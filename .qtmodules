@@ -1,0 +1,6 @@
+core
+serialbus
+serialport
+sql
+websockets
+network

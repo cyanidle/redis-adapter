@@ -1,0 +1,45 @@
+debug/
+release/
+*[Dd]ebug*
+*[Rr]elease*
+*qmake*
+Makefile*
+*pro.user
+.qtmodules
+.Dockerfile*
+*.ini
+# Not in testfiles
+!**/testfiles/localstorage/*.ini
+#
+.vscode
+**.o
+moc_**
+**.moc
+**.exe
+object_script.*
+target_wrapper.*
+.qtc_clangd
+**.pro.qtds
+# App Binary
+build/
+redis-adapter
+!src/redis-adapter
+!.qtmodules
+*test-results*
+# Libs
+**.pdb
+**.ilk
+**.lib
+**.prl
+**.a
+*.dll*
+*.so*
+# Tests Binaries
+tests/tests-bin/gtest/*
+tests/tests-bin/qtest/*
+tests/tests-bin/results
+# Autosaves from VSCode
+**.autosave
+# Commit info
+GIT_COMMIT
+build_env_file

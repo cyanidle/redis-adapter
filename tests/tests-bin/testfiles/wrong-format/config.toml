@@ -1,0 +1,69 @@
+parsing
+"{station_id}" = "fail"
+
+[localization]
+timezone = "fail"
+
+[[redis.servers]]
+name = "fail.1"
+host = "10.40.0.87"
+#host = "192.168.11.243"
+port = 6300
+
+[[redis.servers]]
+name = "fail.1"
+host = "10.40.0.77"
+port = 7000
+
+[[redis.stream.producers]]
+name = "fail"
+target_server = "local.1"
+stream_key = "station:{station_id}"
+stream_size = 1000000 # producer only. '-1' to ignore
+
+[[redis.stream.consumers]]
+name = "fail"
+source_server = "remote.1"
+stream_key = "station:{station_id}:commands"
+
+[[redis.caches]]
+name = "fail"
+target_server = "local.1"
+index_key = "station:{station_id}:index"
+filter = "modbusfilter"
+consumers = [ "stationlog" ]
+
+[websocket_server]
+port = 1234
+
+[modbus]
+poll_rate = 500
+response_time = 150 # ms
+retries = 0
+byteorder = "fail" # { "BigEndian" | "LittleEndian" }
+wordorder = "BigEndian" # { "BigEndian" | "LittleEndian" }
+producers = [ "commandlog" ]
+consumers = [ "modbuscache" ]
+
+[[modbus.channel]]
+    name = "fail"
+    type = "master" # { "master" | "slave" }
+    #slave_address = 10 # slave mode only
+    
+    [[modbus.channel.slaves]]
+    address = 255
+    source = "fail.1" # modbus.rtu.devices.name OR modbus.tcp.devices.name
+    registers = [ "fail.*", "polder.*" ]
+    queries = [ { reg_index = 0, reg_count = 50, type = "input" },
+                { reg_index = 50, reg_count = 42, type = "input" },
+                { reg_index = 0, reg_count = 38, type = "holding", poll_rate = 3000 } ]
+
+[modbus.tcp]
+    [[modbus.tcp.devices]]
+    name = "fail.1"
+    ip = "10.40.0.66"
+    port = 502
+    
+[log_debug]
+modbus = true
+mysql = false

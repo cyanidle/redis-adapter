@@ -1,0 +1,110 @@
+[registers.station.{station_id}
+byteorder = "BigEndian"
+wordorder = "LittleEndian"
+table = "input"
+temperature.state = { index = 0, type = "uint16" }
+temperature.readings = { index = 4, type = "float" }
+level.state = [ { index = 1, type = "uint16" },
+                { index = 2, type = "uint16" },
+                { index = 3, type = "uint16" } ]
+level.readings = [ { index = 6, type = "float" },
+                   { index = 8, type = "float" },
+                   { index = 10, type = "float" } ]
+level.change_speed = { index = 46, type = "float" }
+level.active_sensor = { index = 48, type = "uint16" }
+sensors.repair_state = { index = 12, type = "uint16" }
+sensors.fault_state = { index = 13, type = "uint16" }
+sensors.level_readings = [ { index = 30, type = "uint16" },
+                           { index = 31, type = "uint16" },
+                           { index = 32, type = "uint16" } ]
+sensors.pump_protection = [ { index = 34, type = "uint16" },
+                            { index = 35, type = "uint16" },
+                            { index = 36, type = "uint16" } ]
+sensors.temperature = { index = 37, type = "uint16" }
+settings.level_high = { index = 16, type = "float" }
+settings.level_low = { index = 18, type = "float" }
+settings.level_change_speed = { index = 90, type = "float" }
+settings.mode = { index = 20, type = "uint16" }
+settings.status = { index = 80, type = "uint16" }
+security.mode = { index = 14, type = "uint16" }
+visits_count = { index = 15, type = "uint16" }
+plc.di = { index = 21, type = "uint16" }
+plc.do = { index = 22, type = "uint16" }
+plc.expansion.di = { index = 23, type = "uint16" }
+plc.expansion.do = { index = 24, type = "uint16" }
+plc.ai = [ { index = 26, type = "float" },
+           { index = 28, type = "float" } ]
+active_pump = { index = 49, type = "uint16" }
+
+[registers.station.{station_id}.pump.1]
+byteorder = "BigEndian"
+wordorder = "LittleEndian"
+table = "input"
+state = { index = 50, type = "uint16" }
+error_code = { index = 51, type = "uint16" }
+operating_time = { index = 52, type = "uint16" }
+current = { index = 54, type = "float" }
+power = { index = 56, type = "float" }
+consumed_energy = { index = 58, type = "float" }
+
+[registers.station.{station_id}.pump.2]
+byteorder = "BigEndian"
+wordorder = "LittleEndian"
+table = "input"
+state = { index = 60, type = "uint16" }
+error_code = { index = 61, type = "uint16" }
+operating_time = { index = 62, type = "uint16" }
+current = { index = 64, type = "float" }
+power = { index = 66, type = "float" }
+consumed_energy = { index = 68, type = "float" }
+
+[registers.station.{station_id}.pump.3]
+byteorder = "BigEndian"
+wordorder = "LittleEndian"
+table = "input"
+state = { index = 70, type = "uint16" }
+error_code = { index = 71, type = "uint16" }
+operating_time = { index = 72, type = "uint16" }
+current = { index = 74, type = "float" }
+power = { index = 76, type = "float" }
+consumed_energy = { index = 78, type = "float" }
+
+[registers.polder.{station_id}]
+byteorder = "BigEndian"
+wordorder = "LittleEndian"
+table = "input"
+air_temperature = { index = 82, type = "float" }
+precipitation = { index = 84, type = "float" }
+air_humidity = { index = 86, type = "float" }
+atmospheric_pressure = { index = 88, type = "float" }
+
+[registers.station.{station_id}.command]
+byteorder = "BigEndian"
+wordorder = "LittleEndian"
+table = "holding"
+sensors.remote_level = [ { index = 0, type = "float" },
+                         { index = 2, type = "float" },
+                         { index = 4, type = "float" },
+                         { index = 6, type = "float" } ]
+sensors.river = { index = 10, type = "float" }
+settings.level_high = { index = 14, type = "float" }
+settings.level_low = { index = 12, type = "float" }
+settings.level_change_speed = { index = 22, type = "float" }
+security.do_arm = { index = 16, type = "uint16" }
+security.do_disarm = { index = 17, type = "uint16" }
+pump.switch_period = { index = 18, type = "uint16" }
+pump.control = [ { index = 24, type = "uint16" },
+                 { index = 25, type = "uint16" },
+                 { index = 26, type = "uint16" } ]
+network_rssi = { index = 19, type = "uint16" }
+server_ping = { index = 20, type = "uint16" }
+watchdog_const = { index = 30, type = "uint16" }
+
+[registers.polder.{station_id}.command]
+byteorder = "BigEndian"
+wordorder = "LittleEndian"
+table = "holding"
+air_temperature = { index = 32, type = "float" }
+precipitation = { index = 38, type = "float" }
+air_humidity = { index = 34, type = "float" }
+atmospheric_pressure = { index = 36, type = "float" }

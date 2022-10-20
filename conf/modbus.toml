@@ -1,0 +1,28 @@
+[modbus]
+poll_rate = 500
+response_time = 150 # ms
+retries = 0
+byteorder = "BigEndian" # { "BigEndian" | "LittleEndian" }
+wordorder = "BigEndian" # { "BigEndian" | "LittleEndian" }
+filter_name = "modbusfilter"
+producers = [ "commandlog", "commands_local" ]
+consumers = [ "modbuscache" ]
+
+[[modbus.channels]]
+    name = "spk"
+    type = "master" # { "master" | "slave" }
+    #slave_address = 10 # slave mode only
+    
+    [[modbus.channels.slaves]]
+    address = 255
+    source = "tcp.1" # modbus.rtu.devices.name OR modbus.tcp.devices.name
+    registers = [ "station.*", "polder.*" ]
+    queries = [ { reg_index = 0, reg_count = 50, type = "input" },
+                { reg_index = 50, reg_count = 42, type = "input" },
+                { reg_index = 0, reg_count = 50, type = "holding", poll_rate = 3000 } ]
+
+[modbus.tcp]
+    [[modbus.tcp.devices]]
+    name = "tcp.1"
+    ip = "10.40.0.66"
+    port = 502

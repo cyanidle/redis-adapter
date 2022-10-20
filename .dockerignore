@@ -1,0 +1,46 @@
+**/.git*
+!/.git
+**/Makefile*
+**/object_script*
+localstorage.ini
+**/*.qmake*
+.qtmodules
+**/*.pro.*
+**/debug
+**/release
+src/lib/hiredis/
+!src/lib/hiredis/adapters/
+!src/lib/hiredis/*.h
+!src/lib/hiredis/*.c
+src/lib/cpptoml/
+!src/lib/cpptoml/include/cpptoml.h
+**/*.o
+**/*.so*
+*redis-adapter*
+!redis-adapter.pro
+Dockerfile
+.dockerignore
+**/*.a
+**/*.prl
+**/*.exe
+**/*.bat
+**/*.pdb
+**/*.ilk
+moc_**
+**.moc
+**/build
+**/bins
+conf/
+!conf/config.toml
+!conf/filters.toml
+!conf/registers.toml
+# Tests Binaries
+*test-results*
+tests/tests-bin/gtest/*
+tests/tests-bin/qtest/*
+tests/tests-bin/results
+# Autosaves from VSCode
+**.autosave
+build_env_file
+# Need ini in testfiles
+!**/testfiles/localstorage/*.ini

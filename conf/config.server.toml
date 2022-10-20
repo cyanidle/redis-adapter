@@ -1,0 +1,46 @@
+[localization]
+timezone = "UTC+02:00"
+
+[[redis.servers]]
+name = "local.1"
+server_host = "127.0.0.1"
+server_port = 7000
+
+[[redis.servers]]
+name = "station.16"
+server_host = "127.0.0.1"
+server_port = 6300
+
+[[redis.stream.producers]]
+name = "commandlog.16"
+target_server = "local.1"
+stream_key = "station:16:commands"
+stream_size = 1000000 # producer only. '-1' to ignore
+
+[[redis.stream.consumers]]
+name = "stationlog.16"
+source_server = "station.16"
+stream_key = "station:16"
+
+[[mysql.client]]
+name = "polderdata"
+ip = "127.0.0.1"
+port = 3306
+database = "polderdata"
+username = "lotos"
+ 
+[[mysql.keyvault]]
+name = "redis"
+table = "redis_keys"
+
+[mysql.storage.archive]
+client = "polderdata"
+target_table = "archive"
+keyvault = "redis"
+producers = [ "stationlog.*" ]
+
+[websocket_server]
+port = 1234
+
+[log_debug]
+mysql = false

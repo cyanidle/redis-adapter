@@ -1,0 +1,24 @@
+[filters.modbusfilter]
+"station:{station_id}:temperature:readings" = 0.1
+"station:{station_id}:level:readings:1" = 0.005
+"station:{station_id}:level:readings:2" = 0.005
+"station:{station_id}:level:readings:3" = 0.005
+"station:{station_id}:level:change_speed" = 0.005
+"station:{station_id}:sensors:level_readings:1" = 10.0
+"station:{station_id}:sensors:level_readings:2" = 10.0
+"station:{station_id}:sensors:level_readings:3" = 10.0
+"station:{station_id}:sensors:pump_protection:1" = 10.0
+"station:{station_id}:sensors:pump_protection:2" = 10.0
+"station:{station_id}:sensors:pump_protection:3" = 10.0
+"station:{station_id}:sensors:temperature" = 50.0
+"station:{station_id}:plc:ai:1" = 10.0
+"station:{station_id}:plc:ai:2" = 10.0
+"station:{station_id}:pump:1:current" = 0.05
+"station:{station_id}:pump:1:power" = 0.05
+"station:{station_id}:pump:1:consumed_energy" = 0.1
+"station:{station_id}:pump:2:current" = 0.05
+"station:{station_id}:pump:2:power" = 0.05
+"station:{station_id}:pump:2:consumed_energy" = 0.1
+"station:{station_id}:pump:3:current" = 0.05
+"station:{station_id}:pump:3:power" = 0.05
+"station:{station_id}:pump:3:consumed_energy" = 0.1
