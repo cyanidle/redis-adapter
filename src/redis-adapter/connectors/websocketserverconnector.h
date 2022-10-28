@@ -21,7 +21,6 @@ public:
                      const Radapter::WorkerSettings &settings);
 
     Settings::WebsocketServerInfo info() const;
-    Radapter::WorkerMsg::SenderType workerType() const override {return Radapter::WorkerMsg::TypeWebsockerServerConnector;}
 signals:
     void jsonPublished(const QVariant &nestedJson);
 public slots:

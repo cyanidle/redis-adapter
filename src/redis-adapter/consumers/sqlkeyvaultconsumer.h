@@ -3,7 +3,6 @@
 
 #include <QObject>
 #include "redis-adapter/connectors/mysqlconnector.h"
-#include "redis-adapter/protocol.h"
 #include "radapter-broker/workerbase.h"
 #include "redis-adapter/settings/settings.h"
 
@@ -33,7 +32,6 @@ private:
     MySqlConnector* m_dbClient;
     Settings::SqlKeyVaultInfo m_info;
     Formatters::List m_tableFields;
-    Radapter::Protocol* proto;
 };
 
 #endif // SQLKEYVAULTCONSUMER_H

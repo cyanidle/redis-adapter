@@ -4,7 +4,6 @@
 #include <QObject>
 #include <QThread>
 #include "radapter-broker/singletonbase.h"
-#include "redis-adapter/protocol.h"
 #include "redis-adapter/settings/settings.h"
 #include "lib/modbus/modbusdevicesgate.h"
 #include "lib/modbus/modbusfactory.h"
@@ -24,7 +23,6 @@ public:
     int initSettings() override {return 0;}
     int init() override;
     void run() override;
-    Radapter::WorkerMsg::SenderType workerType() const override {return Radapter::WorkerMsg::TypeModbusConnector;}
 public slots:
     void onMsg(const Radapter::WorkerMsg &msg) override;
     void onReply(const Radapter::WorkerMsg &msg) override;
@@ -63,8 +61,6 @@ private:
     QThread* m_modbusThread;
     QString m_lastWriteId;
     Formatters::Dict m_lastWriteRequest;
-    Radapter::Protocol* m_proto;
-    QList<quint64> m_awaitingApproval;
 };
 
 #endif // MODBUSCONNECTOR_H

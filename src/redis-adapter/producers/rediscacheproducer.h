@@ -19,9 +19,6 @@ public:
                            const quint16 dbIndex,
                            const QString &indexKey,
                            const Radapter::WorkerSettings &settings);
-
-    Radapter::WorkerMsg::SenderType workerType() const override {return Radapter::WorkerMsg::TypeRedisCacheProducer;}
-
 signals:
 
 public slots:

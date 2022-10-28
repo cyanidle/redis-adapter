@@ -10,8 +10,7 @@ KeyVaultConsumer::KeyVaultConsumer(MySqlConnector *client,
                                          QObject *parent) :
     QObject(parent),
     m_dbClient(client),
-    m_info(info),
-    proto(Radapter::Protocol::instance())
+    m_info(info)
 {
     m_tableFields = Formatters::List{
             SQL_KEYVAULT_FIELD_REDIS_KEY,

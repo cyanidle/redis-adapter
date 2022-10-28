@@ -20,7 +20,6 @@ public:
                                  const Radapter::WorkerSettings &settings,
                                  const qint32 streamSize = 0u);
     ~RedisStreamProducer() override;
-    Radapter::WorkerMsg::SenderType workerType() const override {return Radapter::WorkerMsg::TypeRedisStreamProducer;}
 
     QString streamKey() const;
     quint32 streamSize() const;

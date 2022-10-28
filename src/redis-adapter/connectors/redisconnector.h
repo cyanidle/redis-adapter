@@ -25,7 +25,6 @@ public:
                             const quint16 dbIndex,
                             const Radapter::WorkerSettings &settings);
     ~RedisConnector() override;
-    Radapter::WorkerMsg::SenderType workerType() const override {return Radapter::WorkerMsg::TypeUnspecified;}
     QString host() const;
     quint16 port() const;
     quint16 dbIndex() const;

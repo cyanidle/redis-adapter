@@ -17,7 +17,6 @@ public:
     explicit ArchiveProducer(MySqlConnector *client,
                              const Settings::SqlStorageInfo &archiveInfo,
                              const Radapter::WorkerSettings &settings);
-    Radapter::WorkerMsg::SenderType workerType() const override {return Radapter::WorkerMsg::TypeSqlArchiveProducer;}
 public slots:
     void run() override;
     void onMsg(const Radapter::WorkerMsg &msg) override;

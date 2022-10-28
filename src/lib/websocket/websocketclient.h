@@ -22,7 +22,6 @@ public:
                     quint16 serverPort,
                     const Radapter::WorkerSettings &settings);
     ~Client() override;
-    Radapter::WorkerMsg::SenderType workerType() const override {return Radapter::WorkerMsg::TypeWebsocketClient;}
     bool isRunning() const;
 
 public slots:

@@ -26,14 +26,14 @@ int StreamFactory::initWorkers()
         if ((streamInfo.mode == Settings::RedisStreamConsumer)
                 || (streamInfo.mode == Settings::RedisStreamConsumerGroups))
         {
-            auto consumer = new RedisStreamConsumer(streamInfo.source.server_host,
+            auto consumer = new StreamConsumer(streamInfo.source.server_host,
                                                     streamInfo.source.server_port,
                                                     streamInfo.stream_key,
                                                     streamInfo.consumer_group_name,
                                                     streamInfo.start_from,
                                                     workerSettings);
-            QObject::connect(thread, &QThread::started, consumer, &RedisStreamConsumer::run);
-            QObject::connect(thread, &QThread::finished, consumer, &RedisStreamConsumer::deleteLater);
+            QObject::connect(thread, &QThread::started, consumer, &StreamConsumer::run);
+            QObject::connect(thread, &QThread::finished, consumer, &StreamConsumer::deleteLater);
             Radapter::Broker::instance()->registerProxy(consumer->createProxy());
             m_workersPool.append(consumer);
         }

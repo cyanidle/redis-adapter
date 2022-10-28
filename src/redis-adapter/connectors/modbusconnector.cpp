@@ -4,15 +4,14 @@
 #include "redis-adapter/include/modbuskeys.h"
 #include "radapter-broker/broker.h"
 #include "redis-adapter/radapterlogging.h"
+#include "redis-adapter/radapterschemes.h"
 
 ModbusConnector::ModbusConnector(const Settings::ModbusConnectionSettings &connectionSettings,
                                  const Settings::DeviceRegistersInfoMap &registersInfo,
                                  const Radapter::WorkerSettings &settings)
     : SingletonBase(settings),
       m_lastWriteId{},
-      m_lastWriteRequest{},
-      m_proto(Radapter::Protocol::instance()),
-      m_awaitingApproval()
+      m_lastWriteRequest{}
 {
     initServices(connectionSettings, registersInfo);
 }
@@ -34,21 +33,18 @@ int ModbusConnector::init()
 
 void ModbusConnector::writeJsonDone(const Formatters::Dict &jsonDict)
 {
-    auto command = m_proto->acknowledge()->send(this, jsonDict);
-    emit sendMsgExplicit(command, MsgToProducers);
+    emit sendMsg(prepareScheme<Radapter::AcknowledgeScheme>(jsonDict));
 }
 
 void ModbusConnector::jsonItemWritten(const Formatters::Dict &modbusJsonUnit)
 {
     Q_UNUSED(modbusJsonUnit);
-    auto command = m_proto->requestNewJson()->send(this);
-    emit sendMsgExplicit(command, MsgToProducers);
+    emit sendMsgWithDirection(prepareScheme<Radapter::RequestJsonCommand>(true), MsgToProducers);
 }
 
 void ModbusConnector::allDevicesConnected()
 {
-    auto command = m_proto->requestNewJson()->send(this);
-    emit sendMsgExplicit(command, MsgToProducers);
+    emit sendMsgWithDirection(prepareScheme<Radapter::RequestJsonCommand>(true), MsgToProducers);
 }
 
 ModbusConnector &ModbusConnector::prvInstance(const Settings::ModbusConnectionSettings &connectionSettings,
@@ -152,15 +148,14 @@ void ModbusConnector::onMsg(const Radapter::WorkerMsg &msg)
 
 void ModbusConnector::approvalRequested(const Formatters::List &jsonKeys)
 {
-    auto requestMsg = m_proto->requestKeys()->send(this, jsonKeys.toQStringList());
-    m_awaitingApproval.append(enqueueMsg(requestMsg));
-    emit sendMsgExplicit(requestMsg, MsgToProducers);
+    auto command = prepareScheme<Radapter::RequestKeysScheme>(jsonKeys);
+    enqueueMsg(command);
+    emit sendMsgWithDirection(command, MsgToProducers);
 }
 
 void ModbusConnector::onReply(const Radapter::WorkerMsg &msg)
 {
-    if (m_awaitingApproval.contains(msg.id())) {
-        m_awaitingApproval.removeOne(msg.id());
+    if (dequeueMsg(msg.id()).brokerFlags != Radapter::WorkerMsg::BrokerBadMsg) {
         onApprovalReceived(msg.data());
     }
 }

@@ -4,7 +4,6 @@
 #include <QObject>
 #include "redis-adapter/connectors/redisconnector.h"
 #include "json-formatters/formatters/list.h"
-#include "redis-adapter/protocol.h"
 #include <QQueue>
 
 namespace Redis{
@@ -20,8 +19,6 @@ public:
                            const quint16 dbIndex,
                            const QString &indexKey,
                            const Radapter::WorkerSettings &settings);
-
-    Radapter::WorkerMsg::SenderType workerType() const override {return Radapter::WorkerMsg::TypeRedisCacheConsumer;}
 public slots:
     void onMsg(const Radapter::WorkerMsg &msg) override;
     void onCommand(const Radapter::WorkerMsg &msg) override;
@@ -42,7 +39,6 @@ private:
     QQueue<Formatters::List> m_requestedKeysBuffer;
 
     QString m_indexKey;
-    Radapter::Protocol* m_proto;
 };
 
 #endif // REDISCACHECONSUMER_H

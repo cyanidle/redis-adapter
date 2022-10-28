@@ -5,21 +5,23 @@
 #include <QTimer>
 #include "redis-adapter/connectors/redisconnector.h"
 #include "json-formatters/formatters/dict.h"
-#include "redis-adapter/protocol.h"
 #include "radapter-broker/workerbase.h"
 #include "redis-adapter/settings/redissettings.h"
 
-class RADAPTER_SHARED_SRC RedisStreamConsumer : public Redis::RedisConnector
+namespace Redis{
+    class RADAPTER_SHARED_SRC StreamConsumer;
+}
+
+class Redis::StreamConsumer : public Redis::RedisConnector
 {
     Q_OBJECT
 public:
-    explicit RedisStreamConsumer(const QString &host,
+    explicit StreamConsumer(const QString &host,
                                  const quint16 port,
                                  const QString &streamKey,
                                  const QString &groupName,
                                  const Settings::RedisConsumerStartMode startFrom,
                                  const Radapter::WorkerSettings &settings);
-    Radapter::WorkerMsg::SenderType workerType() const override {return Radapter::WorkerMsg::TypeRedisStreamConsumer;}
     QString lastReadId() const;
 
     QString streamKey() const;
@@ -83,7 +85,6 @@ private:
     Settings::RedisConsumerStartMode m_startMode;
     QString m_lastStreamId;
     bool m_hasPending;
-    Radapter::Protocol* m_proto;
 };
 
 #endif // REDISSTREAMCONSUMER_H

@@ -36,8 +36,8 @@ SOURCES += \
     $$PWD/redis-adapter/producers/sqlarchiveproducer.cpp \
     $$PWD/redis-adapter/localization.cpp \
     $$PWD/redis-adapter/localstorage.cpp \
-    $$PWD/redis-adapter/protocol.cpp \
-    $$PWD/redis-adapter/radapterlogging.cpp
+    $$PWD/redis-adapter/radapterlogging.cpp \
+    $$PWD/redis-adapter/radapterschemes.cpp
 HEADERS += \
     $$PWD/redis-adapter/connectors/modbusconnector.h \
     $$PWD/redis-adapter/connectors/mysqlconnector.h \
@@ -75,5 +75,5 @@ HEADERS += \
     $$PWD/redis-adapter/producers/sqlarchiveproducer.h \
     $$PWD/redis-adapter/localization.h \
     $$PWD/redis-adapter/localstorage.h \
-    $$PWD/redis-adapter/protocol.h \
-    $$PWD/redis-adapter/radapterlogging.h
+    $$PWD/redis-adapter/radapterlogging.h \
+    $$PWD/redis-adapter/radapterschemes.h

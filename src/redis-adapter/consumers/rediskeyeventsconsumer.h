@@ -16,8 +16,6 @@ public:
                                const quint16 port,
                                const QStringList &keyEvents,
                                const Radapter::WorkerSettings &settings);
-
-    Radapter::WorkerMsg::SenderType workerType() const override {return Radapter::WorkerMsg::TypeRedisKeyEventsConsumer;}
 public slots:
     void run() override;
 
