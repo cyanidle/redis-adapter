@@ -108,7 +108,7 @@ void RedisConnector::tryConnect()
     }
 
     auto options = redisOptions{};
-    REDIS_OPTIONS_SET_TCP(&options, m_host.toStdString().c_str(), m_port)
+    REDIS_OPTIONS_SET_TCP(&options, m_host.toStdString().c_str(), m_port);
     auto timeout = timeval{};
     timeout.tv_usec = TCP_CONNECT_TIMEOUT_MS;
     options.connect_timeout = &timeout;
