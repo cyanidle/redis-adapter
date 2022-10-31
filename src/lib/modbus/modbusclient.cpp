@@ -46,9 +46,12 @@ ModbusClient::ModbusClient(const ModbusConnectionSource &settings,
             this, &ModbusClient::onSlaveStateChanged);
     const auto addressesList = queryMap.uniqueKeys();
     for (auto slaveAddress : addressesList) {
-        m_deviceBuffersMap[slaveAddress] = {
-            { QModbusDataUnit::HoldingRegisters, RegistersTableBuffer(PREALLOC_REG_SIZE, 0u) },
-            { QModbusDataUnit::InputRegisters, RegistersTableBuffer(PREALLOC_REG_SIZE, 0u) }
+        m_deviceBuffersMap[slaveAddress] = {            
+            { QModbusDataUnit::DiscreteInputs, RegistersTableBuffer(PREALLOC_REG_SIZE, 0u) },
+            { QModbusDataUnit::Coils, RegistersTableBuffer(PREALLOC_REG_SIZE, 0u) },
+            { QModbusDataUnit::InputRegisters, RegistersTableBuffer(PREALLOC_REG_SIZE, 0u) },
+            { QModbusDataUnit::HoldingRegisters, RegistersTableBuffer(PREALLOC_REG_SIZE, 0u) }
+
         };
     }
 }
@@ -196,21 +199,22 @@ QVector<quint8> ModbusClient::devicesIdList() const
     return devicesIdList;
 }
 
-void ModbusClient::writeReg(const quint8 slaveAddress, const quint16 address, const quint16 value)
+void ModbusClient::writeReg(const quint8 slaveAddress, const QModbusDataUnit::RegisterType tableType, const quint16 address, const quint16 value)
 {
-    if (m_deviceBuffersMap.value(slaveAddress)
-            .value(QModbusDataUnit::HoldingRegisters).at(address) == value)
-    {
-        emit writeResultReady(m_deviceNames, slaveAddress, address, true);
+
+    if (m_deviceBuffersMap.value(slaveAddress).value(tableType).at(address) == value) {
+        emit writeResultReady(m_deviceNames, slaveAddress, tableType, address, true);
     } else {
-        auto request = createRequest(address, value);
-        mbDebug() << QString("single request for %1 sended:").arg(slaveAddress)
+        auto request = createRequest(tableType, address, value);
+        mbDebug() << QString("single request for %1 sended:").arg(slaveAddress).toStdString().c_str()
+                  << registerTypeToString(request.registerType()).c_str()
                   << request.startAddress() << request.values();
         emit writeRequested(slaveAddress, request);
     }
 }
 
-void ModbusClient::writeRegs(const quint8 slaveAddress, const quint16 startAddress, const QVector<quint16> &values)
+void ModbusClient::writeRegs(const quint8 slaveAddress, const QModbusDataUnit::RegisterType tableType,
+     const quint16 startAddress, const QVector<quint16> &values)
 {
     auto writeRequests = QVector<QModbusDataUnit>{};
 
@@ -218,16 +222,17 @@ void ModbusClient::writeRegs(const quint8 slaveAddress, const quint16 startAddre
         quint16 address = startAddress + index;
         auto regValue = values.at(index);
         if (m_deviceBuffersMap.value(slaveAddress)
-                .value(QModbusDataUnit::HoldingRegisters).at(address) != regValue)
+                .value(tableType).at(address) != regValue)
         {
-            auto request = createRequest(address, regValue);
+            auto request = createRequest(tableType, address, regValue);
             writeRequests.append(request);
         }
     }
 
     if (!writeRequests.isEmpty()) {
         for (auto &request : writeRequests) {
-            mbDebug() << QString("request for %1 sended:").arg(slaveAddress)
+            mbDebug() << QString("request for %1 sended:").arg(slaveAddress).toStdString().c_str()
+                      << registerTypeToString(request.registerType()).c_str()
                       << request.startAddress() << request.values();
             emit writeRequested(slaveAddress, request);
         }
@@ -241,7 +246,7 @@ void ModbusClient::changeData(const quint8 slaveAddress, const ModbusRegistersTa
          regData != registersTable.end();
          regData++)
     {
-        writeReg(slaveAddress, regData.key(), regData.value());
+        writeReg(slaveAddress, tableType, regData.key(), regData.value());
     }
 }
 
@@ -440,9 +445,10 @@ void ModbusClient::sendWriteResult()
     }
 
     auto deviceId = query->slaveAddress();
+    auto tableType = query->request().registerType();
     auto startAddress = static_cast<quint16>(query->request().startAddress());
     auto successful = query->hasSucceeded();
-    emit writeResultReady(m_deviceNames, deviceId, startAddress, successful);
+    emit writeResultReady(m_deviceNames, deviceId, tableType, startAddress, successful);
 }
 
 void ModbusClient::clearWriteQuery()
@@ -461,13 +467,22 @@ void ModbusClient::outputDataUnit(const quint8 slaveAddress, const QModbusDataUn
     auto unitAddressHi = static_cast<quint8>((unit.startAddress() >> 8) & 0xFF);
     auto valueCountLo = static_cast<quint8>(unit.valueCount() & 0xFFU);
     auto valueCountHi = static_cast<quint8>((unit.valueCount() >> 8) & 0xFFU);
-    auto functionCode = "06";
-    if (unit.valueCount() > WRITE_REQUEST_SIZE) {
-        if (unit.registerType() == QModbusDataUnit::HoldingRegisters) {
-            functionCode = "03";
-        } else if (unit.registerType() == QModbusDataUnit::InputRegisters) {
-            functionCode = "04";
-        }
+    auto functionCode = "ERROR";
+    switch (unit.registerType()) {
+    case QModbusDataUnit::Coils:
+        functionCode = unit.valueCount() > WRITE_REQUEST_SIZE ? "01" : "05";
+        break;
+    case QModbusDataUnit::DiscreteInputs:
+        functionCode = "02";
+        break;
+    case QModbusDataUnit::HoldingRegisters:
+        functionCode = unit.valueCount() > WRITE_REQUEST_SIZE ? "03" : "06";
+        break;
+    case QModbusDataUnit::InputRegisters:
+        functionCode = "04";
+        break;
+    default:
+        break;
     }
     auto replyText = QString("%1 %2 %3 %4 %5 %6 ").arg(slaveAddress, 2, 16, QChar('0'))
             .arg(functionCode)
@@ -548,11 +563,11 @@ void ModbusClient::setConnectionParameters()
     mbDebug() << "timeout:" << m_connectionSettings.response_time;
 }
 
-QModbusDataUnit ModbusClient::createRequest(const quint16 address, const quint16 value)
+QModbusDataUnit ModbusClient::createRequest(const QModbusDataUnit::RegisterType tableType, const quint16 address, const quint16 value)
 {
     quint16 size = 1U;
     int firstIndex = 0;
-    auto request = QModbusDataUnit(QModbusDataUnit::HoldingRegisters, address, size);
+    auto request = QModbusDataUnit(tableType, address, size);
     request.setValue(firstIndex, value);
     return request;
 }
@@ -675,6 +690,18 @@ QList<Modbus::ModbusReadQuery*> ModbusClient::getReadQueriesBySlaveAddress(const
     auto slaveQueries = getQueriesBySlaveAddress(m_readQueries, slaveAddress);
     return slaveQueries;
 }
+
+std::string ModbusClient::registerTypeToString(const QModbusDataUnit::RegisterType registerType) const
+{
+    switch (registerType) {
+    case QModbusDataUnit::DiscreteInputs: return "DiscreteInputs";
+    case QModbusDataUnit::Coils: return "Coils";
+    case QModbusDataUnit::InputRegisters: return "InputRegisters";
+    case QModbusDataUnit::HoldingRegisters: return "HoldingRegisters";
+    default: return "";
+    }
+}
+
 
 #ifdef TEST_MODE
 void ModbusClient::sendData()

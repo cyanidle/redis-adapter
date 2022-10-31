@@ -34,7 +34,10 @@ public:
 signals:
     void modbusDataChanged(const quint8 deviceId, const QModbusDataUnit::RegisterType tableType, const QList<quint16> &regAddresses);
     void jsonDataReady(const QVariant &jsonData);
-    void deviceWriteRequested(const QString &deviceName, const quint8 deviceId, const Modbus::ModbusRegistersTableMap &registersMap);
+    void deviceWriteRequested(const QString &deviceName,
+                              const quint8 deviceId,
+                              const QModbusDataUnit::RegisterType tableType,
+                              const Modbus::ModbusRegistersTable &registersTable);
     void deviceWriteResultReady(const QVariant &jsonData, bool successful);
     void deviceInitRequested(const QString &deviceName);
 
@@ -43,6 +46,7 @@ public slots:
                         const Modbus::ModbusRegistersTableMap &registersMap);
     void receiveDeviceWriteResult(const QStringList &deviceNames,
                                   const quint8 deviceId,
+                                  const QModbusDataUnit::RegisterType tableType,
                                   const quint16 startAddress,
                                   bool hasSucceeded);
     void initModbusDevice(const quint8 deviceId);
@@ -84,7 +88,8 @@ private:
 
     struct WriteRequestInfo {
         QVariantMap rawRequestData;
-        quint8 deviceId;
+        quint8 deviceId;        
+        QModbusDataUnit::RegisterType tableType;
         quint16 startAddress;
 
         bool isValid() {
@@ -146,8 +151,15 @@ private:
     AddressNamesTableMap getDeviceAddressMap(const QString &deviceName) const;
     void sortRegistersInfo(QList<Settings::RegisterInfo> &regInfoList) const;
 
-    void enqueueWriteRequest(const QVariantMap &requestData, const quint8 deviceId, const quint16 startAddress);
-    WriteRequestInfo dequeueWriteRequest(const QStringList &deviceNames, const quint8 deviceId, const quint16 startAddress);
+    void enqueueWriteRequest(const QVariantMap &requestData,
+                             const quint8 deviceId,
+                             const QModbusDataUnit::RegisterType tableType,
+                             const quint16 startAddress);
+    WriteRequestInfo dequeueWriteRequest(const QStringList &deviceNames,
+                                         const quint8 deviceId,
+                                         const QModbusDataUnit::RegisterType tableType,
+                                         const quint16 startAddress);
+
 
     QList<WriteRequestInfo> m_writeRequests;
     Settings::DeviceRegistersInfoMap m_devicesConfigInfo;

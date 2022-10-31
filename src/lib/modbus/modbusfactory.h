@@ -28,13 +28,20 @@ public:
     bool areAllDevicesConnected() const;
 signals:
     void dataChanged(quint8 deviceId, const Modbus::ModbusRegistersTableMap &registersMap);
-    void writeResultReady(const QStringList &deviceNames, const quint8 deviceId, const quint16 startAddress, bool hasSucceeded);
+    void writeResultReady(const QStringList &deviceNames,
+                          const quint8 deviceId,
+                          const QModbusDataUnit::RegisterType tableType,
+                          const quint16 startAddress,
+                          bool hasSucceeded);
     void connectionChanged(const QStringList &deviceNames, const bool connected);
     void initRequested(const quint8 deviceId);
 
 public slots:
     void notifyDataChange(quint8 deviceId, const Modbus::ModbusRegistersTableMap &registersMap);
-    void changeDeviceData(const QString &deviceName, const quint8 deviceId, const Modbus::ModbusRegistersTableMap &registersMap);
+    void changeDeviceData(const QString &deviceName,
+                        const quint8 deviceId,
+                        const QModbusDataUnit::RegisterType tableType,
+                        const Modbus::ModbusRegistersTable &registersTable);
 
 private slots:
     void onConnectionChanged(bool connected);

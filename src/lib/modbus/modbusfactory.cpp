@@ -93,7 +93,8 @@ void ModbusFactory::notifyDataChange(quint8 deviceId, const ModbusRegistersTable
     emit dataChanged(deviceId, registersMap);
 }
 
-void ModbusFactory::changeDeviceData(const QString &deviceName, const quint8 deviceId, const ModbusRegistersTableMap &registersMap)
+void ModbusFactory::changeDeviceData(const QString &deviceName, const quint8 deviceId, 
+    const QModbusDataUnit::RegisterType tableType, const ModbusRegistersTable &registersTable)
 {
     auto channelId = getConnectionString(deviceName, deviceId);
     if (channelId.isEmpty()) {
@@ -101,7 +102,7 @@ void ModbusFactory::changeDeviceData(const QString &deviceName, const quint8 dev
     }
     auto device = m_deviceMap.value(channelId);
     if (device) {
-        device->changeData(deviceId, registersMap);
+        device->changeData(deviceId, tableType, registersMap);
     }
 }
 

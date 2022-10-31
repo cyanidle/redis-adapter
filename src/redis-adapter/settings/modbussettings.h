@@ -65,14 +65,16 @@ namespace Settings {
 
         SERIAL_IGNORE_FIELDS_ERRORS(poll_rate)
         bool initType (const QVariant &src) {
-            auto strRep = src.toString();
+            auto strRep = src.toString().toLower();
             if (strRep == "holding") {
                 type = QModbusDataUnit::RegisterType::HoldingRegisters;
             } else if (strRep == "input") {
                 type = QModbusDataUnit::RegisterType::InputRegisters;
             } else if (strRep == "coils") {
                 type = QModbusDataUnit::RegisterType::Coils;
-            }  else {
+            } else if (strRep == "discrete_inputs") {
+                ttype = QModbusDataUnit::RegisterType::DiscreteInputs;
+            } else {
                 return false;
             }
             return true;

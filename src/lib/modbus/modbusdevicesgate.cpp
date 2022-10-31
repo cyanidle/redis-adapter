@@ -137,13 +137,20 @@ void ModbusDevicesGate::writeJsonToModbusDevice(const QVariant &jsonData, bool *
     {
         auto jsonDevice = QVariantMap{ { jsonUnit.key(), jsonUnit.value() } };
         auto registersMap = jsonUnitToRegistersMap(jsonDevice);
-        auto writeRegisters = registersMap.value(QModbusDataUnit::HoldingRegisters);
-        if (!writeRegisters.isEmpty()) {
-            auto deviceName = getFirstDeviceName(jsonDevice);
-            auto deviceId = m_deviceIdNames.value(deviceName);
-            enqueueWriteRequest(jsonDevice, deviceId, writeRegisters.firstKey());
-            emit deviceWriteRequested(deviceName, deviceId, registersMap);
-            hasRegistersToWrite = true;
+                for (auto registersMapItem = registersMap.begin();
+             registersMapItem != registersMap.end();
+             registersMapItem++)
+        {
+            auto tableToWrite = registersMapItem.key();
+            auto registersToWrite = registersMapItem.value();
+            if (!registersToWrite.isEmpty()) {
+                auto deviceName = getFirstDeviceName(jsonDevice);
+                auto deviceId = m_deviceIdNames.value(deviceName);
+                enqueueWriteRequest(jsonDevice, deviceId, tableToWrite, registersToWrite.firstKey());
+                emit deviceWriteRequested(deviceName, deviceId, tableToWrite, registersToWrite);
+                hasRegistersToWrite = true;
+            }
+
         }
     }
     if (isAbleToWrite) {
@@ -151,9 +158,10 @@ void ModbusDevicesGate::writeJsonToModbusDevice(const QVariant &jsonData, bool *
     }
 }
 
-void ModbusDevicesGate::receiveDeviceWriteResult(const QStringList &deviceNames, const quint8 deviceId, const quint16 startAddress, bool hasSucceeded)
+void ModbusDevicesGate::receiveDeviceWriteResult(const QStringList &deviceNames, const quint8 deviceId,
+ const QModbusDataUnit::RegisterType tableType, const quint16 startAddress, bool hasSucceeded)
 {
-    auto writeRequest = dequeueWriteRequest(deviceNames, deviceId, startAddress);
+    auto writeRequest = dequeueWriteRequest(deviceNames, deviceId, tableType, startAddress);
     if (writeRequest.isValid()) {
         emit deviceWriteResultReady(writeRequest.rawRequestData, hasSucceeded);
     }
@@ -762,7 +770,9 @@ Modbus::ModbusRegistersTableMap ModbusDevicesGate::jsonUnitToRegistersMap(const 
             auto regInfoList = registersInfo.values(regName);
             auto registerData = buildRegisterDataByInfoList(deviceName, regInfoList, changedRegData.value());
             if (!registerData.isEmpty()) {
-                registersMap.insert(registerData);
+                auto tableType = registerData.firstKey();
+                auto registersTable = registerData.first();
+                registersMap[tableType].insert(registersTable);
             }
         }
     }
@@ -878,17 +888,20 @@ void ModbusDevicesGate::setDeviceRegistersData(const QString &deviceName, const 
     }
 }
 
-void ModbusDevicesGate::enqueueWriteRequest(const QVariantMap &requestData, const quint8 deviceId, const quint16 startAddress)
+void ModbusDevicesGate::enqueueWriteRequest(const QVariantMap &requestData, const quint8 deviceId,
+ const QModbusDataUnit::RegisterType tableType, const quint16 startAddress)
 {
-    auto request = WriteRequestInfo { requestData, deviceId, startAddress };
+    auto request = WriteRequestInfo { requestData, deviceId, tableType, startAddress };
     m_writeRequests.append(request);
 }
 
-ModbusDevicesGate::WriteRequestInfo ModbusDevicesGate::dequeueWriteRequest(const QStringList &deviceNames, const quint8 deviceId, const quint16 startAddress)
+ModbusDevicesGate::WriteRequestInfo ModbusDevicesGate::dequeueWriteRequest(const QStringList &deviceNames, const quint8 deviceId,
+     const QModbusDataUnit::RegisterType tableType, const quint16 startAddress)
 {
     for (quint16 reqIndex = 0u; reqIndex < m_writeRequests.size(); reqIndex++) {
         auto request = m_writeRequests.at(reqIndex);
         if ((request.deviceId == deviceId)
+                && (request.tableType == tableType)
                 && (request.startAddress == startAddress)
                 && deviceNames.contains(request.rawRequestData.firstKey()))
         {
