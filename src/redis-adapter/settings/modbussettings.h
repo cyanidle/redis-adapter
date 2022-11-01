@@ -73,7 +73,7 @@ namespace Settings {
             } else if (strRep == "coils") {
                 type = QModbusDataUnit::RegisterType::Coils;
             } else if (strRep == "discrete_inputs") {
-                ttype = QModbusDataUnit::RegisterType::DiscreteInputs;
+                type = QModbusDataUnit::RegisterType::DiscreteInputs;
             } else {
                 return false;
             }

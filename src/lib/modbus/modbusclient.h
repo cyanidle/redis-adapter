@@ -150,7 +150,7 @@ private:
         return slaveQueries;
     }
     QList<ModbusReadQuery*> getReadQueriesBySlaveAddress(const quint8 slaveAddress) const;
-    std::string registerTypeToString(const QModbusDataUnit::RegisterType registerType) const
+    std::string registerTypeToString(const QModbusDataUnit::RegisterType registerType) const;
     QModbusClient* m_client;
     Settings::ModbusConnectionType m_connectionType;
     ModbusQueryMap m_queryDataMap;

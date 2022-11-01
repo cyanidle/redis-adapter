@@ -102,7 +102,7 @@ void ModbusFactory::changeDeviceData(const QString &deviceName, const quint8 dev
     }
     auto device = m_deviceMap.value(channelId);
     if (device) {
-        device->changeData(deviceId, tableType, registersMap);
+        device->changeData(deviceId, tableType, registersTable);
     }
 }
 

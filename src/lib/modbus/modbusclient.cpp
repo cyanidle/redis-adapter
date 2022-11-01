@@ -199,7 +199,8 @@ QVector<quint8> ModbusClient::devicesIdList() const
     return devicesIdList;
 }
 
-void ModbusClient::writeReg(const quint8 slaveAddress, const QModbusDataUnit::RegisterType tableType, const quint16 address, const quint16 value)
+void ModbusClient::writeReg(const quint8 slaveAddress, const QModbusDataUnit::RegisterType tableType,
+                            const quint16 address, const quint16 value)
 {
 
     if (m_deviceBuffersMap.value(slaveAddress).value(tableType).at(address) == value) {
@@ -239,9 +240,10 @@ void ModbusClient::writeRegs(const quint8 slaveAddress, const QModbusDataUnit::R
     }
 }
 
-void ModbusClient::changeData(const quint8 slaveAddress, const ModbusRegistersTableMap &registersMap)
+void ModbusClient::changeData(const quint8 slaveAddress,
+                              const QModbusDataUnit::RegisterType tableType,
+                              const ModbusRegistersTable &registersTable)
 {
-    auto registersTable = registersMap.value(QModbusDataUnit::HoldingRegisters);
     for (auto regData = registersTable.begin();
          regData != registersTable.end();
          regData++)
