@@ -58,25 +58,25 @@ void Launcher::addWorker(WorkerBase* worker, QList<InterceptorBase*> interceptor
 //! чтобы компилятор не удалил "неиспользуемые переменные"
 void Launcher::prvPreInit()
 {
-    auto redisServers = precacheFromToml<Settings::RedisServer>("redis.servers", m_filereader);
+    auto redisServers = precacheFromToml<Settings::RedisServer>("redis.servers");
     reDebug() << "config: Redis Servers count: " << redisServers.size();
-    auto redisStreams = precacheFromToml<Settings::RedisStream>("redis.streams", m_filereader);
+    auto redisStreams = precacheFromToml<Settings::RedisStream>("redis.streams");
     reDebug() << "config: Redis Streams count: " << redisStreams.size();
-    auto redisCaches = precacheFromToml<Settings::RedisCache>("redis.caches", m_filereader);
+    auto redisCaches = precacheFromToml<Settings::RedisCache>("redis.caches");
     reDebug() << "config: Caches count: " << redisCaches.size();
-    auto sqlClientsInfo = precacheFromToml<Settings::SqlClientInfo>("mysql.client", m_filereader);
+    auto sqlClientsInfo = precacheFromToml<Settings::SqlClientInfo>("mysql.client");
     reDebug() << "config: Sql clients count: " << sqlClientsInfo.size();
-    auto redisSubscribers = precacheFromToml<Settings::RedisSubscriber>("redis.subscribers", m_filereader);
+    auto redisSubscribers = precacheFromToml<Settings::RedisSubscriber>("redis.subscribers");
     reDebug() << "config: Redis Subs count: " << redisSubscribers.size();
     m_filereader->setPath("conf/modbus.toml");
-    auto tcpDevices = precacheFromToml<Settings::TcpDevice>("modbus.tcp.devices", m_filereader);
+    auto tcpDevices = precacheFromToml<Settings::TcpDevice>("modbus.tcp.devices");
     reDebug() << "config: Tcp devices count: " << tcpDevices.size();
-    auto rtuDevices = precacheFromToml<Settings::SerialDevice>("modbus.rtu.devices", m_filereader);
+    auto rtuDevices = precacheFromToml<Settings::SerialDevice>("modbus.rtu.devices");
     reDebug() << "config: Rtu devices count: " << rtuDevices.size();
-    auto keyvaults = precacheFromToml<Settings::SqlKeyVaultInfo>("mysql.keyvault", m_filereader);
+    auto keyvaults = precacheFromToml<Settings::SqlKeyVaultInfo>("mysql.keyvault");
     reDebug() << "config: Sql Keyvaults count: " << keyvaults.size();
     m_filereader->setPath("conf/filters.toml");
-    auto filters = precacheFromToml<Settings::Filters>("filters", m_filereader);
+    auto filters = precacheFromToml<Settings::Filters>("filters");
     reDebug() << "config: Filters count: " << filters.size();
     m_filereader->setPath("conf/bindings.toml");
     auto jsonBindings = Settings::JsonBinding::parseList(m_filereader->deserialise("json_bindings").toList());

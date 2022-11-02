@@ -35,8 +35,8 @@ private:
     void prvPreInit();
 
     template <typename T>
-    QList<T> precacheFromToml(const QString &tomlPath, Settings::FileReader* filereader) {
-        return Serializer::fromQList<T>(filereader->deserialise(tomlPath,true).toList());
+    QList<T> precacheFromToml(const QString &tomlPath) {
+        return Serializer::fromQList<T>(m_filereader->deserialise(tomlPath,true).toList());
     }
     QList<SingletonBase*> m_singletons;
     QList<FactoryBase*> m_factories;
