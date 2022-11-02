@@ -5,6 +5,7 @@
 #include "redis-adapter/formatters/redisstreamentryformatter.h"
 #include "redis-adapter/formatters/streamentriesmapformatter.h"
 #include "redis-adapter/radapterlogging.h"
+#include "redis-adapter/radapterschemas.h"
 
 #define BLOCK_TIMEOUT_MS    30000
 #define POLL_TIMEOUT_MS     3000
@@ -17,7 +18,7 @@ StreamConsumer::StreamConsumer(const QString &host,
                                          const QString &groupName,
                                          const Settings::RedisConsumerStartMode startFrom,
                                          const Radapter::WorkerSettings &settings)
-    : RedisConnector(host, port, 0u, settings),
+    : Connector(host, port, 0u, settings),
       m_streamKey(streamKey),
       m_groupName(groupName),
       m_blockingReadTimer(nullptr),
@@ -29,7 +30,7 @@ StreamConsumer::StreamConsumer(const QString &host,
 
 void StreamConsumer::run()
 {
-    RedisConnector::run();
+    Connector::run();
     disablePingKeepalive();
 
     auto readInterval = static_cast<qint32>(BLOCK_TIMEOUT_MS * 1.5);
@@ -57,14 +58,14 @@ void StreamConsumer::run()
 
 void StreamConsumer::blockingRead()
 {
-    auto commandToSelf = prepareCommand();
+    auto commandToSelf = prepareCommand<Radapter::RequestJsonSchema>(true);
     auto id = enqueueMsg(commandToSelf);
     blockingReadImpl(id);
 }
 
 void StreamConsumer::readGroup()
 {
-    auto commandToSelf = prepareCommand();
+    auto commandToSelf = prepareCommand<Radapter::RequestJsonSchema>(true);
     auto id = enqueueMsg(commandToSelf);
     readGroupImpl(id);
 }
@@ -313,10 +314,14 @@ void StreamConsumer::setPending(bool state)
 
 void StreamConsumer::onCommand(const Radapter::WorkerMsg &msg)
 {
-    if (m_groupName.isEmpty()) {
-        readGroupImpl(enqueueMsg(msg));
+    if (msg.usesScheme<Radapter::RequestJsonSchema>()) {
+        if (m_groupName.isEmpty()) {
+            readGroupImpl(enqueueMsg(msg));
+        } else {
+            blockingReadImpl(enqueueMsg(msg));
+        }
     } else {
-        blockingReadImpl(enqueueMsg(msg));
+        reWarn() << "Incorrect schema used for 'Command' to 'Redis::StreamConsumer'";
     }
 }
 

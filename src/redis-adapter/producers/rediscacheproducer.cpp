@@ -8,7 +8,7 @@ CacheProducer::CacheProducer(const QString &host,
                              const quint16 dbIndex,
                              const QString &indexKey,
                              const Radapter::WorkerSettings &settings) :
-    RedisConnector(host, port, dbIndex, settings),
+    Connector(host, port, dbIndex, settings),
     m_indexKey(indexKey)
 {
 }
@@ -19,17 +19,6 @@ void CacheProducer::onMsg(const Radapter::WorkerMsg &msg)
     writeKeys(msg.data(), enqueueMsg(msg));
     auto forwardedToConsumers = prepareMsg(msg.data());
     emit sendMsg(forwardedToConsumers);
-}
-
-void CacheProducer::onCommand(const Radapter::WorkerMsg &msg)
-{
-    if (msg["meta"].toString() == "writeKeys") {
-        auto id = enqueueMsg(msg);
-        writeKeys(msg["data"], id);
-    } else if (msg["meta"].toString() == "writeIndex") {
-        auto id = enqueueMsg(msg);
-        writeIndex(msg["data"], m_indexKey, id);
-    }
 }
 
 void CacheProducer::writeKeys(const Formatters::JsonDict &json, int msgId)

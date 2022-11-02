@@ -20,6 +20,7 @@ int StreamFactory::initWorkers()
     for (auto &streamInfo : streamsInfoList) {
         auto thread = new QThread(this);
         auto workerSettings = WorkerSettings();
+        workerSettings.isDebug = streamInfo.debug;
         workerSettings.thread = thread;
         workerSettings.name = streamInfo.name;
         QObject::connect(thread, &QThread::finished, thread, &QThread::deleteLater);
@@ -38,13 +39,13 @@ int StreamFactory::initWorkers()
             m_workersPool.append(consumer);
         }
         if ((streamInfo.mode == Settings::RedisStreamProducer)) {
-            auto producer = new RedisStreamProducer(streamInfo.target.server_host,
+            auto producer = new StreamProducer(streamInfo.target.server_host,
                                                     streamInfo.target.server_port,
                                                     streamInfo.stream_key,
                                                     workerSettings,
                                                     streamInfo.stream_size);
-            QObject::connect(thread, &QThread::started, producer, &RedisStreamProducer::run);
-            QObject::connect(thread, &QThread::finished, producer, &RedisStreamProducer::deleteLater);
+            QObject::connect(thread, &QThread::started, producer, &StreamProducer::run);
+            QObject::connect(thread, &QThread::finished, producer, &StreamProducer::deleteLater);
             Radapter::Broker::instance()->registerProxy(producer->createProxy());
             m_workersPool.append(producer);
         }

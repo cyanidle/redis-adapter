@@ -18,6 +18,7 @@ int PubSubFactory::initWorkers()
     for (auto &subscriberInfo : m_subscribersList) {
         auto thread = new QThread{};
         auto settings = Radapter::WorkerSettings();
+        settings.isDebug = subscriberInfo.debug;
         settings.thread = thread;
         settings.name = subscriberInfo.name;
         connect(thread, &QThread::finished, thread, &QThread::deleteLater);

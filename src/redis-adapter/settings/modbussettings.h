@@ -352,6 +352,7 @@ namespace Settings {
         SERIAL_FIELD(quint16, poll_rate)
         SERIAL_FIELD(quint16, response_time)
         SERIAL_FIELD(quint16, retries)
+        SERIAL_FIELD(bool, debug, false)
         SERIAL_CONTAINER(QList, QString, producers)
         SERIAL_CONTAINER(QList, QString, consumers)
         SERIAL_NEST(ModbusTcpDevicesSettings, tcp)

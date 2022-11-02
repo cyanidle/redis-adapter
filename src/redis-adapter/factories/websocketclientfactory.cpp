@@ -16,9 +16,9 @@ int ClientFactory::initWorkers()
             info.name,
             new QThread(this),
             info.consumers,
-            info.producers
+            info.producers,
+            info.debug
         };
-
         connect(settings.thread, &QThread::finished, settings.thread, &QThread::deleteLater);
         auto client = new Websocket::Client(info.server_host, info.server_port, settings);
         connect(client->thread(), &QThread::started, client, &Websocket::Client::start);

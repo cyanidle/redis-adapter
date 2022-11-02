@@ -10,7 +10,7 @@ KeyEventsConsumer::KeyEventsConsumer(const QString &host,
                                      const quint16 port,
                                      const QStringList &keyEvents,
                                      const Radapter::WorkerSettings &settings)
-    : RedisConnector(host, port, 0u, settings),
+    : Connector(host, port, 0u, settings),
       m_keyEventNotifications(keyEvents),
       m_isSubscribed(false)
 {
@@ -68,7 +68,7 @@ void KeyEventsConsumer::run()
     connect(this, &KeyEventsConsumer::disconnected, this, &KeyEventsConsumer::unsubscribe);
     blockSelectDb();
     disablePingKeepalive();
-    RedisConnector::run();
+    Connector::run();
 }
 
 void KeyEventsConsumer::eventReceived(const Formatters::List &jsonMessage)

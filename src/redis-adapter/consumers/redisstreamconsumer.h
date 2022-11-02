@@ -12,7 +12,7 @@ namespace Redis{
     class RADAPTER_SHARED_SRC StreamConsumer;
 }
 
-class Redis::StreamConsumer : public Redis::RedisConnector
+class Redis::StreamConsumer : public Redis::Connector
 {
     Q_OBJECT
 public:
@@ -39,19 +39,6 @@ public slots:
     void onReply(const Radapter::WorkerMsg &msg) override;
     void blockingRead();
     void readGroup();
-
-//    connect(redisWorker.consumer, &RedisStreamConsumer::jsonReady,
-//            m_modbusLauncher, &ModbusConnector::onDataReceived,
-//            Qt::QueuedConnection);
-//    connect(m_modbusLauncher, &ModbusConnector::jsonItemWritten,
-//            redisWorker.consumer, &RedisStreamConsumer::readGroup,
-//            Qt::QueuedConnection);
-//    connect(m_modbusLauncher, &ModbusConnector::allDevicesConnected,
-//            redisWorker.consumer, &RedisStreamConsumer::readGroup,
-//            Qt::QueuedConnection);
-//    connect(m_modbusLauncher, &ModbusConnector::writeJsonDone,
-//            redisWorker.consumer, &RedisStreamConsumer::acknowledge,
-//            Qt::QueuedConnection);
 
 private slots:
     void doRead(quint64 msgId);

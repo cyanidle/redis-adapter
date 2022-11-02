@@ -21,9 +21,7 @@ public:
     Formatters::Dict readJsonEntries(const QStringList &keys);
 
 public slots:
-//    Commands
     void run();
-//    void onCommand(const Radapter::WorkerMsg &msg) override;
 
 private:
 

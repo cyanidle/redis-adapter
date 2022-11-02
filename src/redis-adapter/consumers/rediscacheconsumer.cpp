@@ -1,7 +1,7 @@
 #include "rediscacheconsumer.h"
 #include "redis-adapter/formatters/redisqueryformatter.h"
 #include "redis-adapter/radapterlogging.h"
-#include "redis-adapter/radapterschemes.h"
+#include "redis-adapter/radapterschemas.h"
 
 using namespace Redis;
 
@@ -10,7 +10,7 @@ CacheConsumer::CacheConsumer(const QString &host,
                              const quint16 dbIndex,
                              const QString &indexKey,
                              const Radapter::WorkerSettings &settings) :
-    RedisConnector(host, port, dbIndex, settings),
+    Connector(host, port, dbIndex, settings),
     m_requestedKeysBuffer{},
     m_indexKey(indexKey)
 {
@@ -134,12 +134,12 @@ void CacheConsumer::onMsg(const Radapter::WorkerMsg &msg)
 
 void CacheConsumer::onCommand(const Radapter::WorkerMsg &msg)
 {
-    if (msg.usesScheme<Radapter::RequestJsonCommand>()) {
-        if (msg.receiveWithScheme().toBool()) {
+    if (msg.usesScheme<Radapter::RequestJsonSchema>()) {
+        if (msg.schemeAs<Radapter::RequestJsonSchema>()->isJsonRequested(msg)) {
             requestIndex(m_indexKey, enqueueMsg(msg));
         }
-    } else if (msg.usesScheme<Radapter::RequestKeysScheme>()) {
-        auto requestKeysCommand = msg.receiveWithScheme().toStringList();
+    } else if (msg.usesScheme<Radapter::RequestKeysSchema>()) {
+        auto requestKeysCommand = msg.schemeAs<Radapter::RequestKeysSchema>()->receiveKeys(msg);
         if (!requestKeysCommand.isEmpty()) {
             requestKeys(requestKeysCommand, enqueueMsg(msg));
         }

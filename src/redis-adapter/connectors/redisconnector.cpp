@@ -16,7 +16,7 @@
 
 using namespace Redis;
 
-RedisConnector::RedisConnector(const QString &host,
+Connector::Connector(const QString &host,
                                const quint16 port,
                                const quint16 dbIndex,
                                const Radapter::WorkerSettings &settings)
@@ -37,7 +37,7 @@ RedisConnector::RedisConnector(const QString &host,
 {
 }
 
-RedisConnector::~RedisConnector()
+Connector::~Connector()
 {
     if (m_isConnected) {
         redisAsyncDisconnect(m_redisContext);
@@ -49,7 +49,7 @@ RedisConnector::~RedisConnector()
     }
 }
 
-void RedisConnector::run()
+void Connector::run()
 {
     m_client = new RedisQtAdapter(this);
 
@@ -62,14 +62,14 @@ void RedisConnector::run()
         tryConnect();
     });
     resetConnectionTimeout();
-    connect(this, &RedisConnector::connected, &RedisConnector::resetConnectionTimeout);
-    connect(this, &RedisConnector::connected, &RedisConnector::stopConnectionTimer);
+    connect(this, &Connector::connected, &Connector::resetConnectionTimeout);
+    connect(this, &Connector::connected, &Connector::stopConnectionTimer);
 
     m_reconnectCooldown = new QTimer(this);
     m_reconnectCooldown->setSingleShot(true);
     m_reconnectCooldown->setInterval(RECONNECT_DELAY_MS);
-    m_reconnectCooldown->callOnTimeout(this, &RedisConnector::tryConnect);
-    connect(this, &RedisConnector::disconnected, m_reconnectCooldown, QOverload<>::of(&QTimer::start));
+    m_reconnectCooldown->callOnTimeout(this, &Connector::tryConnect);
+    connect(this, &Connector::disconnected, m_reconnectCooldown, QOverload<>::of(&QTimer::start));
 
     m_pingTimer = new QTimer(this);
     m_pingTimer->setSingleShot(false);
@@ -86,11 +86,11 @@ void RedisConnector::run()
         incrementErrorCounter();
     });
 
-    connect(this, &RedisConnector::connected, &RedisConnector::selectDb);
+    connect(this, &Connector::connected, &Connector::selectDb);
     tryConnect();
 }
 
-void RedisConnector::finishAsyncCommand()
+void Connector::finishAsyncCommand()
 {
     if (!m_commandStack.isEmpty()) {
         m_commandStack.pop();
@@ -101,7 +101,7 @@ void RedisConnector::finishAsyncCommand()
     }
 }
 
-void RedisConnector::tryConnect()
+void Connector::tryConnect()
 {
     if (isConnected()) {
         return;
@@ -126,13 +126,13 @@ void RedisConnector::tryConnect()
     doPing();
 }
 
-void RedisConnector::doPing()
+void Connector::doPing()
 {
     redisAsyncCommand(m_redisContext, pingCallback, this, PING_REQUEST);
     m_commandTimer->start();
 }
 
-void RedisConnector::clearContext()
+void Connector::clearContext()
 {
     if (isValidContext(m_redisContext)) {
         redisAsyncFree(m_redisContext);
@@ -140,17 +140,17 @@ void RedisConnector::clearContext()
     nullifyContext();
 }
 
-void RedisConnector::nullifyContext()
+void Connector::nullifyContext()
 {
     m_redisContext = nullptr;
 }
 
-void RedisConnector::resetConnectionTimeout()
+void Connector::resetConnectionTimeout()
 {
     m_connectionTimer->setInterval(TCP_CONNECT_TIMEOUT_MS);
 }
 
-void RedisConnector::increaseConnectionTimeout()
+void Connector::increaseConnectionTimeout()
 {
     auto timeout = m_connectionTimer->interval() * 2;
     if (timeout > (TCP_CONNECT_TIMEOUT_MS * MAX_TIMEOUT_FACTOR)) {
@@ -159,12 +159,12 @@ void RedisConnector::increaseConnectionTimeout()
     m_connectionTimer->setInterval(timeout);
 }
 
-void RedisConnector::stopConnectionTimer()
+void Connector::stopConnectionTimer()
 {
     m_connectionTimer->stop();
 }
 
-void RedisConnector::incrementErrorCounter()
+void Connector::incrementErrorCounter()
 {
     m_commandTimeoutsCounter++;
     if (m_commandTimeoutsCounter >= MAX_COMMAND_ERRORS) {
@@ -173,17 +173,17 @@ void RedisConnector::incrementErrorCounter()
     }
 }
 
-void RedisConnector::resetErrorCounter()
+void Connector::resetErrorCounter()
 {
     m_commandTimeoutsCounter = 0u;
 }
 
-void RedisConnector::stopCommandTimer()
+void Connector::stopCommandTimer()
 {
     m_commandTimer->stop();
 }
 
-void RedisConnector::selectDb()
+void Connector::selectDb()
 {
     if (!m_canSelect) {
         return;
@@ -192,9 +192,9 @@ void RedisConnector::selectDb()
     runAsyncCommand(selectCallback, selectCommand);
 }
 
-void RedisConnector::pingCallback(redisAsyncContext *context, void *replyPtr, void *sender)
+void Connector::pingCallback(redisAsyncContext *context, void *replyPtr, void *sender)
 {
-    auto adapter = static_cast<RedisConnector *>(sender);
+    auto adapter = static_cast<Connector *>(sender);
     if (adapter) {
         adapter->stopCommandTimer();
     }
@@ -219,7 +219,7 @@ void RedisConnector::pingCallback(redisAsyncContext *context, void *replyPtr, vo
     }
 }
 
-void RedisConnector::selectCallback(redisAsyncContext *context, void *replyPtr, void *sender)
+void Connector::selectCallback(redisAsyncContext *context, void *replyPtr, void *sender)
 {
     if (isNullReply(context, replyPtr, sender)
             || isEmptyReply(context, replyPtr))
@@ -228,13 +228,13 @@ void RedisConnector::selectCallback(redisAsyncContext *context, void *replyPtr, 
     }
     auto reply = static_cast<redisReply *>(replyPtr);
     reDebug() << metaInfo(context).c_str() << "select status:" << toString(reply);
-    auto adapter = static_cast<RedisConnector *>(sender);
+    auto adapter = static_cast<Connector *>(sender);
     adapter->finishAsyncCommand();
 }
 
-void RedisConnector::connectCallback(const redisAsyncContext *context, int status)
+void Connector::connectCallback(const redisAsyncContext *context, int status)
 {
-    auto adapter = static_cast<RedisConnector *>(context->data);
+    auto adapter = static_cast<Connector *>(context->data);
     reDebug() << metaInfo(context).c_str() << "Connected with status" << status;
     if (adapter->isBlocked()) {
         return;
@@ -245,21 +245,21 @@ void RedisConnector::connectCallback(const redisAsyncContext *context, int statu
     }
 }
 
-void RedisConnector::disconnectCallback(const redisAsyncContext *context, int status)
+void Connector::disconnectCallback(const redisAsyncContext *context, int status)
 {
-    auto adapter = static_cast<RedisConnector *>(context->data);
+    auto adapter = static_cast<Connector *>(context->data);
     reDebug() << metaInfo(context).c_str() << "Disconnected with status" << status;
     adapter->setConnected(false);
     // hiredis already freed the context
     adapter->nullifyContext();
 }
 
-bool RedisConnector::isConnected() const
+bool Connector::isConnected() const
 {
     return m_isConnected;
 }
 
-int RedisConnector::runAsyncCommand(const QString &command)
+int Connector::runAsyncCommand(const QString &command)
 {
     if (!isConnected() || !isValidContext(m_redisContext)) {
         return REDIS_ERR;
@@ -268,7 +268,7 @@ int RedisConnector::runAsyncCommand(const QString &command)
     return status;
 }
 
-int RedisConnector::runAsyncCommand(redisCallbackFn *callback, const QString &command, const QVariant &args)
+int Connector::runAsyncCommand(redisCallbackFn *callback, const QString &command, const QVariant &args)
 {
     if (!isConnected() || !isValidContext(m_redisContext)) {
         return REDIS_ERR;
@@ -286,10 +286,10 @@ int RedisConnector::runAsyncCommand(redisCallbackFn *callback, const QString &co
     return status;
 }
 
-bool RedisConnector::isNullReply(redisAsyncContext *context, void *replyPtr, void *sender)
+bool Connector::isNullReply(redisAsyncContext *context, void *replyPtr, void *sender)
 {
     auto reply = static_cast<redisReply *>(replyPtr);
-    auto adapter = static_cast<RedisConnector *>(sender);
+    auto adapter = static_cast<Connector *>(sender);
     if (reply == nullptr || adapter == nullptr) {
         if (context) {
             reDebug() << metaInfo(context).c_str() << "Error: null reply"
@@ -302,7 +302,7 @@ bool RedisConnector::isNullReply(redisAsyncContext *context, void *replyPtr, voi
     return false;
 }
 
-bool RedisConnector::isEmptyReply(redisAsyncContext *context, void *replyPtr)
+bool Connector::isEmptyReply(redisAsyncContext *context, void *replyPtr)
 {
     auto reply = static_cast<redisReply *>(replyPtr);
     if (QString(reply->str).isEmpty()) {
@@ -316,7 +316,7 @@ bool RedisConnector::isEmptyReply(redisAsyncContext *context, void *replyPtr)
     return false;
 }
 
-void RedisConnector::setConnected(bool state)
+void Connector::setConnected(bool state)
 {
     if (m_isConnected != state) {
         m_isConnected = state;
@@ -331,55 +331,55 @@ void RedisConnector::setConnected(bool state)
     }
 }
 
-bool RedisConnector::isBlocked() const
+bool Connector::isBlocked() const
 {
     return m_reconnectCooldown->isActive();
 }
 
-void RedisConnector::enablePingKeepalive()
+void Connector::enablePingKeepalive()
 {
-    m_pingTimer->callOnTimeout(this, &RedisConnector::doPing);
-    connect(this, &RedisConnector::connected, m_pingTimer, QOverload<>::of(&QTimer::start));
-    connect(this, &RedisConnector::disconnected, m_pingTimer, &QTimer::stop);
+    m_pingTimer->callOnTimeout(this, &Connector::doPing);
+    connect(this, &Connector::connected, m_pingTimer, QOverload<>::of(&QTimer::start));
+    connect(this, &Connector::disconnected, m_pingTimer, &QTimer::stop);
 }
 
-void RedisConnector::disablePingKeepalive()
+void Connector::disablePingKeepalive()
 {
     disconnect(m_pingTimer);
     m_pingTimer->disconnect();
 }
 
-void RedisConnector::allowSelectDb()
+void Connector::allowSelectDb()
 {
     m_canSelect = true;
 }
 
-void RedisConnector::blockSelectDb()
+void Connector::blockSelectDb()
 {
     m_canSelect = false;
 }
 
-bool RedisConnector::isValidContext(const redisAsyncContext *context)
+bool Connector::isValidContext(const redisAsyncContext *context)
 {
     return (context != nullptr) && !(context->err);
 }
 
-QString RedisConnector::host() const
+QString Connector::host() const
 {
     return m_host;
 }
 
-quint16 RedisConnector::port() const
+quint16 Connector::port() const
 {
     return m_port;
 }
 
-quint16 RedisConnector::dbIndex() const
+quint16 Connector::dbIndex() const
 {
     return m_dbIndex;
 }
 
-void RedisConnector::setDbIndex(const quint16 dbIndex)
+void Connector::setDbIndex(const quint16 dbIndex)
 {
     if (m_dbIndex != dbIndex) {
         m_dbIndex = dbIndex;
@@ -387,23 +387,23 @@ void RedisConnector::setDbIndex(const quint16 dbIndex)
     }
 }
 
-quint16 RedisConnector::port(const redisAsyncContext *context)
+quint16 Connector::port(const redisAsyncContext *context)
 {
     if (!isValidContext(context)) {
         return 0u;
     }
-    auto adapter = static_cast<RedisConnector *>(context->data);
+    auto adapter = static_cast<Connector *>(context->data);
     auto redisPort = adapter ? adapter->port() : static_cast<quint16>(context->c.tcp.port);
     return redisPort;
 }
 
-std::string RedisConnector::metaInfo(const redisAsyncContext *context, const int connectionPort, const QString &id)
+std::string Connector::metaInfo(const redisAsyncContext *context, const int connectionPort, const QString &id)
 {
     auto serverPort = connectionPort < 0 ? port(context) : connectionPort;
     auto info = QString("[ %1 ]").arg(serverPort);
     auto idString = id;
     if (idString.isEmpty() && isValidContext(context)) {
-        auto adapter = static_cast<RedisConnector *>(context->data);
+        auto adapter = static_cast<Connector *>(context->data);
         if (adapter) {
             idString = adapter->id();
         }
@@ -414,20 +414,20 @@ std::string RedisConnector::metaInfo(const redisAsyncContext *context, const int
     return info.toStdString();
 }
 
-std::string RedisConnector::metaInfo() const
+std::string Connector::metaInfo() const
 {
     auto infoString = metaInfo(m_redisContext, port(), id());
     return infoString;
 }
 
 
-QString RedisConnector::id() const
+QString Connector::id() const
 {
     auto idString = QString(metaObject()->className());
     return idString;
 }
 
-QString RedisConnector::toString(const redisReply *reply)
+QString Connector::toString(const redisReply *reply)
 {
     if (!reply) {
         return QString{};

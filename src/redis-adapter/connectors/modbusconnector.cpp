@@ -4,7 +4,7 @@
 #include "redis-adapter/include/modbuskeys.h"
 #include "radapter-broker/broker.h"
 #include "redis-adapter/radapterlogging.h"
-#include "redis-adapter/radapterschemes.h"
+#include "redis-adapter/radapterschemas.h"
 
 ModbusConnector::ModbusConnector(const Settings::ModbusConnectionSettings &connectionSettings,
                                  const Settings::DeviceRegistersInfoMap &registersInfo,
@@ -33,18 +33,18 @@ int ModbusConnector::init()
 
 void ModbusConnector::writeJsonDone(const Formatters::Dict &jsonDict)
 {
-    emit sendMsg(prepareScheme<Radapter::AcknowledgeScheme>(jsonDict));
+    emit sendMsg(prepareCommand<Radapter::AcknowledgeSchema>(jsonDict));
 }
 
 void ModbusConnector::jsonItemWritten(const Formatters::Dict &modbusJsonUnit)
 {
     Q_UNUSED(modbusJsonUnit);
-    emit sendMsgWithDirection(prepareScheme<Radapter::RequestJsonCommand>(true), MsgToProducers);
+    emit sendMsgWithDirection(prepareCommand<Radapter::RequestJsonSchema>(true), MsgToProducers);
 }
 
 void ModbusConnector::allDevicesConnected()
 {
-    emit sendMsgWithDirection(prepareScheme<Radapter::RequestJsonCommand>(true), MsgToProducers);
+    emit sendMsgWithDirection(prepareCommand<Radapter::RequestJsonSchema>(true), MsgToProducers);
 }
 
 ModbusConnector &ModbusConnector::prvInstance(const Settings::ModbusConnectionSettings &connectionSettings,
@@ -148,15 +148,18 @@ void ModbusConnector::onMsg(const Radapter::WorkerMsg &msg)
 
 void ModbusConnector::approvalRequested(const Formatters::List &jsonKeys)
 {
-    auto command = prepareScheme<Radapter::RequestKeysScheme>(jsonKeys);
+    auto command = prepareCommand<Radapter::RequestKeysSchema>(jsonKeys);
     enqueueMsg(command);
     emit sendMsgWithDirection(command, MsgToProducers);
 }
 
 void ModbusConnector::onReply(const Radapter::WorkerMsg &msg)
 {
-    if (dequeueMsg(msg.id()).brokerFlags != Radapter::WorkerMsg::BrokerBadMsg) {
-        onApprovalReceived(msg.data());
+    if (dequeueMsg(msg.id()).brokerFlags != Radapter::WorkerMsg::BrokerBadMsg &&
+        msg.usesScheme<Radapter::AcknowledgeSchema>()) {
+        onApprovalReceived(msg.schemeAs<Radapter::AcknowledgeSchema>()->receiveAckJson(msg).data());
+    } else {
+        reDebug() << "ModbusConnector received reply with non 'AcknowledgeScheme'";
     }
 }
 

@@ -10,12 +10,12 @@
 
 using namespace Redis;
 
-RedisStreamProducer::RedisStreamProducer(const QString &host,
+StreamProducer::StreamProducer(const QString &host,
                                          const quint16 port,
                                          const QString &streamKey,
                                          const Radapter::WorkerSettings &settings,
                                          const qint32 streamSize)
-    : RedisConnector(host, port, 0u, settings),
+    : Connector(host, port, 0u, settings),
       m_trimTimer(nullptr),
       m_addCounter{},
       m_streamKey(streamKey)
@@ -23,7 +23,7 @@ RedisStreamProducer::RedisStreamProducer(const QString &host,
     m_streamSize = streamSize > 0 ? static_cast<quint32>(streamSize) : DEFAULT_STREAM_SIZE;
 }
 
-RedisStreamProducer::~RedisStreamProducer()
+StreamProducer::~StreamProducer()
 {
     if (m_trimTimer) {
         m_trimTimer->stop();
@@ -31,27 +31,27 @@ RedisStreamProducer::~RedisStreamProducer()
     }
 }
 
-QString RedisStreamProducer::streamKey() const
+QString StreamProducer::streamKey() const
 {
     return m_streamKey;
 }
 
-quint32 RedisStreamProducer::streamSize() const
+quint32 StreamProducer::streamSize() const
 {
     return m_streamSize;
 }
 
-void RedisStreamProducer::run()
+void StreamProducer::run()
 {
-    RedisConnector::run();
+    Connector::run();
     m_trimTimer = new QTimer(this);
     m_trimTimer->setInterval(TRIM_TIMEOUT_MS);
     m_trimTimer->setSingleShot(false);
-    m_trimTimer->callOnTimeout(this, &RedisStreamProducer::tryTrim);
+    m_trimTimer->callOnTimeout(this, &StreamProducer::tryTrim);
     m_trimTimer->start();
 }
 
-void RedisStreamProducer::onMsg(const Radapter::WorkerMsg &msg)
+void StreamProducer::onMsg(const Radapter::WorkerMsg &msg)
 {
     if (msg.isEmpty()) {
         return;
@@ -68,7 +68,7 @@ void RedisStreamProducer::onMsg(const Radapter::WorkerMsg &msg)
     }
 }
 
-void RedisStreamProducer::tryTrim()
+void StreamProducer::tryTrim()
 {
     if (m_addCounter >= ADDS_COUNT_TO_TRIM) {
         auto command = RedisQueryFormatter(Formatters::Dict{}).toTrimCommand(m_streamKey, streamSize());
@@ -80,7 +80,7 @@ void RedisStreamProducer::tryTrim()
     }
 }
 
-void RedisStreamProducer::writeCallback(redisAsyncContext *context, void *replyPtr, void *args)
+void StreamProducer::writeCallback(redisAsyncContext *context, void *replyPtr, void *args)
 {
     auto cbArgs = static_cast<CallbackArgs*>(args);
     if (isNullReply(context, replyPtr, cbArgs->sender)
@@ -90,31 +90,31 @@ void RedisStreamProducer::writeCallback(redisAsyncContext *context, void *replyP
     }
     auto reply = static_cast<redisReply *>(replyPtr);
     reDebug() << metaInfo(context).c_str() << "Entry added:" << reply->str;
-    auto adapter = static_cast<RedisStreamProducer *>(cbArgs->sender);
+    auto adapter = static_cast<StreamProducer *>(cbArgs->sender);
     adapter->writeDone(reply->str, cbArgs->args.toULongLong());
     adapter->finishAsyncCommand();
     delete cbArgs;
 }
 
-void RedisStreamProducer::writeDone(const QString &newEntryId, quint64 msgId)
+void StreamProducer::writeDone(const QString &newEntryId, quint64 msgId)
 {
     auto reply = prepareReply(dequeueMsg(msgId));
     reply["data"] = newEntryId;
     emit sendMsg(reply);
 }
 
-void RedisStreamProducer::trimCallback(redisAsyncContext *context, void *replyPtr, void *sender)
+void StreamProducer::trimCallback(redisAsyncContext *context, void *replyPtr, void *sender)
 {
     if (isNullReply(context, replyPtr, sender)) {
         return;
     }
     auto reply = static_cast<redisReply *>(replyPtr);
     reDebug() << metaInfo(context).c_str() << "Entries trimmed:" << reply->integer;
-    auto adapter = static_cast<RedisStreamProducer *>(sender);
+    auto adapter = static_cast<StreamProducer *>(sender);
     adapter->finishAsyncCommand();
 }
 
-QString RedisStreamProducer::id() const
+QString StreamProducer::id() const
 {
     auto idString = QString("%1 | %2").arg(metaObject()->className(), streamKey());
     return idString;

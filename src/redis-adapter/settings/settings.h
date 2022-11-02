@@ -80,6 +80,7 @@ namespace Settings {
         IS_SERIALIZABLE
         SERIAL_FIELD(QString, name)
         SERIAL_FIELD(QString, ip)
+        SERIAL_FIELD(bool, debug, false)
         SERIAL_FIELD(quint16, port)
         SERIAL_FIELD(QString, database)
         SERIAL_FIELD(QString, username)
@@ -194,6 +195,7 @@ namespace Settings {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_FIELD(quint16, port)
+        SERIAL_FIELD(bool, debug, false)
         SERIAL_CONTAINER(QList, QString, producers)
         SERIAL_CONTAINER(QList, QString, consumers)
 
@@ -215,6 +217,7 @@ namespace Settings {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_FIELD(QString, name)
+        SERIAL_FIELD(bool, debug, false)
         SERIAL_CONTAINER(QList, QString, producers)
         SERIAL_CONTAINER(QList, QString, consumers)
     };

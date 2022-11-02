@@ -7,19 +7,19 @@
 #include "redis-adapter/connectors/redisconnector.h"
 
 namespace Redis {
-class RADAPTER_SHARED_SRC RedisStreamProducer;
+class RADAPTER_SHARED_SRC StreamProducer;
 }
 
-class Redis::RedisStreamProducer : public RedisConnector
+class Redis::StreamProducer : public Connector
 {
     Q_OBJECT
 public:
-    explicit RedisStreamProducer(const QString &host,
+    explicit StreamProducer(const QString &host,
                                  const quint16 port,
                                  const QString &streamKey,
                                  const Radapter::WorkerSettings &settings,
                                  const qint32 streamSize = 0u);
-    ~RedisStreamProducer() override;
+    ~StreamProducer() override;
 
     QString streamKey() const;
     quint32 streamSize() const;

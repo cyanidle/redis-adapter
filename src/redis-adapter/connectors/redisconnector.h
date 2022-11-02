@@ -8,23 +8,23 @@
 #include "radapter-broker/workerbase.h"
 
 namespace Redis{
-class RADAPTER_SHARED_SRC RedisConnector;
+class RADAPTER_SHARED_SRC Connector;
 }
 
-class Redis::RedisConnector : public Radapter::WorkerBase
+class Redis::Connector : public Radapter::WorkerBase
 {
     Q_OBJECT
 public:
     struct CallbackArgs {
-        RedisConnector* sender;
+        Connector* sender;
         QVariant args;
     };
 
-    explicit RedisConnector(const QString &host,
+    explicit Connector(const QString &host,
                             const quint16 port,
                             const quint16 dbIndex,
                             const Radapter::WorkerSettings &settings);
-    ~RedisConnector() override;
+    ~Connector() override;
     QString host() const;
     quint16 port() const;
     quint16 dbIndex() const;

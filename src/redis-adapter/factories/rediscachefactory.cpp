@@ -25,6 +25,7 @@ int CacheFactory::initWorkers()
         settings.name = cacheInfo.name;
         settings.producers = cacheInfo.producers;
         settings.consumers = cacheInfo.consumers;
+        settings.isDebug = cacheInfo.debug;
         if (cacheInfo.mode == Settings::RedisCache::Producer) {
             auto worker = new CacheProducer(cacheInfo.target_server.server_host,
                                             cacheInfo.target_server.server_port,

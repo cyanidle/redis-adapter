@@ -101,7 +101,8 @@ int Launcher::prvInit()
     auto mbWorkerSettings = WorkerSettings{"modbus",
                                             new QThread(this),
                                             modbusConnSettings.consumers,
-                                            modbusConnSettings.producers};
+                                            modbusConnSettings.producers,
+                                            modbusConnSettings.debug};
     ModbusConnector::init(modbusConnSettings,
                           mbRegisters,
                           mbWorkerSettings);

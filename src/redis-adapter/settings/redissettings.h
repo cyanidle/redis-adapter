@@ -32,6 +32,7 @@ namespace Settings {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_FIELD(QString, name)
+        SERIAL_FIELD(bool, debug, false)
         SERIAL_FIELD(QString, source_server_name)
         RedisServer source_server;
         SERIAL_CONTAINER(QList, QString, keyEvents)
@@ -81,6 +82,7 @@ namespace Settings {
         SERIAL_FIELD(QString, name)
         SERIAL_CUSTOM(RedisStreamMode, mode, initMode, readMode)
         SERIAL_FIELD(QString, target_server)
+        SERIAL_FIELD(bool, debug, false)
         RedisServer target;
         SERIAL_FIELD(QString, source_server)
         RedisServer source;
@@ -195,6 +197,7 @@ namespace Settings {
         RedisServer target_server;
         SERIAL_FIELD(quint16, db_index)
         SERIAL_FIELD(QString, index_key)
+        SERIAL_FIELD(bool, debug, false)
         SERIAL_CONTAINER(QList, QString, producers)
         SERIAL_CONTAINER(QList, QString, consumers)
         SERIAL_CUSTOM(Mode, mode, initMode, readMode)

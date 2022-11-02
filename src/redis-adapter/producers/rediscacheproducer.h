@@ -10,7 +10,7 @@ namespace Redis {
 class RADAPTER_SHARED_SRC CacheProducer;
 }
 
-class Redis::CacheProducer : public RedisConnector
+class Redis::CacheProducer : public Connector
 {
     Q_OBJECT
 public:
@@ -23,7 +23,6 @@ signals:
 
 public slots:
     void onMsg(const Radapter::WorkerMsg &msg) override;
-    void onCommand(const Radapter::WorkerMsg &msg) override;
 
 private:
     // Commands
