@@ -111,7 +111,7 @@ int Launcher::prvInit()
     if (modbusConnSettings.filters.isEmpty()) {
         mbProxy = ModbusConnector::instance()->createProxy();
     } else {
-        auto filter = new DeltaFilter(modbusConnSettings.filters);
+        auto filter = new ProducerFilter(modbusConnSettings.filters);
         mbProxy = ModbusConnector::instance()->createProxy({filter});
     }
     Radapter::Broker::instance()->registerProxy(mbProxy);

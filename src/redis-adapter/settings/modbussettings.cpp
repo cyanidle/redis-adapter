@@ -5,7 +5,8 @@ using namespace Settings;
 RegisterInfo::tableMap RegisterInfo::StringToTable = tableMap{
         {"holding",QModbusDataUnit::RegisterType::HoldingRegisters},
         {"input",QModbusDataUnit::RegisterType::InputRegisters},
-        {"coils",QModbusDataUnit::RegisterType::Coils}
+        {"coils",QModbusDataUnit::RegisterType::Coils},
+        {"discrete_inputs",QModbusDataUnit::RegisterType::DiscreteInputs}
         };
 RegisterInfo::typeMap RegisterInfo::StringToType = typeMap{
         {"uint16", QMetaType::UShort},

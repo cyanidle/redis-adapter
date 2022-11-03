@@ -8,7 +8,7 @@
 #include "redis-adapter/settings/settings.h"
 #include "redis-adapter/connectors/redisconnector.h"
 
-class RADAPTER_SHARED_SRC DeltaFilter : public Radapter::InterceptorBase
+class RADAPTER_SHARED_SRC ProducerFilter : public Radapter::InterceptorBase
 {
     Q_OBJECT
 public:
@@ -16,7 +16,7 @@ public:
         StrategyStrict = 0,
         StrategyByWildcard = 1
     };
-    explicit DeltaFilter(const Settings::Filters::Table &filters);
+    explicit ProducerFilter(const Settings::Filters::Table &filters);
 
 signals:
     void requestCacheRead();

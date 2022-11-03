@@ -86,7 +86,9 @@ namespace Settings {
                 return "input";
             } else if (type == QModbusDataUnit::RegisterType::Coils) {
                 return "coils";
-            }  else {
+            } else if (type == QModbusDataUnit::RegisterType::DiscreteInputs) {
+                return "discrete_inputs";
+            } else {
                 return QVariant();
             }
         }
@@ -292,6 +294,10 @@ namespace Settings {
         SERIAL_FIELD(bool, is_persistent)
 
         SERIAL_IGNORE_FIELDS_ERRORS(type, endianess, is_persistent)
+
+        bool isValid() const {
+            return table != QModbusDataUnit::Invalid;
+        }
 
         bool initType(const QVariant &src) {
             type = StringToType.value(src.toString());

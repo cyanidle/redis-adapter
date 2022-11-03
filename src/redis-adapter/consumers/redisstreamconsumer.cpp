@@ -314,7 +314,7 @@ void StreamConsumer::setPending(bool state)
 
 void StreamConsumer::onCommand(const Radapter::WorkerMsg &msg)
 {
-    if (msg.usesScheme<Radapter::RequestJsonSchema>()) {
+    if (msg.usesSchema<Radapter::RequestJsonSchema>()) {
         if (m_groupName.isEmpty()) {
             readGroupImpl(enqueueMsg(msg));
         } else {
@@ -327,7 +327,7 @@ void StreamConsumer::onCommand(const Radapter::WorkerMsg &msg)
 
 void StreamConsumer::onReply(const Radapter::WorkerMsg &msg)
 {
-    if (msg.sender == this) {
+    if (msg.sender() == this) {
         auto json = msg;
         json.setData(json.first().toMap());
         emit sendMsg(prepareMsg(json.flatten(":"), MsgToConsumers));

@@ -129,17 +129,17 @@ Formatters::Dict CacheConsumer::mergeWithKeys(const Formatters::List &entries)
 
 void CacheConsumer::onMsg(const Radapter::WorkerMsg &msg)
 {
-    reDebug() << "CacheConsumer (" << workerName() << "): received generic msg from: " << msg.sender;
+    reDebug() << "CacheConsumer (" << workerName() << "): received generic msg from: " << msg.sender();
 }
 
 void CacheConsumer::onCommand(const Radapter::WorkerMsg &msg)
 {
-    if (msg.usesScheme<Radapter::RequestJsonSchema>()) {
-        if (msg.schemeAs<Radapter::RequestJsonSchema>()->isJsonRequested(msg)) {
+    if (msg.usesSchema<Radapter::RequestJsonSchema>()) {
+        if (msg.schemaAs<Radapter::RequestJsonSchema>()->isJsonRequested(msg)) {
             requestIndex(m_indexKey, enqueueMsg(msg));
         }
-    } else if (msg.usesScheme<Radapter::RequestKeysSchema>()) {
-        auto requestKeysCommand = msg.schemeAs<Radapter::RequestKeysSchema>()->receiveKeys(msg);
+    } else if (msg.usesSchema<Radapter::RequestKeysSchema>()) {
+        auto requestKeysCommand = msg.schemaAs<Radapter::RequestKeysSchema>()->receiveKeys(msg);
         if (!requestKeysCommand.isEmpty()) {
             requestKeys(requestKeysCommand, enqueueMsg(msg));
         }

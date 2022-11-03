@@ -1,6 +1,6 @@
 #include "producerfilter.h"
 
-DeltaFilter::DeltaFilter(const Settings::Filters::Table &filters)
+ProducerFilter::ProducerFilter(const Settings::Filters::Table &filters)
     : InterceptorBase(),
       m_strategy(StrategyStrict),
       m_filters(filters),
@@ -21,7 +21,7 @@ DeltaFilter::DeltaFilter(const Settings::Filters::Table &filters)
     }
 }
 
-void DeltaFilter::onMsgFromWorker(const Radapter::WorkerMsg &msg)
+void ProducerFilter::onMsgFromWorker(const Radapter::WorkerMsg &msg)
 {
     if (msg.brokerFlags == Radapter::WorkerMsg::BrokerBadMsg ||
         msg.workerFlags == Radapter::WorkerMsg::WorkerInternalCommand ||
@@ -36,7 +36,7 @@ void DeltaFilter::onMsgFromWorker(const Radapter::WorkerMsg &msg)
     m_last.merge(msg);
 }
 
-void DeltaFilter::filterStrictByName(const Radapter::WorkerMsg &srcMsg)
+void ProducerFilter::filterStrictByName(const Radapter::WorkerMsg &srcMsg)
 {
     if (m_last.isEmpty()) {
         emit msgToBroker(srcMsg);
@@ -49,7 +49,7 @@ void DeltaFilter::filterStrictByName(const Radapter::WorkerMsg &srcMsg)
         if (!(currentValue.canConvert<double>() &&
               lastValue.canConvert<double>() &&
               m_filters.contains(currentKey))) {
-            reDebug() << "Cannot filter msg from: " << srcMsg.sender;
+            reDebug() << "Cannot filter msg from: " << srcMsg.sender()->objectName();
             reDebug() << "currentValue.canConvert<double>() = " << currentValue.canConvert<double>();\
             reDebug() << "lastValue.canConvert<double>() = " << lastValue.canConvert<double>();
             reDebug() << "m_filters.contains(currentKey)) = " << m_filters.contains(currentKey);
@@ -66,7 +66,7 @@ void DeltaFilter::filterStrictByName(const Radapter::WorkerMsg &srcMsg)
     }
 }
 
-void DeltaFilter::addFiltersByWildcard(const Formatters::Dict &cachedJson)
+void ProducerFilter::addFiltersByWildcard(const Formatters::Dict &cachedJson)
 {
     auto cachedKeys = cachedJson.flatten(":").keys();
     for (auto &key : cachedKeys) {

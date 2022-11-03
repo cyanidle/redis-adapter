@@ -6,6 +6,8 @@
 #include "redis-adapter/radapterlogging.h"
 #include "redis-adapter/radapterschemas.h"
 
+using namespace Radapter;
+
 ModbusConnector::ModbusConnector(const Settings::ModbusConnectionSettings &connectionSettings,
                                  const Settings::DeviceRegistersInfoMap &registersInfo,
                                  const Radapter::WorkerSettings &settings)
@@ -148,18 +150,16 @@ void ModbusConnector::onMsg(const Radapter::WorkerMsg &msg)
 
 void ModbusConnector::approvalRequested(const Formatters::List &jsonKeys)
 {
-    auto command = prepareCommand<Radapter::RequestKeysSchema>(jsonKeys);
-    enqueueMsg(command);
+    auto command = prepareCommand<RequestKeysSchema>(jsonKeys);
     emit sendMsgWithDirection(command, MsgToProducers);
 }
 
 void ModbusConnector::onReply(const Radapter::WorkerMsg &msg)
 {
-    if (dequeueMsg(msg.id()).brokerFlags != Radapter::WorkerMsg::BrokerBadMsg &&
-        msg.usesScheme<Radapter::AcknowledgeSchema>()) {
-        onApprovalReceived(msg.schemeAs<Radapter::AcknowledgeSchema>()->receiveAckJson(msg).data());
+    if (msg.usesSchema<AcknowledgeSchema>()) {
+        onApprovalReceived(msg.schemaAs<AcknowledgeSchema>()->receiveAckJson(msg).data());
     } else {
-        reDebug() << "ModbusConnector received reply with non 'AcknowledgeScheme'";
+        reDebug() << "ModbusConnector received reply with non 'AcknowledgeSchema'";
     }
 }
 

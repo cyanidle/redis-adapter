@@ -75,6 +75,9 @@ void ModbusDevicesGate::initDevicesRegAddressMap()
              deviceReg++)
         {
             addressNames[deviceReg.value().table][deviceReg.value().index] = FullRegisterName{device.key(), deviceReg.key()};
+            if (!deviceReg.value().isValid()) {
+
+            }
         }
     }
 }
@@ -158,8 +161,11 @@ void ModbusDevicesGate::writeJsonToModbusDevice(const QVariant &jsonData, bool *
     }
 }
 
-void ModbusDevicesGate::receiveDeviceWriteResult(const QStringList &deviceNames, const quint8 deviceId,
- const QModbusDataUnit::RegisterType tableType, const quint16 startAddress, bool hasSucceeded)
+void ModbusDevicesGate::receiveDeviceWriteResult(const QStringList &deviceNames,
+                                                 const quint8 deviceId,
+                                                 const QModbusDataUnit::RegisterType tableType,
+                                                 const quint16 startAddress,
+                                                 bool hasSucceeded)
 {
     auto writeRequest = dequeueWriteRequest(deviceNames, deviceId, tableType, startAddress);
     if (writeRequest.isValid()) {
