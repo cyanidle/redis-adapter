@@ -2,7 +2,7 @@
 #define REDISKEYEVENTFORMATTER_H
 
 #include <QObject>
-#include "json-formatters/formatters/list.h"
+#include "JsonFormatters"
 
 class RedisKeyEventFormatter : public QObject
 {

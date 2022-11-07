@@ -26,13 +26,11 @@ namespace Settings {
         }
     };
 
-    struct RADAPTER_SHARED_SRC RedisSubscriber : Serializer::SerializerBase{
+    struct RADAPTER_SHARED_SRC RedisSubscriber : WorkerSettings {
         typedef QMap<QString, RedisSubscriber> Map;
         static Map cacheMap;
         Q_GADGET
         IS_SERIALIZABLE
-        SERIAL_FIELD(QString, name)
-        SERIAL_FIELD(bool, debug, false)
         SERIAL_FIELD(QString, source_server_name)
         RedisServer source_server;
         SERIAL_CONTAINER(QList, QString, keyEvents)
@@ -74,28 +72,20 @@ namespace Settings {
         RedisStartFromLastUnread
      };
 
-    struct RADAPTER_SHARED_SRC RedisStream : Serializer::SerializerBase{
+    struct RADAPTER_SHARED_SRC RedisStream : WorkerSettings {
         typedef QMap<QString, RedisStream> Map;
         static Map cacheMap;
         Q_GADGET
         IS_SERIALIZABLE
-        SERIAL_FIELD(QString, name)
         SERIAL_CUSTOM(RedisStreamMode, mode, initMode, readMode)
-        SERIAL_FIELD(QString, target_server)
-        SERIAL_FIELD(bool, debug, false)
+        SERIAL_FIELD(QString, target_server, QString())
         RedisServer target;
-        SERIAL_FIELD(QString, source_server)
+        SERIAL_FIELD(QString, source_server, QString())
         RedisServer source;
         SERIAL_FIELD(QString, stream_key)
-        SERIAL_FIELD(qint32, stream_size)
-        SERIAL_FIELD(QString, consumer_group_name)
+        SERIAL_FIELD(qint32, stream_size, 10000)
+        SERIAL_FIELD(QString, consumer_group_name, "")
         SERIAL_CUSTOM(RedisConsumerStartMode, start_from, initStartMode, readStartMode)
-
-        SERIAL_IGNORE_FIELDS_ERRORS(target_server,
-                                    source_server,
-                                    consumer_group_name,
-                                    stream_size,
-                                    start_from)
         SERIAL_POST_INIT(postInit)
         void postInit() {
             if (!target_server.isEmpty()) {
@@ -181,7 +171,7 @@ namespace Settings {
             return !(*this == src);
         }
     };
-    struct RADAPTER_SHARED_SRC RedisCache : Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC RedisCache : WorkerSettings {
         typedef QMap<QString, RedisCache> Map;
         static Map cacheMap;
         enum Mode {
@@ -189,20 +179,13 @@ namespace Settings {
             Consumer,
             Producer
         };
-
         Q_GADGET
         IS_SERIALIZABLE
-        SERIAL_FIELD(QString, name)
         SERIAL_FIELD(QString, target_server_name)
         RedisServer target_server;
         SERIAL_FIELD(quint16, db_index)
         SERIAL_FIELD(QString, index_key)
-        SERIAL_FIELD(bool, debug, false)
-        SERIAL_CONTAINER(QList, QString, producers)
-        SERIAL_CONTAINER(QList, QString, consumers)
         SERIAL_CUSTOM(Mode, mode, initMode, readMode)
-
-        SERIAL_IGNORE_FIELDS_ERRORS(producers, consumers, db_index)
         SERIAL_POST_INIT(postInit)
 
         static inline QList<RedisCache> getCaches(const QVariant &src) {

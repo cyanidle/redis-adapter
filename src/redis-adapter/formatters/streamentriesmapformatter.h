@@ -2,8 +2,7 @@
 #define STREAMENTRIESMAPFORMATTER_H
 
 #include <QObject>
-#include "json-formatters/formatters/dict.h"
-#include "json-formatters/formatters/list.h"
+#include "JsonFormatters"
 
 class StreamEntriesMapFormatter : public QObject
 {

@@ -3,7 +3,7 @@
 
 #include <QObject>
 #include "redis-adapter/connectors/redisconnector.h"
-#include "json-formatters/formatters/list.h"
+#include "JsonFormatters"
 #include <QQueue>
 
 namespace Redis{

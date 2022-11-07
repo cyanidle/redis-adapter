@@ -2,8 +2,7 @@
 #define REDISQUERYFORMATTER_H
 
 #include <QObject>
-#include "json-formatters/formatters/dict.h"
-#include "json-formatters/formatters/list.h"
+#include "JsonFormatters"
 
 class RADAPTER_SHARED_SRC RedisQueryFormatter : public QObject
 {

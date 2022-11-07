@@ -15,6 +15,36 @@
 
 namespace Settings {
 
+    struct RADAPTER_SHARED_SRC WorkerSettings : public Serializer::SerializerBase {
+        Q_GADGET
+        IS_SERIALIZABLE
+        SERIAL_FIELD(QString, name, "None");
+        SERIAL_FIELD(bool, debug, false)
+        SERIAL_CONTAINER(QList, QString, producers, QStringList())
+        SERIAL_CONTAINER(QList, QString, consumers, QStringList())
+    };
+
+    struct RADAPTER_SHARED_SRC MockWorkerSettings : public WorkerSettings {
+        Q_GADGET
+        IS_SERIALIZABLE
+        SERIAL_FIELD(quint32, mock_timer_delay)
+        SERIAL_FIELD(QString, json_file_path)
+    };
+
+    struct RADAPTER_SHARED_SRC UseMockSetting : public Serializer::SerializerBase {
+        Q_GADGET
+        IS_SERIALIZABLE
+        SERIAL_FIELD(bool, use, false)
+        SERIAL_FIELD(QString, filepath, "")
+    };
+
+    struct RADAPTER_SHARED_SRC RecordOutgoingSetting : public Serializer::SerializerBase {
+        Q_GADGET
+        IS_SERIALIZABLE
+        SERIAL_FIELD(bool, use, false)
+        SERIAL_FIELD(QString, filepath, "")
+    };
+
     struct RADAPTER_SHARED_SRC ServerInfo : public Serializer::SerializerBase {
         Q_GADGET
         IS_SERIALIZABLE
@@ -213,13 +243,11 @@ namespace Settings {
         }
     };
 
-    struct RADAPTER_SHARED_SRC WebsockerClientInfo : ServerInfo {
+    struct RADAPTER_SHARED_SRC WebsockerClientInfo : WorkerSettings {
         Q_GADGET
         IS_SERIALIZABLE
-        SERIAL_FIELD(QString, name)
-        SERIAL_FIELD(bool, debug, false)
-        SERIAL_CONTAINER(QList, QString, producers)
-        SERIAL_CONTAINER(QList, QString, consumers)
+        SERIAL_FIELD(QString, server_host, "localhost");
+        SERIAL_FIELD(quint16, server_port, 0);
     };
 }
 

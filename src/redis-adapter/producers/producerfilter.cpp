@@ -49,11 +49,6 @@ void ProducerFilter::filterStrictByName(const Radapter::WorkerMsg &srcMsg)
         if (!(currentValue.canConvert<double>() &&
               lastValue.canConvert<double>() &&
               m_filters.contains(currentKey))) {
-            reDebug() << "Cannot filter msg from: " << srcMsg.sender()->objectName();
-            reDebug() << "currentValue.canConvert<double>() = " << currentValue.canConvert<double>();\
-            reDebug() << "lastValue.canConvert<double>() = " << lastValue.canConvert<double>();
-            reDebug() << "m_filters.contains(currentKey)) = " << m_filters.contains(currentKey);
-            reDebug() << "currentKey = " << currentKey;
             emit msgToBroker(srcMsg);
             return;
         }

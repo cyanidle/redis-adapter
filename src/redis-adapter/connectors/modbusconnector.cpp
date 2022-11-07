@@ -41,12 +41,12 @@ void ModbusConnector::writeJsonDone(const Formatters::Dict &jsonDict)
 void ModbusConnector::jsonItemWritten(const Formatters::Dict &modbusJsonUnit)
 {
     Q_UNUSED(modbusJsonUnit);
-    emit sendMsgWithDirection(prepareCommand<Radapter::RequestJsonSchema>(true), MsgToProducers);
+    emit sendMsgWithDirection(prepareCommand<Radapter::RequestJsonSchema>(true), DirectionToProducers);
 }
 
 void ModbusConnector::allDevicesConnected()
 {
-    emit sendMsgWithDirection(prepareCommand<Radapter::RequestJsonSchema>(true), MsgToProducers);
+    emit sendMsgWithDirection(prepareCommand<Radapter::RequestJsonSchema>(true), DirectionToProducers);
 }
 
 ModbusConnector &ModbusConnector::prvInstance(const Settings::ModbusConnectionSettings &connectionSettings,
@@ -151,7 +151,7 @@ void ModbusConnector::onMsg(const Radapter::WorkerMsg &msg)
 void ModbusConnector::approvalRequested(const Formatters::List &jsonKeys)
 {
     auto command = prepareCommand<RequestKeysSchema>(jsonKeys);
-    emit sendMsgWithDirection(command, MsgToProducers);
+    emit sendMsgWithDirection(command, DirectionToProducers);
 }
 
 void ModbusConnector::onReply(const Radapter::WorkerMsg &msg)

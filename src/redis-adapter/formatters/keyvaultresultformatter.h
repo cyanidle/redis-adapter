@@ -2,7 +2,7 @@
 #define KEYVAULTRESULTFORMATTER_H
 
 #include <QObject>
-#include "json-formatters/formatters/list.h"
+#include "JsonFormatters"
 
 class RADAPTER_SHARED_SRC KeyVaultResultFormatter : public QObject
 {

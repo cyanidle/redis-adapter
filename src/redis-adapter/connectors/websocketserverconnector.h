@@ -3,7 +3,7 @@
 
 #include <QObject>
 #include <QThread>
-#include "json-formatters/formatters/dict.h"
+#include "JsonFormatters"
 #include "lib/websocket/websocketserver.h"
 #include "radapter-broker/singletonbase.h"
 #include "redis-adapter/settings/settings.h"

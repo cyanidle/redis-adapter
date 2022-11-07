@@ -330,6 +330,6 @@ void StreamConsumer::onReply(const Radapter::WorkerMsg &msg)
     if (msg.sender() == this) {
         auto json = msg;
         json.setData(json.first().toMap());
-        emit sendMsg(prepareMsg(json.flatten(":"), MsgToConsumers));
+        emit sendMsg(prepareMsg(json.flatten(":"), DirectionToConsumers));
     }
 }

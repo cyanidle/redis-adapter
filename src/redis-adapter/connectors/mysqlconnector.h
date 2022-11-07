@@ -2,7 +2,7 @@
 #define MYSQLCONNECTOR_H
 
 #include <QObject>
-#include "json-formatters/formatters/list.h"
+#include "JsonFormatters"
 #include "lib/mysql/mysqlclient.h"
 
 class RADAPTER_SHARED_SRC MySqlConnector : public QObject

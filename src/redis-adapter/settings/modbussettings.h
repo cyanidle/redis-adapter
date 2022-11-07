@@ -2,7 +2,7 @@
 #define MODBUSSETTINGS_H
 
 #include "settings.h"
-#include "json-formatters/formatters/jsondict.h"
+#include "JsonFormatters"
 
 namespace Settings {
 
@@ -17,8 +17,6 @@ namespace Settings {
         SERIAL_FIELD(int, baud)
         SERIAL_FIELD(int, data_bits)
         SERIAL_FIELD(int, stop_bits)
-
-        SERIAL_IGNORE_FIELDS_ERRORS(parity, baud, data_bits, stop_bits)
         SERIAL_POST_INIT(cache)
         void cache() {
             cacheMap.insert(name, *this);
@@ -61,9 +59,8 @@ namespace Settings {
         SERIAL_CUSTOM(QModbusDataUnit::RegisterType, type, initType, readType)
         SERIAL_FIELD(quint16, reg_index)
         SERIAL_FIELD(quint8, reg_count)
-        SERIAL_FIELD(quint16, poll_rate)
+        SERIAL_FIELD(quint16, poll_rate, 0)
 
-        SERIAL_IGNORE_FIELDS_ERRORS(poll_rate)
         bool initType (const QVariant &src) {
             auto strRep = src.toString().toLower();
             if (strRep == "holding") {
@@ -75,7 +72,8 @@ namespace Settings {
             } else if (strRep == "discrete_inputs") {
                 type = QModbusDataUnit::RegisterType::DiscreteInputs;
             } else {
-                return false;
+                auto errorMsg = QString("Incorrect RegisterType: ") + src.toString();
+                throw std::runtime_error(errorMsg.toStdString());
             }
             return true;
         }
@@ -196,11 +194,8 @@ namespace Settings {
         IS_SERIALIZABLE
         SERIAL_FIELD(QString, name)
         SERIAL_CUSTOM(ModbusChannelType, type, initChannelType, readChannelType)
-        SERIAL_FIELD(quint8, slave_address)
-        SERIAL_CONTAINER_NEST(QList, ModbusSlaveInfo, slaves)
-
-        SERIAL_IGNORE_FIELDS_ERRORS(slave_address)
-
+        SERIAL_FIELD(quint8, slave_address, 0)
+        SERIAL_CONTAINER_NEST(QList, ModbusSlaveInfo, slaves, {})
         bool initChannelType(const QVariant &src) {
             auto rawType = src.toString();
             if (rawType == "slave") {
@@ -240,7 +235,8 @@ namespace Settings {
             } else if (name.toLower() == "bigendian") {
                 return QDataStream::BigEndian;
             } else {
-                return QDataStream::BigEndian;
+                auto msg = QString("Error endianess passed: ") + name;
+                throw std::runtime_error(msg.toStdString());
             }
         }
         static QString read_order(QDataStream::ByteOrder order) {
@@ -291,9 +287,7 @@ namespace Settings {
         SERIAL_FIELD(quint16, index)
         SERIAL_CUSTOM(QMetaType::Type, type, initType, readType)
         SERIAL_NEST(PackingMode, endianess)
-        SERIAL_FIELD(bool, is_persistent)
-
-        SERIAL_IGNORE_FIELDS_ERRORS(type, endianess, is_persistent)
+        SERIAL_FIELD(bool, is_persistent, false)
 
         bool isValid() const {
             return table != QModbusDataUnit::Invalid;
@@ -359,10 +353,12 @@ namespace Settings {
         SERIAL_FIELD(quint16, response_time)
         SERIAL_FIELD(quint16, retries)
         SERIAL_FIELD(bool, debug, false)
-        SERIAL_CONTAINER(QList, QString, producers)
-        SERIAL_CONTAINER(QList, QString, consumers)
-        SERIAL_NEST(ModbusTcpDevicesSettings, tcp)
-        SERIAL_NEST(ModbusRtuDevicesSettings, rtu)
+        SERIAL_CONTAINER(QList, QString, producers, {})
+        SERIAL_CONTAINER(QList, QString, consumers, {})
+        SERIAL_NEST(UseMockSetting, mock, {})
+        SERIAL_NEST(RecordOutgoingSetting, log_jsons, {})
+        SERIAL_NEST(ModbusTcpDevicesSettings, tcp, {})
+        SERIAL_NEST(ModbusRtuDevicesSettings, rtu, {})
         SERIAL_FIELD(QString, filter_name)
         Filters::Table filters;
 
