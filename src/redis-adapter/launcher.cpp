@@ -13,6 +13,7 @@
 #include "redis-adapter/settings/modbussettings.h"
 #include "redis-adapter/settings/redissettings.h"
 #include "redis-adapter/connectors/modbusconnector.h"
+#include "radapter-broker/debugging/logginginterceptor.h"
 
 using namespace Radapter;
 
@@ -107,13 +108,16 @@ int Launcher::prvInit()
                           mbRegisters,
                           mbWorkerSettings);
     addSingleton(ModbusConnector::instance());
-    WorkerProxy* mbProxy;
-    if (modbusConnSettings.filters.isEmpty()) {
-        mbProxy = ModbusConnector::instance()->createProxy();
-    } else {
-        auto filter = new ProducerFilter(modbusConnSettings.filters);
-        mbProxy = ModbusConnector::instance()->createProxy({filter});
+    QList<InterceptorBase*> mbInterceptors{};
+    if (!modbusConnSettings.filters.isEmpty()) {
+        mbInterceptors.append(new ProducerFilter(modbusConnSettings.filters));
     }
+    if (modbusConnSettings.log_jsons.use) {
+        auto jsonLogSettings = LoggingInterceptorSettings{};
+        jsonLogSettings.filePath = modbusConnSettings.log_jsons.filepath;
+        mbInterceptors.append(new LoggingInterceptor(jsonLogSettings));
+    }
+    WorkerProxy* mbProxy = ModbusConnector::instance()->createProxy(mbInterceptors);
     Radapter::Broker::instance()->registerProxy(mbProxy);
     m_filereader->setPath("conf/config.toml");
     if (!Settings::SqlClientInfo::cacheMap.isEmpty()) {

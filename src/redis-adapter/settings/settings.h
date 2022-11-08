@@ -31,13 +31,6 @@ namespace Settings {
         SERIAL_FIELD(QString, json_file_path)
     };
 
-    struct RADAPTER_SHARED_SRC UseMockSetting : public Serializer::SerializerBase {
-        Q_GADGET
-        IS_SERIALIZABLE
-        SERIAL_FIELD(bool, use, false)
-        SERIAL_FIELD(QString, filepath, "")
-    };
-
     struct RADAPTER_SHARED_SRC RecordOutgoingSetting : public Serializer::SerializerBase {
         Q_GADGET
         IS_SERIALIZABLE

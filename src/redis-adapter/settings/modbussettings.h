@@ -355,7 +355,6 @@ namespace Settings {
         SERIAL_FIELD(bool, debug, false)
         SERIAL_CONTAINER(QList, QString, producers, {})
         SERIAL_CONTAINER(QList, QString, consumers, {})
-        SERIAL_NEST(UseMockSetting, mock, {})
         SERIAL_NEST(RecordOutgoingSetting, log_jsons, {})
         SERIAL_NEST(ModbusTcpDevicesSettings, tcp, {})
         SERIAL_NEST(ModbusRtuDevicesSettings, rtu, {})
