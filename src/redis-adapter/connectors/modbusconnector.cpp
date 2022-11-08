@@ -119,6 +119,7 @@ void ModbusConnector::run()
 {
     m_modbusThread->start();
     thread()->start();
+    emit sendMsg(prepareMsg(Formatters::JsonDict{{"status", "ready"}}));
 }
 
 void ModbusConnector::onMsg(const Radapter::WorkerMsg &msg)

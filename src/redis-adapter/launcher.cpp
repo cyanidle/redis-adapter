@@ -9,7 +9,7 @@
 #include "radapterlogging.h"
 #include "localstorage.h"
 #include "localization.h"
-#include "json-formatters/bindings/bindingsprovider.h"
+#include "JsonFormatters"
 #include "redis-adapter/settings/modbussettings.h"
 #include "redis-adapter/settings/redissettings.h"
 #include "redis-adapter/connectors/modbusconnector.h"
@@ -113,9 +113,7 @@ int Launcher::prvInit()
         mbInterceptors.append(new ProducerFilter(modbusConnSettings.filters));
     }
     if (modbusConnSettings.log_jsons.use) {
-        auto jsonLogSettings = LoggingInterceptorSettings{};
-        jsonLogSettings.filePath = modbusConnSettings.log_jsons.filepath;
-        mbInterceptors.append(new LoggingInterceptor(jsonLogSettings));
+        mbInterceptors.append(new LoggingInterceptor(modbusConnSettings.log_jsons.asLoggingInterSettings()));
     }
     WorkerProxy* mbProxy = ModbusConnector::instance()->createProxy(mbInterceptors);
     Radapter::Broker::instance()->registerProxy(mbProxy);

@@ -9,9 +9,12 @@
 #include <QTime>
 #include <QModbusDataUnit>
 #include <QTimeZone>
+#include "qthread.h"
 #include "redis-adapter/radapterlogging.h"
+#include "radapter-broker/workerbasesettings.h"
+#include "radapter-broker/debugging/logginginterceptorsettings.h"
 #include <settings-parsing/serializerbase.h>
-
+#include <QJsonDocument>
 
 namespace Settings {
 
@@ -22,6 +25,18 @@ namespace Settings {
         SERIAL_FIELD(bool, debug, false)
         SERIAL_CONTAINER(QList, QString, producers, QStringList())
         SERIAL_CONTAINER(QList, QString, consumers, QStringList())
+        SERIAL_FIELD(quint32, maxQueueSize, 30)
+
+        Radapter::WorkerSettings asWorkerSettings(QThread *thread) const {
+            return Radapter::WorkerSettings(
+                name,
+                thread,
+                consumers,
+                producers,
+                debug,
+                maxQueueSize
+                );
+        }
     };
 
     struct RADAPTER_SHARED_SRC MockWorkerSettings : public WorkerSettings {
@@ -36,6 +51,28 @@ namespace Settings {
         IS_SERIALIZABLE
         SERIAL_FIELD(bool, use, false)
         SERIAL_FIELD(QString, filepath, "")
+        SERIAL_FIELD(quint32, flushDelay, 1000)
+        SERIAL_FIELD(quint64, maxSizeBytes, 100000000)
+        SERIAL_FIELD(quint16, maxFiles, 10)
+        SERIAL_CUSTOM(QJsonDocument::JsonFormat, format, initFormat, CUSTOM_NO_READ, QJsonDocument::Indented)
+        bool initFormat(const QVariant &src) {
+            auto strRep = src.toString().toLower();
+            if (strRep == "compact") {
+                format = QJsonDocument::Compact;
+            } else {
+                format = QJsonDocument::Indented;
+            }
+            return true;
+        }
+        Radapter::LoggingInterceptorSettings asLoggingInterSettings() const {
+            Radapter::LoggingInterceptorSettings result;
+            result.filePath = filepath;
+            result.flushTimerDelay = flushDelay;
+            result.format = format;
+            result.maxFileSizeBytes = maxSizeBytes;
+            result.maxFiles = maxFiles;
+            return result;
+        }
     };
 
     struct RADAPTER_SHARED_SRC ServerInfo : public Serializer::SerializerBase {
