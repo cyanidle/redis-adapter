@@ -83,12 +83,12 @@ void StreamProducer::tryTrim()
 void StreamProducer::writeCallback(redisAsyncContext *context, void *replyPtr, void *args)
 {
     auto cbArgs = static_cast<CallbackArgs*>(args);
+    auto reply = static_cast<redisReply *>(replyPtr);
     if (isNullReply(context, replyPtr, cbArgs->sender)
             || isEmptyReply(context, replyPtr))
     {
         return;
     }
-    auto reply = static_cast<redisReply *>(replyPtr);
     reDebug() << metaInfo(context).c_str() << "Entry added:" << reply->str;
     auto adapter = static_cast<StreamProducer *>(cbArgs->sender);
     adapter->writeDone(reply->str, cbArgs->args.toULongLong());

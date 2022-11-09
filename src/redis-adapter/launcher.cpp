@@ -1,4 +1,5 @@
 #include "radapter-broker/broker.h"
+#include "radapter-broker/debugging/mockworker.h"
 #include "redis-adapter/factories/rediscachefactory.h"
 #include "redis-adapter/factories/redispubsubfactory.h"
 #include "redis-adapter/factories/redisstreamfactory.h"
@@ -92,7 +93,13 @@ int Launcher::prvInit()
     addFactory(new Redis::StreamFactory(Settings::RedisStream::cacheMap, this));
     addFactory(new Redis::CacheFactory(Settings::RedisCache::cacheMap.values(), this));
     addFactory(new Redis::PubSubFactory(Settings::RedisSubscriber::cacheMap.values(), this));
-
+    m_filereader->setPath("conf/mocks.toml");
+    const auto mocks = Serializer::fromQList<Settings::MockWorkerSettings>(
+            m_filereader->deserialise("mock").toList()
+        );
+    for (const auto &mockSettings : mocks) {
+        addWorker(new Radapter::MockWorker(mockSettings.asMockSettings(new QThread())));
+    }
     m_filereader->setPath("conf/modbus.toml");
     auto modbusConnSettings = Serializer::fromQMap<Settings::ModbusConnectionSettings>(
         m_filereader->deserialise("modbus", true).toMap());

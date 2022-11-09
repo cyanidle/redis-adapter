@@ -12,6 +12,7 @@
 #include "qthread.h"
 #include "redis-adapter/radapterlogging.h"
 #include "radapter-broker/workerbasesettings.h"
+#include "radapter-broker/debugging/mockworkersettings.h"
 #include "radapter-broker/debugging/logginginterceptorsettings.h"
 #include <settings-parsing/serializerbase.h>
 #include <QJsonDocument>
@@ -39,12 +40,6 @@ namespace Settings {
         }
     };
 
-    struct RADAPTER_SHARED_SRC MockWorkerSettings : public WorkerSettings {
-        Q_GADGET
-        IS_SERIALIZABLE
-        SERIAL_FIELD(quint32, mock_timer_delay)
-        SERIAL_FIELD(QString, json_file_path)
-    };
 
     struct RADAPTER_SHARED_SRC RecordOutgoingSetting : public Serializer::SerializerBase {
         Q_GADGET
@@ -75,6 +70,24 @@ namespace Settings {
         }
     };
 
+    struct RADAPTER_SHARED_SRC MockWorkerSettings : public WorkerSettings {
+        Q_GADGET
+        IS_SERIALIZABLE
+        SERIAL_FIELD(quint32, mock_timer_delay, 1000)
+        SERIAL_FIELD(QString, json_file_path)
+        Radapter::MockWorkerSettings asMockSettings(QThread *thread) const {
+            Radapter::MockWorkerSettings result;
+            result.mockTimerDelay = mock_timer_delay;
+            result.jsonFilePath = json_file_path;
+            result.name = name;
+            result.thread = thread;
+            result.consumers = consumers;
+            result.producers = producers;
+            result.isDebug = debug;
+            result.maxMsgsInQueue = maxQueueSize;
+            return result;
+        }
+    };
     struct RADAPTER_SHARED_SRC ServerInfo : public Serializer::SerializerBase {
         Q_GADGET
         IS_SERIALIZABLE

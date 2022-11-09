@@ -17,8 +17,7 @@ void CacheProducer::onMsg(const Radapter::WorkerMsg &msg)
 {
     writeIndex(msg.data(), m_indexKey, enqueueMsg(msg));
     writeKeys(msg.data(), enqueueMsg(msg));
-    auto forwardedToConsumers = prepareMsg(msg.data());
-    emit sendMsg(forwardedToConsumers);
+    emit sendMsgWithDirection(msg, MsgDirection::DirectionToConsumers);
 }
 
 void CacheProducer::writeKeys(const Formatters::JsonDict &json, int msgId)
