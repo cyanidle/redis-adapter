@@ -63,7 +63,11 @@ void StreamProducer::onMsg(const Radapter::WorkerMsg &msg)
     auto json = msg.data();
     auto command = RedisQueryFormatter(json).toAddStreamCommand(m_streamKey, streamSize());
     if (!command.isEmpty()) {
-        runAsyncCommand(writeCallback, command, enqueueMsg(msg));
+        if (runAsyncCommand(writeCallback, command, enqueueMsg(msg)) != REDIS_OK) {
+            auto reply = prepareReply(dequeueMsg(msg.id()));
+            reply["data"] = "failed";
+            emit sendMsg(reply);
+        }
         m_addCounter++;
     }
 }

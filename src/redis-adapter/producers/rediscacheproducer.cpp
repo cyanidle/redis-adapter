@@ -15,37 +15,45 @@ CacheProducer::CacheProducer(const QString &host,
 
 void CacheProducer::onMsg(const Radapter::WorkerMsg &msg)
 {
-    writeIndex(msg.data(), m_indexKey, enqueueMsg(msg));
-    writeKeys(msg.data(), enqueueMsg(msg));
+    if (writeIndex(msg.data(), m_indexKey, enqueueMsg(msg)) != REDIS_OK) {
+            auto reply = prepareReply(dequeueMsg(msg.id()));
+            reply["data"] = "failed";
+            emit sendMsg(reply);
+        }
+    if (writeKeys(msg.data(), enqueueMsg(msg)) != REDIS_OK) {
+            auto reply = prepareReply(dequeueMsg(msg.id()));
+            reply["data"] = "failed";
+            emit sendMsg(reply);
+        }
     emit sendMsgWithDirection(msg, MsgDirection::DirectionToConsumers);
 }
 
-void CacheProducer::writeKeys(const Formatters::JsonDict &json, int msgId)
+int CacheProducer::writeKeys(const Formatters::JsonDict &json, int msgId)
 {
     if (json.data().isEmpty()) {
         writeKeysDone(msgId);
-        return;
+        return REDIS_ERR;
     }
     if (!isConnected()) {
         run();
     }
 
     auto msetCommand = RedisQueryFormatter(json.data()).toMultipleSetCommand();
-    runAsyncCommand(msetCallback, msetCommand, msgId);
+    return runAsyncCommand(msetCallback, msetCommand, msgId);
 }
 
-void CacheProducer::writeIndex(const Formatters::JsonDict &json, const QString &indexKey, int msgId)
+int CacheProducer::writeIndex(const Formatters::JsonDict &json, const QString &indexKey, int msgId)
 {
     if (json.data().isEmpty() || indexKey.isEmpty()) {
         writeIndexDone(msgId);
-        return;
+        return REDIS_ERR;
     }
     if (!isConnected()) {
         run();
     }
 
     auto indexCommand = RedisQueryFormatter(json.data()).toUpdateIndexCommand(indexKey);
-    runAsyncCommand(indexCallback, indexCommand, msgId);
+    return runAsyncCommand(indexCallback, indexCommand, msgId);
 }
 
 void CacheProducer::msetCallback(redisAsyncContext *context, void *replyPtr, void *args)

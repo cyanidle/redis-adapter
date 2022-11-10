@@ -26,8 +26,8 @@ public slots:
 
 private:
     // Commands
-    void writeKeys(const Formatters::JsonDict &json, int msgId);
-    void writeIndex(const Formatters::JsonDict &json, const QString &indexKey, int msgId);
+    int writeKeys(const Formatters::JsonDict &json, int msgId);
+    int writeIndex(const Formatters::JsonDict &json, const QString &indexKey, int msgId);
     // Replies
     void writeKeysDone(int msgId);
     void writeIndexDone(int msgId);
