@@ -2,7 +2,7 @@
 
 using namespace Redis;
 
-PubSubFactory::PubSubFactory(const QList<Settings::RedisSubscriber> &subscribers,
+PubSubFactory::PubSubFactory(const QList<Settings::RedisKeyEventSubscriber> &subscribers,
                                        QObject *parent)
     : FactoryBase(parent),
       m_subscribersList(subscribers)

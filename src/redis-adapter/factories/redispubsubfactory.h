@@ -15,7 +15,7 @@ class Redis::PubSubFactory : public Radapter::FactoryBase
 {
     Q_OBJECT
 public:
-    explicit PubSubFactory(const QList<Settings::RedisSubscriber> &subscribers, QObject *parent = nullptr);
+    explicit PubSubFactory(const QList<Settings::RedisKeyEventSubscriber> &subscribers, QObject *parent = nullptr);
 
 
     void run() override;
@@ -26,7 +26,7 @@ signals:
 
 private:
     Radapter::WorkersList m_workersPool;
-    QList<Settings::RedisSubscriber> m_subscribersList;
+    QList<Settings::RedisKeyEventSubscriber> m_subscribersList;
 };
 
 #endif // REDISPUBSUBFACTORY_H

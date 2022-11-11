@@ -26,8 +26,8 @@ namespace Settings {
         }
     };
 
-    struct RADAPTER_SHARED_SRC RedisSubscriber : WorkerSettings {
-        typedef QMap<QString, RedisSubscriber> Map;
+    struct RADAPTER_SHARED_SRC RedisKeyEventSubscriber : WorkerSettings {
+        typedef QMap<QString, RedisKeyEventSubscriber> Map;
         static Map cacheMap;
         Q_GADGET
         IS_SERIALIZABLE
@@ -47,14 +47,14 @@ namespace Settings {
                     && source_server.isValid() && !keyEvents.isEmpty();
         }
 
-        bool operator==(const RedisSubscriber &other) const {
+        bool operator==(const RedisKeyEventSubscriber &other) const {
             return name == other.name
                     && source_server_name == other.source_server_name
                     && source_server == other.source_server
                     && keyEvents == other.keyEvents;
         }
 
-        bool operator!=(const RedisSubscriber &other) const {
+        bool operator!=(const RedisKeyEventSubscriber &other) const {
             return !(*this == other);
         }
     };
@@ -85,7 +85,7 @@ namespace Settings {
         SERIAL_FIELD(QString, stream_key)
         SERIAL_FIELD(qint32, stream_size, 10000)
         SERIAL_FIELD(QString, consumer_group_name, "")
-        SERIAL_CUSTOM(RedisConsumerStartMode, start_from, initStartMode, readStartMode)
+        SERIAL_CUSTOM(RedisConsumerStartMode, start_from, initStartMode, readStartMode, RedisStartFromTop)
         SERIAL_POST_INIT(postInit)
         void postInit() {
             if (!target_server.isEmpty()) {
@@ -183,7 +183,7 @@ namespace Settings {
         IS_SERIALIZABLE
         SERIAL_FIELD(QString, target_server_name)
         RedisServer target_server;
-        SERIAL_FIELD(quint16, db_index)
+        SERIAL_FIELD(quint16, db_index, 0)
         SERIAL_FIELD(QString, index_key)
         SERIAL_CUSTOM(Mode, mode, initMode, readMode)
         SERIAL_POST_INIT(postInit)

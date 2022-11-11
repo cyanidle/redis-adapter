@@ -68,7 +68,7 @@ void Launcher::prvPreInit()
     reDebug() << "config: Caches count: " << redisCaches.size();
     auto sqlClientsInfo = precacheFromToml<Settings::SqlClientInfo>("mysql.client");
     reDebug() << "config: Sql clients count: " << sqlClientsInfo.size();
-    auto redisSubscribers = precacheFromToml<Settings::RedisSubscriber>("redis.subscribers");
+    auto redisSubscribers = precacheFromToml<Settings::RedisKeyEventSubscriber>("redis.subscribers");
     reDebug() << "config: Redis Subs count: " << redisSubscribers.size();
     m_filereader->setPath("conf/modbus.toml");
     auto tcpDevices = precacheFromToml<Settings::TcpDevice>("modbus.tcp.devices");
@@ -92,7 +92,7 @@ int Launcher::prvInit()
     prvPreInit();
     addFactory(new Redis::StreamFactory(Settings::RedisStream::cacheMap, this));
     addFactory(new Redis::CacheFactory(Settings::RedisCache::cacheMap.values(), this));
-    addFactory(new Redis::PubSubFactory(Settings::RedisSubscriber::cacheMap.values(), this));
+    addFactory(new Redis::PubSubFactory(Settings::RedisKeyEventSubscriber::cacheMap.values(), this));
     m_filereader->setPath("conf/mocks.toml");
     const auto mocks = Serializer::fromQList<Settings::MockWorkerSettings>(
             m_filereader->deserialise("mock").toList()
@@ -135,26 +135,30 @@ int Launcher::prvInit()
         }
     }
     auto websocketClients = Serializer::fromQList<Settings::WebsockerClientInfo>(
-        m_filereader->deserialise("websocket.client",true).toList());
+        m_filereader->deserialise("websocket.client", true).toList());
     if (!websocketClients.isEmpty()) {
         addFactory(new Websocket::ClientFactory(websocketClients, this));
     }
-    auto websocketServer = Serializer::fromQMap<Settings::WebsocketServerInfo>(
-        m_filereader->deserialise("websocket.server", true).toMap());
-    if (websocketServer.isValid()) {
-        auto settings = WorkerSettings{
-            "websocket-server",
-            new QThread(this),
-            websocketServer.consumers,
-            websocketServer.producers
-        };
-        Websocket::ServerConnector::init(websocketServer, settings);
-        addSingleton(Websocket::ServerConnector::instance());
-        Radapter::Broker::instance()->registerProxy(Websocket::ServerConnector::instance()->createProxy());
+    auto websocketServerConf = m_filereader->deserialise("websocket.server", true).toMap();
+    if (!websocketServerConf.isEmpty()) {
+        auto websocketServer = Serializer::fromQMap<Settings::WebsocketServerInfo>(websocketServerConf);
+        if (websocketServer.isValid()) {
+            auto settings = WorkerSettings{
+                "websocket-server",
+                new QThread(this),
+                websocketServer.consumers,
+                websocketServer.producers
+            };
+            Websocket::ServerConnector::init(websocketServer, settings);
+            addSingleton(Websocket::ServerConnector::instance());
+            Radapter::Broker::instance()->registerProxy(Websocket::ServerConnector::instance()->createProxy());
+        }
     }
     auto localizationInfoMap = m_filereader->deserialise("localization").toMap();
-    auto localizationInfo = Serializer::fromQMap<Settings::LocalizationInfo>(localizationInfoMap);
-    Localization::init(localizationInfo, this);
+    if (!localizationInfoMap.isEmpty()) {
+        auto localizationInfo = Serializer::fromQMap<Settings::LocalizationInfo>(localizationInfoMap);
+        Localization::init(localizationInfo, this);
+    }
     LocalStorage::init(this);
     return 0;
 }

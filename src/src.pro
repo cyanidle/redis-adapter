@@ -12,6 +12,7 @@ CONFIG(release, debug|release){
     MOC_DIR = build/release
 }
 CONFIG -= debug_and_release
+
 CONFIG += create_prl
 DESTDIR = ..
 DEFINES -= RADAPTER_SHARED_SRC

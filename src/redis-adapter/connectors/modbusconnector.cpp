@@ -35,7 +35,7 @@ int ModbusConnector::init()
 
 void ModbusConnector::writeJsonDone(const Formatters::Dict &jsonDict)
 {
-    emit sendMsg(prepareCommand<Radapter::AcknowledgeSchema>(jsonDict));
+    emit sendMsgWithDirection(prepareCommand<Radapter::AcknowledgeSchema>(jsonDict), DirectionToProducers);
 }
 
 void ModbusConnector::jsonItemWritten(const Formatters::Dict &modbusJsonUnit)
@@ -119,7 +119,6 @@ void ModbusConnector::run()
 {
     m_modbusThread->start();
     thread()->start();
-    emit sendMsg(prepareMsg(Formatters::JsonDict{{"status", "ready"}}));
 }
 
 void ModbusConnector::onMsg(const Radapter::WorkerMsg &msg)

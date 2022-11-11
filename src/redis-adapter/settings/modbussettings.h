@@ -349,16 +349,16 @@ namespace Settings {
         SERIAL_CONTAINER_NEST(QList, ModbusChannelSettings, channels);
         SerialDevice::Map serial_devices;
         TcpDevice::Map tcp_devices;
-        SERIAL_FIELD(quint16, poll_rate)
-        SERIAL_FIELD(quint16, response_time)
-        SERIAL_FIELD(quint16, retries)
+        SERIAL_FIELD(quint16, poll_rate, 500)
+        SERIAL_FIELD(quint16, response_time, 150)
+        SERIAL_FIELD(quint16, retries, 3)
         SERIAL_FIELD(bool, debug, false)
-        SERIAL_CONTAINER(QList, QString, producers, {})
-        SERIAL_CONTAINER(QList, QString, consumers, {})
-        SERIAL_NEST(RecordOutgoingSetting, log_jsons, {})
-        SERIAL_NEST(ModbusTcpDevicesSettings, tcp, {})
-        SERIAL_NEST(ModbusRtuDevicesSettings, rtu, {})
-        SERIAL_FIELD(QString, filter_name)
+        SERIAL_CONTAINER(QList, QString, producers, DEFAULT)
+        SERIAL_CONTAINER(QList, QString, consumers, DEFAULT)
+        SERIAL_NEST(RecordOutgoingSetting, log_jsons, DEFAULT)
+        SERIAL_NEST(ModbusTcpDevicesSettings, tcp, DEFAULT)
+        SERIAL_NEST(ModbusRtuDevicesSettings, rtu, DEFAULT)
+        SERIAL_FIELD(QString, filter_name, DEFAULT)
         Filters::Table filters;
 
         SERIAL_POST_INIT(postInit)
