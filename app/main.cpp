@@ -13,7 +13,7 @@ int main (int argc, char **argv) {
 
     Settings::FileReader reader("conf/config.toml");
     setLoggingFilters(Settings::LoggingInfoParser::parse(
-                          reader.deserialise("log_debug").toMap()));
+                          reader.deserialize("log_debug").toMap()));
 
     auto launcher = new Radapter::Launcher();
     auto initStatus = launcher->initAll();
