@@ -26,7 +26,7 @@ namespace Settings {
         SERIAL_FIELD(bool, debug, false)
         SERIAL_CONTAINER(QList, QString, producers, QStringList())
         SERIAL_CONTAINER(QList, QString, consumers, QStringList())
-        SERIAL_FIELD(quint32, maxQueueSize, 30)
+        SERIAL_FIELD(quint32, max_msgs_in_queue, 30)
 
         Radapter::WorkerSettings asWorkerSettings(QThread *thread) const {
             return Radapter::WorkerSettings(
@@ -35,21 +35,26 @@ namespace Settings {
                 consumers,
                 producers,
                 debug,
-                maxQueueSize
+                max_msgs_in_queue
                 );
         }
     };
 
 
     struct RADAPTER_SHARED_SRC RecordOutgoingSetting : public Serializer::SerializerBase {
+        using targetSetting = Radapter::LoggingInterceptorSettings;
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_FIELD(bool, use, false)
         SERIAL_FIELD(QString, filepath, "")
+        SERIAL_CUSTOM(targetSetting::LogMsg,
+                      log, initLog, CUSTOM_NO_READ,
+                      targetSetting::LogNormal)
         SERIAL_FIELD(quint32, flushDelay, 1000)
         SERIAL_FIELD(quint64, maxSizeBytes, 100000000)
         SERIAL_FIELD(quint16, maxFiles, 10)
         SERIAL_CUSTOM(QJsonDocument::JsonFormat, format, initFormat, CUSTOM_NO_READ, QJsonDocument::Indented)
+
         bool initFormat(const QVariant &src) {
             auto strRep = src.toString().toLower();
             if (strRep == "compact") {
@@ -59,13 +64,32 @@ namespace Settings {
             }
             return true;
         }
-        Radapter::LoggingInterceptorSettings asLoggingInterSettings() const {
+        bool initLog(const QVariant &src) {
+            const auto strRep = src.toString().toLower();
+            if (strRep == "all") {
+                log = targetSetting::LogAll;
+            } else {
+                const auto splitVersions = Serializer::convertQList<QString>(src.toList());
+                if (splitVersions.contains("normal") || strRep == "normal") {
+                    log |= targetSetting::LogNormal;
+                }
+                if (splitVersions.contains("reply") || strRep == "reply") {
+                    log |= targetSetting::LogReply;
+                }
+                if (splitVersions.contains("command") || strRep == "command") {
+                    log |= targetSetting::LogCommand;
+                }
+            }
+            return true;
+        }
+        Radapter::LoggingInterceptorSettings asSettings() const {
             Radapter::LoggingInterceptorSettings result;
             result.filePath = filepath;
             result.flushTimerDelay = flushDelay;
             result.format = format;
             result.maxFileSizeBytes = maxSizeBytes;
             result.maxFiles = maxFiles;
+            result.logFlags = log;
             return result;
         }
     };
@@ -84,7 +108,7 @@ namespace Settings {
             result.consumers = consumers;
             result.producers = producers;
             result.isDebug = debug;
-            result.maxMsgsInQueue = maxQueueSize;
+            result.maxMsgsInQueue = max_msgs_in_queue;
             return result;
         }
     };

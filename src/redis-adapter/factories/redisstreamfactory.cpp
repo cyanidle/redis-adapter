@@ -1,5 +1,6 @@
 #include "redisstreamfactory.h"
 #include "radapter-broker/broker.h"
+#include "radapter-broker/debugging/logginginterceptor.h"
 using namespace Radapter;
 using namespace Redis;
 
@@ -23,6 +24,12 @@ int StreamFactory::initWorkers()
         workerSettings.isDebug = streamInfo.debug;
         workerSettings.thread = thread;
         workerSettings.name = streamInfo.name;
+        workerSettings.consumers = streamInfo.consumers;
+        workerSettings.producers = streamInfo.producers;
+        QList<Radapter::InterceptorBase*> loggers;
+        if (streamInfo.log_jsons.use) {
+            loggers.append(new Radapter::LoggingInterceptor(streamInfo.log_jsons.asSettings()));
+        }
         QObject::connect(thread, &QThread::finished, thread, &QThread::deleteLater);
         if ((streamInfo.mode == Settings::RedisStreamConsumer)
                 || (streamInfo.mode == Settings::RedisStreamConsumerGroups))
@@ -35,7 +42,7 @@ int StreamFactory::initWorkers()
                                                     workerSettings);
             QObject::connect(thread, &QThread::started, consumer, &StreamConsumer::run);
             QObject::connect(thread, &QThread::finished, consumer, &StreamConsumer::deleteLater);
-            Radapter::Broker::instance()->registerProxy(consumer->createProxy());
+            Radapter::Broker::instance()->registerProxy(consumer->createProxy(loggers));
             m_workersPool.append(consumer);
         }
         if ((streamInfo.mode == Settings::RedisStreamProducer)) {
@@ -46,7 +53,7 @@ int StreamFactory::initWorkers()
                                                     streamInfo.stream_size);
             QObject::connect(thread, &QThread::started, producer, &StreamProducer::run);
             QObject::connect(thread, &QThread::finished, producer, &StreamProducer::deleteLater);
-            Radapter::Broker::instance()->registerProxy(producer->createProxy());
+            Radapter::Broker::instance()->registerProxy(producer->createProxy(loggers));
             m_workersPool.append(producer);
         }
     }

@@ -120,7 +120,7 @@ int Launcher::prvInit()
         mbInterceptors.append(new ProducerFilter(modbusConnSettings.filters));
     }
     if (modbusConnSettings.log_jsons.use) {
-        mbInterceptors.append(new LoggingInterceptor(modbusConnSettings.log_jsons.asLoggingInterSettings()));
+        mbInterceptors.append(new LoggingInterceptor(modbusConnSettings.log_jsons.asSettings()));
     }
     WorkerProxy* mbProxy = ModbusConnector::instance()->createProxy(mbInterceptors);
     Radapter::Broker::instance()->registerProxy(mbProxy);
@@ -175,7 +175,6 @@ int Launcher::initAll()
     if (status != 0) {
         return status;
     }
-    Broker::instance()->connectProducersAndConsumers();
     return 0;
 }
 
@@ -218,8 +217,9 @@ int Launcher::initWorkers()
     return 0;
 }
 
-void Launcher::run()
+void Launcher::run(bool pedantic)
 {
+    Broker::instance()->connectProducersAndConsumers(pedantic);
     for (auto &factory : m_factories) {
         factory->run();
     }

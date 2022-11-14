@@ -16,16 +16,12 @@ CacheProducer::CacheProducer(const QString &host,
 void CacheProducer::onMsg(const Radapter::WorkerMsg &msg)
 {
     if (writeIndex(msg.data(), m_indexKey, enqueueMsg(msg)) != REDIS_OK) {
-            auto reply = prepareReply(dequeueMsg(msg.id()));
-            reply["data"] = "failed";
-            emit sendMsg(reply);
-        }
+        emit sendMsg(prepareReply(dequeueMsg(msg.id()), "index_write_failed"));
+    }
     if (writeKeys(msg.data(), enqueueMsg(msg)) != REDIS_OK) {
-            auto reply = prepareReply(dequeueMsg(msg.id()));
-            reply["data"] = "failed";
-            emit sendMsg(reply);
-        }
-    emit sendMsgWithDirection(msg, MsgDirection::DirectionToConsumers);
+        emit sendMsg(prepareReply(dequeueMsg(msg.id()), "keys_write_failed"));
+    }
+    emit sendMsgWithDirection(prepareMsg(msg), MsgDirection::DirectionToConsumers);
 }
 
 int CacheProducer::writeKeys(const Formatters::JsonDict &json, int msgId)
@@ -90,10 +86,10 @@ void CacheProducer::indexCallback(redisAsyncContext *context, void *replyPtr, vo
 
 void CacheProducer::writeKeysDone(int msgId)
 {
-    emit sendMsg(prepareReply(dequeueMsg(msgId)));
+    emit sendMsg(prepareReply(dequeueMsg(msgId), "keys_write_ok"));
 }
 
 void CacheProducer::writeIndexDone(int msgId)
 {
-    emit sendMsg(prepareReply(dequeueMsg(msgId)));
+    emit sendMsg(prepareReply(dequeueMsg(msgId), "index_write_ok"));
 }

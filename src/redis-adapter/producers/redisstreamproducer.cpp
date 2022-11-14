@@ -64,8 +64,7 @@ void StreamProducer::onMsg(const Radapter::WorkerMsg &msg)
     auto command = RedisQueryFormatter(json).toAddStreamCommand(m_streamKey, streamSize());
     if (!command.isEmpty()) {
         if (runAsyncCommand(writeCallback, command, enqueueMsg(msg)) != REDIS_OK) {
-            auto reply = prepareReply(dequeueMsg(msg.id()));
-            reply["data"] = "failed";
+            auto reply = prepareReply(dequeueMsg(msg.id()), "failed");
             emit sendMsg(reply);
         }
         m_addCounter++;
@@ -102,8 +101,7 @@ void StreamProducer::writeCallback(redisAsyncContext *context, void *replyPtr, v
 
 void StreamProducer::writeDone(const QString &newEntryId, quint64 msgId)
 {
-    auto reply = prepareReply(dequeueMsg(msgId));
-    reply["data"] = newEntryId;
+    auto reply = prepareReply(dequeueMsg(msgId), newEntryId);
     emit sendMsg(reply);
 }
 

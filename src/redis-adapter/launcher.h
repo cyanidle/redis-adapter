@@ -26,7 +26,7 @@ public slots:
     void addWorker(Radapter::WorkerBase *worker, QList<Radapter::InterceptorBase *> interceptors = {});
 
     int initAll();
-    void run();
+    void run(bool pedantic = true);
 private:
     int initSettings();
     int initWorkers();
