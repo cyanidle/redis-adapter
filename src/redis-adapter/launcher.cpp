@@ -101,29 +101,31 @@ int Launcher::prvInit()
         addWorker(new Radapter::MockWorker(mockSettings.asMockSettings(new QThread())));
     }
     m_filereader->setPath("conf/modbus.toml");
-    auto modbusConnSettings = Serializer::fromQMap<Settings::ModbusConnectionSettings>(
-        m_filereader->deserialise("modbus", true).toMap());
-    m_filereader->setPath("conf/registers.toml");
-    auto mbRegisters = Settings::DeviceRegistersInfoMapParser::parse(
-        m_filereader->deserialise("registers", true).toMap());
-    auto mbWorkerSettings = WorkerSettings{"modbus",
-                                            new QThread(this),
-                                            modbusConnSettings.consumers,
-                                            modbusConnSettings.producers,
-                                            modbusConnSettings.debug};
-    ModbusConnector::init(modbusConnSettings,
-                          mbRegisters,
-                          mbWorkerSettings);
-    addSingleton(ModbusConnector::instance());
-    QList<InterceptorBase*> mbInterceptors{};
-    if (!modbusConnSettings.filters.isEmpty()) {
-        mbInterceptors.append(new ProducerFilter(modbusConnSettings.filters));
+    auto modbusConnSettingsRaw = m_filereader->deserialise("modbus", true).toMap();
+    if (!modbusConnSettingsRaw.isEmpty()) {
+        auto modbusConnSettings = Serializer::fromQMap<Settings::ModbusConnectionSettings>(modbusConnSettingsRaw);
+        m_filereader->setPath("conf/registers.toml");
+        auto mbRegisters = Settings::DeviceRegistersInfoMapParser::parse(
+            m_filereader->deserialise("registers", true).toMap());
+        auto mbWorkerSettings = WorkerSettings{"modbus",
+                                               new QThread(this),
+                                               modbusConnSettings.consumers,
+                                               modbusConnSettings.producers,
+                                               modbusConnSettings.debug};
+        ModbusConnector::init(modbusConnSettings,
+                              mbRegisters,
+                              mbWorkerSettings);
+        addSingleton(ModbusConnector::instance());
+        QList<InterceptorBase*> mbInterceptors{};
+        if (!modbusConnSettings.filters.isEmpty()) {
+            mbInterceptors.append(new ProducerFilter(modbusConnSettings.filters));
+        }
+        if (modbusConnSettings.log_jsons.use) {
+            mbInterceptors.append(new LoggingInterceptor(modbusConnSettings.log_jsons.asSettings()));
+        }
+        WorkerProxy* mbProxy = ModbusConnector::instance()->createProxy(mbInterceptors);
+        Radapter::Broker::instance()->registerProxy(mbProxy);
     }
-    if (modbusConnSettings.log_jsons.use) {
-        mbInterceptors.append(new LoggingInterceptor(modbusConnSettings.log_jsons.asSettings()));
-    }
-    WorkerProxy* mbProxy = ModbusConnector::instance()->createProxy(mbInterceptors);
-    Radapter::Broker::instance()->registerProxy(mbProxy);
     m_filereader->setPath("conf/config.toml");
     if (!Settings::SqlClientInfo::cacheMap.isEmpty()) {
         m_sqlFactory = new MySqlFactory(Settings::SqlClientInfo::cacheMap.values(), this);
