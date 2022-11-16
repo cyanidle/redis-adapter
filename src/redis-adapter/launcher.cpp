@@ -75,6 +75,7 @@ void Launcher::prvPreInit()
     reDebug() << "config: Tcp devices count: " << tcpDevices.size();
     auto rtuDevices = precacheFromToml<Settings::SerialDevice>("modbus.rtu.devices");
     reDebug() << "config: Rtu devices count: " << rtuDevices.size();
+    m_filereader->setPath("conf/config.toml");
     auto keyvaults = precacheFromToml<Settings::SqlKeyVaultInfo>("mysql.keyvault");
     reDebug() << "config: Sql Keyvaults count: " << keyvaults.size();
     m_filereader->setPath("conf/filters.toml");
