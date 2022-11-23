@@ -50,9 +50,9 @@ namespace Settings {
         SERIAL_CUSTOM(targetSetting::LogMsg,
                       log, initLog, CUSTOM_NO_READ,
                       targetSetting::LogNormal)
-        SERIAL_FIELD(quint32, flushDelay, 1000)
-        SERIAL_FIELD(quint64, maxSizeBytes, 100000000)
-        SERIAL_FIELD(quint16, maxFiles, 10)
+        SERIAL_FIELD(quint32, flush_delay, 1000)
+        SERIAL_FIELD(quint64, max_size_bytes, 100000000)
+        SERIAL_FIELD(quint16, max_files, 10)
         SERIAL_CUSTOM(QJsonDocument::JsonFormat, format, initFormat, CUSTOM_NO_READ, QJsonDocument::Indented)
 
         bool initFormat(const QVariant &src) {
@@ -69,7 +69,7 @@ namespace Settings {
             if (strRep == "all") {
                 log = targetSetting::LogAll;
             } else {
-                const auto splitVersions = Serializer::convertQList<QString>(src.toList());
+                const auto splitVersions = src.toList();
                 if (splitVersions.contains("normal") || strRep == "normal") {
                     log |= targetSetting::LogNormal;
                 }
@@ -85,10 +85,10 @@ namespace Settings {
         Radapter::LoggingInterceptorSettings asSettings() const {
             Radapter::LoggingInterceptorSettings result;
             result.filePath = filepath;
-            result.flushTimerDelay = flushDelay;
+            result.flushTimerDelay = flush_delay;
             result.format = format;
-            result.maxFileSizeBytes = maxSizeBytes;
-            result.maxFiles = maxFiles;
+            result.maxFileSizeBytes = max_size_bytes;
+            result.maxFiles = max_files;
             result.logFlags = log;
             return result;
         }
