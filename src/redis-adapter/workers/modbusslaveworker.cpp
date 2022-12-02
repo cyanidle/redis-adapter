@@ -67,31 +67,63 @@ void SlaveWorker::onDataWritten(QModbusDataUnit::RegisterType table, int address
         if (!m_reverseRegisters[table].contains(address + i)) {
             break;
         }
-        const auto &regString = m_reverseRegisters[table][address];
+        const auto &regString = m_reverseRegisters[table][address + i];
         auto regInfo = deviceRegisters().value(regString);
-        quint16 value;
-        switch (table) {
-        case QModbusDataUnit::Coils:
-            modbusDevice->data(QModbusDataUnit::Coils, quint16(address + i), &value);
-            break;
-        case QModbusDataUnit::DiscreteInputs:
-            modbusDevice->data(QModbusDataUnit::DiscreteInputs, quint16(address + i), &value);
-            break;
-        case QModbusDataUnit::HoldingRegisters:
-            modbusDevice->data(QModbusDataUnit::HoldingRegisters, quint16(address + i), &value);
-            break;
-        case QModbusDataUnit::InputRegisters:
-            modbusDevice->data(QModbusDataUnit::InputRegisters, quint16(address + i), &value);
-            break;
-        default:
-            reWarn() << "Invalid data written: Adress: " << address << "; Size: " << size;
-            break;
-        }
+        bool ok = false;
+        auto result = parseType(table, address, regInfo, &size, &ok);
 
         return;
     }
     reWarn() << "No mapping for Table: " << QMetaEnum::fromType<QModbusDataUnit::RegisterType>().valueToKey(table)
              << ": Adress: " << address << "; Size : " << size;
+}
+
+QVariant SlaveWorker::parseType(QModbusDataUnit::RegisterType table, int address,
+                                const Settings::RegisterInfo &reg, int *currentSize, bool *ok)
+{
+    constexpr static int maxSize = sizeof(long long int);
+    const int size = QMetaType::sizeOf(reg.type);
+    if (size > maxSize) {
+        *ok = false;
+        return {};
+    }
+    *currentSize += size - 1;
+    quint16 buffer[maxSize] = {};
+    for (int i = 0; i < size; ++i) {
+        switch (table) {
+        case QModbusDataUnit::Coils:
+            modbusDevice->data(QModbusDataUnit::Coils, quint16(address), buffer + i);
+            break;
+        case QModbusDataUnit::DiscreteInputs:
+            modbusDevice->data(QModbusDataUnit::DiscreteInputs, quint16(address), buffer + i);
+            break;
+        case QModbusDataUnit::HoldingRegisters:
+            modbusDevice->data(QModbusDataUnit::HoldingRegisters, quint16(address), buffer + i);
+            break;
+        case QModbusDataUnit::InputRegisters:
+            modbusDevice->data(QModbusDataUnit::InputRegisters, quint16(address), buffer + i);
+            break;
+        default:
+            reWarn() << "Invalid data written: Adress: " << address << "; Table: "
+                     << QMetaEnum::fromType<QModbusDataUnit::RegisterType>().valueToKey(table);
+            break;
+        }
+    }
+    *ok = true;
+    return parseBuffer(buffer, reg.type, reg.endianess);
+}
+
+QVariant SlaveWorker::parseBuffer(quint16 *wordBuffer, const int size, const Settings::PackingMode &packing)
+{
+    if (packing.byte_order == QDataStream::ByteOrder::BigEndian) {
+        for (int i = 0; i < size; ++i) {
+            std::swap(*(wordBuffer + i), *(wordBuffer + size - i - 1));
+            if (packing.word_order == QDataStream::ByteOrder::BigEndian) {
+                auto bytesInWord = reinterpret_cast<quint8*>(wordBuffer + i);
+                std::swap(*bytesInWord, *(bytesInWord + 1));
+            }
+        }
+    }
 }
 
 void SlaveWorker::onErrorOccurred(QModbusDevice::Error error)

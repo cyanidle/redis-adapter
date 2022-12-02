@@ -23,6 +23,8 @@ private slots:
     void onStateChanged(QModbusDevice::State state);
 private:
     Settings::DeviceRegistersInfo &deviceRegisters() {return m_settings.registers;}
+    QVariant parseType(QModbusDataUnit::RegisterType table, int address, const Settings::RegisterInfo &reg, int *currentSize, bool *ok);
+    static QVariant parseBuffer(quint16 *wordBuffer, const int size, const Settings::PackingMode &packing);
     void connectDevice();
     void disconnectDevice();
 
