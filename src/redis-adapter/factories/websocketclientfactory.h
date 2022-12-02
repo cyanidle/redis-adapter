@@ -16,7 +16,7 @@ class Websocket::ClientFactory : public Radapter::FactoryBase
 {
     Q_OBJECT
 public:
-    explicit ClientFactory(const QList<Settings::WebsockerClientInfo> &info,
+    explicit ClientFactory(const QList<Settings::WebsocketClientInfo> &info,
                                     QObject *parent = nullptr);
     int initWorkers() override;
     int initSettings() override {return 0;}
@@ -25,7 +25,7 @@ public:
 signals:
 
 private:
-    QList<Settings::WebsockerClientInfo> m_info;
+    QList<Settings::WebsocketClientInfo> m_info;
     Radapter::WorkersList m_workersPool;
 };
 

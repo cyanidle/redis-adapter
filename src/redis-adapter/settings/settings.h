@@ -22,22 +22,26 @@ namespace Settings {
     struct RADAPTER_SHARED_SRC WorkerSettings : public Serializer::SerializerBase {
         Q_GADGET
         IS_SERIALIZABLE
-        SERIAL_FIELD(QString, name, "None");
+        SERIAL_FIELD(QString, name);
         SERIAL_FIELD(bool, debug, false)
-        SERIAL_CONTAINER(QList, QString, producers, QStringList())
-        SERIAL_CONTAINER(QList, QString, consumers, QStringList())
+        SERIAL_CONTAINER(QList, QString, producers, DEFAULT)
+        SERIAL_CONTAINER(QList, QString, consumers, DEFAULT)
+        SERIAL_CONTAINER(QList, QString, filter_namespaces, DEFAULT)
         SERIAL_FIELD(quint32, max_msgs_in_queue, 30)
 
         Radapter::WorkerSettings asWorkerSettings(QThread *thread) const {
-            return Radapter::WorkerSettings(
+            Radapter::WorkerSettings result = {
                 name,
                 thread,
                 consumers,
                 producers,
                 debug,
-                max_msgs_in_queue
-                );
+                max_msgs_in_queue,
+                filter_namespaces
+            };
+            return result;
         }
+        bool isValid() const {return !name.isEmpty();}
     };
 
 
@@ -100,7 +104,7 @@ namespace Settings {
         SERIAL_FIELD(quint32, mock_timer_delay, 1000)
         SERIAL_FIELD(QString, json_file_path)
         Radapter::MockWorkerSettings asMockSettings(QThread *thread) const {
-            Radapter::MockWorkerSettings result;
+            Radapter::MockWorkerSettings result = {};
             result.mockTimerDelay = mock_timer_delay;
             result.jsonFilePath = json_file_path;
             result.name = name;
@@ -134,12 +138,19 @@ namespace Settings {
         static Map cacheMap;
         Q_GADGET
         IS_SERIALIZABLE
-        SERIAL_FIELD(QString, name);
+        SERIAL_FIELD(QString, name, "");
         SERIAL_FIELD(QString, ip);
         SERIAL_FIELD(quint16, port)
+        QString repr() const {
+            return QStringLiteral("Tcp dev %1; Ip: %2; Port: %3")
+                .arg(name, ip)
+                .arg(port);
+        }
         SERIAL_POST_INIT(cache)
         void cache() {
-            cacheMap.insert(name, *this);
+            if (!name.isEmpty()) {
+                cacheMap.insert(name, *this);
+            }
         }
         bool isValid() {
             return !ip.isEmpty() && (port > 0u);
@@ -228,12 +239,12 @@ namespace Settings {
     struct RADAPTER_SHARED_SRC SqlStorageInfo : Serializer::SerializerBase {
         Q_GADGET
         IS_SERIALIZABLE
+        SERIAL_NEST(WorkerSettings, worker)
         SERIAL_FIELD(QString, name)
         SERIAL_FIELD(QString, client_name)
         SERIAL_FIELD(QString, target_table)
         SERIAL_FIELD(QString, key_vault_name)
         SqlKeyVaultInfo key_vault;
-        SERIAL_CONTAINER(QList, QString, producers)
         SERIAL_POST_INIT(postInit)
 
         void postInit()
@@ -243,13 +254,12 @@ namespace Settings {
 
         bool isValid() const {
             return !client_name.isEmpty() && !target_table.isEmpty()
-                    && key_vault.isValid() && !producers.isEmpty();
+                    && key_vault.isValid();
         }
         bool operator==(const SqlStorageInfo &other) const {
             return this->client_name == other.client_name
                     && this->target_table == other.target_table
-                    && this->key_vault == other.key_vault
-                    && this->producers == other.producers;
+                    && this->key_vault == other.key_vault;
         }
         bool operator!=(const SqlStorageInfo &other) const {
             return !(*this == other);
@@ -293,26 +303,26 @@ namespace Settings {
         IS_SERIALIZABLE
         SERIAL_FIELD(quint16, port)
         SERIAL_FIELD(bool, debug, false)
-        SERIAL_CONTAINER(QList, QString, producers)
-        SERIAL_CONTAINER(QList, QString, consumers)
+        SERIAL_NEST(WorkerSettings, worker)
 
         bool isValid() const {
             return (port > 0u)
-                    && !(producers.isEmpty() && consumers.isEmpty());
+                    && !(worker.producers.isEmpty() && worker.consumers.isEmpty());
         }
         bool operator==(const WebsocketServerInfo &other) const {
             return (port == other.port)
-                    && (producers == other.producers)
-                    && (consumers == other.consumers);
+                    && (worker.producers == other.worker.producers)
+                    && (worker.consumers == other.worker.consumers);
         }
         bool operator!=(const WebsocketServerInfo &other) const {
             return !(*this == other);
         }
     };
 
-    struct RADAPTER_SHARED_SRC WebsockerClientInfo : WorkerSettings {
+    struct RADAPTER_SHARED_SRC WebsocketClientInfo : Serializer::SerializerBase {
         Q_GADGET
         IS_SERIALIZABLE
+        SERIAL_NEST(WorkerSettings, worker)
         SERIAL_FIELD(QString, server_host, "localhost");
         SERIAL_FIELD(quint16, server_port, 0);
     };

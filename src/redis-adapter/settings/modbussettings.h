@@ -11,15 +11,24 @@ namespace Settings {
         static Map cacheMap;
         Q_GADGET
         IS_SERIALIZABLE
-        SERIAL_FIELD(QString, name);
+        SERIAL_FIELD(QString, name, "");
         SERIAL_FIELD(QString, port_name);
-        SERIAL_FIELD(int, parity)
-        SERIAL_FIELD(int, baud)
-        SERIAL_FIELD(int, data_bits)
-        SERIAL_FIELD(int, stop_bits)
+        SERIAL_FIELD(int, parity, QSerialPort::NoParity)
+        SERIAL_FIELD(int, baud, QSerialPort::Baud115200)
+        SERIAL_FIELD(int, data_bits, QSerialPort::Data8)
+        SERIAL_FIELD(int, stop_bits, QSerialPort::OneStop)
+        QString repr() const {
+            return QStringLiteral("Serial dev %1; Port: %2; Parity: %3; Baud: %4; Data bits: %5; Stop bits: %6")
+                .arg(name, port_name)
+                .arg(parity, baud, data_bits)
+                .arg(stop_bits);
+        }
+
         SERIAL_POST_INIT(cache)
         void cache() {
-            cacheMap.insert(name, *this);
+            if (!name.isEmpty()) {
+                cacheMap.insert(name, *this);
+            }
         }
 
         SerialDevice()
@@ -29,6 +38,8 @@ namespace Settings {
               stop_bits(QSerialPort::OneStop)
         {
         }
+
+        bool isValid() const {return !name.isEmpty() && !port_name.isEmpty();}
 
         bool operator==(const SerialDevice &src) const {
             return port_name == src.port_name
@@ -122,7 +133,7 @@ namespace Settings {
                 serial = SerialDevice::cacheMap.value(name);
                 type = ModbusConnectionType::Serial;
             } else {
-                type = ModbusConnectionType::Unknown;
+                throw std::runtime_error("Missing device: " + name.toStdString());
             }
         }
 
@@ -193,22 +204,9 @@ namespace Settings {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_FIELD(QString, name)
-        SERIAL_CUSTOM(ModbusChannelType, type, initChannelType, readChannelType)
+        ModbusChannelType type = MbMaster;
         SERIAL_FIELD(quint8, slave_address, 0)
         SERIAL_CONTAINER_NEST(QList, ModbusSlaveInfo, slaves, {})
-        bool initChannelType(const QVariant &src) {
-            auto rawType = src.toString();
-            if (rawType == "slave") {
-                type = ModbusChannelType::MbSlave;
-                return true;
-            }
-            if (rawType == "master") {
-                type = ModbusChannelType::MbMaster;
-                return true;
-            }
-            return false;
-        }
-
         QVariant readChannelType() const {
             return QVariant(type);
         }
@@ -294,8 +292,8 @@ namespace Settings {
         }
 
         bool initType(const QVariant &src) {
-            type = StringToType.value(src.toString());
-            return true;
+            type = StringToType.value(src.toString(), QMetaType::UnknownType);
+            return type != QMetaType::UnknownType;
         }
 
         QVariant readType() const {
@@ -304,7 +302,7 @@ namespace Settings {
 
         bool initTable(const QVariant &src) {
             table = StringToTable.value(src.toString());
-            return true;
+            return table != QModbusDataUnit::Invalid;
         }
 
         QVariant readTable() const {
@@ -353,9 +351,8 @@ namespace Settings {
         SERIAL_FIELD(quint16, response_time, 150)
         SERIAL_FIELD(quint16, retries, 3)
         SERIAL_FIELD(bool, debug, false)
-        SERIAL_CONTAINER(QList, QString, producers, DEFAULT)
-        SERIAL_CONTAINER(QList, QString, consumers, DEFAULT)
         SERIAL_NEST(RecordOutgoingSetting, log_jsons, DEFAULT)
+        SERIAL_NEST(WorkerSettings, worker)
         SERIAL_NEST(ModbusTcpDevicesSettings, tcp, DEFAULT)
         SERIAL_NEST(ModbusRtuDevicesSettings, rtu, DEFAULT)
         SERIAL_FIELD(QString, filter_name, DEFAULT)
@@ -381,8 +378,8 @@ namespace Settings {
 
         bool operator==(const ModbusConnectionSettings &src) const{
             return channels == channels
-                && producers == src.producers
-                && consumers == src.consumers;
+                && worker.producers == src.worker.producers
+                && worker.consumers == src.worker.consumers;
         }
 
         bool operator!=(const ModbusConnectionSettings &other) {
@@ -390,7 +387,91 @@ namespace Settings {
         }
     };
 
+    struct RADAPTER_SHARED_SRC ModbusDevice : Serializer::SerializerBase {
+        Q_GADGET
+        IS_SERIALIZABLE
+        SERIAL_NEST(TcpDevice, tcp, DEFAULT)
+        SERIAL_NEST(SerialDevice, rtu, DEFAULT)
+        ModbusConnectionType device_type = ModbusConnectionType::Unknown;
+        SERIAL_POST_INIT(postInit)
+        QString repr() const {
+            return device_type==ModbusConnectionType::Serial?
+                rtu.repr():
+                tcp.repr();
+        }
+        void postInit() {
+            if (tcp.isValid() && rtu.isValid()) {
+                throw std::runtime_error("Both tcp and rtu device is prohibited! Use one");
+            }
+            if (tcp.isValid()) {
+                device_type = Tcp;
+            } else if (rtu.isValid()) {
+                device_type = Serial;
+            } else {
+                throw std::runtime_error("Provide at least one target device!");
+            }
+        }
+    };
 
+    struct RADAPTER_SHARED_SRC ModbusSlaveWorker : Serializer::SerializerBase {
+        Q_GADGET
+        IS_SERIALIZABLE
+        SERIAL_NEST(WorkerSettings, worker)
+        SERIAL_NEST(ModbusDevice, device)
+        SERIAL_FIELD(quint32, reconnect_timeout_ms, 5000)
+        SERIAL_CUSTOM(bool, holding_registers, parseHolding, CUSTOM_NO_READ, DEFAULT)
+        SERIAL_CUSTOM(bool, input_registers, parseInput, CUSTOM_NO_READ, DEFAULT)
+        SERIAL_CUSTOM(bool, di, parseDi, CUSTOM_NO_READ, DEFAULT)
+        SERIAL_CUSTOM(bool, coils, parseCoils, CUSTOM_NO_READ, DEFAULT)
+        DeviceRegistersInfo registers = {};
+        SERIAL_POST_INIT(postInit)
+        void postInit() {
+            if (registers.isEmpty()) {
+                throw std::runtime_error("Empty registers for MbSlave worker!");
+            }
+        }
+        bool parseHolding(const QVariant &src) {
+            auto map = src.toMap();
+            map.insert("table_type", "holding");
+            registers.unite(parseRegisters(map));
+            holding_registers = true;
+            return true;
+        }
+        bool parseInput(const QVariant &src) {
+            auto map = src.toMap();
+            map.insert("table_type", "input");
+            registers.unite(parseRegisters(map));
+            input_registers = true;
+            return true;
+        }
+        bool parseDi(const QVariant &src) {
+            auto map = src.toMap();
+            map.insert("table_type", "discrete_inputs");
+            registers.unite(parseRegisters(map));
+            di = true;
+            return true;
+        }
+        bool parseCoils(const QVariant &src) {
+            auto map = src.toMap();
+            map.insert("table_type", "coils");
+            registers.unite(parseRegisters(map));
+            coils = true;
+            return true;
+        }
+        DeviceRegistersInfo parseRegisters(const Formatters::JsonDict &target) {
+            DeviceRegistersInfo result;
+            for (auto &iter : target) {
+                if (iter.field() == "index") {
+                    auto domain = iter.getCurrentDomain();
+                    auto map = target[domain].toMap();
+                    map.insert("table", target["table_type"]);
+                    auto reg = Serializer::fromQMap<Settings::RegisterInfo>(map);
+                    result.insert(domain.join(":"), reg);
+                }
+            }
+            return result;
+        }
+    };
 
 
 }

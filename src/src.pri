@@ -37,7 +37,8 @@ SOURCES += \
     $$PWD/redis-adapter/localization.cpp \
     $$PWD/redis-adapter/localstorage.cpp \
     $$PWD/redis-adapter/radapterlogging.cpp \
-    $$PWD/redis-adapter/radapterschemas.cpp
+    $$PWD/redis-adapter/radapterschemas.cpp \
+    $$PWD/redis-adapter/workers/modbusslaveworker.cpp
 HEADERS += \
     $$PWD/redis-adapter/connectors/modbusconnector.h \
     $$PWD/redis-adapter/connectors/mysqlconnector.h \
@@ -76,4 +77,5 @@ HEADERS += \
     $$PWD/redis-adapter/localization.h \
     $$PWD/redis-adapter/localstorage.h \
     $$PWD/redis-adapter/radapterlogging.h \
-    $$PWD/redis-adapter/radapterschemas.h
+    $$PWD/redis-adapter/radapterschemas.h \
+    $$PWD/redis-adapter/workers/modbusslaveworker.h

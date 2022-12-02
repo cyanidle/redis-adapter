@@ -15,6 +15,7 @@
 #include "redis-adapter/settings/redissettings.h"
 #include "redis-adapter/connectors/modbusconnector.h"
 #include "radapter-broker/debugging/logginginterceptor.h"
+#include "redis-adapter/workers/modbusslaveworker.h"
 
 using namespace Radapter;
 
@@ -102,20 +103,22 @@ int Launcher::prvInit()
         addWorker(new Radapter::MockWorker(mockSettings.asMockSettings(new QThread())));
     }
     m_filereader->setPath("conf/modbus.toml");
+    auto slavesList = m_filereader->deserialise("modbus_slave").toList();
+    if (!slavesList.isEmpty()) {
+        auto mbSlaves = Serializer::fromQList<Settings::ModbusSlaveWorker>(slavesList);
+        for (const auto& slaveInfo : slavesList) {
+            addWorker(new Modbus::SlaveWorker(slaveInfo, new QThread(this)));
+        }
+    }
     auto modbusConnSettingsRaw = m_filereader->deserialise("modbus", true).toMap();
     if (!modbusConnSettingsRaw.isEmpty()) {
         auto modbusConnSettings = Serializer::fromQMap<Settings::ModbusConnectionSettings>(modbusConnSettingsRaw);
         m_filereader->setPath("conf/registers.toml");
         auto mbRegisters = Settings::DeviceRegistersInfoMapParser::parse(
             m_filereader->deserialise("registers", true).toMap());
-        auto mbWorkerSettings = WorkerSettings{"modbus",
-                                               new QThread(this),
-                                               modbusConnSettings.consumers,
-                                               modbusConnSettings.producers,
-                                               modbusConnSettings.debug};
         ModbusConnector::init(modbusConnSettings,
                               mbRegisters,
-                              mbWorkerSettings);
+                              modbusConnSettings.worker.asWorkerSettings(new QThread(this)));
         addSingleton(ModbusConnector::instance());
         QList<InterceptorBase*> mbInterceptors{};
         if (!modbusConnSettings.filters.isEmpty()) {
@@ -137,7 +140,7 @@ int Launcher::prvInit()
             addFactory(new Sql::ArchiveFactory(archivesInfo, m_sqlFactory, this));
         }
     }
-    auto websocketClients = Serializer::fromQList<Settings::WebsockerClientInfo>(
+    auto websocketClients = Serializer::fromQList<Settings::WebsocketClientInfo>(
         m_filereader->deserialise("websocket.client", true).toList());
     if (!websocketClients.isEmpty()) {
         addFactory(new Websocket::ClientFactory(websocketClients, this));
@@ -146,13 +149,7 @@ int Launcher::prvInit()
     if (!websocketServerConf.isEmpty()) {
         auto websocketServer = Serializer::fromQMap<Settings::WebsocketServerInfo>(websocketServerConf);
         if (websocketServer.isValid()) {
-            auto settings = WorkerSettings{
-                "websocket-server",
-                new QThread(this),
-                websocketServer.consumers,
-                websocketServer.producers
-            };
-            Websocket::ServerConnector::init(websocketServer, settings);
+            Websocket::ServerConnector::init(websocketServer, websocketServer.worker.asWorkerSettings(new QThread(this)));
             addSingleton(Websocket::ServerConnector::instance());
             Radapter::Broker::instance()->registerProxy(Websocket::ServerConnector::instance()->createProxy());
         }
@@ -162,6 +159,7 @@ int Launcher::prvInit()
         auto localizationInfo = Serializer::fromQMap<Settings::LocalizationInfo>(localizationInfoMap);
         Localization::init(localizationInfo, this);
     }
+    m_filereader->setPath("conf/config.toml");
     LocalStorage::init(this);
     return 0;
 }

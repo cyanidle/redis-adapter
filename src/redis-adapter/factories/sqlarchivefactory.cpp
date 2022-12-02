@@ -20,11 +20,7 @@ int ArchiveFactory::initWorkers()
             return -1;
         }
         auto dbWorker = m_dbFactory->getWorker(archiveInfo.client_name);
-        auto workerSettings = Radapter::WorkerSettings();
-        workerSettings.name = archiveInfo.name;
-        workerSettings.thread = new QThread(this);
-        workerSettings.producers = archiveInfo.producers;
-        auto archiveProducer = new ArchiveProducer(dbWorker, archiveInfo, workerSettings);
+        auto archiveProducer = new ArchiveProducer(dbWorker, archiveInfo, archiveInfo.worker.asWorkerSettings(new QThread(this)));
         connect(archiveProducer->thread(), &QThread::started, archiveProducer, &ArchiveProducer::run);
         connect(archiveProducer->thread(), &QThread::finished, archiveProducer, &ArchiveProducer::deleteLater);
         m_workerPool.append(archiveProducer);

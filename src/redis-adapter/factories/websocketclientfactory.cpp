@@ -3,7 +3,7 @@
 
 using namespace Websocket;
 
-ClientFactory::ClientFactory(const QList<Settings::WebsockerClientInfo> &info, QObject *parent) :
+ClientFactory::ClientFactory(const QList<Settings::WebsocketClientInfo> &info, QObject *parent) :
     Radapter::FactoryBase(parent),
     m_info(info)
 {   
@@ -12,15 +12,9 @@ ClientFactory::ClientFactory(const QList<Settings::WebsockerClientInfo> &info, Q
 int ClientFactory::initWorkers()
 {
     for (auto &info : m_info) {
-        auto settings = Radapter::WorkerSettings{
-            info.name,
-            new QThread(this),
-            info.consumers,
-            info.producers,
-            info.debug
-        };
-        connect(settings.thread, &QThread::finished, settings.thread, &QThread::deleteLater);
-        auto client = new Websocket::Client(info.server_host, info.server_port, settings);
+        auto thread = new QThread(this);
+        connect(thread, &QThread::finished, thread, &QThread::deleteLater);
+        auto client = new Websocket::Client(info.server_host, info.server_port, info.worker.asWorkerSettings(thread));
         connect(client->thread(), &QThread::started, client, &Websocket::Client::start);
         connect(client->thread(), &QThread::finished, client, &Websocket::Client::deleteLater);
         m_workersPool.append(client);

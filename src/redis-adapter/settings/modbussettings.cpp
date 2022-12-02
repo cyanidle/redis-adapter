@@ -29,7 +29,7 @@ DeviceRegistersInfoMap DeviceRegistersInfoMapParser::parse(const QVariant &src) 
             auto byteorder = domainJson.value("byte_order").toString().toLower();
             auto wordorder = domainJson.value("word_order").toString().toLower();
             if (byteorder.isEmpty() || wordorder.isEmpty()) {
-                reDebug() << "'byte_order' or 'word_order' not set in registers config!";
+                throw std::runtime_error("'byte_order' or 'word_order' not set in registers config!");
             }
             auto regInfoMapJson = Formatters::JsonDict(domainJson.value("registers").toMap());
 
