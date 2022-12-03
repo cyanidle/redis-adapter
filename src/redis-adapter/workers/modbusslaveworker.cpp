@@ -15,7 +15,7 @@ SlaveWorker::SlaveWorker(const Settings::ModbusSlaveWorker &settings, QThread *t
     m_reconnectTimer->setInterval(settings.reconnect_timeout_ms);
     m_reconnectTimer->setSingleShot(true);
     m_reconnectTimer->callOnTimeout(this, &SlaveWorker::connectDevice);
-    connect(this->thread(), &QThread::started, m_reconnectTimer, QOverload<>::of(&QTimer::start));
+    connect(this->thread(), &QThread::started, this, &SlaveWorker::connectDevice);
     if (settings.device.device_type == Settings::Tcp) {
         modbusDevice = new QModbusTcpServer(this);
         modbusDevice->setConnectionParameter(QModbusDevice::NetworkPortParameter, settings.device.tcp.port);
@@ -28,12 +28,15 @@ SlaveWorker::SlaveWorker(const Settings::ModbusSlaveWorker &settings, QThread *t
         modbusDevice->setConnectionParameter(QModbusDevice::SerialDataBitsParameter, settings.device.rtu.data_bits);
         modbusDevice->setConnectionParameter(QModbusDevice::SerialStopBitsParameter, settings.device.rtu.stop_bits);
     }
+    modbusDevice->setServerAddress(settings.slave_id);
+
     connect(modbusDevice, &QModbusServer::dataWritten,
             this, &SlaveWorker::onDataWritten);
     connect(modbusDevice, &QModbusServer::stateChanged,
             this, &SlaveWorker::onStateChanged);
     connect(modbusDevice, &QModbusServer::errorOccurred,
             this, &SlaveWorker::onErrorOccurred);
+    QModbusDataUnitMap regMap;
     for (auto iter = deviceRegisters().constBegin(); iter != deviceRegisters().constEnd(); ++iter) {
         if (m_reverseRegisters.contains(iter.value().table)) {
             m_reverseRegisters[iter.value().table].insert(iter.value().index, iter.key());
@@ -41,12 +44,22 @@ SlaveWorker::SlaveWorker(const Settings::ModbusSlaveWorker &settings, QThread *t
             m_reverseRegisters[iter.value().table] = {{iter.value().index, iter.key()}};
         }
     }
+    regMap.insert(QModbusDataUnit::Coils, {QModbusDataUnit::Coils, 0, settings.coils});
+    regMap.insert(QModbusDataUnit::HoldingRegisters, {QModbusDataUnit::HoldingRegisters, 0, settings.holding_registers});
+    regMap.insert(QModbusDataUnit::InputRegisters, {QModbusDataUnit::InputRegisters, 0, settings.input_registers});
+    regMap.insert(QModbusDataUnit::DiscreteInputs, {QModbusDataUnit::DiscreteInputs, 0, settings.di});
+    modbusDevice->setMap(regMap);
+}
+
+SlaveWorker::~SlaveWorker()
+{
+    disconnectDevice();
 }
 
 void SlaveWorker::connectDevice()
 {
     if (!modbusDevice->connectDevice()) {
-        reWarn() << "FAIL: Attempt to connect to: " << m_settings.device.repr();
+        reWarn() << workerName() << ": Failed to connect: Attempt to reconnect to: " << m_settings.device.repr();
         m_reconnectTimer->start();
     }
 }
@@ -59,71 +72,25 @@ void SlaveWorker::disconnectDevice()
 void SlaveWorker::onDataWritten(QModbusDataUnit::RegisterType table, int address, int size)
 {
     auto msg = prepareMsg();
-    QByteArray tempBuffer;
     for (int i = 0; i < size; ++i) {
         if (!m_reverseRegisters.contains(table)) {
-            break;
+            reWarn() << "No mapping for Table: " << table
+                     << ": Adress: " << address << "; Size : " << size;
+            return;
         }
-        if (!m_reverseRegisters[table].contains(address + i)) {
-            break;
+        if (!m_reverseRegisters[table].contains(address)) {
+            reWarn() << "Modbus Slave error: Current address not found:" << address;
         }
-        const auto &regString = m_reverseRegisters[table][address + i];
+        const auto &regString = m_reverseRegisters[table][address];
         auto regInfo = deviceRegisters().value(regString);
-        bool ok = false;
-        auto result = parseType(table, address, regInfo, &size, &ok);
-
-        return;
-    }
-    reWarn() << "No mapping for Table: " << QMetaEnum::fromType<QModbusDataUnit::RegisterType>().valueToKey(table)
-             << ": Adress: " << address << "; Size : " << size;
-}
-
-QVariant SlaveWorker::parseType(QModbusDataUnit::RegisterType table, int address,
-                                const Settings::RegisterInfo &reg, int *currentSize, bool *ok)
-{
-    constexpr static int maxSize = sizeof(long long int);
-    const int size = QMetaType::sizeOf(reg.type);
-    if (size > maxSize) {
-        *ok = false;
-        return {};
-    }
-    *currentSize += size - 1;
-    quint16 buffer[maxSize] = {};
-    for (int i = 0; i < size; ++i) {
-        switch (table) {
-        case QModbusDataUnit::Coils:
-            modbusDevice->data(QModbusDataUnit::Coils, quint16(address), buffer + i);
-            break;
-        case QModbusDataUnit::DiscreteInputs:
-            modbusDevice->data(QModbusDataUnit::DiscreteInputs, quint16(address), buffer + i);
-            break;
-        case QModbusDataUnit::HoldingRegisters:
-            modbusDevice->data(QModbusDataUnit::HoldingRegisters, quint16(address), buffer + i);
-            break;
-        case QModbusDataUnit::InputRegisters:
-            modbusDevice->data(QModbusDataUnit::InputRegisters, quint16(address), buffer + i);
-            break;
-        default:
-            reWarn() << "Invalid data written: Adress: " << address << "; Table: "
-                     << QMetaEnum::fromType<QModbusDataUnit::RegisterType>().valueToKey(table);
-            break;
+        auto result = parseType(table, address, regInfo, &i);
+        if (result.isValid()) {
+            msg[regString.split(":")] = result;
+        } else {
+            reWarn() << "Modbus Slave error: Current adress: " << address;
         }
     }
-    *ok = true;
-    return parseBuffer(buffer, reg.type, reg.endianess);
-}
-
-QVariant SlaveWorker::parseBuffer(quint16 *wordBuffer, const int size, const Settings::PackingMode &packing)
-{
-    if (packing.byte_order == QDataStream::ByteOrder::BigEndian) {
-        for (int i = 0; i < size; ++i) {
-            std::swap(*(wordBuffer + i), *(wordBuffer + size - i - 1));
-            if (packing.word_order == QDataStream::ByteOrder::BigEndian) {
-                auto bytesInWord = reinterpret_cast<quint8*>(wordBuffer + i);
-                std::swap(*bytesInWord, *(bytesInWord + 1));
-            }
-        }
-    }
+    emit sendMsg(msg);
 }
 
 void SlaveWorker::onErrorOccurred(QModbusDevice::Error error)
@@ -131,7 +98,7 @@ void SlaveWorker::onErrorOccurred(QModbusDevice::Error error)
     reWarn() << "Error: " << m_settings.device.repr() << "; Reason: " <<
         QMetaEnum::fromType<QModbusDevice::Error>().valueToKey(error);
     disconnectDevice();
-
+    m_reconnectTimer->start();
 }
 
 void SlaveWorker::onStateChanged(QModbusDevice::State state)
@@ -148,7 +115,7 @@ void SlaveWorker::onMsg(const Radapter::WorkerMsg &msg)
             auto regInfo = m_settings.registers.value(fullKeyJoined);
             auto value = iter.value();
             if (value.canConvert(regInfo.type)) {
-                m_currRegisters.insert(fullKeyJoined, value);
+                setValues(value, regInfo);
             } else {
                 reWarn() << "Incorrect value type for slave: " << workerName() << "; Received: " << value;
             }
@@ -156,7 +123,26 @@ void SlaveWorker::onMsg(const Radapter::WorkerMsg &msg)
     }
 }
 
-// Аяяйяйяйяйяйййя убили SlaveWorker, убили SlaveWorker,
+void SlaveWorker::setValues(const QVariant &src, const Settings::RegisterInfo &regInfo)
+{
+    if (!src.canConvert(regInfo.type)) {
+        reError() << "Worker: " << workerName()
+                  << "Error writing data to modbus slave: "
+                  << src << "; Index: " << regInfo.index;
+    }
+    const auto sizeWords = QMetaType::sizeOf(regInfo.type)/2;
+    auto copy = src;
+    auto wordArr = reinterpret_cast<quint16 *>(copy.data());
+    applyEndianess(wordArr, sizeWords, regInfo.endianess);
+    QVector<quint16> toWrite;
+    for (int i = 0; i < sizeWords; ++i) {
+        reDebug() << workerName() << ": Writing: " << *(wordArr + i) << " --> " << regInfo.index + i;
+        toWrite.append(*(wordArr + i));
+    }
+    modbusDevice->setData(QModbusDataUnit{regInfo.table, regInfo.index, toWrite});
+}
+
+// Аяяйяйяйяйяйййя убили SlaveWorker`а убили,
 // аяаяаяаяаяаяаая ни за что ни про что
 void SlaveWorker::run()
 {

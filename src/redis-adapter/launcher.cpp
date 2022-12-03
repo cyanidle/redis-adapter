@@ -106,7 +106,7 @@ int Launcher::prvInit()
     auto slavesList = m_filereader->deserialise("modbus_slave").toList();
     if (!slavesList.isEmpty()) {
         auto mbSlaves = Serializer::fromQList<Settings::ModbusSlaveWorker>(slavesList);
-        for (const auto& slaveInfo : slavesList) {
+        for (const auto& slaveInfo : mbSlaves) {
             addWorker(new Modbus::SlaveWorker(slaveInfo, new QThread(this)));
         }
     }

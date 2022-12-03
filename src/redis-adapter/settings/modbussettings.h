@@ -273,18 +273,24 @@ namespace Settings {
     };
 
     struct RADAPTER_SHARED_SRC RegisterInfo : Serializer::SerializerBase {
-
         typedef QMap<QString, QModbusDataUnit::RegisterType> tableMap;
         typedef QMap<QString, QMetaType::Type> typeMap;
-        static tableMap StringToTable;
-        static typeMap StringToType;
-
+        static typeMap stringToType() {
+            return {{"uint16", QMetaType::UShort},
+                    {"uint32", QMetaType::UInt},
+                    {"float", QMetaType::Float},
+                    {"float32", QMetaType::Float}};}
+        static tableMap stringToTable() {
+            return {{"holding",QModbusDataUnit::RegisterType::HoldingRegisters},
+                    {"input",QModbusDataUnit::RegisterType::InputRegisters},
+                    {"coils",QModbusDataUnit::RegisterType::Coils},
+                    {"discrete_inputs",QModbusDataUnit::RegisterType::DiscreteInputs}};}
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_CUSTOM(QModbusDataUnit::RegisterType, table, initTable, readTable)
         SERIAL_FIELD(quint16, index)
-        SERIAL_CUSTOM(QMetaType::Type, type, initType, readType)
-        SERIAL_NEST(PackingMode, endianess)
+        SERIAL_CUSTOM(QMetaType::Type, type, initType, readType, QMetaType::UShort)
+        SERIAL_NEST(PackingMode, endianess, DEFAULT)
         SERIAL_FIELD(bool, is_persistent, false)
 
         bool isValid() const {
@@ -292,21 +298,21 @@ namespace Settings {
         }
 
         bool initType(const QVariant &src) {
-            type = StringToType.value(src.toString(), QMetaType::UnknownType);
+            type = stringToType().value(src.toString(), QMetaType::UnknownType);
             return type != QMetaType::UnknownType;
         }
 
         QVariant readType() const {
-            return StringToType.key(type);
+            return stringToType().key(type);
         }
 
         bool initTable(const QVariant &src) {
-            table = StringToTable.value(src.toString());
+            table = stringToTable().value(src.toString());
             return table != QModbusDataUnit::Invalid;
         }
 
         QVariant readTable() const {
-            return StringToTable.key(table);
+            return stringToTable().key(table);
         }
 
         bool operator==(const RegisterInfo &src) const{
@@ -419,58 +425,19 @@ namespace Settings {
         SERIAL_NEST(WorkerSettings, worker)
         SERIAL_NEST(ModbusDevice, device)
         SERIAL_FIELD(quint32, reconnect_timeout_ms, 5000)
-        SERIAL_CUSTOM(bool, holding_registers, parseHolding, CUSTOM_NO_READ, DEFAULT)
-        SERIAL_CUSTOM(bool, input_registers, parseInput, CUSTOM_NO_READ, DEFAULT)
-        SERIAL_CUSTOM(bool, di, parseDi, CUSTOM_NO_READ, DEFAULT)
-        SERIAL_CUSTOM(bool, coils, parseCoils, CUSTOM_NO_READ, DEFAULT)
+        SERIAL_FIELD(quint16, slave_id)
+        SERIAL_CUSTOM(quint16, holding_registers, parseHolding, CUSTOM_NO_READ, DEFAULT)
+        SERIAL_CUSTOM(quint16, input_registers, parseInput, CUSTOM_NO_READ, DEFAULT)
+        SERIAL_CUSTOM(quint16, di, parseDi, CUSTOM_NO_READ, DEFAULT)
+        SERIAL_CUSTOM(quint16, coils, parseCoils, CUSTOM_NO_READ, DEFAULT)
         DeviceRegistersInfo registers = {};
         SERIAL_POST_INIT(postInit)
-        void postInit() {
-            if (registers.isEmpty()) {
-                throw std::runtime_error("Empty registers for MbSlave worker!");
-            }
-        }
-        bool parseHolding(const QVariant &src) {
-            auto map = src.toMap();
-            map.insert("table_type", "holding");
-            registers.unite(parseRegisters(map));
-            holding_registers = true;
-            return true;
-        }
-        bool parseInput(const QVariant &src) {
-            auto map = src.toMap();
-            map.insert("table_type", "input");
-            registers.unite(parseRegisters(map));
-            input_registers = true;
-            return true;
-        }
-        bool parseDi(const QVariant &src) {
-            auto map = src.toMap();
-            map.insert("table_type", "discrete_inputs");
-            registers.unite(parseRegisters(map));
-            di = true;
-            return true;
-        }
-        bool parseCoils(const QVariant &src) {
-            auto map = src.toMap();
-            map.insert("table_type", "coils");
-            registers.unite(parseRegisters(map));
-            coils = true;
-            return true;
-        }
-        DeviceRegistersInfo parseRegisters(const Formatters::JsonDict &target) {
-            DeviceRegistersInfo result;
-            for (auto &iter : target) {
-                if (iter.field() == "index") {
-                    auto domain = iter.getCurrentDomain();
-                    auto map = target[domain].toMap();
-                    map.insert("table", target["table_type"]);
-                    auto reg = Serializer::fromQMap<Settings::RegisterInfo>(map);
-                    result.insert(domain.join(":"), reg);
-                }
-            }
-            return result;
-        }
+        void postInit() const;
+        bool parseHolding(const QVariant &src);
+        bool parseInput(const QVariant &src);
+        bool parseDi(const QVariant &src);
+        bool parseCoils(const QVariant &src);
+        static DeviceRegistersInfo parseRegisters(const Formatters::JsonDict &target);
     };
 
 

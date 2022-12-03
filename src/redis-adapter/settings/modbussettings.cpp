@@ -1,18 +1,6 @@
 #include "modbussettings.h"
 
-using namespace Settings;
-
-RegisterInfo::tableMap RegisterInfo::StringToTable = tableMap{
-        {"holding",QModbusDataUnit::RegisterType::HoldingRegisters},
-        {"input",QModbusDataUnit::RegisterType::InputRegisters},
-        {"coils",QModbusDataUnit::RegisterType::Coils},
-        {"discrete_inputs",QModbusDataUnit::RegisterType::DiscreteInputs}
-        };
-RegisterInfo::typeMap RegisterInfo::StringToType = typeMap{
-        {"uint16", QMetaType::UShort},
-        {"uint32", QMetaType::UInt},
-        {"float", QMetaType::Float}
-        };
+using namespace Settings;;
 SerialDevice::Map SerialDevice::cacheMap = SerialDevice::Map{};
 ModbusConnectionSource::Map ModbusConnectionSource::cacheMap = ModbusConnectionSource::Map{};
 
@@ -61,3 +49,75 @@ DeviceRegistersInfoMap DeviceRegistersInfoMapParser::parse(const QVariant &src) 
     }
     return result;
 }
+
+bool ModbusSlaveWorker::parseHolding(const QVariant &src) {
+    auto map = src.toMap();
+    map.insert("table_type", "holding");
+    auto regs = parseRegisters(map);
+    registers.unite(regs);
+    holding_registers = regs.count();
+    return true;
+}
+bool ModbusSlaveWorker::parseInput(const QVariant &src) {
+    auto map = src.toMap();
+    map.insert("table_type", "input");
+    auto regs = parseRegisters(map);
+    registers.unite(regs);
+    input_registers = regs.count();
+    return true;
+}
+bool ModbusSlaveWorker::parseDi(const QVariant &src) {
+    auto map = src.toMap();
+    map.insert("table_type", "discrete_inputs");
+    auto regs = parseRegisters(map);
+    registers.unite(regs);
+    di = regs.count();
+    return true;
+}
+bool ModbusSlaveWorker::parseCoils(const QVariant &src) {
+    auto map = src.toMap();
+    map.insert("table_type", "coils");
+    auto regs = parseRegisters(map);
+    registers.unite(regs);
+    coils = regs.count();
+    return true;
+}
+DeviceRegistersInfo ModbusSlaveWorker::parseRegisters(const Formatters::JsonDict &target) {
+    DeviceRegistersInfo result;
+    for (auto &iter : target) {
+        if (iter.field() == "index") {
+            auto domain = iter.getCurrentDomain();
+            auto map = target[domain].toMap();
+            map.insert("table", target["table_type"]);
+            auto reg = Serializer::fromQMap<Settings::RegisterInfo>(map);
+            result.insert(domain.join(":"), reg);
+        }
+    }
+    return result;
+}
+
+void ModbusSlaveWorker::postInit() const {
+    if (registers.isEmpty()) {
+        throw std::runtime_error("Empty registers for MbSlave worker!");
+    }
+    for (const auto &reg : registers) {
+        switch (reg.table) {
+        case QModbusDataUnit::Coils:
+            if (reg.index > coils) throw std::runtime_error("Registers must be from 0 with step 1");
+            break;
+        case QModbusDataUnit::HoldingRegisters:
+            if (reg.index > holding_registers) throw std::runtime_error("Registers must be from 0 with step 1");
+            break;
+        case QModbusDataUnit::InputRegisters:
+            if (reg.index > input_registers) throw std::runtime_error("Registers must be from 0 with step 1");
+            break;
+        case QModbusDataUnit::DiscreteInputs:
+            if (reg.index > di) throw std::runtime_error("Registers must be from 0 with step 1");
+            break;
+        default:
+            throw std::runtime_error("Registers error");
+        }
+    }
+}
+
+
