@@ -29,7 +29,6 @@ SlaveWorker::SlaveWorker(const Settings::ModbusSlaveWorker &settings, QThread *t
         modbusDevice->setConnectionParameter(QModbusDevice::SerialStopBitsParameter, settings.device.rtu.stop_bits);
     }
     modbusDevice->setServerAddress(settings.slave_id);
-
     connect(modbusDevice, &QModbusServer::dataWritten,
             this, &SlaveWorker::onDataWritten);
     connect(modbusDevice, &QModbusServer::stateChanged,
@@ -79,11 +78,14 @@ void SlaveWorker::onDataWritten(QModbusDataUnit::RegisterType table, int address
             return;
         }
         if (!m_reverseRegisters[table].contains(address)) {
-            reWarn() << "Modbus Slave error: Current address not found:" << address;
+            continue;
         }
         const auto &regString = m_reverseRegisters[table][address];
         auto regInfo = deviceRegisters().value(regString);
         auto result = parseType(table, address, regInfo, &i);
+        if (regInfo.table == QModbusDataUnit::Coils) {
+            result = result.toUInt() > 0 ? 1 : 0;
+        }
         if (result.isValid()) {
             msg[regString.split(":")] = result;
         } else {
@@ -129,9 +131,11 @@ void SlaveWorker::setValues(const QVariant &src, const Settings::RegisterInfo &r
         reError() << "Worker: " << workerName()
                   << "Error writing data to modbus slave: "
                   << src << "; Index: " << regInfo.index;
+        return;
     }
     const auto sizeWords = QMetaType::sizeOf(regInfo.type)/2;
     auto copy = src;
+    copy.convert(regInfo.type);
     auto wordArr = reinterpret_cast<quint16 *>(copy.data());
     applyEndianess(wordArr, sizeWords, regInfo.endianess);
     QVector<quint16> toWrite;

@@ -53,29 +53,33 @@ QVariant SlaveWorker::parseType(QModbusDataUnit::RegisterType table, int address
                                 const Settings::RegisterInfo &reg, int *currentSize)
 {
     constexpr static int maxSize = sizeof(long long int);
-    const int sizeWords = QMetaType::sizeOf(reg.type)/2;
+    const int sizeWords = QMetaType::sizeOf(reg.type)/2 + QMetaType::sizeOf(reg.type) % 2;
     if (sizeWords > maxSize || sizeWords <= 0) {
         return {};
     }
     *currentSize += sizeWords - 1;
     quint16 buffer[maxSize] = {};
     for (int i = 0; i < sizeWords; ++i) {
+        bool ok = false;
         switch (table) {
         case QModbusDataUnit::Coils:
-            modbusDevice->data(QModbusDataUnit::Coils, quint16(address), buffer + i);
+            ok = modbusDevice->data(QModbusDataUnit::Coils, quint16(address + i), buffer + i);
             break;
         case QModbusDataUnit::DiscreteInputs:
-            modbusDevice->data(QModbusDataUnit::DiscreteInputs, quint16(address), buffer + i);
+            ok = modbusDevice->data(QModbusDataUnit::DiscreteInputs, quint16(address + i), buffer + i);
             break;
         case QModbusDataUnit::HoldingRegisters:
-            modbusDevice->data(QModbusDataUnit::HoldingRegisters, quint16(address), buffer + i);
+            ok = modbusDevice->data(QModbusDataUnit::HoldingRegisters, quint16(address + i), buffer + i);
             break;
         case QModbusDataUnit::InputRegisters:
-            modbusDevice->data(QModbusDataUnit::InputRegisters, quint16(address), buffer + i);
+            ok = modbusDevice->data(QModbusDataUnit::InputRegisters, quint16(address + i), buffer + i);
             break;
         default:
-            reWarn() << "Invalid data written: Adress: " << address << "; Table: " << table;
+            reWarn() << "Invalid data written: Adress: " << address + i << "; Table: " << table;
             return {};
+        }
+        if (!ok) {
+            reWarn() << "Error reading data! Adress:" << address << "; Table:" << table;
         }
     }
     applyEndianess(buffer, QMetaType::sizeOf(reg.type)/2, reg.endianess);
@@ -86,6 +90,9 @@ QVariant SlaveWorker::parseType(QModbusDataUnit::RegisterType table, int address
         return *reinterpret_cast<quint16*>(buffer);
     case QMetaType::UInt:
         return *reinterpret_cast<quint32*>(buffer);
+    case QMetaType::UChar:
+        return *(reinterpret_cast<quint8*>(buffer) +
+                 (reg.endianess.byte_order == QDataStream::BigEndian));
     default:
         return {};
     }

@@ -278,6 +278,7 @@ namespace Settings {
         static typeMap stringToType() {
             return {{"uint16", QMetaType::UShort},
                     {"uint32", QMetaType::UInt},
+                    {"uint8", QMetaType::UChar},
                     {"float", QMetaType::Float},
                     {"float32", QMetaType::Float}};}
         static tableMap stringToTable() {
