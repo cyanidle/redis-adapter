@@ -71,28 +71,73 @@ void SlaveWorker::disconnectDevice()
 void SlaveWorker::onDataWritten(QModbusDataUnit::RegisterType table, int address, int size)
 {
     auto msg = prepareMsg();
+    QVector<quint16> words(size);
     for (int i = 0; i < size; ++i) {
-        if (!m_reverseRegisters.contains(table)) {
-            reWarn() << "No mapping for Table: " << table
-                     << ": Adress: " << address << "; Size : " << size;
-            return;
+        bool ok = false;
+        switch (table) {
+        case QModbusDataUnit::Coils:
+            ok = modbusDevice->data(QModbusDataUnit::Coils, quint16(address + i), &(words[i]));
+            break;
+        case QModbusDataUnit::DiscreteInputs:
+            ok = modbusDevice->data(QModbusDataUnit::DiscreteInputs, quint16(address + i), &(words[i]));
+            break;
+        case QModbusDataUnit::HoldingRegisters:
+            ok = modbusDevice->data(QModbusDataUnit::HoldingRegisters, quint16(address + i), &(words[i]));
+            break;
+        case QModbusDataUnit::InputRegisters:
+            ok = modbusDevice->data(QModbusDataUnit::InputRegisters, quint16(address + i), &(words[i]));
+            break;
+        default:
+            reWarn() << "Invalid data written: Adress: " << address + i << "; Table: " << table;
         }
-        if (!m_reverseRegisters[table].contains(address)) {
+        if (!ok) {
+            reWarn() << "Error reading data! Adress:" << address << "; Table:" << table;
+            continue;
+        }
+    }
+    for (int i = 0; i < size; ++i) {
+        if (!m_reverseRegisters[table].contains(address + i)) {
+            ++i;
             continue;
         }
         const auto &regString = m_reverseRegisters[table][address];
         auto regInfo = deviceRegisters().value(regString);
-        auto result = parseType(table, address, regInfo, &i);
-        if (regInfo.table == QModbusDataUnit::Coils) {
-            result = result.toUInt() > 0 ? 1 : 0;
+        auto sizeWords = QMetaType::sizeOf(regInfo.type)/2;
+        auto result = parseType(words.data() + i, regInfo, sizeWords);
+        i += sizeWords;
+        if (i + sizeWords < size) {
+            reWarn() << "Insufficient size of value: " << sizeWords;
         }
         if (result.isValid()) {
-            msg[regString.split(":")] = result;
+            if (regInfo.table == QModbusDataUnit::Coils
+                || regInfo.table == QModbusDataUnit::DiscreteInputs) {
+                msg[regString.split(":")] = result.toUInt() ? 1 : 0;
+            } else {
+                msg[regString.split(":")] = result;
+            }
         } else {
             reWarn() << "Modbus Slave error: Current adress: " << address;
         }
     }
     emit sendMsg(msg);
+}
+
+QVariant SlaveWorker::parseType(quint16* words, const Settings::RegisterInfo &regInfo, int sizeWords)
+{
+    applyEndianness(words, regInfo.endianess, sizeWords);
+    switch(regInfo.type) {
+    case QMetaType::UShort:
+        return *(reinterpret_cast<quint16*>(words));
+        break;
+    case QMetaType::UInt:
+        return *(reinterpret_cast<quint32*>(words));
+        break;
+    case QMetaType::Float:
+        return *(reinterpret_cast<float*>(words));
+        break;
+    default:
+        return{};
+    }
 }
 
 void SlaveWorker::onErrorOccurred(QModbusDevice::Error error)
@@ -111,39 +156,49 @@ void SlaveWorker::onStateChanged(QModbusDevice::State state)
 
 void SlaveWorker::onMsg(const Radapter::WorkerMsg &msg)
 {
+    QList<QModbusDataUnit> results;
     for (auto& iter : msg) {
         auto fullKeyJoined = iter.getFullKey().join(":");
         if (m_settings.registers.contains(fullKeyJoined)) {
             auto regInfo = m_settings.registers.value(fullKeyJoined);
             auto value = iter.value();
-            if (value.canConvert(regInfo.type)) {
-                setValues(value, regInfo);
+            if (Q_LIKELY(value.canConvert(regInfo.type))) {
+                results.append(parseValues(value, regInfo));
             } else {
-                reWarn() << "Incorrect value type for slave: " << workerName() << "; Received: " << value;
+                reWarn() << "Incorrect value type for slave: " << workerName() << "; Received: " << value << "; Key:" << fullKeyJoined;
             }
         }
     }
+    //! \todo Merge results based on tables
+    for (auto &item: results) {
+        modbusDevice->setData(item);
+    }
 }
 
-void SlaveWorker::setValues(const QVariant &src, const Settings::RegisterInfo &regInfo)
+QModbusDataUnit SlaveWorker::parseValues(const QVariant &src, const Settings::RegisterInfo &regInfo)
 {
     if (!src.canConvert(regInfo.type)) {
         reError() << "Worker: " << workerName()
                   << "Error writing data to modbus slave: "
                   << src << "; Index: " << regInfo.index;
-        return;
+        return {};
     }
     const auto sizeWords = QMetaType::sizeOf(regInfo.type)/2;
     auto copy = src;
-    copy.convert(regInfo.type);
-    auto wordArr = reinterpret_cast<quint16 *>(copy.data());
-    applyEndianess(wordArr, sizeWords, regInfo.endianess);
-    QVector<quint16> toWrite;
-    for (int i = 0; i < sizeWords; ++i) {
-        reDebug() << workerName() << ": Writing: " << *(wordArr + i) << " --> " << regInfo.index + i;
-        toWrite.append(*(wordArr + i));
+    if (!copy.convert(regInfo.type)) {
+        reWarn() << "MbSlave: Cpnversion error!";
+        return {};
     }
-    modbusDevice->setData(QModbusDataUnit{regInfo.table, regInfo.index, toWrite});
+    auto words = reinterpret_cast<quint16 *>(copy.data());
+    applyEndianness(words, regInfo.endianess, sizeWords);
+    QVector<quint16> toWrite(sizeWords);
+    toWrite.reserve(sizeWords);
+    for (int i = 0; i < sizeWords; ++i) {
+        quint16 value = words[i];
+        reDebug() << workerName() << ": Writing: " << value << " --> " << regInfo.index + i;
+        toWrite[i] = value;
+    }
+    return QModbusDataUnit{regInfo.table, regInfo.index, toWrite};
 }
 
 // Аяяйяйяйяйяйййя убили SlaveWorker`а убили,

@@ -28,6 +28,8 @@ public:
     QVariantMap unpackJsonDevicesData(const QVariantMap &jsonData) const;
     bool isPackedJsonUnit(const QVariantMap &jsonUnit) const;
 
+    static QList<quint16> splitRegValue(const QVariant &regValue, const QMetaType::Type type);
+    static QVariant extractRegValueByType(const QMetaType::Type &type, const QByteArray &dataBytes, const QDataStream::ByteOrder byteOrder);
     FullRegisterName splitFullRegisterName(const QString &fullRegisterName) const;
 
     void writeJsonToModbusDevice(const QVariant &jsonData, bool *isAbleToWrite = nullptr);
@@ -88,7 +90,7 @@ private:
 
     struct WriteRequestInfo {
         QVariantMap rawRequestData;
-        quint8 deviceId;        
+        quint8 deviceId;
         QModbusDataUnit::RegisterType tableType;
         quint16 startAddress;
 
@@ -127,13 +129,11 @@ private:
     RegisterBytes wordToBytes(const quint16 regValue, const QDataStream::ByteOrder byteOrder) const;
     quint16 bytesToWord(const RegisterBytes &regValue) const;
     QByteArray packRegisterData(const QString &deviceName, const QModbusDataUnit::RegisterType tableType, const RegisterData &regData) const;
-    QVariant extractRegValueByType(const QMetaType::Type &type, const QByteArray &dataBytes, const QDataStream::ByteOrder byteOrder) const;
     QMetaType::Type getTypeByRegisterData(const QString &deviceName, const QModbusDataUnit::RegisterType tableType, const RegisterData &regData) const;
     quint16 calculateHighWordAddress(const quint16 lowWordAddress, const QDataStream::ByteOrder wordOrder) const;
     quint16 calculateLowWordAddress(const quint16 highWordAddress, const QDataStream::ByteOrder wordOrder) const;
     bool hasHighAddress(const RegisterData &regData) const;
     quint16 getSecondWordAddress(const RegisterData &regInfo) const;
-    QList<quint16> splitRegValue(const QVariant &regValue, const QMetaType::Type type) const;
     Modbus::ModbusRegistersTableMap createRegistersMap(const QString &deviceName,
                                                        const QModbusDataUnit::RegisterType tableType,
                                                        const quint16 regAddress,

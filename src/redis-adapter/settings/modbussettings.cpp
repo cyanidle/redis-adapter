@@ -69,7 +69,6 @@ bool ModbusSlaveWorker::parseInput(const QVariant &src) {
 bool ModbusSlaveWorker::parseDi(const QVariant &src) {
     auto map = src.toMap();
     map.insert("table_type", "discrete_inputs");
-    map["type"] = "uint8";
     auto regs = parseRegisters(map);
     registers.unite(regs);
     di = regs.count();
@@ -78,7 +77,6 @@ bool ModbusSlaveWorker::parseDi(const QVariant &src) {
 bool ModbusSlaveWorker::parseCoils(const QVariant &src) {
     auto map = src.toMap();
     map.insert("table_type", "coils");
-    map["type"] = "uint8";
     auto regs = parseRegisters(map);
     registers.unite(regs);
     coils = regs.count();
@@ -91,9 +89,6 @@ DeviceRegistersInfo ModbusSlaveWorker::parseRegisters(const Formatters::JsonDict
             auto domain = iter.getCurrentDomain();
             auto map = target[domain].toMap();
             map.insert("table", target["table_type"]);
-            if (target.value("type").isValid()) {
-                map["type"] = target.value("type");
-            }
             auto reg = Serializer::fromQMap<Settings::RegisterInfo>(map);
             result.insert(domain.join(":"), reg);
         }

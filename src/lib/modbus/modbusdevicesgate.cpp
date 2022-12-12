@@ -612,7 +612,7 @@ QByteArray ModbusDevicesGate::packRegisterData(const QString &deviceName, const 
     return bytes;
 }
 
-QVariant ModbusDevicesGate::extractRegValueByType(const QMetaType::Type &type, const QByteArray &dataBytes, const QDataStream::ByteOrder byteOrder) const
+QVariant ModbusDevicesGate::extractRegValueByType(const QMetaType::Type &type, const QByteArray &dataBytes, const QDataStream::ByteOrder byteOrder)
 {
     auto regValue = QVariant{};
     auto bytes = dataBytes;
@@ -644,7 +644,7 @@ QVariant ModbusDevicesGate::extractRegValueByType(const QMetaType::Type &type, c
     return regValue;
 }
 
-QList<quint16> ModbusDevicesGate::splitRegValue(const QVariant &regValue, const QMetaType::Type type) const
+QList<quint16> ModbusDevicesGate::splitRegValue(const QVariant &regValue, const QMetaType::Type type)
 {
     auto bytes = QByteArray{};
     QDataStream writeStream{ &bytes, QIODevice::WriteOnly };

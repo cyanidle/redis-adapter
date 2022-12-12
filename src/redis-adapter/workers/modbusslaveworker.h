@@ -23,11 +23,10 @@ private slots:
     void onStateChanged(QModbusDevice::State state);
 private:
     Settings::DeviceRegistersInfo &deviceRegisters() {return m_settings.registers;}
-    inline QVariant parseType(QModbusDataUnit::RegisterType table, int address, const Settings::RegisterInfo &reg, int *currentSize);
-    static inline void applyEndianess(quint16 *wordBuffer, const int sizeWords, const Settings::PackingMode &endianess);
+    static QVariant parseType(quint16 *words, const Settings::RegisterInfo &regInfo, int sizeWords);
     void connectDevice();
     void disconnectDevice();
-    void setValues(const QVariant &src, const Settings::RegisterInfo &regInfo);
+    QModbusDataUnit parseValues(const QVariant &src, const Settings::RegisterInfo &regInfo);
 
     Settings::ModbusSlaveWorker m_settings;
     QTimer *m_reconnectTimer = nullptr;
@@ -35,66 +34,30 @@ private:
     QModbusServer *modbusDevice = nullptr;
 };
 
-void SlaveWorker::applyEndianess(quint16 *wordBuffer, const int sizeWords, const Settings::PackingMode &endianess) {
-    if (endianess.word_order == QDataStream::ByteOrder::BigEndian) {
-        for (int i = 0; i < sizeWords / 2; ++i) {
-            std::swap(*(wordBuffer + i), *(wordBuffer + sizeWords - i - 1));
-        }
-    }
-    if (endianess.byte_order == QDataStream::ByteOrder::LittleEndian) {
-        for (int i = 0; i < sizeWords; ++i) {
-            auto bytesInWord = reinterpret_cast<quint8*>(wordBuffer + i);
-            std::swap(*bytesInWord, *(bytesInWord + 1));
-        }
+template<typename T>
+typename std::enable_if<!(std::is_pointer<T>())>::type
+flipWords(T& target) {
+    static_assert(!(sizeof(T)%2), "Odd words count types unsupported!");
+    constexpr const auto sizeWords = sizeof(T)/2;
+    auto words = reinterpret_cast<quint16*>(&target);
+    for (size_t i = 0; i < sizeWords / 2; ++i) {
+        std::swap(words[i], words[sizeWords - 1 - i]);
     }
 }
 
-QVariant SlaveWorker::parseType(QModbusDataUnit::RegisterType table, int address,
-                                const Settings::RegisterInfo &reg, int *currentSize)
-{
-    constexpr static int maxSize = sizeof(long long int);
-    const int sizeWords = QMetaType::sizeOf(reg.type)/2 + QMetaType::sizeOf(reg.type) % 2;
-    if (sizeWords > maxSize || sizeWords <= 0) {
-        return {};
-    }
-    *currentSize += sizeWords - 1;
-    quint16 buffer[maxSize] = {};
+inline void flipBytes(quint16 *words, int sizeWords) {
+    auto bytes = reinterpret_cast<quint8*>(words);
     for (int i = 0; i < sizeWords; ++i) {
-        bool ok = false;
-        switch (table) {
-        case QModbusDataUnit::Coils:
-            ok = modbusDevice->data(QModbusDataUnit::Coils, quint16(address + i), buffer + i);
-            break;
-        case QModbusDataUnit::DiscreteInputs:
-            ok = modbusDevice->data(QModbusDataUnit::DiscreteInputs, quint16(address + i), buffer + i);
-            break;
-        case QModbusDataUnit::HoldingRegisters:
-            ok = modbusDevice->data(QModbusDataUnit::HoldingRegisters, quint16(address + i), buffer + i);
-            break;
-        case QModbusDataUnit::InputRegisters:
-            ok = modbusDevice->data(QModbusDataUnit::InputRegisters, quint16(address + i), buffer + i);
-            break;
-        default:
-            reWarn() << "Invalid data written: Adress: " << address + i << "; Table: " << table;
-            return {};
-        }
-        if (!ok) {
-            reWarn() << "Error reading data! Adress:" << address << "; Table:" << table;
-        }
+        std::swap(bytes[i], bytes[sizeWords - 1 - i]);
     }
-    applyEndianess(buffer, QMetaType::sizeOf(reg.type)/2, reg.endianess);
-    switch (reg.type) {
-    case QMetaType::Float:
-        return *reinterpret_cast<float*>(buffer);
-    case QMetaType::UShort:
-        return *reinterpret_cast<quint16*>(buffer);
-    case QMetaType::UInt:
-        return *reinterpret_cast<quint32*>(buffer);
-    case QMetaType::UChar:
-        return *(reinterpret_cast<quint8*>(buffer) +
-                 (reg.endianess.byte_order == QDataStream::BigEndian));
-    default:
-        return {};
+}
+
+inline void applyEndianness(quint16 *words, const Settings::PackingMode endianess, int sizeWords) {
+    if (endianess.byte_order == QDataStream::LittleEndian) {
+        flipBytes(words, sizeWords);
+    }
+    if (endianess.word_order == QDataStream::BigEndian) {
+        flipWords(*words);
     }
 }
 
