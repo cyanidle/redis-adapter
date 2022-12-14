@@ -65,6 +65,7 @@ HEADERS += \
     $$PWD/redis-adapter/formatters/sqlresultformatter.h \
     $$PWD/redis-adapter/formatters/streamentriesmapformatter.h \
     $$PWD/redis-adapter/formatters/timeformatter.h \
+    $$PWD/redis-adapter/formatters/wordoperations.h \
     $$PWD/redis-adapter/include/modbuskeys.h \
     $$PWD/redis-adapter/include/redismessagekeys.h \
     $$PWD/redis-adapter/include/sqlarchivefields.h \

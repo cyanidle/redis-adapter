@@ -95,7 +95,8 @@ void SlaveWorker::onDataWritten(QModbusDataUnit::RegisterType table, int address
             continue;
         }
     }
-    for (int i = 0; i < size; ++i) {
+    auto wordsStart = words.data();
+    for (int i = 0; i < size;) {
         if (!m_reverseRegisters[table].contains(address + i)) {
             ++i;
             continue;
@@ -103,7 +104,7 @@ void SlaveWorker::onDataWritten(QModbusDataUnit::RegisterType table, int address
         const auto &regString = m_reverseRegisters[table][address];
         auto regInfo = deviceRegisters().value(regString);
         auto sizeWords = QMetaType::sizeOf(regInfo.type)/2;
-        auto result = parseType(words.data() + i, regInfo, sizeWords);
+        auto result = parseType(wordsStart + i, regInfo, sizeWords);
         i += sizeWords;
         if (i + sizeWords < size) {
             reWarn() << "Insufficient size of value: " << sizeWords;
@@ -127,11 +128,11 @@ QVariant SlaveWorker::parseType(quint16* words, const Settings::RegisterInfo &re
     applyEndianness(words, regInfo.endianess, sizeWords);
     switch(regInfo.type) {
     case QMetaType::UShort:
-        return bit_cast<quint16>(words);
+        return bit_cast_from_array<quint16>(words);
     case QMetaType::UInt:
-        return bit_cast<quint32>(words);
+        return bit_cast_from_array<quint32>(words);
     case QMetaType::Float:
-        return bit_cast<float>(words);
+        return bit_cast_from_array<float>(words);
     default:
         return{};
     }
@@ -160,7 +161,7 @@ void SlaveWorker::onMsg(const Radapter::WorkerMsg &msg)
             auto regInfo = m_settings.registers.value(fullKeyJoined);
             auto value = iter.value();
             if (Q_LIKELY(value.canConvert(regInfo.type))) {
-                results.append(parseValues(value, regInfo));
+                results.append(setValues(value, regInfo));
             } else {
                 reWarn() << "Incorrect value type for slave: " << workerName() << "; Received: " << value << "; Key:" << fullKeyJoined;
             }
@@ -172,7 +173,7 @@ void SlaveWorker::onMsg(const Radapter::WorkerMsg &msg)
     }
 }
 
-QModbusDataUnit SlaveWorker::parseValues(const QVariant &src, const Settings::RegisterInfo &regInfo)
+QModbusDataUnit SlaveWorker::setValues(const QVariant &src, const Settings::RegisterInfo &regInfo)
 {
     if (!src.canConvert(regInfo.type)) {
         reError() << "Worker: " << workerName()
@@ -186,7 +187,8 @@ QModbusDataUnit SlaveWorker::parseValues(const QVariant &src, const Settings::Re
         reWarn() << "MbSlave: Cpnversion error!";
         return {};
     }
-    auto words = reinterpret_cast<quint16 *>(copy.data());
+    quint16 words[sizeWords];
+    std::memcpy(words, copy.data(), sizeWords*2);
     applyEndianness(words, regInfo.endianess, sizeWords);
     QVector<quint16> toWrite(sizeWords);
     toWrite.reserve(sizeWords);
