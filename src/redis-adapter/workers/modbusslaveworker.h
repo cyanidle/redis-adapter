@@ -61,6 +61,18 @@ inline void applyEndianness(quint16 *words, const Settings::PackingMode endianes
     }
 }
 
+template <typename To,
+         typename From,
+         typename = std::enable_if<(
+             sizeof(To) == sizeof(From) &&
+             std::is_trivially_copyable<To>::value &&
+             std::is_trivially_copyable<From>::value)>>
+To bit_cast(const From& src) {
+    To result;
+    memcpy(&result, &src, sizeof(To));
+    return result;
+}
+
 } // namespace Modbus
 
 #endif // MODBUS_SLAVEWORKER_H

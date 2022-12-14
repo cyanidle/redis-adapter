@@ -299,6 +299,9 @@ namespace Settings {
 
         bool initType(const QVariant &src) {
             type = stringToType().value(src.toString(), QMetaType::UnknownType);
+            if (QMetaType::sizeOf(type) < 2) {
+                throw std::runtime_error("Types with size less than 2 bytes (1 word) are not supported!");
+            }
             return type != QMetaType::UnknownType;
         }
 
