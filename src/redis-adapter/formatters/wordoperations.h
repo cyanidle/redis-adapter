@@ -49,27 +49,22 @@ inline void applyEndianness(quint16 *words, const Settings::PackingMode endianes
     }
 }
 
-template <typename To,
-         typename From,
-         typename = std::enable_if<
-             sizeof(To) == sizeof(From) &&
-             std::is_trivially_copyable<To>::value &&
-             std::is_trivially_copyable<From>::value>>
-To bit_cast_from_array(const From* src) {
+template <typename To, typename From>
+typename std::enable_if<std::is_trivially_copyable<To>::value &&
+                        std::is_trivially_copyable<From>::value &&
+                        !std::is_pointer<From>::value, To>::type
+bit_cast(const From* src) {
     To result;
     std::memcpy(&result, src, sizeof(To));
     return result;
 }
 
-
-template <typename To,
-         typename From,
-         typename = std::enable_if<
-             sizeof(To) == sizeof(From) &&
-             std::is_trivially_copyable<To>::value &&
-             std::is_trivially_copyable<From>::value &&
-             !std::is_pointer<From>::value>>
-To bit_cast(const From& src) {
+template <typename To, typename From>
+typename std::enable_if<sizeof(To) == sizeof(From) &&
+                        std::is_trivially_copyable<To>::value &&
+                        std::is_trivially_copyable<From>::value &&
+                        !std::is_pointer<From>::value, To>::type
+bit_cast(const From& src) {
     To result;
     std::memcpy(&result, &src, sizeof(To));
     return result;

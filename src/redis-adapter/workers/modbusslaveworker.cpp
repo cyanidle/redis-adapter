@@ -128,11 +128,11 @@ QVariant SlaveWorker::parseType(quint16* words, const Settings::RegisterInfo &re
     applyEndianness(words, regInfo.endianess, sizeWords);
     switch(regInfo.type) {
     case QMetaType::UShort:
-        return bit_cast_from_array<quint16>(words);
+        return bit_cast<quint16>(words);
     case QMetaType::UInt:
-        return bit_cast_from_array<quint32>(words);
+        return bit_cast<quint32>(words);
     case QMetaType::Float:
-        return bit_cast_from_array<float>(words);
+        return bit_cast<float>(words);
     default:
         return{};
     }
