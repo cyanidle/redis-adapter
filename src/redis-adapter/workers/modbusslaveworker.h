@@ -38,6 +38,7 @@ template<typename T>
 typename std::enable_if<!(std::is_pointer<T>())>::type
 flipWords(T& target) {
     static_assert(!(sizeof(T)%2), "Odd words count types unsupported!");
+    static_assert(sizeof(T)>=2, "Size of target must be >= 2 bytes (1 word)!");
     constexpr const auto sizeWords = sizeof(T)/2;
     auto words = reinterpret_cast<quint16*>(&target);
     for (size_t i = 0; i < sizeWords / 2; ++i) {
@@ -53,10 +54,22 @@ inline void flipBytes(quint16 *words, int sizeWords) {
 }
 
 inline void applyEndianness(quint16 *words, const Settings::PackingMode endianess, int sizeWords) {
-    if (endianess.byte_order == QDataStream::LittleEndian) {
+    if (endianess.byte_order ==
+        #if Q_BYTE_ORDER == Q_BIG_ENDIAN
+        QDataStream::BigEndian
+        #else
+        QDataStream::LittleEndian
+        #endif
+        ) {
         flipBytes(words, sizeWords);
     }
-    if (endianess.word_order == QDataStream::BigEndian) {
+    if (endianess.word_order ==
+        #if Q_BYTE_ORDER == Q_BIG_ENDIAN
+        QDataStream::LittleEndian
+        #else
+        QDataStream::BigEndian
+        #endif
+        ) {
         flipWords(*words);
     }
 }
