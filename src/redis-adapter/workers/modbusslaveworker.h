@@ -27,7 +27,7 @@ private:
     static QVariant parseType(quint16 *words, const Settings::RegisterInfo &regInfo, int sizeWords);
     void connectDevice();
     void disconnectDevice();
-    QModbusDataUnit setValues(const QVariant &src, const Settings::RegisterInfo &regInfo);
+    QModbusDataUnit parseValueToDataUnit(const QVariant &src, const Settings::RegisterInfo &regInfo);
 
     Settings::ModbusSlaveWorker m_settings;
     QTimer *m_reconnectTimer = nullptr;

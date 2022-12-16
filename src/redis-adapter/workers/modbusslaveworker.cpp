@@ -125,7 +125,7 @@ void SlaveWorker::onDataWritten(QModbusDataUnit::RegisterType table, int address
 
 QVariant SlaveWorker::parseType(quint16* words, const Settings::RegisterInfo &regInfo, int sizeWords)
 {
-    applyEndianness(words, regInfo.endianess, sizeWords);
+    applyEndianness(words, regInfo.endianess, sizeWords, true);
     switch(regInfo.type) {
     case QMetaType::UShort:
         return bit_cast<quint16>(words);
@@ -161,7 +161,7 @@ void SlaveWorker::onMsg(const Radapter::WorkerMsg &msg)
             auto regInfo = m_settings.registers.value(fullKeyJoined);
             auto value = iter.value();
             if (Q_LIKELY(value.canConvert(regInfo.type))) {
-                results.append(setValues(value, regInfo));
+                results.append(parseValueToDataUnit(value, regInfo));
             } else {
                 reWarn() << "Incorrect value type for slave: " << workerName() << "; Received: " << value << "; Key:" << fullKeyJoined;
             }
@@ -173,7 +173,7 @@ void SlaveWorker::onMsg(const Radapter::WorkerMsg &msg)
     }
 }
 
-QModbusDataUnit SlaveWorker::setValues(const QVariant &src, const Settings::RegisterInfo &regInfo)
+QModbusDataUnit SlaveWorker::parseValueToDataUnit(const QVariant &src, const Settings::RegisterInfo &regInfo)
 {
     if (!src.canConvert(regInfo.type)) {
         reError() << "Worker: " << workerName()
@@ -184,16 +184,15 @@ QModbusDataUnit SlaveWorker::setValues(const QVariant &src, const Settings::Regi
     const auto sizeWords = QMetaType::sizeOf(regInfo.type)/2;
     auto copy = src;
     if (!copy.convert(regInfo.type)) {
-        reWarn() << "MbSlave: Cpnversion error!";
+        reWarn() << "MbSlave: Conversion error!";
         return {};
     }
-    quint16 words[sizeWords];
-    std::memcpy(words, copy.data(), sizeWords*2);
-    applyEndianness(words, regInfo.endianess, sizeWords);
+    auto words = toWords(copy.data(), sizeWords);
+    auto rawWords = words.data();
+    applyEndianness(rawWords, regInfo.endianess, sizeWords, false);
     QVector<quint16> toWrite(sizeWords);
-    toWrite.reserve(sizeWords);
     for (int i = 0; i < sizeWords; ++i) {
-        quint16 value = words[i];
+        quint16 value = rawWords[i];
         reDebug() << workerName() << ": Writing: " << value << " --> " << regInfo.index + i;
         toWrite[i] = value;
     }

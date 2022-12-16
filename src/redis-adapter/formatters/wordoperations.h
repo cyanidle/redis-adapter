@@ -6,46 +6,59 @@
 #include <QDataStream>
 
 template<typename T>
-typename std::enable_if<!(std::is_pointer<T>())>::type
-flipWords(T& target) {
-    static_assert(!(sizeof(T)%2), "Odd words count types unsupported!");
-    static_assert(sizeof(T)>=2, "Size of target must be >= 2 bytes (1 word)!");
-    constexpr const auto sizeWords = sizeof(T)/2;
-    quint16 words[sizeof(T)/2];
-    std::memcpy(words, &target, sizeof(T));
-    for (size_t i = 0; i < sizeWords / 2; ++i) {
-        std::swap(words[i], words[sizeWords - 1 - i]);
+inline QVector<quint16> toWords(const T& src) {
+    static_assert(!(sizeof(T)%2), "Cannot cast to words type with odd length");
+    quint16 result[sizeof(T)/2];
+    std::memcpy(result, &src, sizeof(T));
+    auto out = QVector<quint16>(sizeof(T)/2);
+    for (int i = 0; i < sizeof(T)/2; ++i) {
+        out[i] = result[i];
     }
-    std::memcpy(&target, words, sizeof(T));
+    return out;
 }
 
-inline void flipBytes(quint16 *words, int sizeWords) {
-    quint8 bytes[sizeWords*2];
-    std::memcpy(bytes, words, sizeWords*2);
+inline QVector<quint16> toWords(const void* src, int sizeWords) {
+    quint16 result[sizeWords];
+    std::memcpy(result, src, sizeWords*2);
+    auto out = QVector<quint16>(sizeWords);
     for (int i = 0; i < sizeWords; ++i) {
-        std::swap(bytes[i], bytes[sizeWords - 1 - i]);
+        out[i] = result[i];
     }
-    std::memcpy(words, bytes, sizeWords*2);
+    return out;
 }
 
-inline void applyEndianness(quint16 *words, const Settings::PackingMode endianess, int sizeWords) {
-    if (endianess.byte_order ==
-#if Q_BYTE_ORDER == Q_BIG_ENDIAN
-        QDataStream::BigEndian
-#else
-        QDataStream::LittleEndian
-#endif
-        ) {
-        flipBytes(words, sizeWords);
+constexpr QDataStream::ByteOrder getEndianess() {
+    return Q_BYTE_ORDER == Q_LITTLE_ENDIAN ? QDataStream::LittleEndian : QDataStream::BigEndian;
+}
+
+inline void applyToWords(quint16 *words, int sizeWords, QDataStream::ByteOrder wordOrder) {
+    if (wordOrder != getEndianess()) {
+        for (int i = 0; i < sizeWords/2; ++i) {
+            std::swap(words[i], words[sizeWords - i - 1]);
+        }
     }
-    if (endianess.word_order ==
-#if Q_BYTE_ORDER == Q_BIG_ENDIAN
-        QDataStream::LittleEndian
-#else
-        QDataStream::BigEndian
-#endif
-        ) {
-        flipWords(*words);
+}
+
+inline void applyToBytes(quint16 *words, int sizeWords, QDataStream::ByteOrder byteOrder) {
+    if (byteOrder != getEndianess()) {
+        auto sizeBytes = sizeWords*2;
+        quint8 bytes[sizeBytes];
+        std::memcpy(bytes, words, sizeBytes);
+        for (int i = 0; i < sizeBytes/2; ++i) {
+            std::swap(bytes[i], bytes[sizeBytes - 1 - i]);
+        }
+        std::memcpy(words, bytes, sizeBytes);
+    }
+}
+
+inline void applyEndianness(quint16 *words, const Settings::PackingMode endianess,
+                            int sizeWords, bool receive) {
+    if (!receive) {
+        applyToBytes(words, sizeWords, endianess.byte_order);
+    }
+    applyToWords(words, sizeWords, endianess.word_order);
+    if (receive) {
+        applyToBytes(words, sizeWords, endianess.byte_order);
     }
 }
 
