@@ -43,6 +43,8 @@ void CacheConsumer::readIndexCallback(redisAsyncContext *context, void *replyPtr
 {
     auto cbArgs = static_cast<CallbackArgs*>(args);
     if (isNullReply(context, replyPtr, cbArgs->sender)) {
+        cbArgs->sender->dequeueMsg(cbArgs->args.toULongLong());
+        delete cbArgs;
         return;
     }
     auto reply = static_cast<redisReply *>(replyPtr);
@@ -50,6 +52,7 @@ void CacheConsumer::readIndexCallback(redisAsyncContext *context, void *replyPtr
     if (reply->elements == 0) {
         reDebug() << metaInfo(context).c_str() << "Empty index.";
         adapter->finishIndex(Formatters::List{}, cbArgs->args.toULongLong());
+        delete cbArgs;
         return;
     }
 
@@ -69,6 +72,8 @@ void CacheConsumer::readKeysCallback(redisAsyncContext *context, void *replyPtr,
 {
     auto cbArgs = static_cast<CallbackArgs*>(args);
     if (isNullReply(context, replyPtr, cbArgs->sender)) {
+        cbArgs->sender->dequeueMsg(cbArgs->args.toULongLong());
+        delete cbArgs;
         return;
     }
     auto reply = static_cast<redisReply *>(replyPtr);
@@ -84,14 +89,10 @@ void CacheConsumer::readKeysCallback(redisAsyncContext *context, void *replyPtr,
     reDebug() << metaInfo(context).c_str() << "Key entries found:" << keysMatched;
     auto adapter = static_cast<CacheConsumer *>(cbArgs->sender);
     auto resultJson = adapter->mergeWithKeys(foundEntries);
-    if (!resultJson.isEmpty()) {
-        adapter->finishKeys(resultJson,cbArgs->args.toULongLong());
-    }
+    adapter->finishKeys(resultJson,cbArgs->args.toULongLong());
     adapter->finishAsyncCommand();
     delete cbArgs;
 }
-
-
 
 void CacheConsumer::finishIndex(const Formatters::List &json, quint64 msgId)
 {

@@ -190,6 +190,7 @@ void StreamConsumer::readCallback(redisAsyncContext *context, void *replyPtr, vo
     auto sender = actual->sender;
     auto msgId = actual->args.toULongLong();
     if (isNullReply(context, replyPtr, sender)) {
+        sender->dequeueMsg(msgId);
         return;
     }
     auto reply = static_cast<redisReply *>(replyPtr);
@@ -255,8 +256,9 @@ QString StreamConsumer::id() const
 
 void StreamConsumer::finishRead(const Formatters::Dict &json, quint64 msgId)
 {
+    auto msgToReply = dequeueMsg(msgId);
     if (!json.isEmpty()) {
-        auto reply = prepareReply(dequeueMsg(msgId));
+        auto reply = prepareReply(msgToReply);
         if (reply.brokerFlags != Radapter::WorkerMsg::BrokerBadMsg) {
             reply.setData(json);
             emit sendMsg(reply);

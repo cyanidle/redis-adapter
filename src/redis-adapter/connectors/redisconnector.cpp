@@ -44,9 +44,6 @@ Connector::~Connector()
     } else if (m_redisContext) {
         redisAsyncFree(m_redisContext);
     }
-    if (m_client) {
-        delete m_client;
-    }
 }
 
 void Connector::run()
@@ -79,7 +76,7 @@ void Connector::run()
     m_commandTimer = new QTimer(this);
     m_commandTimer->setSingleShot(true);
     m_commandTimer->setInterval(COMMAND_TIMEOUT_MS);
-    m_commandTimer->callOnTimeout(this, [this](){
+    m_commandTimer->callOnTimeout([this](){
         if (m_commandTimeoutsCounter < MAX_COMMAND_ERRORS) {
             reDebug() << metaInfo().c_str() << "command timeout";
         }
@@ -115,7 +112,7 @@ void Connector::tryConnect()
     m_redisContext = redisAsyncConnectWithOptions(&options);
     m_redisContext->data = this;
     m_client->setContext(m_redisContext);
-    redisAsyncSetConnectCallback(m_redisContext, connectCallback);
+    redisAsyncSetConnectCallback(m_redisContext, disconnectCallback);
     redisAsyncSetDisconnectCallback(m_redisContext, disconnectCallback);
     m_connectionTimer->start();
     if (m_redisContext->err) {
@@ -134,7 +131,8 @@ void Connector::doPing()
 
 void Connector::clearContext()
 {
-    if (isValidContext(m_redisContext)) {
+    redisAsyncDisconnect(m_redisContext);
+    if (m_redisContext) {
         redisAsyncFree(m_redisContext);
     }
     nullifyContext();
