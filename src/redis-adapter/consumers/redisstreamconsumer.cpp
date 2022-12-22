@@ -259,7 +259,7 @@ void StreamConsumer::finishRead(const Formatters::Dict &json, quint64 msgId)
     auto msgToReply = dequeueMsg(msgId);
     if (!json.isEmpty()) {
         auto reply = prepareReply(msgToReply);
-        if (reply.brokerFlags != Radapter::WorkerMsg::BrokerBadMsg) {
+        if (reply.isValid()) {
             reply.setData(json);
             emit sendMsg(reply);
             setLastReadId(json.lastKey());
