@@ -98,7 +98,7 @@ void CacheConsumer::finishIndex(const Formatters::List &json, quint64 msgId)
 {
     auto reply = prepareReply(dequeueMsg(msgId));
     for (auto &jsonDict : json) {
-        reply.setData(jsonDict.toMap()); // id stays the same, command issuer can check id to receive reply
+        reply.setJson(jsonDict.toMap()); // id stays the same, command issuer can check id to receive reply
         emit sendMsg(reply);
     }
     finishAsyncCommand();
@@ -107,7 +107,7 @@ void CacheConsumer::finishIndex(const Formatters::List &json, quint64 msgId)
 void CacheConsumer::finishKeys(const Formatters::Dict &json, quint64 msgId)
 {
     auto reply = prepareReply(dequeueMsg(msgId));
-    reply.setData(json);
+    reply.setJson(json);
     emit sendMsg(reply);
 }
 

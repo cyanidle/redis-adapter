@@ -260,7 +260,7 @@ void StreamConsumer::finishRead(const Formatters::Dict &json, quint64 msgId)
     if (!json.isEmpty()) {
         auto reply = prepareReply(msgToReply);
         if (reply.isValid()) {
-            reply.setData(json);
+            reply.setJson(json);
             emit sendMsg(reply);
             setLastReadId(json.lastKey());
         }
@@ -331,7 +331,7 @@ void StreamConsumer::onReply(const Radapter::WorkerMsg &msg)
 {
     if (msg.sender() == this) {
         auto json = msg;
-        json.setData(json.first().toMap());
+        json.setJson(json.first().toMap());
         emit sendMsg(prepareMsg(json.flatten(":"), DirectionToConsumers));
     }
 }

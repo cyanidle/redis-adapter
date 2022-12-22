@@ -19,103 +19,6 @@
 
 namespace Settings {
 
-    struct RADAPTER_SHARED_SRC WorkerSettings : public Serializer::SerializerBase {
-        Q_GADGET
-        IS_SERIALIZABLE
-        SERIAL_FIELD(QString, name);
-        SERIAL_FIELD(bool, debug, false)
-        SERIAL_CONTAINER(QList, QString, producers, DEFAULT)
-        SERIAL_CONTAINER(QList, QString, consumers, DEFAULT)
-        SERIAL_CONTAINER(QList, QString, filter_namespaces, DEFAULT)
-        SERIAL_FIELD(quint32, max_msgs_in_queue, 30)
-
-        Radapter::WorkerSettings asWorkerSettings(QThread *thread) const {
-            Radapter::WorkerSettings result = {
-                name,
-                thread,
-                consumers,
-                producers,
-                debug,
-                max_msgs_in_queue,
-                filter_namespaces
-            };
-            return result;
-        }
-        bool isValid() const {return !name.isEmpty();}
-    };
-
-
-    struct RADAPTER_SHARED_SRC RecordOutgoingSetting : public Serializer::SerializerBase {
-        using targetSetting = Radapter::LoggingInterceptorSettings;
-        Q_GADGET
-        IS_SERIALIZABLE
-        SERIAL_FIELD(bool, use, false)
-        SERIAL_FIELD(QString, filepath, "")
-        SERIAL_CUSTOM(targetSetting::LogMsg,
-                      log, initLog, CUSTOM_NO_READ,
-                      targetSetting::LogNormal)
-        SERIAL_FIELD(quint32, flush_delay, 1000)
-        SERIAL_FIELD(quint64, max_size_bytes, 100000000)
-        SERIAL_FIELD(quint16, max_files, 10)
-        SERIAL_CUSTOM(QJsonDocument::JsonFormat, format, initFormat, CUSTOM_NO_READ, QJsonDocument::Indented)
-
-        bool initFormat(const QVariant &src) {
-            auto strRep = src.toString().toLower();
-            if (strRep == "compact") {
-                format = QJsonDocument::Compact;
-            } else {
-                format = QJsonDocument::Indented;
-            }
-            return true;
-        }
-        bool initLog(const QVariant &src) {
-            const auto strRep = src.toString().toLower();
-            if (strRep == "all") {
-                log = targetSetting::LogAll;
-            } else {
-                const auto splitVersions = src.toList();
-                if (splitVersions.contains("normal") || strRep == "normal") {
-                    log |= targetSetting::LogNormal;
-                }
-                if (splitVersions.contains("reply") || strRep == "reply") {
-                    log |= targetSetting::LogReply;
-                }
-                if (splitVersions.contains("command") || strRep == "command") {
-                    log |= targetSetting::LogCommand;
-                }
-            }
-            return true;
-        }
-        Radapter::LoggingInterceptorSettings asSettings() const {
-            Radapter::LoggingInterceptorSettings result;
-            result.filePath = filepath;
-            result.flushTimerDelay = flush_delay;
-            result.format = format;
-            result.maxFileSizeBytes = max_size_bytes;
-            result.maxFiles = max_files;
-            result.logFlags = log;
-            return result;
-        }
-    };
-
-    struct RADAPTER_SHARED_SRC MockWorkerSettings : public WorkerSettings {
-        Q_GADGET
-        IS_SERIALIZABLE
-        SERIAL_FIELD(quint32, mock_timer_delay, 1000)
-        SERIAL_FIELD(QString, json_file_path)
-        Radapter::MockWorkerSettings asMockSettings(QThread *thread) const {
-            Radapter::MockWorkerSettings result = {};
-            result.mockTimerDelay = mock_timer_delay;
-            result.jsonFilePath = json_file_path;
-            result.name = name;
-            result.thread = thread;
-            result.consumers = consumers;
-            result.producers = producers;
-            result.isDebug = debug;
-            result.maxMsgsInQueue = max_msgs_in_queue;
-            return result;
-        }
-    };
     struct RADAPTER_SHARED_SRC ServerInfo : public Serializer::SerializerBase {
         Q_GADGET
         IS_SERIALIZABLE
@@ -239,7 +142,7 @@ namespace Settings {
     struct RADAPTER_SHARED_SRC SqlStorageInfo : Serializer::SerializerBase {
         Q_GADGET
         IS_SERIALIZABLE
-        SERIAL_NEST(WorkerSettings, worker)
+        SERIAL_NEST(Radapter::WorkerSettings, worker)
         SERIAL_FIELD(QString, name)
         SERIAL_FIELD(QString, client_name)
         SERIAL_FIELD(QString, target_table)
@@ -303,7 +206,7 @@ namespace Settings {
         IS_SERIALIZABLE
         SERIAL_FIELD(quint16, port)
         SERIAL_FIELD(bool, debug, false)
-        SERIAL_NEST(WorkerSettings, worker)
+        SERIAL_NEST(Radapter::WorkerSettings, worker)
 
         bool isValid() const {
             return (port > 0u)
@@ -322,7 +225,7 @@ namespace Settings {
     struct RADAPTER_SHARED_SRC WebsocketClientInfo : Serializer::SerializerBase {
         Q_GADGET
         IS_SERIALIZABLE
-        SERIAL_NEST(WorkerSettings, worker)
+        SERIAL_NEST(Radapter::WorkerSettings, worker)
         SERIAL_FIELD(QString, server_host, "localhost");
         SERIAL_FIELD(quint16, server_port, 0);
     };
