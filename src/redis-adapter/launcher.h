@@ -28,6 +28,7 @@ public slots:
     int initAll();
     void run();
 private:
+    void setLoggingFilters(const Settings::LoggingInfo &loggers);
     int initSettings();
     int initWorkers();
 

@@ -89,9 +89,29 @@ void Launcher::prvPreInit()
     m_filereader->setPath("conf/config.toml");
 }
 
+
+void Launcher::setLoggingFilters(const Settings::LoggingInfo &loggers)
+{
+    auto filterRules = QStringList{
+        "*.debug=false",
+        "default.debug=true"
+    };
+    for (auto logInfo = loggers.begin(); logInfo != loggers.end(); logInfo++) {
+        auto rule = QString("%1=%2").arg(logInfo.key(), logInfo.value() ? "true" : "false");
+        filterRules.append(rule);
+    }
+    if (!filterRules.isEmpty()) {
+        Broker::instance()->setIsDebugMode(loggers);
+        auto filterString = filterRules.join("\n");
+        QLoggingCategory::setFilterRules(filterString);
+    }
+}
+
+
 int Launcher::prvInit()
 {
     prvPreInit();
+    setLoggingFilters(Settings::LoggingInfoParser::parse(m_filereader->deserialise("log_debug").toMap()));
     addFactory(new Redis::StreamFactory(Settings::RedisStream::cacheMap, this));
     addFactory(new Redis::CacheFactory(Settings::RedisCache::cacheMap.values(), this));
     addFactory(new Redis::PubSubFactory(Settings::RedisKeyEventSubscriber::cacheMap.values(), this));

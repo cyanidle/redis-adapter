@@ -14,7 +14,7 @@ public:
 signals:
 
 private:
-    Formatters::Dict arrangeArrays(const Formatters::Dict &jsonDict) const;
+    Formatters::Dict arrangeArrays(const Formatters::JsonDict &jsonDict) const;
 
     Formatters::Dict m_jsonDict;
 };

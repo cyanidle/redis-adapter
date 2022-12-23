@@ -128,11 +128,11 @@ void Connector::doPing()
 
 void Connector::clearContext()
 {
-    redisAsyncDisconnect(m_redisContext);
     if (m_redisContext) {
+        redisAsyncDisconnect(m_redisContext);
         redisAsyncFree(m_redisContext);
+        nullifyContext();
     }
-    nullifyContext();
 }
 
 void Connector::nullifyContext()

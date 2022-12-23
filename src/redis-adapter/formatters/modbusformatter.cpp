@@ -18,23 +18,7 @@ Formatters::Dict ModbusFormatter::toModbusUnit() const
     return modbusUnit;
 }
 
-Formatters::Dict ModbusFormatter::arrangeArrays(const Formatters::Dict &jsonDict) const
+Formatters::Dict ModbusFormatter::arrangeArrays(const Formatters::JsonDict &jsonDict) const
 {
-    auto arraysFlattened = Formatters::Dict{};
-    auto separator = ":";
-    for (auto jsonItem = jsonDict.begin();
-         jsonItem != jsonDict.end();
-         jsonItem++)
-    {
-        auto levelKeys = jsonItem.key().split(separator);
-        auto arrayIndex = levelKeys.takeLast();
-        if (arrayIndex.toUInt() > 0u) {
-            auto arrayName = QStringList{ levelKeys.takeLast(), arrayIndex }.join(".");
-            auto arrayItem = Formatters::Dict{ QVariantMap{{ arrayName, jsonItem.value() }} };
-            arraysFlattened.insert(levelKeys.join(separator), arrayItem);
-        } else {
-            arraysFlattened.insert(jsonItem.key(), jsonItem.value());
-        }
-    }
-    return arraysFlattened;
+    return jsonDict.flatten(".");
 }
