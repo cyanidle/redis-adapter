@@ -341,13 +341,13 @@ namespace Settings {
     struct RADAPTER_SHARED_SRC ModbusTcpDevicesSettings : Serializer::SerializerBase {
         Q_GADGET
         IS_SERIALIZABLE
-        SERIAL_CONTAINER_NEST(QList, TcpDevice, devices);
+        SERIAL_CONTAINER_NEST_PTRS(QList, TcpDevice, devices);
     };
 
     struct RADAPTER_SHARED_SRC ModbusRtuDevicesSettings : Serializer::SerializerBase {
         Q_GADGET
         IS_SERIALIZABLE
-        SERIAL_CONTAINER_NEST(QList, SerialDevice, devices);
+        SERIAL_CONTAINER_NEST_PTRS(QList, SerialDevice, devices);
     };
 
     struct RADAPTER_SHARED_SRC ModbusConnectionSettings : Serializer::SerializerBase {
@@ -360,8 +360,8 @@ namespace Settings {
         SERIAL_FIELD(quint16, response_time, 150)
         SERIAL_FIELD(quint16, retries, 3)
         SERIAL_FIELD(bool, debug, false)
-        SERIAL_NEST(RecordOutgoingSetting, log_jsons, DEFAULT)
-        SERIAL_NEST(WorkerSettings, worker)
+        SERIAL_NEST_PTR(Radapter::LoggingInterceptorSettings, log_jsons, DEFAULT)
+        SERIAL_NEST(Radapter::WorkerSettings, worker)
         SERIAL_NEST(ModbusTcpDevicesSettings, tcp, DEFAULT)
         SERIAL_NEST(ModbusRtuDevicesSettings, rtu, DEFAULT)
         SERIAL_FIELD(QString, filter_name, DEFAULT)
@@ -371,10 +371,10 @@ namespace Settings {
 
         void postInit() {
             for (auto &device : rtu.devices) {
-                serial_devices.insert(device.name, device);
+                serial_devices.insert(device->name, *device);
             }
             for (auto &device : tcp.devices) {
-                tcp_devices.insert(device.name, device);
+                tcp_devices.insert(device->name, *device);
             }
             for (auto &channel : channels) {
                 for (auto &slave: channel.slaves) {
@@ -399,22 +399,22 @@ namespace Settings {
     struct RADAPTER_SHARED_SRC ModbusDevice : Serializer::SerializerBase {
         Q_GADGET
         IS_SERIALIZABLE
-        SERIAL_NEST(TcpDevice, tcp, DEFAULT)
-        SERIAL_NEST(SerialDevice, rtu, DEFAULT)
+        SERIAL_NEST_PTR(TcpDevice, tcp, DEFAULT)
+        SERIAL_NEST_PTR(SerialDevice, rtu, DEFAULT)
         ModbusConnectionType device_type = ModbusConnectionType::Unknown;
         SERIAL_POST_INIT(postInit)
         QString repr() const {
             return device_type==ModbusConnectionType::Serial?
-                rtu.repr():
-                tcp.repr();
+                rtu->repr():
+                tcp->repr();
         }
         void postInit() {
-            if (tcp.isValid() && rtu.isValid()) {
+            if (tcp && rtu) {
                 throw std::runtime_error("Both tcp and rtu device is prohibited! Use one");
             }
-            if (tcp.isValid()) {
+            if (tcp) {
                 device_type = Tcp;
-            } else if (rtu.isValid()) {
+            } else if (rtu) {
                 device_type = Serial;
             } else {
                 throw std::runtime_error("Provide at least one target device!");
@@ -425,7 +425,7 @@ namespace Settings {
     struct RADAPTER_SHARED_SRC ModbusSlaveWorker : Serializer::SerializerBase {
         Q_GADGET
         IS_SERIALIZABLE
-        SERIAL_NEST(WorkerSettings, worker)
+        SERIAL_NEST(Radapter::WorkerSettings, worker)
         SERIAL_NEST(ModbusDevice, device)
         SERIAL_FIELD(quint32, reconnect_timeout_ms, 5000)
         SERIAL_FIELD(quint16, slave_id)

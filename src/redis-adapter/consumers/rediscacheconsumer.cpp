@@ -1,7 +1,6 @@
 #include "rediscacheconsumer.h"
 #include "redis-adapter/formatters/redisqueryformatter.h"
 #include "redis-adapter/radapterlogging.h"
-#include "redis-adapter/radapterschemas.h"
 
 using namespace Redis;
 
@@ -9,50 +8,45 @@ CacheConsumer::CacheConsumer(const QString &host,
                              const quint16 port,
                              const quint16 dbIndex,
                              const QString &indexKey,
-                             const Radapter::WorkerSettings &settings) :
-    Connector(host, port, dbIndex, settings),
+                             const Radapter::WorkerSettings &settings,
+                             QThread *thread) :
+    Connector(host, port, dbIndex, settings, thread),
     m_requestedKeysBuffer{},
     m_indexKey(indexKey)
 {
 }
 
-void CacheConsumer::requestIndex(const QString &indexKey, quint64 msgId)
+void CacheConsumer::requestIndex(const QString &indexKey, const Radapter::WorkerMsg &msg)
 {
     if (indexKey.isEmpty()) {
-        requestIndex(m_indexKey, msgId);
+        requestIndex(m_indexKey, msg);
     }
     auto command = RedisQueryFormatter{}.toGetIndexCommand(indexKey);
-    runAsyncCommand(readIndexCallback, command, msgId);
+    runAsyncCommandWithMsg(readIndexCallback, command, msg);
 }
 
-void CacheConsumer::requestKeys(const Formatters::List &keys, quint64 msgId)
+void CacheConsumer::requestKeys(const Formatters::List &keys, const Radapter::WorkerMsg &msg)
 {
     if (keys.isEmpty()) {
-        finishKeys(Formatters::Dict{}, msgId);
+        finishKeys(Formatters::Dict{}, msg);
         return;
     }
 
     auto command = RedisQueryFormatter{}.toMultipleGetCommand(keys);
     m_requestedKeysBuffer.enqueue(keys);
-    runAsyncCommand(readKeysCallback, command, msgId);
+    runAsyncCommandWithMsg(readKeysCallback, command, msg);
 }
 
-
-
-void CacheConsumer::readIndexCallback(redisAsyncContext *context, void *replyPtr, void *args)
+void CacheConsumer::readIndexCallback(redisAsyncContext *context, void *replyPtr, void *sender, const Radapter::WorkerMsg &msg)
 {
-    auto cbArgs = static_cast<CallbackArgs*>(args);
-    if (isNullReply(context, replyPtr, cbArgs->sender)) {
-        cbArgs->sender->dequeueMsg(cbArgs->args.toULongLong());
-        delete cbArgs;
+    if (isNullReply(context, replyPtr, sender)) {
         return;
     }
     auto reply = static_cast<redisReply *>(replyPtr);
-    auto adapter = static_cast<CacheConsumer *>(cbArgs->sender);
+    auto adapter = static_cast<CacheConsumer *>(sender);
     if (reply->elements == 0) {
         reDebug() << metaInfo(context).c_str() << "Empty index.";
-        adapter->finishIndex(Formatters::List{}, cbArgs->args.toULongLong());
-        delete cbArgs;
+        adapter->finishIndex(Formatters::List{}, msg);
         return;
     }
 
@@ -64,18 +58,15 @@ void CacheConsumer::readIndexCallback(redisAsyncContext *context, void *replyPtr
             indexedKeys.append(keyItem);
         }
     }
-    adapter->finishIndex(indexedKeys, cbArgs->args.toULongLong());
-    delete cbArgs;
+    adapter->finishIndex(indexedKeys, msg);
 }
 
-void CacheConsumer::readKeysCallback(redisAsyncContext *context, void *replyPtr, void *args)
+void CacheConsumer::readKeysCallback(redisAsyncContext *context, void *replyPtr, void *sender, const Radapter::WorkerMsg &msg)
 {
-    auto cbArgs = static_cast<CallbackArgs*>(args);
-    if (isNullReply(context, replyPtr, cbArgs->sender)) {
-        cbArgs->sender->dequeueMsg(cbArgs->args.toULongLong());
-        delete cbArgs;
+    if (isNullReply(context, replyPtr, sender)) {
         return;
     }
+    auto adapter = static_cast<CacheConsumer*>(sender);
     auto reply = static_cast<redisReply *>(replyPtr);
     auto foundEntries = Formatters::List{};
     quint16 keysMatched = 0u;
@@ -87,26 +78,22 @@ void CacheConsumer::readKeysCallback(redisAsyncContext *context, void *replyPtr,
         foundEntries.append(entryItem);
     }
     reDebug() << metaInfo(context).c_str() << "Key entries found:" << keysMatched;
-    auto adapter = static_cast<CacheConsumer *>(cbArgs->sender);
     auto resultJson = adapter->mergeWithKeys(foundEntries);
-    adapter->finishKeys(resultJson,cbArgs->args.toULongLong());
-    adapter->finishAsyncCommand();
-    delete cbArgs;
+    adapter->finishKeys(resultJson, msg);
 }
 
-void CacheConsumer::finishIndex(const Formatters::List &json, quint64 msgId)
+void CacheConsumer::finishIndex(const Formatters::List &json, const Radapter::WorkerMsg &msg)
 {
-    auto reply = prepareReply(dequeueMsg(msgId));
+    auto reply = prepareReply(msg);
     for (auto &jsonDict : json) {
         reply.setJson(jsonDict.toMap()); // id stays the same, command issuer can check id to receive reply
         emit sendMsg(reply);
     }
-    finishAsyncCommand();
 }
 
-void CacheConsumer::finishKeys(const Formatters::Dict &json, quint64 msgId)
+void CacheConsumer::finishKeys(const Formatters::Dict &json, const Radapter::WorkerMsg &msg)
 {
-    auto reply = prepareReply(dequeueMsg(msgId));
+    auto reply = prepareReply(msg);
     reply.setJson(json);
     emit sendMsg(reply);
 }
@@ -128,21 +115,13 @@ Formatters::Dict CacheConsumer::mergeWithKeys(const Formatters::List &entries)
     return jsonDict;
 }
 
-void CacheConsumer::onMsg(const Radapter::WorkerMsg &msg)
-{
-    reDebug() << "CacheConsumer (" << workerName() << "): received generic msg from: " << msg.sender();
-}
-
 void CacheConsumer::onCommand(const Radapter::WorkerMsg &msg)
 {
-    if (msg.usesSchema<Radapter::RequestJsonSchema>()) {
-        if (msg.schemaAs<Radapter::RequestJsonSchema>()->isJsonRequested(msg)) {
-            requestIndex(m_indexKey, enqueueMsg(msg));
-        }
-    } else if (msg.usesSchema<Radapter::RequestKeysSchema>()) {
-        auto requestKeysCommand = msg.schemaAs<Radapter::RequestKeysSchema>()->receiveKeys(msg);
-        if (!requestKeysCommand.isEmpty()) {
-            requestKeys(requestKeysCommand, enqueueMsg(msg));
-        }
+    auto requestedJson = msg.serviceData(Radapter::WorkerMsg::ServiceRequestJson);
+    auto requestedKeys = msg.serviceData(Radapter::WorkerMsg::ServiceRequestKeys);
+    if (requestedJson.isValid()) {
+        requestIndex(m_indexKey, msg);
+    } else if (requestedKeys.isValid()) {
+        requestKeys(requestedKeys.toStringList(), msg);
     }
 }

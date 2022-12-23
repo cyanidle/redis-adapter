@@ -18,7 +18,7 @@ public:
                            const quint16 port,
                            const quint16 dbIndex,
                            const QString &indexKey,
-                           const Radapter::WorkerSettings &settings);
+                           const Radapter::WorkerSettings &settings, QThread *thread);
 signals:
 
 public slots:
@@ -26,14 +26,14 @@ public slots:
 
 private:
     // Commands
-    int writeKeys(const Formatters::JsonDict &json, int msgId);
-    int writeIndex(const Formatters::JsonDict &json, const QString &indexKey, int msgId);
+    int writeKeys(const Formatters::JsonDict &json, const Radapter::WorkerMsg &msg);
+    int writeIndex(const Formatters::JsonDict &json, const QString &indexKey, const Radapter::WorkerMsg &msg);
     // Replies
-    void writeKeysDone(int msgId);
-    void writeIndexDone(int msgId);
+    void writeKeysDone(const Radapter::WorkerMsg &msg);
+    void writeIndexDone(const Radapter::WorkerMsg &msg);
 
-    static void msetCallback(redisAsyncContext *context, void *replyPtr, void *args);
-    static void indexCallback(redisAsyncContext *context, void *replyPtr, void *args);
+    static void msetCallback(redisAsyncContext *context, void *replyPtr, void *args, const Radapter::WorkerMsg &msg);
+    static void indexCallback(redisAsyncContext *context, void *replyPtr, void *args, const Radapter::WorkerMsg &msg);
 
     QString m_indexKey;
 };

@@ -5,7 +5,6 @@
 #include "redis-adapter/formatters/redisstreamentryformatter.h"
 #include "redis-adapter/formatters/streamentriesmapformatter.h"
 #include "redis-adapter/radapterlogging.h"
-#include "redis-adapter/radapterschemas.h"
 
 #define BLOCK_TIMEOUT_MS    30000
 #define POLL_TIMEOUT_MS     3000
@@ -13,12 +12,13 @@
 using namespace Redis;
 
 StreamConsumer::StreamConsumer(const QString &host,
-                                         const quint16 port,
-                                         const QString &streamKey,
-                                         const QString &groupName,
-                                         const Settings::RedisConsumerStartMode startFrom,
-                                         const Radapter::WorkerSettings &settings)
-    : Connector(host, port, 0u, settings),
+                               const quint16 port,
+                               const QString &streamKey,
+                               const QString &groupName,
+                               const Settings::RedisConsumerStartMode startFrom,
+                               const Radapter::WorkerSettings &settings,
+                               QThread *thread)
+    : Connector(host, port, 0u, settings, thread),
       m_streamKey(streamKey),
       m_groupName(groupName),
       m_blockingReadTimer(nullptr),
@@ -56,31 +56,28 @@ void StreamConsumer::run()
     connect(this, &StreamConsumer::ackCompleted, &StreamConsumer::readGroup);
 }
 
-void StreamConsumer::blockingRead()
-{
-    auto commandToSelf = prepareCommand<Radapter::RequestJsonSchema>(true);
-    auto id = enqueueMsg(commandToSelf);
-    blockingReadImpl(id);
-}
-
-void StreamConsumer::readGroup()
-{
-    auto commandToSelf = prepareCommand<Radapter::RequestJsonSchema>(true);
-    auto id = enqueueMsg(commandToSelf);
-    readGroupImpl(id);
-}
-
-void StreamConsumer::blockingReadImpl(quint64 msgId)
+void StreamConsumer::blockingReadCommand(const Radapter::WorkerMsg &msg)
 {
     if (hasPendingEntries()) {
         return;
     }
     m_blockingReadTimer->stop();
-    doRead(msgId);
+    doRead(msg);
     m_blockingReadTimer->start();
 }
 
-void StreamConsumer::readGroupImpl(quint64 msgId)
+
+void StreamConsumer::blockingRead()
+{
+    doRead();
+}
+
+void StreamConsumer::readGroup()
+{
+    doRead();
+}
+
+void StreamConsumer::readGroupCommand(const Radapter::WorkerMsg &msg)
 {
     if (!hasPendingEntries()
             || m_blockingReadTimer->isActive()
@@ -88,7 +85,7 @@ void StreamConsumer::readGroupImpl(quint64 msgId)
     {
         return;
     }
-    doRead(msgId);
+    doRead(msg);
     m_readGroupTimer->start();
 }
 
@@ -139,7 +136,7 @@ bool StreamConsumer::hasPendingEntries() const
     return areGroupsEnabled() && m_hasPending;
 }
 
-void StreamConsumer::doRead(quint64 msgId)
+void StreamConsumer::doRead(const Radapter::WorkerMsg &msg)
 {
     auto readCommand = QString{};
     auto startId = lastReadId();
@@ -148,7 +145,7 @@ void StreamConsumer::doRead(quint64 msgId)
     } else {
         readCommand = RedisQueryFormatter{}.toReadStreamCommand(m_streamKey, BLOCK_TIMEOUT_MS, startId);
     }
-    runAsyncCommand(readCallback, readCommand, msgId);
+    runAsyncCommandWithMsg(readCallback, readCommand, msg);
 }
 
 void StreamConsumer::updatePingKeepalive()
@@ -184,20 +181,16 @@ void StreamConsumer::createGroup()
     runAsyncCommand(createGroupCallback, command);
 }
 
-void StreamConsumer::readCallback(redisAsyncContext *context, void *replyPtr, void *args)
+void StreamConsumer::readCallback(redisAsyncContext *context, void *replyPtr, void *sender, const Radapter::WorkerMsg &msg)
 {
-    auto actual = static_cast<CallbackArgs*>(args);
-    auto sender = actual->sender;
-    auto msgId = actual->args.toULongLong();
+    auto adapter = static_cast<StreamConsumer *>(sender);
     if (isNullReply(context, replyPtr, sender)) {
-        sender->dequeueMsg(msgId);
         return;
     }
     auto reply = static_cast<redisReply *>(replyPtr);
-    auto adapter = static_cast<StreamConsumer *>(sender);
     if (reply->elements == 0) {
         reDebug() << metaInfo(context).c_str() << "No new entries";
-        adapter->finishRead(Formatters::Dict{}, msgId);
+        adapter->finishRead(Formatters::Dict{}, msg);
         return;
     }
 
@@ -205,7 +198,7 @@ void StreamConsumer::readCallback(redisAsyncContext *context, void *replyPtr, vo
     reDebug() << metaInfo(context).c_str() << "stream key:" << rootEntry->element[0]->str;
     auto streamEntries = rootEntry->element[1];
     if (streamEntries->elements == 0) {
-        adapter->finishRead(Formatters::Dict{}, msgId);
+        adapter->finishRead(Formatters::Dict{}, msg);
         return;
     }
 
@@ -220,8 +213,7 @@ void StreamConsumer::readCallback(redisAsyncContext *context, void *replyPtr, vo
         entriesCount += jsonDict.count();
     }
     reDebug() << metaInfo(context).c_str() << "entries processed:" << entriesCount;
-    adapter->finishRead(jsonEntries, msgId);
-    delete actual;
+    adapter->finishRead(jsonEntries, msg);
 }
 
 void StreamConsumer::ackCallback(redisAsyncContext *context, void *replyPtr, void *sender)
@@ -235,6 +227,11 @@ void StreamConsumer::ackCallback(redisAsyncContext *context, void *replyPtr, voi
     adapter->finishAck();
 }
 
+void StreamConsumer::finishAck()
+{
+    emit ackCompleted();
+}
+
 void StreamConsumer::createGroupCallback(redisAsyncContext *context, void *replyPtr, void *sender)
 {
     if (isNullReply(context, replyPtr, sender)
@@ -244,8 +241,6 @@ void StreamConsumer::createGroupCallback(redisAsyncContext *context, void *reply
     }
     auto reply = static_cast<redisReply *>(replyPtr);
     reDebug() << metaInfo(context).c_str() << "create group status:" << toString(reply);
-    auto adapter = static_cast<StreamConsumer *>(sender);
-    adapter->finishAsyncCommand();
 }
 
 QString StreamConsumer::id() const
@@ -254,14 +249,18 @@ QString StreamConsumer::id() const
     return idString;
 }
 
-void StreamConsumer::finishRead(const Formatters::Dict &json, quint64 msgId)
+void StreamConsumer::finishRead(const Formatters::Dict &json, const Radapter::WorkerMsg &msg)
 {
-    auto msgToReply = dequeueMsg(msgId);
     if (!json.isEmpty()) {
-        auto reply = prepareReply(msgToReply);
-        if (reply.isValid()) {
-            reply.setJson(json);
-            emit sendMsg(reply);
+        Radapter::WorkerMsg msgToSend;
+        if (msg.isCommand()) {
+            msgToSend = prepareReply(msg);
+        } else {
+            msgToSend = prepareMsg();
+        }
+        if (msg.isValid()) {
+            msgToSend.setJson(json);
+            emit sendMsg(msg);
             setLastReadId(json.lastKey());
         }
     }
@@ -274,25 +273,7 @@ void StreamConsumer::finishRead(const Formatters::Dict &json, quint64 msgId)
         setPending(false);
         setLastReadId(QString{});
     }
-    finishAsyncCommand();
 }
-
-void StreamConsumer::finishAck()
-{
-    ackCompletedImpl();
-    finishAsyncCommand();
-}
-
-void StreamConsumer::pendingChangedImpl()
-{
-    emit pendingChanged();
-}
-
-void StreamConsumer::ackCompletedImpl()
-{
-    emit ackCompleted();
-}
-
 
 void StreamConsumer::setLastReadId(const QString &lastId)
 {
@@ -310,28 +291,19 @@ void StreamConsumer::setPending(bool state)
     }
     if (m_hasPending != state) {
         m_hasPending = state;
-        pendingChangedImpl();
+        emit pendingChanged(state);
     }
 }
 
 void StreamConsumer::onCommand(const Radapter::WorkerMsg &msg)
 {
-    if (msg.usesSchema<Radapter::RequestJsonSchema>()) {
+    if (msg.serviceData(Radapter::WorkerMsg::ServiceRequestJson).isValid()) {
         if (m_groupName.isEmpty()) {
-            readGroupImpl(enqueueMsg(msg));
+            readGroupCommand(msg);
         } else {
-            blockingReadImpl(enqueueMsg(msg));
+            blockingReadCommand(msg);
         }
     } else {
         reWarn() << "Incorrect schema used for 'Command' to 'Redis::StreamConsumer'";
-    }
-}
-
-void StreamConsumer::onReply(const Radapter::WorkerMsg &msg)
-{
-    if (msg.sender() == this) {
-        auto json = msg;
-        json.setJson(json.first().toMap());
-        emit sendMsg(prepareMsg(json.flatten(":"), DirectionToConsumers));
     }
 }

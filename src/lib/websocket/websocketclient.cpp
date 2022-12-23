@@ -11,8 +11,8 @@ using namespace Websocket;
 #define HEARTBEAT_PERIOD_MS         1000
 #define HEARTBEAT_REPLY_TIMEOUT_MS  10000
 
-Client::Client(const QString &serverHost, quint16 serverPort, const Radapter::WorkerSettings &settings)
-    : WorkerBase(settings),
+Client::Client(const QString &serverHost, quint16 serverPort, const Radapter::WorkerSettings &settings, QThread *thread)
+    : WorkerBase(settings, thread),
       m_serverHost(serverHost),
       m_sock(nullptr),
       m_reconnectTimeout(RECONNECT_TIMEOUT_MS),

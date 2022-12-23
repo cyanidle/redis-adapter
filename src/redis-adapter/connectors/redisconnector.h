@@ -15,15 +15,13 @@ class Redis::Connector : public Radapter::WorkerBase
 {
     Q_OBJECT
 public:
-    struct CallbackArgs {
-        Connector* sender;
-        QVariant args;
-    };
-
+    typedef void(ConnectorCb)(redisAsyncContext*, void*, void*);
+    typedef void(ConnectorCbWithMsg)(redisAsyncContext*, void*, void*, const Radapter::WorkerMsg&);
     explicit Connector(const QString &host,
-                            const quint16 port,
-                            const quint16 dbIndex,
-                            const Radapter::WorkerSettings &settings);
+                       const quint16 port,
+                       const quint16 dbIndex,
+                       const Radapter::WorkerSettings &settings,
+                       QThread *thread);
     ~Connector() override;
     QString host() const;
     quint16 port() const;
@@ -32,8 +30,8 @@ public:
     bool isConnected() const;
 
     int runAsyncCommand(const QString &command);
-    //! \warning If args is a valid Variant, then reintepret third args in callback as CallbackArgs*, then delete!
-    int runAsyncCommand(redisCallbackFn *callback, const QString &command, const QVariant &args = QVariant());
+    int runAsyncCommand(ConnectorCb *callback, const QString &command);
+    int runAsyncCommandWithMsg(ConnectorCbWithMsg *callback, const QString &command, const Radapter::WorkerMsg &msgToReply);
 
     void enablePingKeepalive();
     void disablePingKeepalive();
@@ -57,7 +55,6 @@ signals:
 
 public slots:
     virtual void run() override;
-    void finishAsyncCommand();
 
 private slots:
     void tryConnect();
@@ -77,6 +74,9 @@ private:
     static void selectCallback(redisAsyncContext *context, void *replyPtr, void *sender);
     static void connectCallback(const redisAsyncContext *context, int status);
     static void disconnectCallback(const redisAsyncContext *context, int status);
+    static void privateCallback(redisAsyncContext *context, void *replyPtr, void *wantedCallback);
+    static void privateCallbackWithMsg(redisAsyncContext *context, void *replyPtr, void *callbackArgs);
+    void finishAsyncCommand();
 
     QTimer* m_connectionTimer;
     QTimer* m_pingTimer;
@@ -84,13 +84,18 @@ private:
     QTimer* m_reconnectCooldown;
     bool m_isConnected;
     quint8 m_commandTimeoutsCounter;
-    QStack<redisCallbackFn *> m_commandStack;
+    quint32 m_pendingCommandsCounter;
     redisAsyncContext* m_redisContext;
     RedisQtAdapter* m_client;
     QString m_host;
     quint16 m_port;
     quint16 m_dbIndex;
     bool m_canSelect;
+
+    struct CallbackArgs {
+        void *callback;
+        void *data;
+    };
 };
 
 #endif // REDISCONNECTOR_H

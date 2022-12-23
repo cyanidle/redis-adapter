@@ -39,15 +39,15 @@ Formatters::List MySqlConnector::doRead(const QString &tableName, const Formatte
     return jsonResult;
 }
 
-bool MySqlConnector::doWrite(const QString &tableName, const Formatters::Dict &jsonRecord, quint64 msgId)
+bool MySqlConnector::doWrite(const QString &tableName, const Formatters::Dict &jsonRecord, const Radapter::WorkerMsg &msg)
 {
     auto jsonQuery = Formatters::List{};
     jsonQuery.append(jsonRecord);
-    bool isOk = doWriteList(tableName, jsonQuery, msgId);
+    bool isOk = doWriteList(tableName, jsonQuery, msg);
     return isOk;
 }
 
-bool MySqlConnector::doWriteList(const QString &tableName, const Formatters::List &jsonRecords, quint64 msgId)
+bool MySqlConnector::doWriteList(const QString &tableName, const Formatters::List &jsonRecords, const Radapter::WorkerMsg &msg)
 {
     if (jsonRecords.isEmpty()) {
         return false;
@@ -58,6 +58,6 @@ bool MySqlConnector::doWriteList(const QString &tableName, const Formatters::Lis
         auto writeRecord = SqlQueryFieldsFormatter(Formatters::Dict(recordToWrite)).toSqlRecord();
         isOk &= m_client->doInsertQuery(tableName, writeRecord);
     }
-    emit writeDone(isOk, msgId);
+    emit writeDone(isOk, msg);
     return isOk;
 }

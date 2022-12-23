@@ -17,23 +17,23 @@
 using namespace Redis;
 
 Connector::Connector(const QString &host,
-                               const quint16 port,
-                               const quint16 dbIndex,
-                               const Radapter::WorkerSettings &settings)
-    : WorkerBase(settings),
-      m_connectionTimer(nullptr),
-      m_pingTimer(nullptr),
-      m_commandTimer(nullptr),
-      m_reconnectCooldown(nullptr),
-      m_isConnected(false),
-      m_commandTimeoutsCounter{},
-      m_commandStack{},
-      m_redisContext(nullptr),
-      m_client(nullptr),
-      m_host(host),
-      m_port(port),
-      m_dbIndex(dbIndex),
-      m_canSelect(true)
+                     const quint16 port,
+                     const quint16 dbIndex,
+                     const Radapter::WorkerSettings &settings,
+                     QThread *thread) :
+    WorkerBase(settings, thread),
+    m_connectionTimer(nullptr),
+    m_pingTimer(nullptr),
+    m_commandTimer(nullptr),
+    m_reconnectCooldown(nullptr),
+    m_isConnected(false),
+    m_commandTimeoutsCounter{},
+    m_redisContext(nullptr),
+    m_client(nullptr),
+    m_host(host),
+    m_port(port),
+    m_dbIndex(dbIndex),
+    m_canSelect(true)
 {
 }
 
@@ -89,10 +89,7 @@ void Connector::run()
 
 void Connector::finishAsyncCommand()
 {
-    if (!m_commandStack.isEmpty()) {
-        m_commandStack.pop();
-    }
-    if (m_commandStack.isEmpty()) {
+    if (!--m_pendingCommandsCounter) {
         m_pingTimer->start();
         emit commandsFinished();
     }
@@ -226,8 +223,6 @@ void Connector::selectCallback(redisAsyncContext *context, void *replyPtr, void 
     }
     auto reply = static_cast<redisReply *>(replyPtr);
     reDebug() << metaInfo(context).c_str() << "select status:" << toString(reply);
-    auto adapter = static_cast<Connector *>(sender);
-    adapter->finishAsyncCommand();
 }
 
 void Connector::connectCallback(const redisAsyncContext *context, int status)
@@ -266,29 +261,59 @@ int Connector::runAsyncCommand(const QString &command)
     return status;
 }
 
-int Connector::runAsyncCommand(redisCallbackFn *callback, const QString &command, const QVariant &args)
+int Connector::runAsyncCommand(ConnectorCb *callback, const QString &command)
 {
     if (!isConnected() || !isValidContext(m_redisContext)) {
         return REDIS_ERR;
     }
     m_pingTimer->stop();
-    void* cbArgs = this;
-    if (args.isValid()) {
-        cbArgs = new CallbackArgs{this, args};
-    }
-    auto status = redisAsyncCommand(m_redisContext, callback, cbArgs, command.toStdString().c_str());
-
-    if (!m_commandStack.contains(callback)) {
-        m_commandStack.push(callback);
+    auto status = redisAsyncCommand(m_redisContext, privateCallback, &callback, command.toStdString().c_str());
+    if (status != REDIS_OK) {
+        ++m_pendingCommandsCounter;
     }
     return status;
+}
+
+int Connector::runAsyncCommandWithMsg(ConnectorCbWithMsg *callback, const QString &command, const Radapter::WorkerMsg &msgToReply)
+{
+    if (!isConnected() || !isValidContext(m_redisContext)) {
+        return REDIS_ERR;
+    }
+    m_pingTimer->stop();
+    auto cbArgs = new CallbackArgs{&callback, new Radapter::WorkerMsg(msgToReply)};
+    auto status = redisAsyncCommand(m_redisContext, privateCallbackWithMsg, cbArgs, command.toStdString().c_str());
+    if (status != REDIS_OK) {
+        ++m_pendingCommandsCounter;
+    }
+    return status;
+}
+
+void Connector::privateCallback(redisAsyncContext *context, void *replyPtr, void *wantedCallback)
+{
+    static_assert(sizeof(ConnectorCb**) == sizeof(void*), "Fix callback passing!");
+    auto sender = static_cast<Connector*>(context->data);
+    auto callback = static_cast<ConnectorCb**>(wantedCallback);
+    (*callback)(context, static_cast<redisReply*>(replyPtr), sender);
+    sender->finishAsyncCommand();
+}
+
+void Connector::privateCallbackWithMsg(redisAsyncContext *context, void *replyPtr, void *callbackArguments)
+{
+    auto cbArgs = static_cast<CallbackArgs*>(callbackArguments);
+    auto sender = static_cast<Connector*>(context->data);
+    auto msgPointer = static_cast<Radapter::WorkerMsg*>(cbArgs->data);
+    auto reply = static_cast<redisReply*>(replyPtr);
+    auto callback = static_cast<ConnectorCbWithMsg**>(cbArgs->callback);
+    (*callback)(context, reply, sender, *msgPointer);
+    delete msgPointer;
+    sender->finishAsyncCommand();
+    delete cbArgs;
 }
 
 bool Connector::isNullReply(redisAsyncContext *context, void *replyPtr, void *sender)
 {
     auto reply = static_cast<redisReply *>(replyPtr);
-    auto adapter = static_cast<Connector *>(sender);
-    if (reply == nullptr || adapter == nullptr) {
+    if (reply == nullptr || sender == nullptr) {
         if (context) {
             reDebug() << metaInfo(context).c_str() << "Error: null reply"
                       << context->err << context->errstr;

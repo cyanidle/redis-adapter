@@ -14,7 +14,7 @@ int ClientFactory::initWorkers()
     for (auto &info : m_info) {
         auto thread = new QThread(this);
         connect(thread, &QThread::finished, thread, &QThread::deleteLater);
-        auto client = new Websocket::Client(info.server_host, info.server_port, info.worker.asWorkerSettings(thread));
+        auto client = new Websocket::Client(info.server_host, info.server_port, info.worker, thread);
         connect(client->thread(), &QThread::started, client, &Websocket::Client::start);
         connect(client->thread(), &QThread::finished, client, &Websocket::Client::deleteLater);
         m_workersPool.append(client);

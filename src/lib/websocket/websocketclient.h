@@ -20,7 +20,7 @@ class Websocket::Client : public Radapter::WorkerBase
 public:
     explicit Client(const QString &serverHost,
                     quint16 serverPort,
-                    const Radapter::WorkerSettings &settings);
+                    const Radapter::WorkerSettings &settings, QThread *thread);
     ~Client() override;
     bool isRunning() const;
 

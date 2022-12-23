@@ -21,14 +21,15 @@ int PubSubFactory::initWorkers()
         auto thread = new QThread{};
         auto settings = Radapter::WorkerSettings();
         QList<Radapter::InterceptorBase*> loggers;
-        if (subscriberInfo.log_jsons.use) {
-            loggers.append(new Radapter::LoggingInterceptor(subscriberInfo.log_jsons.asSettings()));
+        if (subscriberInfo.log_jsons) {
+            loggers.append(new Radapter::LoggingInterceptor(*subscriberInfo.log_jsons));
         }
         connect(thread, &QThread::finished, thread, &QThread::deleteLater);
         auto consumer = new KeyEventsConsumer(subscriberInfo.source_server.server_host,
                                               subscriberInfo.source_server.server_port,
                                               subscriberInfo.keyEvents,
-                                              subscriberInfo.worker.asWorkerSettings(thread));
+                                              subscriberInfo.worker,
+                                              thread);
         connect(thread, &QThread::started, consumer, &KeyEventsConsumer::run);
         connect(thread, &QThread::finished, consumer, &KeyEventsConsumer::deleteLater);
         m_workersPool.append(consumer);

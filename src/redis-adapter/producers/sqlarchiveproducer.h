@@ -16,15 +16,15 @@ class Sql::ArchiveProducer : public Radapter::WorkerBase
 public:
     explicit ArchiveProducer(MySqlConnector *client,
                              const Settings::SqlStorageInfo &archiveInfo,
-                             const Radapter::WorkerSettings &settings);
+                             const Radapter::WorkerSettings &settings, QThread *thread);
 public slots:
     void run() override;
     void onMsg(const Radapter::WorkerMsg &msg) override;
     //Replies
-    void saveFinished(bool isOk, quint64 msgId);
+    void saveFinished(bool isOk, const Radapter::WorkerMsg &msg);
 private:
     //Generic Data In
-    void saveRedisStreamEntries(const Formatters::Dict &redisStreamJson, quint64 msgId);
+    void saveRedisStreamEntries(const Formatters::Dict &redisStreamJson, const Radapter::WorkerMsg &msg);
 
     MySqlConnector* m_dbClient;
     KeyVaultConsumer* m_keyVaultClient;

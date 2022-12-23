@@ -21,15 +21,16 @@ int CacheFactory::initWorkers()
         auto thread = new QThread{};
         QObject::connect(thread, &QThread::finished, thread, &QThread::deleteLater);
         QList<Radapter::InterceptorBase*> loggers;
-        if (cacheInfo.log_jsons.use) {
-            loggers.append(new Radapter::LoggingInterceptor(cacheInfo.log_jsons.asSettings()));
+        if (cacheInfo.log_jsons) {
+            loggers.append(new Radapter::LoggingInterceptor(*cacheInfo.log_jsons));
         }
         if (cacheInfo.mode == Settings::RedisCache::Producer) {
             auto worker = new CacheProducer(cacheInfo.target_server.server_host,
                                             cacheInfo.target_server.server_port,
                                             cacheInfo.db_index,
                                             cacheInfo.index_key,
-                                            cacheInfo.worker.asWorkerSettings(thread));
+                                            cacheInfo.worker,
+                                            thread);
             QObject::connect(thread, &QThread::started, worker, &CacheProducer::run);
             QObject::connect(thread, &QThread::finished, worker, &CacheProducer::deleteLater);
             m_workersPool.append(worker);
@@ -39,7 +40,8 @@ int CacheFactory::initWorkers()
                                             cacheInfo.target_server.server_port,
                                             cacheInfo.db_index,
                                             cacheInfo.index_key,
-                                            cacheInfo.worker.asWorkerSettings(thread));
+                                            cacheInfo.worker,
+                                            thread);
             QObject::connect(thread, &QThread::started, worker, &CacheConsumer::run);
             QObject::connect(thread, &QThread::finished, worker, &CacheConsumer::deleteLater);
             m_workersPool.append(worker);

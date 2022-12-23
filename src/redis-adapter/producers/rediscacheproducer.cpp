@@ -7,27 +7,28 @@ CacheProducer::CacheProducer(const QString &host,
                              const quint16 port,
                              const quint16 dbIndex,
                              const QString &indexKey,
-                             const Radapter::WorkerSettings &settings) :
-    Connector(host, port, dbIndex, settings),
+                             const Radapter::WorkerSettings &settings,
+                             QThread *thread) :
+    Connector(host, port, dbIndex, settings, thread),
     m_indexKey(indexKey)
 {
 }
 
 void CacheProducer::onMsg(const Radapter::WorkerMsg &msg)
 {
-    if (writeIndex(msg.data(), m_indexKey, enqueueMsg(msg)) != REDIS_OK) {
-        emit sendMsg(prepareReply(dequeueMsg(msg.id()), "index_write_failed"));
+    if (writeIndex(msg.data(), m_indexKey, msg) != REDIS_OK) {
+        emit sendMsg(prepareReply(msg, "index_write_failed"));
     }
-    if (writeKeys(msg.data(), enqueueMsg(msg)) != REDIS_OK) {
-        emit sendMsg(prepareReply(dequeueMsg(msg.id()), "keys_write_failed"));
+    if (writeKeys(msg.data(), msg) != REDIS_OK) {
+        emit sendMsg(prepareReply(msg, "keys_write_failed"));
     }
-    emit sendMsgWithDirection(prepareMsg(msg), MsgDirection::DirectionToConsumers);
+    emit sendMsg(prepareMsg(msg));
 }
 
-int CacheProducer::writeKeys(const Formatters::JsonDict &json, int msgId)
+int CacheProducer::writeKeys(const Formatters::JsonDict &json, const Radapter::WorkerMsg &msg)
 {
     if (json.data().isEmpty()) {
-        writeKeysDone(msgId);
+        writeKeysDone(msg);
         return REDIS_ERR;
     }
     if (!isConnected()) {
@@ -35,27 +36,25 @@ int CacheProducer::writeKeys(const Formatters::JsonDict &json, int msgId)
     }
 
     auto msetCommand = RedisQueryFormatter(json.data()).toMultipleSetCommand();
-    return runAsyncCommand(msetCallback, msetCommand, msgId);
+    return runAsyncCommandWithMsg(msetCallback, msetCommand, msg);
 }
 
-int CacheProducer::writeIndex(const Formatters::JsonDict &json, const QString &indexKey, int msgId)
+int CacheProducer::writeIndex(const Formatters::JsonDict &json, const QString &indexKey, const Radapter::WorkerMsg &msg)
 {
     if (json.data().isEmpty() || indexKey.isEmpty()) {
-        writeIndexDone(msgId);
+        writeIndexDone(msg);
         return REDIS_ERR;
     }
     if (!isConnected()) {
         run();
     }
-
     auto indexCommand = RedisQueryFormatter(json.data()).toUpdateIndexCommand(indexKey);
-    return runAsyncCommand(indexCallback, indexCommand, msgId);
+    return runAsyncCommandWithMsg(indexCallback, indexCommand, msg);
 }
 
-void CacheProducer::msetCallback(redisAsyncContext *context, void *replyPtr, void *args)
+void CacheProducer::msetCallback(redisAsyncContext *context, void *replyPtr, void *sender, const Radapter::WorkerMsg &msg)
 {
-    auto received = static_cast<CallbackArgs*>(args);
-    auto sender = received->sender;
+    auto adapter = static_cast<CacheProducer*>(sender);
     if (isNullReply(context, replyPtr, sender)
             || isEmptyReply(context, replyPtr))
     {
@@ -63,33 +62,26 @@ void CacheProducer::msetCallback(redisAsyncContext *context, void *replyPtr, voi
     }
     auto reply = static_cast<redisReply *>(replyPtr);
     reDebug() << metaInfo(context).c_str() << "mset status:" << reply->str;
-    auto adapter = static_cast<CacheProducer*>(sender);
-    adapter->writeKeysDone(received->args.value<quint64>());
-    adapter->finishAsyncCommand();
-    delete received;
+    adapter->writeKeysDone(msg);
 }
 
-void CacheProducer::indexCallback(redisAsyncContext *context, void *replyPtr, void *args)
+void CacheProducer::indexCallback(redisAsyncContext *context, void *replyPtr, void *sender, const Radapter::WorkerMsg &msg)
 {
-    auto received = static_cast<CallbackArgs*>(args);
-    auto sender = received->sender;
+    auto adapter = static_cast<CacheProducer*>(sender);
     if (isNullReply(context, replyPtr, sender)) {
         return;
     }
     auto reply = static_cast<redisReply *>(replyPtr);
     reDebug() << metaInfo(context).c_str() << "index members updated:" << reply->integer;
-    auto adapter = static_cast<CacheProducer*>(sender);
-    adapter->writeIndexDone(received->args.value<quint64>());
-    adapter->finishAsyncCommand();
-    delete received;
+    adapter->writeIndexDone(msg);
 }
 
-void CacheProducer::writeKeysDone(int msgId)
+void CacheProducer::writeKeysDone(const Radapter::WorkerMsg &msg)
 {
-    emit sendMsg(prepareReply(dequeueMsg(msgId), "keys_write_ok"));
+    emit sendMsg(prepareReply(msg, "keys_write_ok"));
 }
 
-void CacheProducer::writeIndexDone(int msgId)
+void CacheProducer::writeIndexDone(const Radapter::WorkerMsg &msg)
 {
-    emit sendMsg(prepareReply(dequeueMsg(msgId), "index_write_ok"));
+    emit sendMsg(prepareReply(msg, "index_write_ok"));
 }

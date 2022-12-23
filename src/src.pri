@@ -1,7 +1,7 @@
 
 include($$PWD/lib/lib.pri)
-include($$PWD/redis-adapter/settings/settings.pri)
-include($$PWD/src-headers.pri)
+
+INCLUDEPATH += $$PWD
 
 SOURCES += \
     $$PWD/redis-adapter/connectors/modbusconnector.cpp \
@@ -37,7 +37,11 @@ SOURCES += \
     $$PWD/redis-adapter/localization.cpp \
     $$PWD/redis-adapter/localstorage.cpp \
     $$PWD/redis-adapter/radapterlogging.cpp \
-    $$PWD/redis-adapter/workers/modbusslaveworker.cpp
+    $$PWD/redis-adapter/workers/modbusslaveworker.cpp \
+    $$PWD/redis-adapter/settings/modbussettings.cpp \
+    $$PWD/redis-adapter/settings/redissettings.cpp \
+    $$PWD/redis-adapter/settings/settings.cpp
+
 HEADERS += \
     $$PWD/redis-adapter/connectors/modbusconnector.h \
     $$PWD/redis-adapter/connectors/mysqlconnector.h \
@@ -77,4 +81,7 @@ HEADERS += \
     $$PWD/redis-adapter/localization.h \
     $$PWD/redis-adapter/localstorage.h \
     $$PWD/redis-adapter/radapterlogging.h \
-    $$PWD/redis-adapter/workers/modbusslaveworker.h
+    $$PWD/redis-adapter/workers/modbusslaveworker.h \
+    $$PWD/redis-adapter/settings/modbussettings.h \
+    $$PWD/redis-adapter/settings/redissettings.h \
+    $$PWD/redis-adapter/settings/settings.h

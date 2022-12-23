@@ -4,14 +4,14 @@
 #include "redis-adapter/include/modbuskeys.h"
 #include "radapter-broker/broker.h"
 #include "redis-adapter/radapterlogging.h"
-#include "redis-adapter/radapterschemas.h"
 
 using namespace Radapter;
 
 ModbusConnector::ModbusConnector(const Settings::ModbusConnectionSettings &connectionSettings,
                                  const Settings::DeviceRegistersInfoMap &registersInfo,
-                                 const Radapter::WorkerSettings &settings)
-    : SingletonBase(settings),
+                                 const Radapter::WorkerSettings &settings,
+                                 QThread *thread)
+    : SingletonBase(settings, thread),
       m_lastWriteId{},
       m_lastWriteRequest{}
 {
@@ -35,33 +35,40 @@ int ModbusConnector::init()
 
 void ModbusConnector::writeJsonDone(const Formatters::Dict &jsonDict)
 {
-    emit sendMsgWithDirection(prepareCommand<Radapter::AcknowledgeSchema>(jsonDict), DirectionToProducers);
+    auto command = prepareCommand(Radapter::WorkerMsg::ServiceAcknowledge, jsonDict);
+    command.receivers() = producers();
+    emit sendMsg(command);
 }
 
 void ModbusConnector::jsonItemWritten(const Formatters::Dict &modbusJsonUnit)
 {
     Q_UNUSED(modbusJsonUnit);
-    emit sendMsgWithDirection(prepareCommand<Radapter::RequestJsonSchema>(true), DirectionToProducers);
+    auto command = prepareCommand(Radapter::WorkerMsg::ServiceRequestJson);
+    command.receivers() = producers();
+    emit sendMsg(command);
 }
 
 void ModbusConnector::allDevicesConnected()
 {
-    emit sendMsgWithDirection(prepareCommand<Radapter::RequestJsonSchema>(true), DirectionToProducers);
+    auto command = prepareCommand(Radapter::WorkerMsg::ServiceRequestJson);
+    command.receivers() = producers();
+    emit sendMsg(command);
 }
 
 ModbusConnector &ModbusConnector::prvInstance(const Settings::ModbusConnectionSettings &connectionSettings,
                                               const Settings::DeviceRegistersInfoMap &devices,
-                                              const Radapter::WorkerSettings &settings)
+                                              const Radapter::WorkerSettings &settings,
+                                              QThread *thread)
 {
-    static ModbusConnector conn(connectionSettings, devices, settings);
+    static ModbusConnector conn(connectionSettings, devices, settings, thread);
     return conn;
 }
 
 void ModbusConnector::init(const Settings::ModbusConnectionSettings &connectionSettings,
                            const Settings::DeviceRegistersInfoMap &devices,
-                           const Radapter::WorkerSettings &settings)
+                           const Radapter::WorkerSettings &settings, QThread *thread)
 {
-    prvInstance(connectionSettings, devices, settings);
+    prvInstance(connectionSettings, devices, settings, thread);
 }
 
 void ModbusConnector::initServices(const Settings::ModbusConnectionSettings &connectionSettings, const Settings::DeviceRegistersInfoMap &registersInfo)
@@ -150,14 +157,16 @@ void ModbusConnector::onMsg(const Radapter::WorkerMsg &msg)
 
 void ModbusConnector::approvalRequested(const Formatters::List &jsonKeys)
 {
-    auto command = prepareCommand<RequestKeysSchema>(jsonKeys);
-    emit sendMsgWithDirection(command, DirectionToProducers);
+    auto command = prepareCommand(Radapter::WorkerMsg::ServiceRequestKeys, jsonKeys);
+    command.receivers() = producers();
+    emit sendMsg(command);
 }
 
 void ModbusConnector::onReply(const Radapter::WorkerMsg &msg)
 {
-    if (msg.usesSchema<AcknowledgeSchema>()) {
-        onApprovalReceived(msg.schemaAs<AcknowledgeSchema>()->receiveAckJson(msg).data());
+    auto ack = msg.serviceData(Radapter::WorkerMsg::ServiceAcknowledge);
+    if (ack.isValid()) {
+        onApprovalReceived(ack.toMap());
     } else {
         reDebug() << "ModbusConnector received reply with non 'AcknowledgeSchema'";
     }

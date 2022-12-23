@@ -23,9 +23,9 @@ ProducerFilter::ProducerFilter(const Settings::Filters::Table &filters)
 
 void ProducerFilter::onMsgFromWorker(const Radapter::WorkerMsg &msg)
 {
-    if (msg.brokerFlags == Radapter::WorkerMsg::BrokerBadMsg ||
-        msg.workerFlags == Radapter::WorkerMsg::WorkerInternalCommand ||
-        msg.workerFlags == Radapter::WorkerMsg::WorkerReply) {
+    if (msg.testFlags(Radapter::WorkerMsg::MsgBad |
+                      Radapter::WorkerMsg::MsgReply |
+                      Radapter::WorkerMsg::MsgCommand)) {
         emit msgToBroker(msg);
         return;
     }

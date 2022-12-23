@@ -21,7 +21,7 @@ public:
                                  const QString &streamKey,
                                  const QString &groupName,
                                  const Settings::RedisConsumerStartMode startFrom,
-                                 const Radapter::WorkerSettings &settings);
+                                 const Radapter::WorkerSettings &settings, QThread *thread);
     QString lastReadId() const;
 
     QString streamKey() const;
@@ -30,37 +30,35 @@ public:
     bool areGroupsEnabled() const;
     bool hasPendingEntries() const;
 signals:
-    void pendingChanged();
     void ackCompleted();
-
+    void pendingChanged(bool state);
 public slots:
     void run() override;
     void onCommand(const Radapter::WorkerMsg &msg) override;
-    void onReply(const Radapter::WorkerMsg &msg) override;
+
     void blockingRead();
     void readGroup();
 
 private slots:
-    void doRead(quint64 msgId);
+    void doRead(const Radapter::WorkerMsg &msg = {});
     void updatePingKeepalive();
     void updateReadTimers();
     void createGroup();
 private:
     // Commands
-    void blockingReadImpl(quint64 msgId);
-    void readGroupImpl(quint64 msgId);
+    void blockingReadCommand(const Radapter::WorkerMsg &msg);
+    void readGroupCommand(const Radapter::WorkerMsg &msg);
     // Replies
     void acknowledge(const Formatters::Dict &jsonEntries);
     void pendingChangedImpl();
     void ackCompletedImpl();
 
-
-    static void readCallback(redisAsyncContext *context, void *replyPtr, void *args);
+    static void readCallback(redisAsyncContext *context, void *replyPtr, void *sender, const Radapter::WorkerMsg &msg);
     static void ackCallback(redisAsyncContext *context, void *replyPtr, void *sender);
     static void createGroupCallback(redisAsyncContext *context, void *replyPtr, void *sender);
     QString id() const override;
 
-    void finishRead(const Formatters::Dict &json, quint64 msgId);
+    void finishRead(const Formatters::Dict &json, const Radapter::WorkerMsg &msg);
     void finishAck();
     void setLastReadId(const QString &lastId);
     void setPending(bool state);

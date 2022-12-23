@@ -9,8 +9,9 @@ using namespace Redis;
 KeyEventsConsumer::KeyEventsConsumer(const QString &host,
                                      const quint16 port,
                                      const QStringList &keyEvents,
-                                     const Radapter::WorkerSettings &settings)
-    : Connector(host, port, 0u, settings),
+                                     const Radapter::WorkerSettings &settings,
+                                     QThread *thread)
+    : Connector(host, port, 0u, settings, thread),
       m_keyEventNotifications(keyEvents),
       m_isSubscribed(false)
 {

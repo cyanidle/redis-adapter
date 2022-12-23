@@ -5,8 +5,9 @@
 using namespace Websocket;
 
 ServerConnector::ServerConnector(const Settings::WebsocketServerInfo &serverInfo,
-                               const Radapter::WorkerSettings &settings)
-    : SingletonBase(settings),
+                                 const Radapter::WorkerSettings &settings,
+                                 QThread *thread)
+    : SingletonBase(settings, thread),
       m_info(serverInfo)
 {
     m_thread = new QThread();
@@ -26,9 +27,10 @@ ServerConnector::ServerConnector(const Settings::WebsocketServerInfo &serverInfo
 }
 
 ServerConnector &ServerConnector::prvInstance(const Settings::WebsocketServerInfo &serverInfo,
-                                                const Radapter::WorkerSettings &settings)
+                                              const Radapter::WorkerSettings &settings,
+                                              QThread *thread)
 {
-    static ServerConnector connector(serverInfo, settings);
+    static ServerConnector connector(serverInfo, settings, thread);
     return connector;
 }
 
@@ -38,9 +40,10 @@ ServerConnector *ServerConnector::instance()
 }
 
 void ServerConnector::init(const Settings::WebsocketServerInfo &serverInfo,
-                                    const Radapter::WorkerSettings &settings)
+                           const Radapter::WorkerSettings &settings,
+                           QThread *thread)
 {
-    prvInstance(serverInfo, settings);
+    prvInstance(serverInfo, settings, thread);
 }
 
 Settings::WebsocketServerInfo ServerConnector::info() const

@@ -15,10 +15,11 @@ class Redis::StreamProducer : public Connector
     Q_OBJECT
 public:
     explicit StreamProducer(const QString &host,
-                                 const quint16 port,
-                                 const QString &streamKey,
-                                 const Radapter::WorkerSettings &settings,
-                                 const qint32 streamSize = 0u);
+                            const quint16 port,
+                            const QString &streamKey,
+                            const Radapter::WorkerSettings &settings,
+                            QThread *thread,
+                            const qint32 streamSize = 0u);
     ~StreamProducer() override;
 
     QString streamKey() const;
@@ -33,9 +34,9 @@ private slots:
 
 private:
     // Replies
-    void writeDone(const QString &newEntryId, quint64 msgId);
+    void writeDone(const QString &newEntryId, const Radapter::WorkerMsg &msg);
 
-    static void writeCallback(redisAsyncContext *context, void *replyPtr, void *args);
+    static void writeCallback(redisAsyncContext *context, void *replyPtr, void *sender, const Radapter::WorkerMsg &msg);
     static void trimCallback(redisAsyncContext *context, void *replyPtr, void *sender);
     QString id() const override;
 

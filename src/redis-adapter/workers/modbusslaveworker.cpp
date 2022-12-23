@@ -7,7 +7,7 @@ using namespace Radapter;
 using namespace Formatters;
 
 SlaveWorker::SlaveWorker(const Settings::ModbusSlaveWorker &settings, QThread *thread) :
-    WorkerBase(settings.worker.asWorkerSettings(thread)),
+    WorkerBase(settings.worker, thread),
     m_settings(settings),
     m_reconnectTimer(new QTimer(this)),
     m_reverseRegisters()
@@ -18,15 +18,15 @@ SlaveWorker::SlaveWorker(const Settings::ModbusSlaveWorker &settings, QThread *t
     connect(this->thread(), &QThread::started, this, &SlaveWorker::connectDevice);
     if (settings.device.device_type == Settings::Tcp) {
         modbusDevice = new QModbusTcpServer(this);
-        modbusDevice->setConnectionParameter(QModbusDevice::NetworkPortParameter, settings.device.tcp.port);
-        modbusDevice->setConnectionParameter(QModbusDevice::NetworkAddressParameter, settings.device.tcp.ip);
+        modbusDevice->setConnectionParameter(QModbusDevice::NetworkPortParameter, settings.device.tcp->port);
+        modbusDevice->setConnectionParameter(QModbusDevice::NetworkAddressParameter, settings.device.tcp->ip);
     } else {
         modbusDevice = new QModbusRtuSerialSlave(this);
-        modbusDevice->setConnectionParameter(QModbusDevice::SerialPortNameParameter, settings.device.rtu.port_name);
-        modbusDevice->setConnectionParameter(QModbusDevice::SerialParityParameter, settings.device.rtu.parity);
-        modbusDevice->setConnectionParameter(QModbusDevice::SerialBaudRateParameter, settings.device.rtu.baud);
-        modbusDevice->setConnectionParameter(QModbusDevice::SerialDataBitsParameter, settings.device.rtu.data_bits);
-        modbusDevice->setConnectionParameter(QModbusDevice::SerialStopBitsParameter, settings.device.rtu.stop_bits);
+        modbusDevice->setConnectionParameter(QModbusDevice::SerialPortNameParameter, settings.device.rtu->port_name);
+        modbusDevice->setConnectionParameter(QModbusDevice::SerialParityParameter, settings.device.rtu->parity);
+        modbusDevice->setConnectionParameter(QModbusDevice::SerialBaudRateParameter, settings.device.rtu->baud);
+        modbusDevice->setConnectionParameter(QModbusDevice::SerialDataBitsParameter, settings.device.rtu->data_bits);
+        modbusDevice->setConnectionParameter(QModbusDevice::SerialStopBitsParameter, settings.device.rtu->stop_bits);
     }
     modbusDevice->setServerAddress(settings.slave_id);
     connect(modbusDevice, &QModbusServer::dataWritten,

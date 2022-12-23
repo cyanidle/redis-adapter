@@ -18,21 +18,20 @@ public:
                            const quint16 port,
                            const quint16 dbIndex,
                            const QString &indexKey,
-                           const Radapter::WorkerSettings &settings);
+                           const Radapter::WorkerSettings &settings, QThread *thread);
 public slots:
-    void onMsg(const Radapter::WorkerMsg &msg) override;
     void onCommand(const Radapter::WorkerMsg &msg) override;
 
 private:
     //Commands
-    void requestIndex(const QString &indexKey, quint64 msgId);
-    void requestKeys(const Formatters::List &keys, quint64 msgId);
+    void requestIndex(const QString &indexKey, const Radapter::WorkerMsg &msg);
+    void requestKeys(const Formatters::List &keys, const Radapter::WorkerMsg &msg);
     //Replies
-    void finishIndex(const Formatters::List &json, quint64 msgId);
-    void finishKeys(const Formatters::Dict &json, quint64 msgId);
+    void finishIndex(const Formatters::List &json, const Radapter::WorkerMsg &msg);
+    void finishKeys(const Formatters::Dict &json, const Radapter::WorkerMsg &msg);
 
-    static void readIndexCallback(redisAsyncContext *context, void *replyPtr, void *args);
-    static void readKeysCallback(redisAsyncContext *context, void *replyPtr, void *args);
+    static void readIndexCallback(redisAsyncContext *context, void *replyPtr, void *sender, const Radapter::WorkerMsg &msg);
+    static void readKeysCallback(redisAsyncContext *context, void *replyPtr, void *sender, const Radapter::WorkerMsg &msg);
 
 
     Formatters::Dict mergeWithKeys(const Formatters::List &entries);

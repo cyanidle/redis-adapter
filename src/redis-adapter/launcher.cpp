@@ -96,11 +96,11 @@ int Launcher::prvInit()
     addFactory(new Redis::CacheFactory(Settings::RedisCache::cacheMap.values(), this));
     addFactory(new Redis::PubSubFactory(Settings::RedisKeyEventSubscriber::cacheMap.values(), this));
     m_filereader->setPath("conf/mocks.toml");
-    const auto mocks = Serializer::fromQList<Settings::MockWorkerSettings>(
+    const auto mocks = Serializer::fromQList<Radapter::MockWorkerSettings>(
             m_filereader->deserialise("mock").toList()
         );
     for (const auto &mockSettings : mocks) {
-        addWorker(new Radapter::MockWorker(mockSettings.asMockSettings(new QThread())));
+        addWorker(new Radapter::MockWorker(mockSettings, new QThread()));
     }
     m_filereader->setPath("conf/modbus.toml");
     auto slavesList = m_filereader->deserialise("modbus_slave").toList();
@@ -118,14 +118,15 @@ int Launcher::prvInit()
             m_filereader->deserialise("registers", true).toMap());
         ModbusConnector::init(modbusConnSettings,
                               mbRegisters,
-                              modbusConnSettings.worker.asWorkerSettings(new QThread(this)));
+                              modbusConnSettings.worker,
+                              new QThread(this));
         addSingleton(ModbusConnector::instance());
         QList<InterceptorBase*> mbInterceptors{};
         if (!modbusConnSettings.filters.isEmpty()) {
             mbInterceptors.append(new ProducerFilter(modbusConnSettings.filters));
         }
-        if (modbusConnSettings.log_jsons.use) {
-            mbInterceptors.append(new LoggingInterceptor(modbusConnSettings.log_jsons.asSettings()));
+        if (modbusConnSettings.log_jsons) {
+            mbInterceptors.append(new LoggingInterceptor(*modbusConnSettings.log_jsons));
         }
         WorkerProxy* mbProxy = ModbusConnector::instance()->createProxy(mbInterceptors);
         Radapter::Broker::instance()->registerProxy(mbProxy);
@@ -149,7 +150,7 @@ int Launcher::prvInit()
     if (!websocketServerConf.isEmpty()) {
         auto websocketServer = Serializer::fromQMap<Settings::WebsocketServerInfo>(websocketServerConf);
         if (websocketServer.isValid()) {
-            Websocket::ServerConnector::init(websocketServer, websocketServer.worker.asWorkerSettings(new QThread(this)));
+            Websocket::ServerConnector::init(websocketServer, websocketServer.worker, new QThread(this));
             addSingleton(Websocket::ServerConnector::instance());
             Radapter::Broker::instance()->registerProxy(Websocket::ServerConnector::instance()->createProxy());
         }
@@ -218,9 +219,9 @@ int Launcher::initWorkers()
     return 0;
 }
 
-void Launcher::run(bool pedantic)
+void Launcher::run()
 {
-    Broker::instance()->connectProducersAndConsumers(pedantic);
+    Broker::instance()->connectProducersAndConsumers();
     for (auto &factory : m_factories) {
         factory->run();
     }

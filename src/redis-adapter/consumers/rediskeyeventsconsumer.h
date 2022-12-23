@@ -15,7 +15,7 @@ public:
     explicit KeyEventsConsumer(const QString &host,
                                const quint16 port,
                                const QStringList &keyEvents,
-                               const Radapter::WorkerSettings &settings);
+                               const Radapter::WorkerSettings &settings, QThread *thread);
 public slots:
     void run() override;
 

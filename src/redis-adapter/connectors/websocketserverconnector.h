@@ -18,7 +18,8 @@ class Websocket::ServerConnector : public Radapter::SingletonBase
 public:
     static ServerConnector* instance();
     static void init(const Settings::WebsocketServerInfo &serverInfo,
-                     const Radapter::WorkerSettings &settings);
+                     const Radapter::WorkerSettings &setting,
+                     QThread *thread);
 
     Settings::WebsocketServerInfo info() const;
 signals:
@@ -33,12 +34,11 @@ private slots:
     void onRequestReceived(const QVariant &nestedJson);
 
 private:
-    //Replies
-
     explicit ServerConnector(const Settings::WebsocketServerInfo &serverInfo,
-                                      const Radapter::WorkerSettings &settings);
+                                      const Radapter::WorkerSettings &settings, QThread *thread);
     static ServerConnector& prvInstance(const Settings::WebsocketServerInfo &serverInfo = {},
-                                                 const Radapter::WorkerSettings &settings = {});
+                                        const Radapter::WorkerSettings &settings = {},
+                                        QThread *thread = nullptr);
     Settings::WebsocketServerInfo m_info;
     Websocket::Server* m_server;
     QThread* m_thread;

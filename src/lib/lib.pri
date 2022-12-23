@@ -44,6 +44,8 @@ SOURCES += \
     $$PWD/websocket/websocketclient.cpp \
     $$PWD/websocket/websocketserver.cpp 
 
-include($$PWD/lib-headers.pri)
+INCLUDEPATH += \
+    $$PWD \
+    $$PWD/googletest
+
 include($$PWD/radapter-broker/radapter-broker.pri)
-include($$PWD/settings-parsing/settings-parsing.pri)
