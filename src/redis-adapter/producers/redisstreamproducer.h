@@ -10,7 +10,7 @@ namespace Redis {
 class RADAPTER_SHARED_SRC StreamProducer;
 }
 
-class Redis::StreamProducer : public ConnectorHelper<StreamProducer>
+class Redis::StreamProducer : public Connector
 {
     Q_OBJECT
 public:

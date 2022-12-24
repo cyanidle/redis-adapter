@@ -12,7 +12,7 @@ namespace Redis{
     class RADAPTER_SHARED_SRC StreamConsumer;
 }
 
-class Redis::StreamConsumer : public ConnectorHelper<StreamConsumer>
+class Redis::StreamConsumer : public Connector
 {
     Q_OBJECT
 public:

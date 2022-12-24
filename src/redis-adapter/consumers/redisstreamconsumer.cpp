@@ -18,7 +18,7 @@ StreamConsumer::StreamConsumer(const QString &host,
                                const Settings::RedisConsumerStartMode startFrom,
                                const Radapter::WorkerSettings &settings,
                                QThread *thread)
-    : ConnectorHelper<StreamConsumer>(host, port, 0u, settings, thread),
+    : Connector(host, port, 0u, settings, thread),
       m_streamKey(streamKey),
       m_groupName(groupName),
       m_blockingReadTimer(nullptr),

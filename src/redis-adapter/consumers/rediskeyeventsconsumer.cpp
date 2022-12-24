@@ -11,7 +11,7 @@ KeyEventsConsumer::KeyEventsConsumer(const QString &host,
                                      const QStringList &keyEvents,
                                      const Radapter::WorkerSettings &settings,
                                      QThread *thread)
-    : ConnectorHelper<KeyEventsConsumer>(host, port, 0u, settings, thread),
+    : Connector(host, port, 0u, settings, thread),
       m_keyEventNotifications(keyEvents),
       m_isSubscribed(false)
 {

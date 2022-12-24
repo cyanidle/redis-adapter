@@ -184,12 +184,12 @@ void Connector::selectDb()
         return;
     }
     auto selectCommand = QString("%1 %2").arg(SELECT_DB_REQUEST).arg(m_dbIndex);
-    runAsyncCommand(selectCallback, selectCommand);
+    runAsyncCommand(&Connector::selectCallback, selectCommand);
 }
 
-void Connector::pingCallback(redisAsyncContext *context, void *replyPtr, void *optData)
+void Connector::pingCallback(redisAsyncContext *context, void *replyPtr, void *sender)
 {
-    auto adapter = static_cast<Connector *>(optData);
+    auto adapter = static_cast<Connector *>(sender);
     if (adapter) {
         adapter->stopCommandTimer();
     }
@@ -214,15 +214,12 @@ void Connector::pingCallback(redisAsyncContext *context, void *replyPtr, void *o
     }
 }
 
-void Connector::selectCallback(redisAsyncContext *context, void *replyPtr, void *optData)
+void Connector::selectCallback(redisAsyncContext *context, redisReply *reply)
 {
-    Q_UNUSED(optData)
-    if (isNullReply(context, replyPtr)
-            || isEmptyReply(context, replyPtr))
+    if (isNullReply(context, reply) || isEmptyReply(context, reply))
     {
         return;
     }
-    auto reply = static_cast<redisReply *>(replyPtr);
     reDebug() << metaInfo(context).c_str() << "select status:" << toString(reply);
 }
 
@@ -262,7 +259,7 @@ int Connector::runAsyncCommand(const QString &command)
     return status;
 }
 
-int Connector::runAsyncCommand(ConnectorCb *callback, const QString &command, void *data)
+int Connector::runAsyncCommand(StaticCb callback, const QString &command, void *data)
 {
     if (!isConnected() || !isValidContext(m_redisContext)) {
         return REDIS_ERR;

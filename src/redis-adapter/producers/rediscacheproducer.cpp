@@ -9,7 +9,7 @@ CacheProducer::CacheProducer(const QString &host,
                              const QString &indexKey,
                              const Radapter::WorkerSettings &settings,
                              QThread *thread) :
-    ConnectorHelper<CacheProducer>(host, port, dbIndex, settings, thread),
+    Connector(host, port, dbIndex, settings, thread),
     m_indexKey(indexKey)
 {
 }

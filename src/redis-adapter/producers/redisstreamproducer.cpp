@@ -16,7 +16,7 @@ StreamProducer::StreamProducer(const QString &host,
                                const Radapter::WorkerSettings &settings,
                                QThread *thread,
                                const qint32 streamSize)
-    : ConnectorHelper<StreamProducer>(host, port, 0u, settings, thread),
+    : Connector(host, port, 0u, settings, thread),
       m_trimTimer(nullptr),
       m_addCounter{},
       m_streamKey(streamKey)

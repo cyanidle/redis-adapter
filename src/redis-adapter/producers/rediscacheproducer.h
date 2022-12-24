@@ -10,7 +10,7 @@ namespace Redis {
 class RADAPTER_SHARED_SRC CacheProducer;
 }
 
-class Redis::CacheProducer : public ConnectorHelper<CacheProducer>
+class Redis::CacheProducer : public Connector
 {
     Q_OBJECT
 public:

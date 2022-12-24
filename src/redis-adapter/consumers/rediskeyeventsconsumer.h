@@ -8,7 +8,7 @@ namespace Redis {
 class RADAPTER_SHARED_SRC KeyEventsConsumer;
 }
 
-class Redis::KeyEventsConsumer : public ConnectorHelper<Redis::KeyEventsConsumer>
+class Redis::KeyEventsConsumer : public Connector
 {
     Q_OBJECT
 public:

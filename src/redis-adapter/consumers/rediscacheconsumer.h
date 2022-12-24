@@ -10,7 +10,7 @@ namespace Redis{
 class RADAPTER_SHARED_SRC CacheConsumer;
 }
 
-class Redis::CacheConsumer : public ConnectorHelper<Redis::CacheConsumer>
+class Redis::CacheConsumer : public Connector
 {
     Q_OBJECT
 public:
