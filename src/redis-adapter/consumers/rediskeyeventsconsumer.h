@@ -8,7 +8,7 @@ namespace Redis {
 class RADAPTER_SHARED_SRC KeyEventsConsumer;
 }
 
-class Redis::KeyEventsConsumer : public Connector
+class Redis::KeyEventsConsumer : public ConnectorHelper<Redis::KeyEventsConsumer>
 {
     Q_OBJECT
 public:
@@ -27,7 +27,7 @@ private:
     void finishMessageRead(const Formatters::List &jsons);
     void eventReceived(const Formatters::List &jsonMessage);
     //Redis Callbacks
-    static void readMessageCallback(redisAsyncContext *context, void *replyPtr, void *sender);
+    void readMessageCallback(redisAsyncContext *context, redisReply *reply);
 
     void subscribeToKeyEventsImpl(const QStringList &eventTypes);
 

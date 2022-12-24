@@ -9,7 +9,7 @@ CacheProducer::CacheProducer(const QString &host,
                              const QString &indexKey,
                              const Radapter::WorkerSettings &settings,
                              QThread *thread) :
-    Connector(host, port, dbIndex, settings, thread),
+    ConnectorHelper<CacheProducer>(host, port, dbIndex, settings, thread),
     m_indexKey(indexKey)
 {
 }
@@ -34,9 +34,13 @@ int CacheProducer::writeKeys(const Formatters::JsonDict &json, const Radapter::W
     if (!isConnected()) {
         run();
     }
-
     auto msetCommand = RedisQueryFormatter(json.data()).toMultipleSetCommand();
-    return runAsyncCommandWithMsg(msetCallback, msetCommand, msg);
+    auto id = enqueueMsg(msg);
+    auto status = runAsyncCommand(&CacheProducer::msetCallback, msetCommand, id);
+    if (status != REDIS_OK) {
+        disposeId(id);
+    }
+    return status;
 }
 
 int CacheProducer::writeIndex(const Formatters::JsonDict &json, const QString &indexKey, const Radapter::WorkerMsg &msg)
@@ -49,31 +53,34 @@ int CacheProducer::writeIndex(const Formatters::JsonDict &json, const QString &i
         run();
     }
     auto indexCommand = RedisQueryFormatter(json.data()).toUpdateIndexCommand(indexKey);
-    return runAsyncCommandWithMsg(indexCallback, indexCommand, msg);
+    auto id = enqueueMsg(msg);
+    auto status = runAsyncCommand(&CacheProducer::indexCallback, indexCommand, id);
+    if (status != REDIS_OK) {
+        disposeId(id);
+    }
+    return status;
 }
 
-void CacheProducer::msetCallback(redisAsyncContext *context, void *replyPtr, void *sender, const Radapter::WorkerMsg &msg)
+void CacheProducer::msetCallback(redisAsyncContext *context, redisReply *reply, void *msgId)
 {
-    auto adapter = static_cast<CacheProducer*>(sender);
-    if (isNullReply(context, replyPtr, sender)
-            || isEmptyReply(context, replyPtr))
+    auto msg = dequeueMsg(msgId);
+    if (isNullReply(context, reply)
+            || isEmptyReply(context, reply))
     {
         return;
     }
-    auto reply = static_cast<redisReply *>(replyPtr);
     reDebug() << metaInfo(context).c_str() << "mset status:" << reply->str;
-    adapter->writeKeysDone(msg);
+    writeKeysDone(msg);
 }
 
-void CacheProducer::indexCallback(redisAsyncContext *context, void *replyPtr, void *sender, const Radapter::WorkerMsg &msg)
+void CacheProducer::indexCallback(redisAsyncContext *context, redisReply *reply, void *msgId)
 {
-    auto adapter = static_cast<CacheProducer*>(sender);
-    if (isNullReply(context, replyPtr, sender)) {
+    auto msg = dequeueMsg(msgId);
+    if (isNullReply(context, reply)) {
         return;
     }
-    auto reply = static_cast<redisReply *>(replyPtr);
     reDebug() << metaInfo(context).c_str() << "index members updated:" << reply->integer;
-    adapter->writeIndexDone(msg);
+    writeIndexDone(msg);
 }
 
 void CacheProducer::writeKeysDone(const Radapter::WorkerMsg &msg)

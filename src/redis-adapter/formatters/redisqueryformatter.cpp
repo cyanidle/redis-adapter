@@ -26,7 +26,7 @@ QString RedisQueryFormatter::toTrimCommand(const QString &streamKey, quint32 max
     return command;
 }
 
-QString RedisQueryFormatter::toReadStreamCommand(const QString &streamKey, qint32 blockTimeout, const QString &lastId) const
+QString RedisQueryFormatter::toReadStreamCommand(const QString &streamKey, qint32 blockTimeout, const QString &lastId)
 {
     if (streamKey.isEmpty()) {
         return QString{};
@@ -36,7 +36,7 @@ QString RedisQueryFormatter::toReadStreamCommand(const QString &streamKey, qint3
     return command;
 }
 
-QString RedisQueryFormatter::toReadGroupCommand(const QString &streamKey, const QString &groupName, const QString &consumerName, qint32 blockTimeout, const QString &lastId) const
+QString RedisQueryFormatter::toReadGroupCommand(const QString &streamKey, const QString &groupName, const QString &consumerName, qint32 blockTimeout, const QString &lastId)
 {
     if (streamKey.isEmpty() || groupName.isEmpty() || consumerName.isEmpty()) {
         return QString{};
@@ -67,7 +67,7 @@ QString RedisQueryFormatter::toCreateGroupCommand(const QString &streamKey, cons
     return command;
 }
 
-QString RedisQueryFormatter::toGetIndexCommand(const QString &indexKey) const
+QString RedisQueryFormatter::toGetIndexCommand(const QString &indexKey)
 {
     auto command = QString("SMEMBERS %1").arg(indexKey);
     return command;
@@ -84,7 +84,7 @@ QString RedisQueryFormatter::toUpdateIndexCommand(const QString &indexKey) const
     return command;
 }
 
-QString RedisQueryFormatter::toMultipleGetCommand(const Formatters::List &keysList) const
+QString RedisQueryFormatter::toMultipleGetCommand(const Formatters::List &keysList)
 {
     if (keysList.isEmpty()) {
         return QString{};
@@ -139,7 +139,7 @@ QString RedisQueryFormatter::toEntryFields() const
     return fieldsList.join(" ");
 }
 
-QString RedisQueryFormatter::toKeysFields(const Formatters::List &keysList) const
+QString RedisQueryFormatter::toKeysFields(const Formatters::List &keysList)
 {
     if (keysList.isEmpty()) {
         return QString{};

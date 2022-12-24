@@ -11,7 +11,7 @@ KeyEventsConsumer::KeyEventsConsumer(const QString &host,
                                      const QStringList &keyEvents,
                                      const Radapter::WorkerSettings &settings,
                                      QThread *thread)
-    : Connector(host, port, 0u, settings, thread),
+    : ConnectorHelper<KeyEventsConsumer>(host, port, 0u, settings, thread),
       m_keyEventNotifications(keyEvents),
       m_isSubscribed(false)
 {
@@ -27,16 +27,14 @@ void KeyEventsConsumer::finishMessageRead(const Formatters::List &jsons)
     }
 }
 
-void KeyEventsConsumer::readMessageCallback(redisAsyncContext *context, void *replyPtr, void *sender)
+void KeyEventsConsumer::readMessageCallback(redisAsyncContext *context, redisReply *reply)
 {
-    if (isNullReply(context, replyPtr, sender)) {
+    if (isNullReply(context, reply)) {
         return;
     }
-    auto reply = static_cast<redisReply *>(replyPtr);
-    auto adapter = static_cast<KeyEventsConsumer *>(sender);
     if (reply->elements == 0) {
         reDebug() << metaInfo(context).c_str() << "Empty message.";
-        adapter->finishMessageRead(Formatters::List{});
+        finishMessageRead(Formatters::List{});
         return;
     }
 
@@ -49,7 +47,7 @@ void KeyEventsConsumer::readMessageCallback(redisAsyncContext *context, void *re
             message.append(messageString);
         }
     }
-    adapter->finishMessageRead(message);
+    finishMessageRead(message);
 }
 
 void KeyEventsConsumer::subscribeToKeyEventsImpl(const QStringList &eventTypes)
@@ -59,7 +57,7 @@ void KeyEventsConsumer::subscribeToKeyEventsImpl(const QStringList &eventTypes)
         return;
     }
     auto command = RedisQueryFormatter{}.toKeyEventsSubscribeCommand(eventTypes);
-    runAsyncCommand(readMessageCallback, command);
+    runAsyncCommand(&KeyEventsConsumer::readMessageCallback, command);
     reDebug() << metaInfo().c_str() << "Listening to key events of types:" << eventTypes;
 }
 

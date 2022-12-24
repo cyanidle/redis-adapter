@@ -16,7 +16,7 @@ StreamProducer::StreamProducer(const QString &host,
                                const Radapter::WorkerSettings &settings,
                                QThread *thread,
                                const qint32 streamSize)
-    : Connector(host, port, 0u, settings, thread),
+    : ConnectorHelper<StreamProducer>(host, port, 0u, settings, thread),
       m_trimTimer(nullptr),
       m_addCounter{},
       m_streamKey(streamKey)
@@ -64,8 +64,10 @@ void StreamProducer::onMsg(const Radapter::WorkerMsg &msg)
     auto json = msg.data();
     auto command = RedisQueryFormatter(json).toAddStreamCommand(m_streamKey, streamSize());
     if (!command.isEmpty()) {
-        if (runAsyncCommandWithMsg(writeCallback, command, msg) != REDIS_OK) {
-            auto reply = prepareReply(msg, "failed");
+        auto id = enqueueMsg(msg);
+        if (runAsyncCommand(&StreamProducer::writeCallback, command, id) != REDIS_OK) {
+            disposeId(id);
+            auto reply = prepareReply(msg, Radapter::WorkerMsg::ReplyFail);
             emit sendMsg(reply);
         }
         m_addCounter++;
@@ -79,22 +81,21 @@ void StreamProducer::tryTrim()
         if (command.isEmpty()) {
             return;
         }
-        runAsyncCommand(trimCallback, command);
+        runAsyncCommand(&StreamProducer::trimCallback, command);
         m_addCounter = 0u;
     }
 }
 
-void StreamProducer::writeCallback(redisAsyncContext *context, void *replyPtr, void *sender, const Radapter::WorkerMsg &msg)
+void StreamProducer::writeCallback(redisAsyncContext *context, redisReply *reply, void *msgId)
 {
-    auto reply = static_cast<redisReply *>(replyPtr);
-    if (isNullReply(context, replyPtr, sender)
-            || isEmptyReply(context, replyPtr))
+    auto msg = dequeueMsg(msgId);
+    if (isNullReply(context, reply)
+            || isEmptyReply(context, reply))
     {
         return;
     }
-    auto adapter = static_cast<StreamProducer *>(sender);
     reDebug() << metaInfo(context).c_str() << "Entry added:" << reply->str;
-    adapter->writeDone(reply->str, msg);
+    writeDone(reply->str, msg);
 }
 
 void StreamProducer::writeDone(const QString &newEntryId, const Radapter::WorkerMsg &msg)
@@ -103,12 +104,11 @@ void StreamProducer::writeDone(const QString &newEntryId, const Radapter::Worker
     emit sendMsg(reply);
 }
 
-void StreamProducer::trimCallback(redisAsyncContext *context, void *replyPtr, void *sender)
+void StreamProducer::trimCallback(redisAsyncContext *context, redisReply *reply)
 {
-    if (isNullReply(context, replyPtr, sender)) {
+    if (isNullReply(context, reply)) {
         return;
     }
-    auto reply = static_cast<redisReply *>(replyPtr);
     reDebug() << metaInfo(context).c_str() << "Entries trimmed:" << reply->integer;
 }
 

@@ -10,7 +10,7 @@ namespace Redis {
 class RADAPTER_SHARED_SRC StreamProducer;
 }
 
-class Redis::StreamProducer : public Connector
+class Redis::StreamProducer : public ConnectorHelper<StreamProducer>
 {
     Q_OBJECT
 public:
@@ -36,8 +36,8 @@ private:
     // Replies
     void writeDone(const QString &newEntryId, const Radapter::WorkerMsg &msg);
 
-    static void writeCallback(redisAsyncContext *context, void *replyPtr, void *sender, const Radapter::WorkerMsg &msg);
-    static void trimCallback(redisAsyncContext *context, void *replyPtr, void *sender);
+    void writeCallback(redisAsyncContext *context, redisReply *replyPtr, void *msgId);
+    void trimCallback(redisAsyncContext *context, redisReply *replyPtr);
     QString id() const override;
 
     QTimer* m_trimTimer;

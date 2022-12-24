@@ -12,7 +12,7 @@
 #define SELECT_DB_REQUEST       "SELECT"
 #define COMMAND_TIMEOUT_MS      150
 #define MAX_COMMAND_ERRORS      3
-#define RECONNECT_DELAY_MS      1000
+#define RECONNECT_DELAY_MS      1500
 
 using namespace Redis;
 
@@ -22,13 +22,13 @@ Connector::Connector(const QString &host,
                      const Radapter::WorkerSettings &settings,
                      QThread *thread) :
     WorkerBase(settings, thread),
-    m_connectionTimer(nullptr),
     m_pingTimer(nullptr),
+    m_redisContext(nullptr),
+    m_connectionTimer(nullptr),
     m_commandTimer(nullptr),
     m_reconnectCooldown(nullptr),
     m_isConnected(false),
     m_commandTimeoutsCounter{},
-    m_redisContext(nullptr),
     m_client(nullptr),
     m_host(host),
     m_port(port),
@@ -109,7 +109,7 @@ void Connector::tryConnect()
     m_redisContext = redisAsyncConnectWithOptions(&options);
     m_redisContext->data = this;
     m_client->setContext(m_redisContext);
-    redisAsyncSetConnectCallback(m_redisContext, disconnectCallback);
+    redisAsyncSetConnectCallback(m_redisContext, connectCallback);
     redisAsyncSetDisconnectCallback(m_redisContext, disconnectCallback);
     m_connectionTimer->start();
     if (m_redisContext->err) {
@@ -187,15 +187,15 @@ void Connector::selectDb()
     runAsyncCommand(selectCallback, selectCommand);
 }
 
-void Connector::pingCallback(redisAsyncContext *context, void *replyPtr, void *sender)
+void Connector::pingCallback(redisAsyncContext *context, void *replyPtr, void *optData)
 {
-    auto adapter = static_cast<Connector *>(sender);
+    auto adapter = static_cast<Connector *>(optData);
     if (adapter) {
         adapter->stopCommandTimer();
     }
 
     bool connected = false;
-    if (!isNullReply(context, replyPtr, sender)
+    if (!isNullReply(context, replyPtr)
             && !isEmptyReply(context, replyPtr))
     {
         auto reply = static_cast<redisReply *>(replyPtr);
@@ -214,9 +214,10 @@ void Connector::pingCallback(redisAsyncContext *context, void *replyPtr, void *s
     }
 }
 
-void Connector::selectCallback(redisAsyncContext *context, void *replyPtr, void *sender)
+void Connector::selectCallback(redisAsyncContext *context, void *replyPtr, void *optData)
 {
-    if (isNullReply(context, replyPtr, sender)
+    Q_UNUSED(optData)
+    if (isNullReply(context, replyPtr)
             || isEmptyReply(context, replyPtr))
     {
         return;
@@ -261,59 +262,34 @@ int Connector::runAsyncCommand(const QString &command)
     return status;
 }
 
-int Connector::runAsyncCommand(ConnectorCb *callback, const QString &command)
+int Connector::runAsyncCommand(ConnectorCb *callback, const QString &command, void *data)
 {
     if (!isConnected() || !isValidContext(m_redisContext)) {
         return REDIS_ERR;
     }
     m_pingTimer->stop();
-    auto status = redisAsyncCommand(m_redisContext, privateCallback, &callback, command.toStdString().c_str());
-    if (status != REDIS_OK) {
+    auto status = redisAsyncCommand(m_redisContext, privateCallbackPlain,
+                                    new CallbackArgsPlain{callback, data},
+                                    command.toStdString().c_str());
+    if (status == REDIS_OK) {
         ++m_pendingCommandsCounter;
     }
     return status;
 }
 
-int Connector::runAsyncCommandWithMsg(ConnectorCbWithMsg *callback, const QString &command, const Radapter::WorkerMsg &msgToReply)
+void Connector::privateCallbackPlain(redisAsyncContext *context, void *replyPtr, void *data)
 {
-    if (!isConnected() || !isValidContext(m_redisContext)) {
-        return REDIS_ERR;
-    }
-    m_pingTimer->stop();
-    auto cbArgs = new CallbackArgs{&callback, new Radapter::WorkerMsg(msgToReply)};
-    auto status = redisAsyncCommand(m_redisContext, privateCallbackWithMsg, cbArgs, command.toStdString().c_str());
-    if (status != REDIS_OK) {
-        ++m_pendingCommandsCounter;
-    }
-    return status;
-}
-
-void Connector::privateCallback(redisAsyncContext *context, void *replyPtr, void *wantedCallback)
-{
-    static_assert(sizeof(ConnectorCb**) == sizeof(void*), "Fix callback passing!");
+    auto args = static_cast<CallbackArgsPlain*>(data);
     auto sender = static_cast<Connector*>(context->data);
-    auto callback = static_cast<ConnectorCb**>(wantedCallback);
-    (*callback)(context, static_cast<redisReply*>(replyPtr), sender);
+    args->callback(context, replyPtr, context->data);
     sender->finishAsyncCommand();
+    delete args;
 }
 
-void Connector::privateCallbackWithMsg(redisAsyncContext *context, void *replyPtr, void *callbackArguments)
-{
-    auto cbArgs = static_cast<CallbackArgs*>(callbackArguments);
-    auto sender = static_cast<Connector*>(context->data);
-    auto msgPointer = static_cast<Radapter::WorkerMsg*>(cbArgs->data);
-    auto reply = static_cast<redisReply*>(replyPtr);
-    auto callback = static_cast<ConnectorCbWithMsg**>(cbArgs->callback);
-    (*callback)(context, reply, sender, *msgPointer);
-    delete msgPointer;
-    sender->finishAsyncCommand();
-    delete cbArgs;
-}
-
-bool Connector::isNullReply(redisAsyncContext *context, void *replyPtr, void *sender)
+bool Connector::isNullReply(redisAsyncContext *context, void *replyPtr)
 {
     auto reply = static_cast<redisReply *>(replyPtr);
-    if (reply == nullptr || sender == nullptr) {
+    if (reply == nullptr) {
         if (context) {
             reDebug() << metaInfo(context).c_str() << "Error: null reply"
                       << context->err << context->errstr;
@@ -432,17 +408,36 @@ std::string Connector::metaInfo(const redisAsyncContext *context, const int conn
         }
     }
     if (!idString.isEmpty()) {
-        info += QString(" %1 :").arg(idString);
+        info += " " + idString;
     }
     return info.toStdString();
 }
 
 std::string Connector::metaInfo() const
 {
-    auto infoString = metaInfo(m_redisContext, port(), id());
+    auto infoString = metaInfo(m_redisContext, port(), id()) + " | " + workerName().toStdString();
     return infoString;
 }
 
+void *Connector::enqueueMsg(const Radapter::WorkerMsg &msg)
+{
+    return new quint64(m_queue.insert(msg.id(), msg).key());
+}
+
+Radapter::WorkerMsg Connector::dequeueMsg(void* msgId)
+{
+    auto key = static_cast<quint64*>(msgId);
+    auto result = m_queue.take(*key);
+    delete key;
+    return result;
+}
+
+void Connector::disposeId(void *msgId)
+{
+    auto key = static_cast<quint64*>(msgId);
+    m_queue.remove(*key);
+    delete key;
+}
 
 QString Connector::id() const
 {

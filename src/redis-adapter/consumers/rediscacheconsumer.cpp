@@ -10,7 +10,7 @@ CacheConsumer::CacheConsumer(const QString &host,
                              const QString &indexKey,
                              const Radapter::WorkerSettings &settings,
                              QThread *thread) :
-    Connector(host, port, dbIndex, settings, thread),
+    ConnectorHelper<CacheConsumer>(host, port, dbIndex, settings, thread),
     m_requestedKeysBuffer{},
     m_indexKey(indexKey)
 {
@@ -21,8 +21,11 @@ void CacheConsumer::requestIndex(const QString &indexKey, const Radapter::Worker
     if (indexKey.isEmpty()) {
         requestIndex(m_indexKey, msg);
     }
-    auto command = RedisQueryFormatter{}.toGetIndexCommand(indexKey);
-    runAsyncCommandWithMsg(readIndexCallback, command, msg);
+    auto command = RedisQueryFormatter::toGetIndexCommand(indexKey);
+    auto id = enqueueMsg(msg);
+    if (runAsyncCommand(&CacheConsumer::readIndexCallback, command, id) != REDIS_OK) {
+        disposeId(id);
+    }
 }
 
 void CacheConsumer::requestKeys(const Formatters::List &keys, const Radapter::WorkerMsg &msg)
@@ -32,21 +35,23 @@ void CacheConsumer::requestKeys(const Formatters::List &keys, const Radapter::Wo
         return;
     }
 
-    auto command = RedisQueryFormatter{}.toMultipleGetCommand(keys);
+    auto command = RedisQueryFormatter::toMultipleGetCommand(keys);
     m_requestedKeysBuffer.enqueue(keys);
-    runAsyncCommandWithMsg(readKeysCallback, command, msg);
+    auto id = enqueueMsg(msg);
+    if (runAsyncCommand(&CacheConsumer::readKeysCallback, command, id) != REDIS_OK) {
+        disposeId(id);
+    }
 }
 
-void CacheConsumer::readIndexCallback(redisAsyncContext *context, void *replyPtr, void *sender, const Radapter::WorkerMsg &msg)
+void CacheConsumer::readIndexCallback(redisAsyncContext *context, redisReply *reply, void *msgId)
 {
-    if (isNullReply(context, replyPtr, sender)) {
+    auto msg = dequeueMsg(msgId);
+    if (isNullReply(context, reply)) {
         return;
     }
-    auto reply = static_cast<redisReply *>(replyPtr);
-    auto adapter = static_cast<CacheConsumer *>(sender);
     if (reply->elements == 0) {
         reDebug() << metaInfo(context).c_str() << "Empty index.";
-        adapter->finishIndex(Formatters::List{}, msg);
+        finishIndex(Formatters::List{}, msg);
         return;
     }
 
@@ -58,16 +63,15 @@ void CacheConsumer::readIndexCallback(redisAsyncContext *context, void *replyPtr
             indexedKeys.append(keyItem);
         }
     }
-    adapter->finishIndex(indexedKeys, msg);
+    finishIndex(indexedKeys, msg);
 }
 
-void CacheConsumer::readKeysCallback(redisAsyncContext *context, void *replyPtr, void *sender, const Radapter::WorkerMsg &msg)
+void CacheConsumer::readKeysCallback(redisAsyncContext *context, redisReply *reply, void *msgId)
 {
-    if (isNullReply(context, replyPtr, sender)) {
+    auto msg = dequeueMsg(msgId);
+    if (isNullReply(context, reply)) {
         return;
     }
-    auto adapter = static_cast<CacheConsumer*>(sender);
-    auto reply = static_cast<redisReply *>(replyPtr);
     auto foundEntries = Formatters::List{};
     quint16 keysMatched = 0u;
     for (quint16 i = 0; i < reply->elements; i++) {
@@ -78,8 +82,8 @@ void CacheConsumer::readKeysCallback(redisAsyncContext *context, void *replyPtr,
         foundEntries.append(entryItem);
     }
     reDebug() << metaInfo(context).c_str() << "Key entries found:" << keysMatched;
-    auto resultJson = adapter->mergeWithKeys(foundEntries);
-    adapter->finishKeys(resultJson, msg);
+    auto resultJson = mergeWithKeys(foundEntries);
+    finishKeys(resultJson, msg);
 }
 
 void CacheConsumer::finishIndex(const Formatters::List &json, const Radapter::WorkerMsg &msg)

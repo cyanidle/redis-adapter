@@ -10,7 +10,7 @@ namespace Redis {
 class RADAPTER_SHARED_SRC CacheProducer;
 }
 
-class Redis::CacheProducer : public Connector
+class Redis::CacheProducer : public ConnectorHelper<CacheProducer>
 {
     Q_OBJECT
 public:
@@ -32,8 +32,8 @@ private:
     void writeKeysDone(const Radapter::WorkerMsg &msg);
     void writeIndexDone(const Radapter::WorkerMsg &msg);
 
-    static void msetCallback(redisAsyncContext *context, void *replyPtr, void *args, const Radapter::WorkerMsg &msg);
-    static void indexCallback(redisAsyncContext *context, void *replyPtr, void *args, const Radapter::WorkerMsg &msg);
+    void msetCallback(redisAsyncContext *context, redisReply *replyPtr, void *msgId);
+    void indexCallback(redisAsyncContext *context, redisReply *replyPtr, void *msgId);
 
     QString m_indexKey;
 };

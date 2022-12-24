@@ -12,7 +12,7 @@ namespace Redis{
     class RADAPTER_SHARED_SRC StreamConsumer;
 }
 
-class Redis::StreamConsumer : public Redis::Connector
+class Redis::StreamConsumer : public ConnectorHelper<StreamConsumer>
 {
     Q_OBJECT
 public:
@@ -53,9 +53,9 @@ private:
     void pendingChangedImpl();
     void ackCompletedImpl();
 
-    static void readCallback(redisAsyncContext *context, void *replyPtr, void *sender, const Radapter::WorkerMsg &msg);
-    static void ackCallback(redisAsyncContext *context, void *replyPtr, void *sender);
-    static void createGroupCallback(redisAsyncContext *context, void *replyPtr, void *sender);
+    void readCallback(redisAsyncContext *context, redisReply *replyPtr, void *msgId);
+    void ackCallback(redisAsyncContext *context, redisReply *replyPtr);
+    void createGroupCallback(redisAsyncContext *context, redisReply *replyPtr);
     QString id() const override;
 
     void finishRead(const Formatters::Dict &json, const Radapter::WorkerMsg &msg);

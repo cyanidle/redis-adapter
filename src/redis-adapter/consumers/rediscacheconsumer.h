@@ -10,7 +10,7 @@ namespace Redis{
 class RADAPTER_SHARED_SRC CacheConsumer;
 }
 
-class Redis::CacheConsumer : public Connector
+class Redis::CacheConsumer : public ConnectorHelper<Redis::CacheConsumer>
 {
     Q_OBJECT
 public:
@@ -30,8 +30,8 @@ private:
     void finishIndex(const Formatters::List &json, const Radapter::WorkerMsg &msg);
     void finishKeys(const Formatters::Dict &json, const Radapter::WorkerMsg &msg);
 
-    static void readIndexCallback(redisAsyncContext *context, void *replyPtr, void *sender, const Radapter::WorkerMsg &msg);
-    static void readKeysCallback(redisAsyncContext *context, void *replyPtr, void *sender, const Radapter::WorkerMsg &msg);
+    void readIndexCallback(redisAsyncContext *context, redisReply *replyPtr, void *msgId);
+    void readKeysCallback(redisAsyncContext *context, redisReply *replyPtr, void *msgId);
 
 
     Formatters::Dict mergeWithKeys(const Formatters::List &entries);

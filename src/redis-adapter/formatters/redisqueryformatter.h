@@ -12,19 +12,19 @@ public:
 
     QString toAddStreamCommand(const QString &streamKey, quint32 maxLen = 0u) const;
     QString toTrimCommand(const QString &streamKey, quint32 maxLen) const;
-    QString toReadStreamCommand(const QString &streamKey, qint32 blockTimeout, const QString &lastId = QString{}) const;
-    QString toReadGroupCommand(const QString &streamKey,
+    static QString toReadStreamCommand(const QString &streamKey, qint32 blockTimeout, const QString &lastId = QString{});
+    static QString toReadGroupCommand(const QString &streamKey,
                                const QString &groupName,
                                const QString &consumerName,
                                qint32 blockTimeout,
-                               const QString &lastId = QString{}) const;
-    QString toReadStreamAckCommand(const QString &streamKey, const QString &groupName, const QStringList &idList);
-    QString toCreateGroupCommand(const QString &streamKey, const QString &groupName, const QString &startId = QString{});
+                               const QString &lastId = QString{});
+    static QString toReadStreamAckCommand(const QString &streamKey, const QString &groupName, const QStringList &idList);
+    static QString toCreateGroupCommand(const QString &streamKey, const QString &groupName, const QString &startId = QString{});
 
-    QString toGetIndexCommand(const QString &indexKey) const;
+    static QString toGetIndexCommand(const QString &indexKey);
     QString toUpdateIndexCommand(const QString &indexKey) const;
 
-    QString toMultipleGetCommand(const Formatters::List &keysList) const;
+    static QString toMultipleGetCommand(const Formatters::List &keysList);
     QString toMultipleSetCommand() const;
 
     QString toKeyEventsSubscribeCommand(const QStringList &eventTypes) const;
@@ -34,7 +34,7 @@ signals:
 private:
     Formatters::Dict flatten() const;
     QString toEntryFields() const;
-    QString toKeysFields(const Formatters::List &keysList) const;
+    static QString toKeysFields(const Formatters::List &keysList);
 
     Formatters::Dict m_json;
 };
