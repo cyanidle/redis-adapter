@@ -100,7 +100,7 @@ void StreamProducer::writeCallback(redisAsyncContext *context, redisReply *reply
 
 void StreamProducer::writeDone(const QString &newEntryId, const Radapter::WorkerMsg &msg)
 {
-    auto reply = prepareReply(msg, newEntryId);
+    auto reply = prepareReply(msg, Radapter::WorkerMsg::ReplyOk, newEntryId);
     emit sendMsg(reply);
 }
 

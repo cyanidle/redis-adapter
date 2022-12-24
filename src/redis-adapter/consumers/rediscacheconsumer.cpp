@@ -88,7 +88,7 @@ void CacheConsumer::readKeysCallback(redisAsyncContext *context, redisReply *rep
 
 void CacheConsumer::finishIndex(const Formatters::List &json, const Radapter::WorkerMsg &msg)
 {
-    auto reply = prepareReply(msg);
+    auto reply = prepareReply(msg, Radapter::WorkerMsg::ReplyOk);
     for (auto &jsonDict : json) {
         reply.setJson(jsonDict.toMap()); // id stays the same, command issuer can check id to receive reply
         emit sendMsg(reply);
@@ -97,7 +97,7 @@ void CacheConsumer::finishIndex(const Formatters::List &json, const Radapter::Wo
 
 void CacheConsumer::finishKeys(const Formatters::Dict &json, const Radapter::WorkerMsg &msg)
 {
-    auto reply = prepareReply(msg);
+    auto reply = prepareReply(msg, Radapter::WorkerMsg::ReplyOk);
     reply.setJson(json);
     emit sendMsg(reply);
 }

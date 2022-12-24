@@ -267,7 +267,7 @@ void StreamConsumer::finishRead(const Formatters::Dict &json, const Radapter::Wo
     if (!json.isEmpty()) {
         Radapter::WorkerMsg msgToSend(this, consumers());
         if (msg.isCommand()) {
-            msgToSend = prepareReply(msg);
+            msgToSend = prepareReply(msg, Radapter::WorkerMsg::ReplyOk);
         } else {
             msgToSend = prepareMsg();
         }

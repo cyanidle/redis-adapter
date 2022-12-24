@@ -17,10 +17,10 @@ CacheProducer::CacheProducer(const QString &host,
 void CacheProducer::onMsg(const Radapter::WorkerMsg &msg)
 {
     if (writeIndex(msg.data(), m_indexKey, msg) != REDIS_OK) {
-        emit sendMsg(prepareReply(msg, "index_write_failed"));
+        emit sendMsg(prepareReply(msg, Radapter::WorkerMsg::ReplyFail));
     }
     if (writeKeys(msg.data(), msg) != REDIS_OK) {
-        emit sendMsg(prepareReply(msg, "keys_write_failed"));
+        emit sendMsg(prepareReply(msg, Radapter::WorkerMsg::ReplyFail));
     }
     emit sendMsg(prepareMsg(msg));
 }
@@ -85,10 +85,10 @@ void CacheProducer::indexCallback(redisAsyncContext *context, redisReply *reply,
 
 void CacheProducer::writeKeysDone(const Radapter::WorkerMsg &msg)
 {
-    emit sendMsg(prepareReply(msg, "keys_write_ok"));
+    emit sendMsg(prepareReply(msg, Radapter::WorkerMsg::ReplyOk));
 }
 
 void CacheProducer::writeIndexDone(const Radapter::WorkerMsg &msg)
 {
-    emit sendMsg(prepareReply(msg, "index_write_ok"));
+    emit sendMsg(prepareReply(msg, Radapter::WorkerMsg::ReplyOk));
 }
