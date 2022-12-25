@@ -261,17 +261,10 @@ int Connector::runAsyncCommand(const QString &command)
 
 int Connector::runAsyncCommand(StaticCb callback, const QString &command, void *data)
 {
-    if (!isConnected() || !isValidContext(m_redisContext)) {
-        return REDIS_ERR;
-    }
-    m_pingTimer->stop();
-    auto status = redisAsyncCommand(m_redisContext, privateCallbackPlain,
-                                    new CallbackArgsPlain{callback, data},
-                                    command.toStdString().c_str());
-    if (status == REDIS_OK) {
-        ++m_pendingCommandsCounter;
-    }
-    return status;
+    return runAsyncCommandImplementation<CallbackArgsPlain>(
+            privateCallbackPlain,
+            command,
+            connAlloc<CallbackArgsPlain>(callback, data));
 }
 
 void Connector::privateCallbackPlain(redisAsyncContext *context, void *replyPtr, void *data)
@@ -280,7 +273,7 @@ void Connector::privateCallbackPlain(redisAsyncContext *context, void *replyPtr,
     auto sender = static_cast<Connector*>(context->data);
     args->callback(context, replyPtr, context->data);
     sender->finishAsyncCommand();
-    delete args;
+    connDealloc(args);
 }
 
 bool Connector::isNullReply(redisAsyncContext *context, void *replyPtr)
@@ -353,6 +346,39 @@ void Connector::allowSelectDb()
 void Connector::blockSelectDb()
 {
     m_canSelect = false;
+}
+
+
+bool Connector::isValidContext()
+{
+    return (context() != nullptr) && !(context()->err);
+}
+
+bool Connector::isNullReply(redisReply *reply)
+{
+    if (reply == nullptr) {
+        if (context()) {
+            reDebug() << metaInfo().c_str() << "Error: null reply"
+                      << context()->err << context()->errstr;
+        } else {
+            reDebug() << "Error: null reply. No context found.";
+        }
+        return true;
+    }
+    return false;
+}
+
+bool Connector::isEmptyReply(redisReply *reply)
+{
+    if (QString(reply->str).isEmpty()) {
+        if (isValidContext(context())) {
+            reDebug() << metaInfo().c_str() << "Error: reply string is empty";
+        } else {
+            reDebug() << "Error: reply string is empty";
+        }
+        return true;
+    }
+    return false;
 }
 
 bool Connector::isValidContext(const redisAsyncContext *context)
