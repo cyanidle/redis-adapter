@@ -18,7 +18,7 @@ public:
                               const Settings::SqlKeyVaultInfo &info,
                               QObject *parent = nullptr);
 
-    Formatters::Dict readJsonEntries(const QStringList &keys);
+    JsonDict readJsonEntries(const QStringList &keys);
 
 public slots:
     void run();
@@ -29,7 +29,7 @@ private:
 
     MySqlConnector* m_dbClient;
     Settings::SqlKeyVaultInfo m_info;
-    Formatters::List m_tableFields;
+    QVariantList m_tableFields;
 };
 
 #endif // SQLKEYVAULTCONSUMER_H

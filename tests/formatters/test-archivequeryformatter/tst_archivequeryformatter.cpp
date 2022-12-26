@@ -54,8 +54,8 @@ void TestArchiveQueryFormatter::TestToWriteRecordsList_data()
             {SQL_ARCHIVE_FIELD_SERVER_TIME,QVariant(QDateTime::fromString(RSK_TEST_TIMESTRING, MILLISECONDS_FORMAT))},
             {SQL_ARCHIVE_FIELD_VALUE, RSK_TEST_STR_VARIANT("continue")}
     };
-    JsonDict sourceRedis0(src_redis_map0);
-    JsonDict sourceKeyVault0(src_keyvault_map0a);
+   JsonDict sourceRedis0(src_redis_map0);
+   JsonDict sourceKeyVault0(src_keyvault_map0a);
     JsonList expectedList0(QVariantList{
                                QVariant(init_exp_map0a),
                                QVariant(init_exp_map0b),

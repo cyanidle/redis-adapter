@@ -12,7 +12,7 @@ KeyVaultConsumer::KeyVaultConsumer(MySqlConnector *client,
     m_dbClient(client),
     m_info(info)
 {
-    m_tableFields = Formatters::List{
+    m_tableFields = QVariantList{
             SQL_KEYVAULT_FIELD_REDIS_KEY,
             SQL_KEYVAULT_FIELD_SOURCE_TYPE,
             SQL_KEYVAULT_FIELD_SOURCE,
@@ -24,14 +24,14 @@ void KeyVaultConsumer::run()
 {
 }
 
-Formatters::Dict KeyVaultConsumer::readJsonEntries(const QStringList &keys)
+JsonDict KeyVaultConsumer::readJsonEntries(const QStringList &keys)
 {   if (keys.isEmpty()) {
-        return Formatters::Dict();
+        return JsonDict();
     }
     auto keysFilter = SqlQueryFormatter().toRegExpFilter(SQL_KEYVAULT_FIELD_REDIS_KEY, keys);
     auto sqlEntries = m_dbClient->doRead(m_info.table_name, m_tableFields, keysFilter);
     if (sqlEntries.isEmpty()) {
-        return Formatters::Dict{};
+        return JsonDict{};
     }
     auto keyedEntriesDict = KeyVaultResultFormatter(sqlEntries).toJsonEntries();
 //    if (!keyedEntriesDict.isEmpty()) {

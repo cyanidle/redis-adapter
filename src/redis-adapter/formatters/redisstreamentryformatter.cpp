@@ -1,7 +1,7 @@
 #include "redisstreamentryformatter.h"
 #include "timeformatter.h"
 
-RedisStreamEntryFormatter::RedisStreamEntryFormatter(const Formatters::Dict &redisStreamJsonEntry, QObject *parent)
+RedisStreamEntryFormatter::RedisStreamEntryFormatter(const JsonDict &redisStreamJsonEntry, QObject *parent)
     : QObject(parent),
       m_streamEntry(redisStreamJsonEntry)
 {
@@ -20,7 +20,7 @@ RedisStreamEntryFormatter::RedisStreamEntryFormatter(redisReply *streamReply, QO
         return;
     }
 
-    auto fields = Formatters::Dict{};
+    auto fields = JsonDict{};
     for (quint16 i = 0; i < itemData->elements; i += 2) {
         auto fieldKey = QString(itemData->element[i]->str);
         auto fieldValue = QString(itemData->element[i + 1]->str);
@@ -29,7 +29,7 @@ RedisStreamEntryFormatter::RedisStreamEntryFormatter(redisReply *streamReply, QO
         }
     }
     if (!fields.isEmpty()) {
-        auto jsonEntry = Formatters::Dict{};
+        auto jsonEntry = JsonDict{};
         jsonEntry.insert(entryId, fields);
         m_streamEntry = jsonEntry;
     }
@@ -54,13 +54,13 @@ QStringList RedisStreamEntryFormatter::entryKeys() const
     return QStringList(keysList);
 }
 
-Formatters::Dict RedisStreamEntryFormatter::eventDataDict() const
+JsonDict RedisStreamEntryFormatter::eventDataDict() const
 {
-    auto keyValueDict = Formatters::Dict(m_streamEntry.first());
+    auto keyValueDict = JsonDict(m_streamEntry.first());
     return keyValueDict;
 }
 
-Formatters::Dict RedisStreamEntryFormatter::toJson() const
+JsonDict RedisStreamEntryFormatter::toJson() const
 {
     return m_streamEntry;
 }

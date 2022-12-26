@@ -2,21 +2,21 @@
 #define MODBUSFORMATTER_H
 
 #include <QObject>
-#include "JsonFormatters"
+#include "jsondict/jsondict.h"
 
 class RADAPTER_SHARED_SRC ModbusFormatter : public QObject
 {
     Q_OBJECT
 public:
-    explicit ModbusFormatter(const Formatters::Dict &jsonDict, QObject *parent = nullptr);
+    explicit ModbusFormatter(const JsonDict &jsonDict, QObject *parent = nullptr);
 
-    Formatters::Dict toModbusUnit() const;
+    JsonDict toModbusUnit() const;
 signals:
 
 private:
-    Formatters::Dict arrangeArrays(const Formatters::JsonDict &jsonDict) const;
+    JsonDict arrangeArrays(const JsonDict &jsonDict) const;
 
-    Formatters::Dict m_jsonDict;
+    JsonDict m_jsonDict;
 };
 
 #endif // MODBUSFORMATTER_H

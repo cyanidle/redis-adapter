@@ -3,25 +3,25 @@
 
 #include <QObject>
 #include <QDateTime>
-#include "JsonFormatters"
+#include "jsondict/jsondict.h"
 #include "lib/hiredis/hiredis.h"
 
 class RADAPTER_SHARED_SRC RedisStreamEntryFormatter : public QObject
 {
     Q_OBJECT
 public:
-    explicit RedisStreamEntryFormatter(const Formatters::Dict &redisStreamJsonEntry, QObject *parent = nullptr);
+    explicit RedisStreamEntryFormatter(const JsonDict &redisStreamJsonEntry, QObject *parent = nullptr);
     explicit RedisStreamEntryFormatter(redisReply* streamReply, QObject *parent = nullptr);
 
     QString entryId() const;
     QDateTime eventTime() const;
-    QStringList entryKeys() const;
-    Formatters::Dict eventDataDict() const;
-    Formatters::Dict toJson() const;
+   QStringList entryKeys() const;
+    JsonDict eventDataDict() const;
+    JsonDict toJson() const;
 signals:
 
 private:
-    Formatters::Dict m_streamEntry;
+    JsonDict m_streamEntry;
 };
 
 #endif // REDISSTREAMENTRYFORMATTER_H

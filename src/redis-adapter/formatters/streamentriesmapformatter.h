@@ -2,20 +2,20 @@
 #define STREAMENTRIESMAPFORMATTER_H
 
 #include <QObject>
-#include "JsonFormatters"
+#include "jsondict/jsondict.h"
 
 class StreamEntriesMapFormatter : public QObject
 {
     Q_OBJECT
 public:
-    explicit StreamEntriesMapFormatter(const Formatters::Dict &streamEntriesJson, QObject *parent = nullptr);
+    explicit StreamEntriesMapFormatter(const JsonDict &streamEntriesJson, QObject *parent = nullptr);
 
-    static bool isValid(const Formatters::Dict &streamEntriesJson);
-    Formatters::List toEntryList();
-    Formatters::Dict joinToLatest();
+    static bool isValid(const JsonDict &streamEntriesJson);
+    QVariantList toEntryList();
+    JsonDict joinToLatest();
 signals:
 private:
-    Formatters::Dict m_streamEntriesMap;
+    JsonDict m_streamEntriesMap;
 
 };
 

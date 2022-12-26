@@ -8,21 +8,21 @@ SqlResultFormatter::SqlResultFormatter(const MySql::QueryRecordList &resultRecor
 {
 }
 
-Formatters::Dict SqlResultFormatter::toJsonRecord(const MySql::QueryRecord &sqlRecord) const
+JsonDict SqlResultFormatter::toJsonRecord(const MySql::QueryRecord &sqlRecord) const
 {
-    auto jsonRecord = Formatters::Dict{};
+    auto jsonRecord = JsonDict{};
     for (auto &sqlField : sqlRecord) {
         jsonRecord.insert(sqlField.name, sqlField.value);
     }
     return jsonRecord;
 }
 
-Formatters::List SqlResultFormatter::toJsonList() const
+QVariantList SqlResultFormatter::toJsonList() const
 {
-    auto jsonRecordsList = Formatters::List{};
+    auto jsonRecordsList = QVariantList{};
     for (auto &sqlRecord : m_sqlRecords) {
         auto jsonRecord = toJsonRecord(sqlRecord);
-        jsonRecordsList.append(jsonRecord);
+        jsonRecordsList.append(jsonRecord.data());
     }
     return jsonRecordsList;
 }

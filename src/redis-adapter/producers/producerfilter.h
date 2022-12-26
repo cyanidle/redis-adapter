@@ -3,7 +3,7 @@
 
 #include <QObject>
 #include <QQueue>
-#include "JsonFormatters"
+#include "jsondict/jsondict.h"
 #include "radapter-broker/interceptorbase.h"
 #include "redis-adapter/settings/settings.h"
 #include "redis-adapter/connectors/redisconnector.h"
@@ -26,7 +26,7 @@ public slots:
 
 private:
     void filterStrictByName(const Radapter::WorkerMsg &msg);
-    void addFiltersByWildcard(const Formatters::Dict &cachedJson);
+    void addFiltersByWildcard(const JsonDict &cachedJson);
 
     Strategy m_strategy;
     Settings::Filters::Table m_filters;

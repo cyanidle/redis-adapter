@@ -56,7 +56,7 @@ private:
     QList<Settings::ModbusSlaveInfo> filterDevicesByType(const QList<Settings::ModbusSlaveInfo> &slaveInfoList,
                                                          const Settings::ModbusConnectionType type);
     QList<QList<Settings::ModbusSlaveInfo>> groupDevicesBySource(const QList<Settings::ModbusSlaveInfo> &devicesList);
-    QStringList getRegistersPackNames(const QList<Settings::ModbusSlaveInfo> &slaves);
+   QStringList getRegistersPackNames(const QList<Settings::ModbusSlaveInfo> &slaves);
     QList<Settings::ModbusSlaveInfo> extractDevices(const QList<Settings::ModbusChannelSettings> &channelsList);
 
     ModbusDeviceInfoMap deviceInfoListToAddressMap(const ModbusDeviceInfoList &deviceInfoList);

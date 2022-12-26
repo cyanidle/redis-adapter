@@ -44,8 +44,8 @@ void ProducerFilter::filterStrictByName(const Radapter::WorkerMsg &srcMsg)
     bool shouldAdd = false;
     for (auto &item : srcMsg) {
         auto currentValue = item.value();
-        auto lastValue = m_last[item.getFullKey()];
-        auto currentKey = item.getFullKey().join(":");
+        auto lastValue = m_last[item.fullKey()];
+        auto currentKey = item.fullKey().join(":");
         if (!(currentValue.canConvert<double>() &&
               lastValue.canConvert<double>() &&
               m_filters.contains(currentKey))) {
@@ -61,7 +61,7 @@ void ProducerFilter::filterStrictByName(const Radapter::WorkerMsg &srcMsg)
     }
 }
 
-void ProducerFilter::addFiltersByWildcard(const Formatters::Dict &cachedJson)
+void ProducerFilter::addFiltersByWildcard(const JsonDict &cachedJson)
 {
     auto cachedKeys = cachedJson.flatten(":").keys();
     for (auto &key : cachedKeys) {

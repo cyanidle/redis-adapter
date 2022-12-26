@@ -2,21 +2,21 @@
 #define KEYVAULTRESULTFORMATTER_H
 
 #include <QObject>
-#include "JsonFormatters"
+#include "jsondict/jsondict.h"
 
 class RADAPTER_SHARED_SRC KeyVaultResultFormatter : public QObject
 {
     Q_OBJECT
 public:
-    explicit KeyVaultResultFormatter(const Formatters::List &sqlRecordsList = Formatters::List{}, QObject *parent = nullptr);
+    explicit KeyVaultResultFormatter(const QVariantList &sqlRecordsList = QVariantList{}, QObject *parent = nullptr);
 
-    Formatters::Dict toJsonEntries() const;
-    bool isValid(const Formatters::Dict &keyVaultEntry) const;
+    JsonDict toJsonEntries() const;
+    bool isValid(const JsonDict &keyVaultEntry) const;
 
 signals:
 
 private:
-    Formatters::List m_sqlRecordsList;
+    QVariantList m_sqlRecordsList;
 };
 
 #endif // KEYVAULTRESULTFORMATTER_H

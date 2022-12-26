@@ -6,20 +6,20 @@ ModbusConnectionSource::Map ModbusConnectionSource::cacheMap = ModbusConnectionS
 
 DeviceRegistersInfoMap DeviceRegistersInfoMapParser::parse(const QVariant &src) {
     auto result = DeviceRegistersInfoMap();
-    auto json = Formatters::JsonDict(src.toMap());
+    auto json = JsonDict(src.toMap());
     for (auto &iter: json) {
-        auto fullKey = iter.getFullKey();
+        auto fullKey = iter.fullKey();
         if (fullKey.constLast() == "table") {
             auto tableType = iter.value().toString();
             auto currentRegs = DeviceRegistersInfo();
-            auto keyToRegisters = iter.getCurrentDomain();
-            auto domainJson = Formatters::JsonDict(json.value(keyToRegisters).toMap());
+            auto keyToRegisters = iter.domain();
+            auto domainJson = JsonDict(json.value(keyToRegisters).toMap());
             auto byteorder = domainJson.value("byte_order").toString().toLower();
             auto wordorder = domainJson.value("word_order").toString().toLower();
             if (byteorder.isEmpty() || wordorder.isEmpty()) {
                 throw std::runtime_error("'byte_order' or 'word_order' not set in registers config!");
             }
-            auto regInfoMapJson = Formatters::JsonDict(domainJson.value("registers").toMap());
+            auto regInfoMapJson = JsonDict(domainJson.value("registers").toMap());
 
             for (auto &regInfoIter: regInfoMapJson){
                 if (regInfoIter.value().canConvert<QVariantList>()) {
@@ -30,16 +30,16 @@ DeviceRegistersInfoMap DeviceRegistersInfoMapParser::parse(const QVariant &src) 
                         currentRegisterMap.insert("endianess", QVariantMap{{"word_order", wordorder}, {"byte_order", byteorder}});
                         currentRegisterMap.insert("is_persistent", currentRegisterMap.value("is_persistent"));
                         auto currentRegister = Serializer::fromQMap<RegisterInfo>(currentRegisterMap);
-                        currentRegs.insert(regInfoIter.getFullKey().join(":") + ":" + QString::number(i + 1), currentRegister);
+                        currentRegs.insert(regInfoIter.fullKey().join(":") + ":" + QString::number(i + 1), currentRegister);
                     }
                 } else if (regInfoIter.field() == "index") {
-                    auto currentRegisterMap = regInfoMapJson[regInfoIter.getCurrentDomain()].toMap();
+                    auto currentRegisterMap = regInfoMapJson[regInfoIter.domain()].toMap();
                     currentRegisterMap.insert("table", tableType);
                     currentRegisterMap.insert("endianess", QVariantMap{{"word_order", wordorder},
                                                                        {"byte_order", byteorder}});
                     currentRegisterMap.insert("is_persistent", currentRegisterMap.value("is_persistent"));
                     auto currentRegister = Serializer::fromQMap<RegisterInfo>(currentRegisterMap);
-                    currentRegs.insert(regInfoIter.getCurrentDomain().join(":"), currentRegister);
+                    currentRegs.insert(regInfoIter.domain().join(":"), currentRegister);
                 }
             }
             if (!currentRegs.isEmpty()) {
@@ -82,11 +82,11 @@ bool ModbusSlaveWorker::parseCoils(const QVariant &src) {
     coils = regs.count();
     return true;
 }
-DeviceRegistersInfo ModbusSlaveWorker::parseRegisters(const Formatters::JsonDict &target) {
+DeviceRegistersInfo ModbusSlaveWorker::parseRegisters(const JsonDict &target) {
     DeviceRegistersInfo result;
     for (auto &iter : target) {
         if (iter.field() == "index") {
-            auto domain = iter.getCurrentDomain();
+            auto domain = iter.domain();
             auto map = target[domain].toMap();
             map.insert("table", target["table_type"]);
             auto reg = Serializer::fromQMap<Settings::RegisterInfo>(map);

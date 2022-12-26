@@ -103,7 +103,7 @@ void StreamConsumer::readGroupCommand(const Radapter::WorkerMsg &msg)
     m_readGroupTimer->start();
 }
 
-void StreamConsumer::acknowledge(const Formatters::Dict &jsonEntries)
+void StreamConsumer::acknowledge(const JsonDict &jsonEntries)
 {
     if (!hasPendingEntries()
             || !StreamEntriesMapFormatter::isValid(jsonEntries))
@@ -206,7 +206,7 @@ void StreamConsumer::readCallback(redisAsyncContext *context, redisReply *reply,
     }
     if (reply->elements == 0) {
         reDebug() << metaInfo(context).c_str() << "No new entries";
-        finishRead(Formatters::Dict{}, msg);
+        finishRead( JsonDict{}, msg);
         return;
     }
 
@@ -214,13 +214,13 @@ void StreamConsumer::readCallback(redisAsyncContext *context, redisReply *reply,
     reDebug() << metaInfo(context).c_str() << "stream key:" << rootEntry->element[0]->str;
     auto streamEntries = rootEntry->element[1];
     if (streamEntries->elements == 0) {
-        finishRead(Formatters::Dict{}, msg);
+        finishRead( JsonDict{}, msg);
         return;
     }
 
     reDebug() << metaInfo(context).c_str() << "new stream entries count:" << streamEntries->elements;
     qint32 entriesCount = 0u;
-    auto jsonEntries = Formatters::Dict{};
+    auto jsonEntries = JsonDict{};
     for (quint16 i = 0; i < streamEntries->elements; i++) {
         auto jsonDict = RedisStreamEntryFormatter(streamEntries->element[i]).toJson();
         if (!jsonDict.isEmpty()) {
@@ -262,7 +262,7 @@ QString StreamConsumer::id() const
     return idString;
 }
 
-void StreamConsumer::finishRead(const Formatters::Dict &json, const Radapter::WorkerMsg &msg)
+void StreamConsumer::finishRead(const JsonDict &json, const Radapter::WorkerMsg &msg)
 {
     if (!json.isEmpty()) {
         Radapter::WorkerMsg msgToSend(this, consumers());

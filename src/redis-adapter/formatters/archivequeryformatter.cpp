@@ -4,29 +4,29 @@
 #include "timeformatter.h"
 #include "redis-adapter/include/sqlarchivefields.h"
 
-ArchiveQueryFormatter::ArchiveQueryFormatter(const Formatters::Dict &redisStreamEntry, QObject *parent)
+ArchiveQueryFormatter::ArchiveQueryFormatter(const JsonDict &redisStreamEntry, QObject *parent)
     : QObject(parent),
       m_streamEntry(redisStreamEntry)
 {
 }
 
-Formatters::List ArchiveQueryFormatter::toWriteRecordsList(const Formatters::Dict &keyVaultEntries) const
+QVariantList ArchiveQueryFormatter::toWriteRecordsList(const JsonDict &keyVaultEntries) const
 {
     RedisStreamEntryFormatter formatter(m_streamEntry);
     auto itemsToWrite = formatter.eventDataDict();
     auto eventTime = formatter.eventTime();
     auto serverTime = TimeFormatter{}.now();
-    auto writeRecordsList = Formatters::List{};
+    auto writeRecordsList = QVariantList{};
     for (auto writeItem = itemsToWrite.begin();
          writeItem != itemsToWrite.end();
          writeItem++)
     {
-        auto associatedKeyBindings = Formatters::Dict(keyVaultEntries.value(writeItem.key()));
+        auto associatedKeyBindings = JsonDict(keyVaultEntries.value(writeItem.fullKey()));
         bool isValidEntry = KeyVaultResultFormatter{}.isValid(associatedKeyBindings);
         if (!isValidEntry) {
             continue;
         }
-        auto writeRecord = Formatters::Dict{};
+        auto writeRecord = QVariantMap{};
         writeRecord.insert(SQL_ARCHIVE_FIELD_SOURCE_TYPE,
                                   associatedKeyBindings.value(SQL_ARCHIVE_FIELD_SOURCE_TYPE));
         writeRecord.insert(SQL_ARCHIVE_FIELD_SOURCE,

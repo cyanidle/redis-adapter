@@ -25,7 +25,7 @@ void CacheProducer::onMsg(const Radapter::WorkerMsg &msg)
     emit sendMsg(prepareMsg(msg));
 }
 
-int CacheProducer::writeKeys(const Formatters::JsonDict &json, const Radapter::WorkerMsg &msg)
+int CacheProducer::writeKeys(const JsonDict &json, const Radapter::WorkerMsg &msg)
 {
     if (json.data().isEmpty()) {
         writeKeysDone(msg);
@@ -43,7 +43,7 @@ int CacheProducer::writeKeys(const Formatters::JsonDict &json, const Radapter::W
     return status;
 }
 
-int CacheProducer::writeIndex(const Formatters::JsonDict &json, const QString &indexKey, const Radapter::WorkerMsg &msg)
+int CacheProducer::writeIndex(const JsonDict &json, const QString &indexKey, const Radapter::WorkerMsg &msg)
 {
     if (json.data().isEmpty() || indexKey.isEmpty()) {
         writeIndexDone(msg);

@@ -33,14 +33,14 @@ int ModbusConnector::init()
     return 0;
 }
 
-void ModbusConnector::writeJsonDone(const Formatters::Dict &jsonDict)
+void ModbusConnector::writeJsonDone(const JsonDict &jsonDict)
 {
-    auto command = prepareCommand(Radapter::WorkerMsg::ServiceAcknowledge, jsonDict);
+    auto command = prepareCommand(Radapter::WorkerMsg::ServiceAcknowledge, jsonDict.data());
     command.receivers() = producers();
     emit sendMsg(command);
 }
 
-void ModbusConnector::jsonItemWritten(const Formatters::Dict &modbusJsonUnit)
+void ModbusConnector::jsonItemWritten(const JsonDict &modbusJsonUnit)
 {
     Q_UNUSED(modbusJsonUnit);
     auto command = prepareCommand(Radapter::WorkerMsg::ServiceRequestJson);
@@ -141,7 +141,7 @@ void ModbusConnector::onMsg(const Radapter::WorkerMsg &msg)
     auto jsonUnit = StreamEntriesMapFormatter(jsonDict).joinToLatest();
     auto lastMessageId = jsonDict.lastKey();
     if (lastMessageId == lastWriteId()) {
-        auto jsonKeys = Formatters::List{ jsonUnit.keys() };
+        auto jsonKeys = QStringList{ jsonUnit.keys() };
         m_lastWriteRequest = jsonDict;
         approvalRequested(jsonKeys);
     } else {
@@ -155,7 +155,7 @@ void ModbusConnector::onMsg(const Radapter::WorkerMsg &msg)
     setLastWriteId(lastMessageId);
 }
 
-void ModbusConnector::approvalRequested(const Formatters::List &jsonKeys)
+void ModbusConnector::approvalRequested(const QStringList &jsonKeys)
 {
     auto command = prepareCommand(Radapter::WorkerMsg::ServiceRequestKeys, jsonKeys);
     command.receivers() = producers();
@@ -172,18 +172,18 @@ void ModbusConnector::onReply(const Radapter::WorkerMsg &msg)
     }
 }
 
-void ModbusConnector::onApprovalReceived(const Formatters::Dict &jsonDict)
+void ModbusConnector::onApprovalReceived(const JsonDict &jsonDict)
 {
     if (jsonDict.isEmpty()) {
         return;
     }
     auto lastRequest = StreamEntriesMapFormatter(m_lastWriteRequest).joinToLatest();
-    if (lastRequest.containsDict(jsonDict)) {
+    if (lastRequest.contains(jsonDict.data())) {
         emitWriteDone(m_lastWriteRequest);
     }
 }
 
-void ModbusConnector::writeJson(const Formatters::Dict &jsonUnit, bool *isAbleToWrite)
+void ModbusConnector::writeJson(const JsonDict &jsonUnit, bool *isAbleToWrite)
 {
     if (jsonUnit.isEmpty()) {
         return;
@@ -191,13 +191,13 @@ void ModbusConnector::writeJson(const Formatters::Dict &jsonUnit, bool *isAbleTo
 
     auto modbusUnit = ModbusFormatter(jsonUnit).toModbusUnit();
     if (!modbusUnit.isEmpty()) {
-        m_gate->writeJsonToModbusDevice(modbusUnit, isAbleToWrite);
+        m_gate->writeJsonToModbusDevice(modbusUnit.data(), isAbleToWrite);
     }
 }
 
 void ModbusConnector::onJsonDataReady(const QVariant &nestedUnitData)
 {
-    auto json = prepareMsg(Formatters::Dict(nestedUnitData));
+    auto json = prepareMsg( JsonDict(nestedUnitData));
     if (!json.isEmpty()) {
         emit sendMsg(json);
     }
@@ -206,7 +206,7 @@ void ModbusConnector::onJsonDataReady(const QVariant &nestedUnitData)
 void ModbusConnector::onWriteResultReady(const QVariant &modbusUnitData, bool successful)
 {
     if (successful) {
-        auto modbusJsonUnit = Formatters::Dict(modbusUnitData);
+        auto modbusJsonUnit = JsonDict(modbusUnitData);
         jsonItemWritten(modbusJsonUnit);
     }
 }
@@ -218,8 +218,8 @@ void ModbusConnector::onConnectionChanged(const QStringList&, const bool connect
     }
 }
 
-void ModbusConnector::emitWriteDone(const Formatters::Dict &writeRequest)
+void ModbusConnector::emitWriteDone(const JsonDict &writeRequest)
 {
     writeJsonDone(writeRequest);
-    m_lastWriteRequest = Formatters::Dict{};
+    m_lastWriteRequest = JsonDict{};
 }

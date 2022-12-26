@@ -21,8 +21,8 @@ void TestModbusFormatter::TestToModbusUnit_data(){
                             )
                         }
     };
-    JsonDict source0(src_map0);
-    JsonDict expected0(exp_map0);
+   JsonDict source0(src_map0);
+   JsonDict expected0(exp_map0);
     QTest::newRow("Basic") << source0 << expected0;
     //////////////////////////////////////
     QVariantMap src_map1{
@@ -39,16 +39,16 @@ void TestModbusFormatter::TestToModbusUnit_data(){
                             )
                         }
     };
-    JsonDict source1(src_map1);
-    JsonDict expected1(exp_map1);
+   JsonDict source1(src_map1);
+   JsonDict expected1(exp_map1);
     QTest::newRow("Changed") << source1 << expected1;
     //////////////////////////////////////
     QVariantMap src_map2{
       {"NotATimestamp", RSK_TEST_NEST_MAP_ONE_KEY("station:16:command:network_rssi", QVariant(QString("3")))}
     };
     QVariantMap exp_map2{}; // Should be empty
-    JsonDict source2(src_map2);
-    JsonDict expected2(exp_map2);
+   JsonDict source2(src_map2);
+   JsonDict expected2(exp_map2);
     QTest::newRow("Wrong Timestamp") << source2 << expected2;
     /////////////////////////////////////
 }

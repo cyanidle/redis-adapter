@@ -77,7 +77,7 @@ void StreamProducer::onMsg(const Radapter::WorkerMsg &msg)
 void StreamProducer::tryTrim()
 {
     if (m_addCounter >= ADDS_COUNT_TO_TRIM) {
-        auto command = RedisQueryFormatter(Formatters::Dict{}).toTrimCommand(m_streamKey, streamSize());
+        auto command = RedisQueryFormatter( JsonDict{}).toTrimCommand(m_streamKey, streamSize());
         if (command.isEmpty()) {
             return;
         }

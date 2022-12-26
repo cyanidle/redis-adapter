@@ -4,7 +4,7 @@
 #include <QObject>
 #include <QTimer>
 #include "redis-adapter/connectors/redisconnector.h"
-#include "JsonFormatters"
+#include "jsondict/jsondict.h"
 #include "radapter-broker/workerbase.h"
 #include "redis-adapter/settings/redissettings.h"
 
@@ -49,7 +49,7 @@ private:
     void blockingReadCommand(const Radapter::WorkerMsg &msg);
     void readGroupCommand(const Radapter::WorkerMsg &msg);
     // Replies
-    void acknowledge(const Formatters::Dict &jsonEntries);
+    void acknowledge(const JsonDict &jsonEntries);
     void pendingChangedImpl();
     void ackCompletedImpl();
 
@@ -58,7 +58,7 @@ private:
     void createGroupCallback(redisAsyncContext *context, redisReply *replyPtr);
     QString id() const override;
 
-    void finishRead(const Formatters::Dict &json, const Radapter::WorkerMsg &msg);
+    void finishRead(const JsonDict &json, const Radapter::WorkerMsg &msg);
     void finishAck();
     void setLastReadId(const QString &lastId);
     void setPending(bool state);

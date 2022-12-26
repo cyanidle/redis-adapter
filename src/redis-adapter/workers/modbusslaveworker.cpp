@@ -4,7 +4,7 @@
 
 using namespace Modbus;
 using namespace Radapter;
-using namespace Formatters;
+ 
 
 SlaveWorker::SlaveWorker(const Settings::ModbusSlaveWorker &settings, QThread *thread) :
     WorkerBase(settings.worker, thread),
@@ -156,7 +156,7 @@ void SlaveWorker::onMsg(const Radapter::WorkerMsg &msg)
 {
     QList<QModbusDataUnit> results;
     for (auto& iter : msg) {
-        auto fullKeyJoined = iter.getFullKey().join(":");
+        auto fullKeyJoined = iter.fullKey().join(":");
         if (m_settings.registers.contains(fullKeyJoined)) {
             auto regInfo = m_settings.registers.value(fullKeyJoined);
             auto value = iter.value();

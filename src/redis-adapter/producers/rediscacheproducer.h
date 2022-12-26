@@ -4,7 +4,7 @@
 #include <QObject>
 #include "redis-adapter/connectors/redisconnector.h"
 #include "redis-adapter/formatters/redisqueryformatter.h"
-#include "JsonFormatters"
+#include "jsondict/jsondict.h"
 
 namespace Redis {
 class RADAPTER_SHARED_SRC CacheProducer;
@@ -26,8 +26,8 @@ public slots:
 
 private:
     // Commands
-    int writeKeys(const Formatters::JsonDict &json, const Radapter::WorkerMsg &msg);
-    int writeIndex(const Formatters::JsonDict &json, const QString &indexKey, const Radapter::WorkerMsg &msg);
+    int writeKeys(const JsonDict &json, const Radapter::WorkerMsg &msg);
+    int writeIndex(const JsonDict &json, const QString &indexKey, const Radapter::WorkerMsg &msg);
     // Replies
     void writeKeysDone(const Radapter::WorkerMsg &msg);
     void writeIndexDone(const Radapter::WorkerMsg &msg);

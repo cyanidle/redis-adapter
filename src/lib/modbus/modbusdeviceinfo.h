@@ -32,7 +32,7 @@ public:
     QString connectionString() const;
     void setConnectionString(const QString &serialPort);
     void setConnectionString(const QString &ip, const quint16 port);
-    QStringList relatedDevices() const;
+   QStringList relatedDevices() const;
     void setRelatedDevices(const QStringList &deviceNames);
     Settings::ModbusConnectionType type();
 
@@ -45,7 +45,7 @@ private:
 
     quint8 m_slaveAddress;
     QString m_connectionString;
-    QStringList m_relatedDevicesList;
+   QStringList m_relatedDevicesList;
     Settings::ModbusConnectionType m_type;
 };
 

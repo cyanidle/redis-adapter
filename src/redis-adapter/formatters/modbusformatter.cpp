@@ -1,16 +1,16 @@
 #include "modbusformatter.h"
 #include "timeformatter.h"
 
-ModbusFormatter::ModbusFormatter(const Formatters::Dict &jsonDict, QObject *parent)
+ModbusFormatter::ModbusFormatter(const JsonDict &jsonDict, QObject *parent)
     : QObject(parent),
       m_jsonDict(jsonDict)
 {
 }
 
-Formatters::Dict ModbusFormatter::toModbusUnit() const
+ JsonDict ModbusFormatter::toModbusUnit() const
 {
     if (m_jsonDict.isEmpty()) {
-        return Formatters::Dict{};
+        return JsonDict{};
     }
 
     auto jsonUnit = arrangeArrays(m_jsonDict);
@@ -18,7 +18,7 @@ Formatters::Dict ModbusFormatter::toModbusUnit() const
     return modbusUnit;
 }
 
-Formatters::Dict ModbusFormatter::arrangeArrays(const Formatters::JsonDict &jsonDict) const
+ JsonDict ModbusFormatter::arrangeArrays(const JsonDict &jsonDict) const
 {
     return jsonDict.flatten(".");
 }

@@ -25,7 +25,7 @@ void TestKeyVaultResultFormatter::TestToJsonEntry_data(){
     {SQL_KEYVAULT_FIELD_SOURCE, QVariant("source")},
     {SQL_KEYVAULT_FIELD_PARAM, QVariant("param")}};
     JsonList source0(QVariantList{QVariant(entry0a),QVariant(entry0b),QVariant(entry0c)});
-    JsonDict expected0(QVariantMap{
+   JsonDict expected0(QVariantMap{
                            {"my_redis_key0",QVariant(exp_map0)},
                            {"my_redis_key1",QVariant(exp_map0)},
                            {"my_redis_key2",QVariant(exp_map0)}
@@ -51,7 +51,7 @@ void TestKeyVaultResultFormatter::TestToJsonEntry_data(){
         {SQL_KEYVAULT_FIELD_PARAM, RSK_TEST_NEST_MAP_ONE_KEY("top_param",QVariant("param"))}
     };
     JsonList source1(QVariantList{QVariant(entry1a),QVariant(entry1b),QVariant(entry1c)});
-    JsonDict expected1(QVariantMap{
+   JsonDict expected1(QVariantMap{
                            {"my_redis_key0",QVariant(
                             QVariantMap{{SQL_KEYVAULT_FIELD_SOURCE_TYPE, QVariant("type0")},
                             {SQL_KEYVAULT_FIELD_SOURCE, QVariant("source0")},
@@ -81,7 +81,7 @@ void TestKeyVaultResultFormatter::TestToJsonEntry(){
 void TestKeyVaultResultFormatter::TestIsValid_data(){
     QTest::addColumn<JsonDict>("source");
     QTest::addColumn<bool>("expected");
-    JsonDict source0(QVariantMap{
+   JsonDict source0(QVariantMap{
         {SQL_KEYVAULT_FIELD_SOURCE_TYPE, QVariant(1)},
         {SQL_KEYVAULT_FIELD_SOURCE, QVariant(2)},
         {SQL_KEYVAULT_FIELD_PARAM, QVariant(3)}
@@ -93,7 +93,7 @@ void TestKeyVaultResultFormatter::TestIsValid_data(){
     source0.data().take(SQL_KEYVAULT_FIELD_SOURCE_TYPE);
     QTest::newRow("Missing key") << source0 << expected0;
     //
-    JsonDict source1(QVariantMap{
+   JsonDict source1(QVariantMap{
         {SQL_KEYVAULT_FIELD_SOURCE_TYPE, QVariant(1)},
         {SQL_KEYVAULT_FIELD_SOURCE, RSK_TEST_NEST_MAP_ONE_KEY("Source",QVariant(2))},
         {SQL_KEYVAULT_FIELD_PARAM, QVariant(3)}
@@ -101,7 +101,7 @@ void TestKeyVaultResultFormatter::TestIsValid_data(){
     auto expected1 = false;
     QTest::newRow("Nested value") << source1 << expected1;
     //
-    JsonDict source2a(QVariantMap{
+   JsonDict source2a(QVariantMap{
         {SQL_KEYVAULT_FIELD_SOURCE_TYPE, QVariant(quint32())},
         {SQL_KEYVAULT_FIELD_SOURCE, QVariant(2)},
         {SQL_KEYVAULT_FIELD_PARAM, QVariant(3)}
@@ -109,7 +109,7 @@ void TestKeyVaultResultFormatter::TestIsValid_data(){
     auto expected2a = false;
     QTest::newRow("Empty key") << source2a << expected2a;
     //
-    JsonDict source2b(QVariantMap{
+   JsonDict source2b(QVariantMap{
         {SQL_KEYVAULT_FIELD_SOURCE_TYPE, QVariant()},
         {SQL_KEYVAULT_FIELD_SOURCE, QVariant(2)},
         {SQL_KEYVAULT_FIELD_PARAM, QVariant(3)}
@@ -117,7 +117,7 @@ void TestKeyVaultResultFormatter::TestIsValid_data(){
     auto expected2b = false;
     QTest::newRow("Default initialised key") << source2b << expected2b;
     //
-    JsonDict source2c(QVariantMap{
+   JsonDict source2c(QVariantMap{
         {SQL_KEYVAULT_FIELD_SOURCE_TYPE, RSK_TEST_STR_VARIANT("1")},
         {SQL_KEYVAULT_FIELD_SOURCE, RSK_TEST_STR_VARIANT("2")},
         {SQL_KEYVAULT_FIELD_PARAM, RSK_TEST_STR_VARIANT("3")}
@@ -125,7 +125,7 @@ void TestKeyVaultResultFormatter::TestIsValid_data(){
     auto expected2c = true;
     QTest::newRow("String keys") << source2c << expected2c;
     //
-    JsonDict source3(QVariantMap{
+   JsonDict source3(QVariantMap{
         {SQL_KEYVAULT_FIELD_REDIS_KEY, QVariant(11)},
         {SQL_KEYVAULT_FIELD_SOURCE_TYPE, QVariant(2)},
         {SQL_KEYVAULT_FIELD_SOURCE, QVariant(3)},

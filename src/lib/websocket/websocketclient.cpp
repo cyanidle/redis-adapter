@@ -139,7 +139,7 @@ void Client::onSocketReceived(const QString &message)
     }
 
     wclDebug().noquote() << "new message:" << jsonMessage.toJson(QJsonDocument::Indented);
-    auto messageData = Formatters::Dict{ jsonMessage.toVariant() };
+    auto messageData = JsonDict{ jsonMessage.toVariant() };
     if (!messageData.isEmpty()) {
         emit sendMsg(prepareMsg(messageData));
     }

@@ -3,7 +3,7 @@
 
 #include <QObject>
 #include "redis-adapter/connectors/redisconnector.h"
-#include "JsonFormatters"
+#include "jsondict/jsondict.h"
 #include <QQueue>
 
 namespace Redis{
@@ -25,17 +25,17 @@ public slots:
 private:
     //Commands
     void requestIndex(const QString &indexKey, const Radapter::WorkerMsg &msg);
-    void requestKeys(const Formatters::List &keys, const Radapter::WorkerMsg &msg);
+    void requestKeys(const QStringList &keys, const Radapter::WorkerMsg &msg);
     //Replies
-    void finishIndex(const Formatters::List &json, const Radapter::WorkerMsg &msg);
-    void finishKeys(const Formatters::Dict &json, const Radapter::WorkerMsg &msg);
+    void finishIndex(const QVariantList &json, const Radapter::WorkerMsg &msg);
+    void finishKeys(const JsonDict &json, const Radapter::WorkerMsg &msg);
 
     void readIndexCallback(redisAsyncContext *context, redisReply *replyPtr, void *msgId);
     void readKeysCallback(redisAsyncContext *context, redisReply *replyPtr, void *msgId);
 
 
-    Formatters::Dict mergeWithKeys(const Formatters::List &entries);
-    QQueue<Formatters::List> m_requestedKeysBuffer;
+    JsonDict mergeWithKeys(const QVariantList &entries);
+    QQueue<QStringList> m_requestedKeysBuffer;
 
     QString m_indexKey;
 };

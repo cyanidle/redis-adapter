@@ -17,7 +17,7 @@ void TestSqlFormatters::TestToSqlRecord_data()
     QTest::addColumn<JsonList>("source_list");
     QTest::addColumn<QueryRecord>("expected");
     ////// Basic test
-    JsonDict source_dict0(QVariantMap{
+   JsonDict source_dict0(QVariantMap{
         {"Field0",QVariant()},
         {"Field1",QVariant()},
         {"Field2",QVariant()},
@@ -48,7 +48,7 @@ void TestSqlFormatters::TestToSqlRecordList_data() // Almost same as last test
     QTest::addColumn<JsonList>("source_list");
     QTest::addColumn<QueryRecordList>("expected");
     ////// Basic test
-    JsonDict source_dict0(QVariantMap{
+   JsonDict source_dict0(QVariantMap{
         {"Field0",QVariant()},
         {"Field1",QVariant()},
         {"Field2",QVariant()},
@@ -80,12 +80,12 @@ void TestSqlFormatters::TestToRegExpFilter_data()
     QTest::addColumn<QString>("expected");
     ////// Basic test
     QString fieldName0("MY_DB");
-    QStringList keys0{"KEY0","KEY1","KEY2","KEY3"};
+   QStringList keys0{"KEY0","KEY1","KEY2","KEY3"};
     QString expected0("WHERE MY_DB REGEXP 'KEY0|KEY1|KEY2|KEY3'");
     QTest::newRow("Basic test") << fieldName0 << keys0 << expected0;
     ////// Complex test
     QString fieldName1("MY_BETTER_DB");
-    QStringList keys1{"KEY0:station:16:complex:key","KEY1","KEY2","KEY3:station:16:commands"};
+   QStringList keys1{"KEY0:station:16:complex:key","KEY1","KEY2","KEY3:station:16:commands"};
     QString expected1(
         "WHERE MY_BETTER_DB REGEXP 'KEY0:station:16:complex:key|KEY1|KEY2|KEY3:station:16:commands'");
     QTest::newRow("Complex keys") << fieldName1 << keys1 << expected1;

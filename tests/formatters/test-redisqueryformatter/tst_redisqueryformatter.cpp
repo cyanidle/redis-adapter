@@ -18,7 +18,7 @@ void TestRedisQueryFormatter::testToAddStreamCommand(){
     {"station:16:level:change_speed", QVariant(0.0135498046875)},
     {"station:16:level:readings:1", QVariant(2.736364)}
   };
-  JsonDict json(map);
+ JsonDict json(map);
   QCOMPARE(
     RedisQueryFormatter(json).toAddStreamCommand("station:16"),
     "XADD station:16 * station:16:level:change_speed 0.0135498046875 station:16:level:readings:1 2.736364"
@@ -43,7 +43,7 @@ void TestRedisQueryFormatter::testToGetIndexCommand(){
 }
 
 void TestRedisQueryFormatter::testToUpdateIndexCommand(){
-  JsonDict json(QVariantMap{
+ JsonDict json(QVariantMap{
     {"station:16:level:change_speed", QVariant(0.009613037109375)},
     {"station:16:level:readings:1", QVariant(1.7673972845077515)}
   });
@@ -62,7 +62,7 @@ void TestRedisQueryFormatter::testToMultipleGetCommand(){
 }
 
 void TestRedisQueryFormatter::testToMultipleSetCommand(){
-  JsonDict json(QVariantMap{
+ JsonDict json(QVariantMap{
     {"station:16:level:change_speed",QVariant(0.01025390625)},
     {"station:16:level:readings:1",QVariant(2.880859375)}
   });

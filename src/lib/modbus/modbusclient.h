@@ -159,7 +159,7 @@ private:
     ModbusScheduler* m_scheduler;
     DeviceBuffersMap m_deviceBuffersMap;
     Settings::ModbusConnectionSource m_connectionSettings;
-    QStringList m_deviceNames;
+   QStringList m_deviceNames;
     ModbusDeviceInfoList m_deviceInfoList;
     QString m_remappedPort;
     quint8 m_reconnectCounter;

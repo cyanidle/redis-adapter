@@ -111,7 +111,7 @@ private:
     QVariantMultiMap joinDeviceInfoUnits(const QVariantList &deviceInfoUnits) const;
     QVariantMap groupJsonByDeviceName(const QVariantMultiMap &jsonUnitData) const;
     bool areValuesValid(const QList<Settings::RegisterInfo> &regInfoList) const;
-    QStringList deviceNamesListById(const quint8 deviceId) const;
+   QStringList deviceNamesListById(const quint8 deviceId) const;
     quint8 getDeviceInfoUnitDepthLevel(const QString &deviceGroup) const;
     Modbus::ModbusDeviceInfo findConnectionInfo(const QString deviceName) const;
     bool hasDeviceMatch(const QStringList &sourceDevicesList, const QString &targetDeviceName) const;
@@ -140,7 +140,7 @@ private:
                                                        const QVariant &regValue,
                                                        const RegisterData &regInfo) const;
     QString getFirstDeviceName(const quint8 deviceId, const QModbusDataUnit::RegisterType tableType, const quint16 regAddress) const;
-    QStringList getDevicesNameList(const quint8 deviceId, const QModbusDataUnit::RegisterType tableType, const QList<quint16> &regAddresses) const;
+   QStringList getDevicesNameList(const quint8 deviceId, const QModbusDataUnit::RegisterType tableType, const QList<quint16> &regAddresses) const;
     Modbus::ModbusRegistersTableMap buildRegisterDataByAddress(const QString &deviceName, const QModbusDataUnit::RegisterType tableType, const quint16 regAddress, const QVariant &regValue) const;
     Modbus::ModbusRegistersTableMap buildRegisterDataByInfoList(const QString &deviceName,
                                                            const QList<Settings::RegisterInfo> &registersInfo,

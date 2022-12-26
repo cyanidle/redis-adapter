@@ -14,7 +14,7 @@ void TestRedisStreamEntryFormatter::TestEventTime_data(){
           {RSK_TEST_TIMESTRING, RSK_TEST_NEST_MAP_ONE_KEY(
               "station:16:command:network_rssi", RSK_TEST_STR_VARIANT("3"))}
         };
-    JsonDict source0(src_map0);
+   JsonDict source0(src_map0);
     auto expected0 = QDateTime::fromString(RSK_TEST_TIMESTRING, MILLISECONDS_FORMAT);
     QTest::newRow("Basic test") << source0 << expected0;
     ////// Wrong timestring
@@ -22,7 +22,7 @@ void TestRedisStreamEntryFormatter::TestEventTime_data(){
           {"NotATimestring", RSK_TEST_NEST_MAP_ONE_KEY(
               "station:16:command:network_rssi", RSK_TEST_STR_VARIANT("3"))}
         };
-    JsonDict source1(src_map1);
+   JsonDict source1(src_map1);
     auto expected1 = QDateTime::fromString("", MILLISECONDS_FORMAT);
     auto expected1_b = QDateTime();
     QTest::newRow("Wrong Timestring (Should return empty QDate)") << source1 << expected1;
@@ -46,8 +46,8 @@ void TestRedisStreamEntryFormatter::TestEntryKeys_data(){
          {"TestKey0", RSK_TEST_STR_VARIANT("Value0")},
          {"TestKey1", RSK_TEST_STR_VARIANT("Value1")}})
      }};
-    JsonDict source0(src_map0);
-    QStringList expected0{"TestKey0", "TestKey1"};
+   JsonDict source0(src_map0);
+   QStringList expected0{"TestKey0", "TestKey1"};
     QTest::newRow("Basic test") << source0 << expected0;
     ///////// 1: 2 lvls nesting
     QVariantMap src_map1_a{
@@ -60,11 +60,11 @@ void TestRedisStreamEntryFormatter::TestEntryKeys_data(){
          {"TestKey0", RSK_TEST_STR_VARIANT("Value0")},
          {"TestKey1", RSK_TEST_STR_VARIANT("Value1")}})
      }};
-    JsonDict source1(QVariantMap{
+   JsonDict source1(QVariantMap{
                          {"TopTopKey0", QVariant(src_map1_a)},
                          {"TopTopKey1", QVariant(src_map1_b)}
                      });
-    QStringList expected1{"TopKey0"};
+   QStringList expected1{"TopKey0"};
     QTest::newRow("2 top level keys (first should be used)") << source1 << expected1;
     ///////// 2: Deeper nesting
     QVariantMap src_map2_a{
@@ -75,8 +75,8 @@ void TestRedisStreamEntryFormatter::TestEntryKeys_data(){
          {"TestKey2", RSK_TEST_STR_VARIANT("Value0")},
          {"TestKey3", RSK_TEST_STR_VARIANT("Value1")}})
      }};
-    JsonDict source2(src_map2_a);
-    QStringList expected2{"TestKey0","TestKey1","TestKey2","TestKey3"};
+   JsonDict source2(src_map2_a);
+   QStringList expected2{"TestKey0","TestKey1","TestKey2","TestKey3"};
     QTest::newRow("Deeper nesting") << source2 << expected2;
     //
     QVariantMap src_map2_b{
@@ -93,8 +93,8 @@ void TestRedisStreamEntryFormatter::TestEntryKeys_data(){
          }
                          })
     }};
-    JsonDict source2_b(src_map2_b);
-    QStringList expected2_b{"TestKey0","TestKey1","TestKey3"};
+   JsonDict source2_b(src_map2_b);
+   QStringList expected2_b{"TestKey0","TestKey1","TestKey3"};
     QTest::newRow("Deeper nesting b") << source2_b << expected2_b;
 }
 
@@ -116,8 +116,8 @@ void TestRedisStreamEntryFormatter::TestEventDataDict_data(){
     QVariantMap exp_map0{
          {"TestKey0", RSK_TEST_STR_VARIANT("Value0")},
          {"TestKey1", RSK_TEST_STR_VARIANT("Value1")}};
-    JsonDict source0(src_map0);
-    JsonDict expected0(exp_map0);
+   JsonDict source0(src_map0);
+   JsonDict expected0(exp_map0);
     QTest::newRow("Basic test") << source0 << expected0;
     ///////// 1: 2 lvls nesting
     QVariantMap src_map1_a{
@@ -130,11 +130,11 @@ void TestRedisStreamEntryFormatter::TestEventDataDict_data(){
          {"TestKey2", RSK_TEST_STR_VARIANT("Value2")},
          {"TestKey3", RSK_TEST_STR_VARIANT("Value3")}})
      }};
-    JsonDict source1(QVariantMap{
+   JsonDict source1(QVariantMap{
                          {"TopTopKey0", QVariant(src_map1_a)},
                          {"TopTopKey1", QVariant(src_map1_b)}
                      });
-    JsonDict expected1(src_map1_a); // should be same as nested map under first key
+   JsonDict expected1(src_map1_a); // should be same as nested map under first key
     QTest::newRow("2 top level keys (first should be used)") << source1 << expected1;
     ///////// 2: Deeper nesting
     QVariantMap src_map2_a{
@@ -150,8 +150,8 @@ void TestRedisStreamEntryFormatter::TestEventDataDict_data(){
                                    {"TestKey1", RSK_TEST_STR_VARIANT("Value1")},
                                    {"TestKey2", RSK_TEST_STR_VARIANT("Value0")},
                                    {"TestKey3", RSK_TEST_STR_VARIANT("Value1")}};
-    JsonDict source2(src_map2_a);
-    JsonDict expected2(exp_map2_a);
+   JsonDict source2(src_map2_a);
+   JsonDict expected2(exp_map2_a);
     QTest::newRow("Deeper nesting") << source2 << expected2;
     //
     QVariantMap src_map2_b{
@@ -179,8 +179,8 @@ void TestRedisStreamEntryFormatter::TestEventDataDict_data(){
                 )
             )
          }};
-    JsonDict source2_b(src_map2_b);
-    JsonDict expected2_b(exp_map2_b);
+   JsonDict source2_b(src_map2_b);
+   JsonDict expected2_b(exp_map2_b);
     QTest::newRow("Deeper nesting b") << source2_b << expected2_b;
 }
 

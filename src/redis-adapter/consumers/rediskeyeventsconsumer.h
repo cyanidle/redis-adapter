@@ -24,14 +24,14 @@ private slots:
     void unsubscribe();
 private:
     //General Data out
-    void finishMessageRead(const Formatters::List &jsons);
-    void eventReceived(const Formatters::List &jsonMessage);
+    void finishMessageRead(const QVariantList &jsons);
+    void eventReceived(const QVariantList &jsonMessage);
     //Redis Callbacks
     void readMessageCallback(redisAsyncContext *context, redisReply *reply);
 
     void subscribeToKeyEventsImpl(const QStringList &eventTypes);
 
-    QStringList m_keyEventNotifications;
+   QStringList m_keyEventNotifications;
     bool m_isSubscribed;
 };
 

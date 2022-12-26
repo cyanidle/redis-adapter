@@ -1,24 +1,24 @@
 #include "keyvaultresultformatter.h"
 #include "redis-adapter/include/sqlkeyvaultfields.h"
 
-KeyVaultResultFormatter::KeyVaultResultFormatter(const Formatters::List &sqlRecordsList, QObject *parent)
+KeyVaultResultFormatter::KeyVaultResultFormatter(const QVariantList &sqlRecordsList, QObject *parent)
     : QObject(parent),
       m_sqlRecordsList(sqlRecordsList)
 {
 }
 
-Formatters::Dict KeyVaultResultFormatter::toJsonEntries() const
+ JsonDict KeyVaultResultFormatter::toJsonEntries() const
 {
-    auto keyedEntriesDict = Formatters::Dict{};
+    auto keyedEntriesDict = JsonDict{};
     for (auto &keyVaultEntry : m_sqlRecordsList) {
-        auto jsonItem = Formatters::Dict(keyVaultEntry);
+        auto jsonItem = JsonDict(keyVaultEntry);
         auto redisKey = jsonItem.take(SQL_KEYVAULT_FIELD_REDIS_KEY).toString();
         keyedEntriesDict.insert(redisKey, jsonItem);
     }
     return keyedEntriesDict;
 }
 
-bool KeyVaultResultFormatter::isValid(const Formatters::Dict &keyVaultEntry) const
+bool KeyVaultResultFormatter::isValid(const JsonDict &keyVaultEntry) const
 {
     auto keyBindings = keyVaultEntry;
     auto sourceType = keyBindings.take(SQL_KEYVAULT_FIELD_SOURCE_TYPE);

@@ -2,13 +2,13 @@
 
 using namespace MySql;
 
-SqlQueryFieldsFormatter::SqlQueryFieldsFormatter(const Formatters::Dict &queryFields, QObject *parent)
+SqlQueryFieldsFormatter::SqlQueryFieldsFormatter(const JsonDict &queryFields, QObject *parent)
     : QObject(parent),
       m_jsonQueryFields(queryFields)
 {
 }
 
-SqlQueryFieldsFormatter::SqlQueryFieldsFormatter(const Formatters::List &fieldNamesList, QObject *parent)
+SqlQueryFieldsFormatter::SqlQueryFieldsFormatter(const QVariantList &fieldNamesList, QObject *parent)
     : QObject(parent),
       m_jsonQueryFields{}
 {

@@ -2,7 +2,7 @@
 #define MODBUSSETTINGS_H
 
 #include "settings.h"
-#include "JsonFormatters"
+#include "jsondict/jsondict.h"
 
 namespace Settings {
 
@@ -440,7 +440,7 @@ namespace Settings {
         bool parseInput(const QVariant &src);
         bool parseDi(const QVariant &src);
         bool parseCoils(const QVariant &src);
-        static DeviceRegistersInfo parseRegisters(const Formatters::JsonDict &target);
+        static DeviceRegistersInfo parseRegisters(const JsonDict &target);
     };
 
 

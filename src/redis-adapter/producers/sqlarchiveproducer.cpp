@@ -35,13 +35,13 @@ void ArchiveProducer::saveFinished(bool isOk, const Radapter::WorkerMsg &msg)
     emit sendMsg(reply);
 }
 
-void ArchiveProducer::saveRedisStreamEntries(const Formatters::Dict &redisStreamJson, const Radapter::WorkerMsg &msg)
+void ArchiveProducer::saveRedisStreamEntries(const JsonDict &redisStreamJson, const Radapter::WorkerMsg &msg)
 {
     auto streamEntriesList = StreamEntriesMapFormatter(redisStreamJson).toEntryList();
     for (auto &streamEntry : streamEntriesList) {
-        auto entryKeys = RedisStreamEntryFormatter(Formatters::Dict(streamEntry)).entryKeys();
+        auto entryKeys = RedisStreamEntryFormatter( JsonDict(streamEntry)).entryKeys();
         auto keyVaultEntries = m_keyVaultClient->readJsonEntries(entryKeys);
-        auto recordsToWrite = ArchiveQueryFormatter(Formatters::Dict(streamEntry)).toWriteRecordsList(keyVaultEntries);
+        auto recordsToWrite = ArchiveQueryFormatter( JsonDict(streamEntry)).toWriteRecordsList(keyVaultEntries);
         m_dbClient->doWriteList(m_archiveInfo.target_table, recordsToWrite, msg);
     }
 }

@@ -20,17 +20,17 @@ void MySqlConnector::run()
     m_client->open();
 }
 
-Formatters::List MySqlConnector::doRead(const QString &tableName, const Formatters::List &fieldsList, const QString &sqlConditions)
+QVariantList MySqlConnector::doRead(const QString &tableName, const QVariantList &fieldsList, const QString &sqlConditions)
 {
     if (fieldsList.isEmpty()) {
-        return Formatters::List{};
+        return QVariantList{};
     }
 
-    auto jsonRecords = Formatters::Dict{};
+    auto jsonRecords = JsonDict{};
     auto sqlRecordsList = SqlQueryFieldsFormatter(fieldsList).toSqlRecordList();
     bool isOk = m_client->doSelectQuery(tableName, sqlRecordsList, sqlConditions);
     if (!isOk) {
-        return Formatters::List{};
+        return QVariantList{};
     }
     auto jsonResult = SqlResultFormatter(sqlRecordsList).toJsonList();
     if (!jsonResult.isEmpty()) {
@@ -39,15 +39,15 @@ Formatters::List MySqlConnector::doRead(const QString &tableName, const Formatte
     return jsonResult;
 }
 
-bool MySqlConnector::doWrite(const QString &tableName, const Formatters::Dict &jsonRecord, const Radapter::WorkerMsg &msg)
+bool MySqlConnector::doWrite(const QString &tableName, const JsonDict &jsonRecord, const Radapter::WorkerMsg &msg)
 {
-    auto jsonQuery = Formatters::List{};
-    jsonQuery.append(jsonRecord);
+    auto jsonQuery = QVariantList{};
+    jsonQuery.append(jsonRecord.data());
     bool isOk = doWriteList(tableName, jsonQuery, msg);
     return isOk;
 }
 
-bool MySqlConnector::doWriteList(const QString &tableName, const Formatters::List &jsonRecords, const Radapter::WorkerMsg &msg)
+bool MySqlConnector::doWriteList(const QString &tableName, const QVariantList &jsonRecords, const Radapter::WorkerMsg &msg)
 {
     if (jsonRecords.isEmpty()) {
         return false;
@@ -55,7 +55,7 @@ bool MySqlConnector::doWriteList(const QString &tableName, const Formatters::Lis
 
     bool isOk = true;
     for (auto &recordToWrite : jsonRecords) {
-        auto writeRecord = SqlQueryFieldsFormatter(Formatters::Dict(recordToWrite)).toSqlRecord();
+        auto writeRecord = SqlQueryFieldsFormatter( JsonDict(recordToWrite)).toSqlRecord();
         isOk &= m_client->doInsertQuery(tableName, writeRecord);
     }
     emit writeDone(isOk, msg);

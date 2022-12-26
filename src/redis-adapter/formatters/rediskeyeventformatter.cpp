@@ -1,7 +1,7 @@
 #include "rediskeyeventformatter.h"
 #include "redis-adapter/include/redismessagekeys.h"
 
-RedisKeyEventFormatter::RedisKeyEventFormatter(const Formatters::List &message, QObject *parent)
+RedisKeyEventFormatter::RedisKeyEventFormatter(const QVariantList &message, QObject *parent)
     : QObject(parent),
       m_message{}
 {
@@ -38,11 +38,11 @@ QString RedisKeyEventFormatter::eventKey() const
     return payload;
 }
 
-Formatters::Dict RedisKeyEventFormatter::toEventMessage() const
+ JsonDict RedisKeyEventFormatter::toEventMessage() const
 {
     if (m_message.isEmpty()) {
-        return Formatters::Dict{};
+        return JsonDict{};
     }
-    auto jsonEvent = Formatters::Dict{ QVariantMap{ { eventType(), eventKey() } } };
+    auto jsonEvent = JsonDict{ QVariantMap{ { eventType(), eventKey() } } };
     return jsonEvent;
 }

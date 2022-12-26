@@ -1,7 +1,7 @@
 #include "redisqueryformatter.h"
 #include "redis-adapter/include/redismessagekeys.h"
 
-RedisQueryFormatter::RedisQueryFormatter(const Formatters::Dict &jsonDict, QObject *parent)
+RedisQueryFormatter::RedisQueryFormatter(const JsonDict &jsonDict, QObject *parent)
     : QObject(parent),
       m_json(jsonDict)
 {
@@ -84,7 +84,7 @@ QString RedisQueryFormatter::toUpdateIndexCommand(const QString &indexKey) const
     return command;
 }
 
-QString RedisQueryFormatter::toMultipleGetCommand(const Formatters::List &keysList)
+QString RedisQueryFormatter::toMultipleGetCommand(const QStringList &keysList)
 {
     if (keysList.isEmpty()) {
         return QString{};
@@ -104,7 +104,7 @@ QString RedisQueryFormatter::toMultipleSetCommand() const
 
 QString RedisQueryFormatter::toKeyEventsSubscribeCommand(const QStringList &eventTypes) const
 {
-    auto patternsList = Formatters::List{};
+    auto patternsList = QStringList{};
     for (auto &keyEventType : eventTypes) {
         auto pattern = QString("%1:%2").arg(REDIS_PATTERN_KEY_EVENT, keyEventType);
         patternsList.append(pattern);
@@ -113,14 +113,14 @@ QString RedisQueryFormatter::toKeyEventsSubscribeCommand(const QStringList &even
     return command;
 }
 
-QString RedisQueryFormatter::toPatternSubscribeCommand(const Formatters::List &patternList) const
+QString RedisQueryFormatter::toPatternSubscribeCommand(const QStringList &patternList) const
 {
     auto command = QString("PSUBSCRIBE ");
     command += toKeysFields(patternList);
     return command;
 }
 
-Formatters::Dict RedisQueryFormatter::flatten() const
+ JsonDict RedisQueryFormatter::flatten() const
 {
     return m_json.flatten();
 }
@@ -139,7 +139,7 @@ QString RedisQueryFormatter::toEntryFields() const
     return fieldsList.join(" ");
 }
 
-QString RedisQueryFormatter::toKeysFields(const Formatters::List &keysList)
+QString RedisQueryFormatter::toKeysFields(const QStringList &keysList)
 {
     if (keysList.isEmpty()) {
         return QString{};

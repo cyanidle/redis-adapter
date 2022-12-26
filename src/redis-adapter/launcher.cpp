@@ -10,7 +10,8 @@
 #include "radapterlogging.h"
 #include "localstorage.h"
 #include "localization.h"
-#include "JsonFormatters"
+#include "jsondict/jsondict.h"
+#include "bindings/bindingsprovider.h"
 #include "redis-adapter/settings/modbussettings.h"
 #include "redis-adapter/settings/redissettings.h"
 #include "redis-adapter/connectors/modbusconnector.h"
@@ -83,8 +84,8 @@ void Launcher::prvPreInit()
     auto filters = precacheFromToml<Settings::Filters>("filters");
     reDebug() << "config: Filters count: " << filters.size();
     m_filereader->setPath("conf/bindings.toml");
-    auto jsonBindings = Settings::JsonBinding::parseList(m_filereader->deserialise("json_bindings").toList());
-    Settings::BindingsProvider::init(jsonBindings);
+    auto jsonBindings = JsonBinding::parseList(m_filereader->deserialise("json_bindings").toList());
+    BindingsProvider::init(jsonBindings);
     reDebug() << "config: Json Bindings count: " << jsonBindings.size();
     m_filereader->setPath("conf/config.toml");
 }

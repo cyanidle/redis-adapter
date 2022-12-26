@@ -28,10 +28,10 @@ void CacheConsumer::requestIndex(const QString &indexKey, const Radapter::Worker
     }
 }
 
-void CacheConsumer::requestKeys(const Formatters::List &keys, const Radapter::WorkerMsg &msg)
+void CacheConsumer::requestKeys(const QStringList &keys, const Radapter::WorkerMsg &msg)
 {
     if (keys.isEmpty()) {
-        finishKeys(Formatters::Dict{}, msg);
+        finishKeys( JsonDict{}, msg);
         return;
     }
 
@@ -51,11 +51,11 @@ void CacheConsumer::readIndexCallback(redisAsyncContext *context, redisReply *re
     }
     if (reply->elements == 0) {
         reDebug() << metaInfo(context).c_str() << "Empty index.";
-        finishIndex(Formatters::List{}, msg);
+        finishIndex( QVariantList{}, msg);
         return;
     }
 
-    auto indexedKeys = Formatters::List{};
+    auto indexedKeys = QVariantList{};
     reDebug() << metaInfo(context).c_str() << "Keys added to index:" << reply->elements;
     for (quint16 i = 0; i < reply->elements; i++) {
         auto keyItem = QString(reply->element[i]->str);
@@ -72,7 +72,7 @@ void CacheConsumer::readKeysCallback(redisAsyncContext *context, redisReply *rep
     if (isNullReply(context, reply)) {
         return;
     }
-    auto foundEntries = Formatters::List{};
+    auto foundEntries = QVariantList{};
     quint16 keysMatched = 0u;
     for (quint16 i = 0; i < reply->elements; i++) {
         auto entryItem = QString(reply->element[i]->str);
@@ -86,7 +86,7 @@ void CacheConsumer::readKeysCallback(redisAsyncContext *context, redisReply *rep
     finishKeys(resultJson, msg);
 }
 
-void CacheConsumer::finishIndex(const Formatters::List &json, const Radapter::WorkerMsg &msg)
+void CacheConsumer::finishIndex(const QVariantList &json, const Radapter::WorkerMsg &msg)
 {
     auto reply = prepareReply(msg, Radapter::WorkerMsg::ReplyOk);
     for (auto &jsonDict : json) {
@@ -95,24 +95,24 @@ void CacheConsumer::finishIndex(const Formatters::List &json, const Radapter::Wo
     }
 }
 
-void CacheConsumer::finishKeys(const Formatters::Dict &json, const Radapter::WorkerMsg &msg)
+void CacheConsumer::finishKeys(const JsonDict &json, const Radapter::WorkerMsg &msg)
 {
     auto reply = prepareReply(msg, Radapter::WorkerMsg::ReplyOk);
     reply.setJson(json);
     emit sendMsg(reply);
 }
 
-Formatters::Dict CacheConsumer::mergeWithKeys(const Formatters::List &entries)
+ JsonDict CacheConsumer::mergeWithKeys(const QVariantList &entries)
 {
     auto requestedKeys = m_requestedKeysBuffer.dequeue();
     if (requestedKeys.isEmpty()) {
-        return Formatters::Dict{};
+        return JsonDict{};
     }
-    auto jsonDict = Formatters::Dict{};
+    auto jsonDict = JsonDict{};
     for (quint16 i = 0; i < entries.count(); i++) {
         auto entryValue = entries.at(i).toString();
         if (!entryValue.isEmpty()) {
-            auto key = requestedKeys.at(i).toString();
+            auto key = requestedKeys.at(i);
             jsonDict.insert(key, entryValue);
         }
     }

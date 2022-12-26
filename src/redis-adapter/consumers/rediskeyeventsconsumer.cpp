@@ -17,7 +17,7 @@ KeyEventsConsumer::KeyEventsConsumer(const QString &host,
 {
 }
 
-void KeyEventsConsumer::finishMessageRead(const Formatters::List &jsons)
+void KeyEventsConsumer::finishMessageRead(const QVariantList &jsons)
 {
     for (auto &json: jsons) {
         auto jsonDict = json.toMap();
@@ -34,11 +34,11 @@ void KeyEventsConsumer::readMessageCallback(redisAsyncContext *context, redisRep
     }
     if (reply->elements == 0) {
         reDebug() << metaInfo(context).c_str() << "Empty message.";
-        finishMessageRead(Formatters::List{});
+        finishMessageRead( QVariantList{});
         return;
     }
 
-    auto message = Formatters::List{};
+    auto message = QVariantList{};
     reDebug() << metaInfo(context).c_str() << "message received:" << reply->element[1]->str;
     for (quint16 i = 0; i < reply->elements; i++) {
         auto messageItem = reply->element[i];
@@ -53,7 +53,7 @@ void KeyEventsConsumer::readMessageCallback(redisAsyncContext *context, redisRep
 void KeyEventsConsumer::subscribeToKeyEventsImpl(const QStringList &eventTypes)
 {
     if (eventTypes.isEmpty()) {
-        finishMessageRead(Formatters::List());
+        finishMessageRead( QVariantList());
         return;
     }
     auto command = RedisQueryFormatter{}.toKeyEventsSubscribeCommand(eventTypes);
@@ -70,7 +70,7 @@ void KeyEventsConsumer::run()
     Connector::run();
 }
 
-void KeyEventsConsumer::eventReceived(const Formatters::List &jsonMessage)
+void KeyEventsConsumer::eventReceived(const QVariantList &jsonMessage)
 {
     auto jsonEvent = RedisKeyEventFormatter(jsonMessage).toEventMessage();
     if (!jsonEvent.isEmpty()) {

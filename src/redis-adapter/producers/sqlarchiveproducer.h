@@ -24,7 +24,7 @@ public slots:
     void saveFinished(bool isOk, const Radapter::WorkerMsg &msg);
 private:
     //Generic Data In
-    void saveRedisStreamEntries(const Formatters::Dict &redisStreamJson, const Radapter::WorkerMsg &msg);
+    void saveRedisStreamEntries(const JsonDict &redisStreamJson, const Radapter::WorkerMsg &msg);
 
     MySqlConnector* m_dbClient;
     KeyVaultConsumer* m_keyVaultClient;

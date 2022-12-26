@@ -2,13 +2,13 @@
 #define REDISQUERYFORMATTER_H
 
 #include <QObject>
-#include "JsonFormatters"
+#include "jsondict/jsondict.h"
 
 class RADAPTER_SHARED_SRC RedisQueryFormatter : public QObject
 {
     Q_OBJECT
 public:
-    explicit RedisQueryFormatter(const Formatters::Dict &jsonDict = Formatters::Dict{}, QObject *parent = nullptr);
+    explicit RedisQueryFormatter(const JsonDict &jsonDict = JsonDict{}, QObject *parent = nullptr);
 
     QString toAddStreamCommand(const QString &streamKey, quint32 maxLen = 0u) const;
     QString toTrimCommand(const QString &streamKey, quint32 maxLen) const;
@@ -24,19 +24,19 @@ public:
     static QString toGetIndexCommand(const QString &indexKey);
     QString toUpdateIndexCommand(const QString &indexKey) const;
 
-    static QString toMultipleGetCommand(const Formatters::List &keysList);
+    static QString toMultipleGetCommand(const QStringList &keysList);
     QString toMultipleSetCommand() const;
 
     QString toKeyEventsSubscribeCommand(const QStringList &eventTypes) const;
-    QString toPatternSubscribeCommand(const Formatters::List &patternList) const;
+    QString toPatternSubscribeCommand(const QStringList &patternList) const;
 signals:
 
 private:
-    Formatters::Dict flatten() const;
+    JsonDict flatten() const;
     QString toEntryFields() const;
-    static QString toKeysFields(const Formatters::List &keysList);
+    static QString toKeysFields(const QStringList &keysList);
 
-    Formatters::Dict m_json;
+    JsonDict m_json;
 };
 
 #endif // REDISQUERYFORMATTER_H
