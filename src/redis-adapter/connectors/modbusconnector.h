@@ -7,8 +7,8 @@
 #include "redis-adapter/settings/settings.h"
 #include "lib/modbus/modbusdevicesgate.h"
 #include "lib/modbus/modbusfactory.h"
-#include "jsondict/jsondict.h"
-#include "jsondict/jsondict.h"
+#include "jsondict/jsondict.hpp"
+#include "jsondict/jsondict.hpp"
 
 class RADAPTER_SHARED_SRC ModbusConnector : public Radapter::SingletonBase
 {

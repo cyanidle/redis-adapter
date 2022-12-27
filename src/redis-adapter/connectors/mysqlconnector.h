@@ -2,7 +2,7 @@
 #define MYSQLCONNECTOR_H
 
 #include <QObject>
-#include "jsondict/jsondict.h"
+#include "jsondict/jsondict.hpp"
 #include "lib/mysql/mysqlclient.h"
 #include "radapter-broker/workermsg.h"
 

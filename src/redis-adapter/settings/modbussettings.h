@@ -2,7 +2,7 @@
 #define MODBUSSETTINGS_H
 
 #include "settings.h"
-#include "jsondict/jsondict.h"
+#include "jsondict/jsondict.hpp"
 
 namespace Settings {
 

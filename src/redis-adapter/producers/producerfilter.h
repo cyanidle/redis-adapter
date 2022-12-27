@@ -3,7 +3,7 @@
 
 #include <QObject>
 #include <QQueue>
-#include "jsondict/jsondict.h"
+#include "jsondict/jsondict.hpp"
 #include "radapter-broker/interceptorbase.h"
 #include "redis-adapter/settings/settings.h"
 #include "redis-adapter/connectors/redisconnector.h"

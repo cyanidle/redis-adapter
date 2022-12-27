@@ -10,7 +10,7 @@
 #include "radapterlogging.h"
 #include "localstorage.h"
 #include "localization.h"
-#include "jsondict/jsondict.h"
+#include "jsondict/jsondict.hpp"
 #include "bindings/bindingsprovider.h"
 #include "redis-adapter/settings/modbussettings.h"
 #include "redis-adapter/settings/redissettings.h"

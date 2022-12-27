@@ -33,7 +33,8 @@ Connector::Connector(const QString &host,
     m_host(host),
     m_port(port),
     m_dbIndex(dbIndex),
-    m_canSelect(true)
+    m_canSelect(true),
+    m_pingConnection()
 {
 }
 
@@ -313,6 +314,7 @@ void Connector::setConnected(bool state)
         if (m_isConnected) {
             reInfo() << metaInfo().c_str() << "Connection successful.";
             emit connected();
+            m_commandTimeoutsCounter = 0;
         } else {
             reError() << metaInfo().c_str() << "Lost connection.";
             emit disconnected();
@@ -327,7 +329,8 @@ bool Connector::isBlocked() const
 
 void Connector::enablePingKeepalive()
 {
-    m_pingTimer->callOnTimeout(this, &Connector::doPing);
+    if (!m_pingConnection)
+        m_pingConnection = m_pingTimer->callOnTimeout(this, &Connector::doPing);
     connect(this, &Connector::connected, m_pingTimer, QOverload<>::of(&QTimer::start));
     connect(this, &Connector::disconnected, m_pingTimer, &QTimer::stop);
 }
@@ -336,6 +339,7 @@ void Connector::disablePingKeepalive()
 {
     disconnect(m_pingTimer);
     m_pingTimer->disconnect();
+    m_pingConnection = {};
 }
 
 void Connector::allowSelectDb()

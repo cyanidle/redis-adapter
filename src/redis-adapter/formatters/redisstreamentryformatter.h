@@ -3,7 +3,7 @@
 
 #include <QObject>
 #include <QDateTime>
-#include "jsondict/jsondict.h"
+#include "jsondict/jsondict.hpp"
 #include "lib/hiredis/hiredis.h"
 
 class RADAPTER_SHARED_SRC RedisStreamEntryFormatter : public QObject

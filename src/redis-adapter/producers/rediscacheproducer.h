@@ -4,7 +4,7 @@
 #include <QObject>
 #include "redis-adapter/connectors/redisconnector.h"
 #include "redis-adapter/formatters/redisqueryformatter.h"
-#include "jsondict/jsondict.h"
+#include "jsondict/jsondict.hpp"
 
 namespace Redis {
 class RADAPTER_SHARED_SRC CacheProducer;

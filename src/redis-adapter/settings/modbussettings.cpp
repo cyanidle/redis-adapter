@@ -13,7 +13,8 @@ DeviceRegistersInfoMap DeviceRegistersInfoMapParser::parse(const QVariant &src) 
             auto tableType = iter.value().toString();
             auto currentRegs = DeviceRegistersInfo();
             auto keyToRegisters = iter.domain();
-            auto domainJson = JsonDict(json.value(keyToRegisters).toMap());
+            auto rawMap = json.value(keyToRegisters).toMap();
+            auto domainJson = JsonDict(rawMap);
             auto byteorder = domainJson.value("byte_order").toString().toLower();
             auto wordorder = domainJson.value("word_order").toString().toLower();
             if (byteorder.isEmpty() || wordorder.isEmpty()) {

@@ -2,7 +2,7 @@
 
 #include <QVariant>
 #include <QString>
-#include "formatters/jsondict.h"
+#include "formatters/jsondict.hpp"
 
 #define BLOCK_TIMEOUT_MS 30000
 

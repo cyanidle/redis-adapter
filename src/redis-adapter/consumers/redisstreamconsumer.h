@@ -4,7 +4,7 @@
 #include <QObject>
 #include <QTimer>
 #include "redis-adapter/connectors/redisconnector.h"
-#include "jsondict/jsondict.h"
+#include "jsondict/jsondict.hpp"
 #include "radapter-broker/workerbase.h"
 #include "redis-adapter/settings/redissettings.h"
 

@@ -1,7 +1,7 @@
 #ifndef SQLRESULTFORMATTER_H
 #define SQLRESULTFORMATTER_H
 
-#include "jsondict/jsondict.h"
+#include "jsondict/jsondict.hpp"
 #include "lib/mysql/mysqlclient.h"
 
 class RADAPTER_SHARED_SRC SqlResultFormatter : public QObject

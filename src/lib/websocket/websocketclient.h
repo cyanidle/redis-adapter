@@ -7,7 +7,7 @@
 #include <QJsonObject>
 #include <QQueue>
 #include <QTimer>
-#include "jsondict/jsondict.h"
+#include "jsondict/jsondict.hpp"
 #include "radapter-broker/workerbase.h"
 
 namespace Websocket {

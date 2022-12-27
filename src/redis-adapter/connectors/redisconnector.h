@@ -112,6 +112,7 @@ private:
     quint16 m_dbIndex;
     bool m_canSelect;
     QHash<quint64, Radapter::WorkerMsg> m_queue;
+    QMetaObject::Connection m_pingConnection;
 
                           struct CallbackArgsPlain {StaticCb callback; void *data;};
     template <class User> struct CallbackArgsWithData {MethodCbWithData<User> callback; void *data;};

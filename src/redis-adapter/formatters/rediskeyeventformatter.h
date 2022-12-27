@@ -2,7 +2,7 @@
 #define REDISKEYEVENTFORMATTER_H
 
 #include <QObject>
-#include "jsondict/jsondict.h"
+#include "jsondict/jsondict.hpp"
 
 class RedisKeyEventFormatter : public QObject
 {
