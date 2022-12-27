@@ -154,7 +154,7 @@ int Connector::runAsyncCommand(MethodCbContextless<User> callback, const QString
 template <typename CallbackArgs_t, typename Callback>
 int Connector::runAsyncCommandImplementation(Callback callback, const QString &command, CallbackArgs_t* cbData) {
     if (!isConnected() || !isValidContext(m_redisContext)) {
-        connDealloc<CallbackArgs_t>(cbData);
+        connDealloc(cbData);
         return REDIS_ERR;
     }
     m_pingTimer->stop();
@@ -162,7 +162,7 @@ int Connector::runAsyncCommandImplementation(Callback callback, const QString &c
     if (status == REDIS_OK) {
         ++m_pendingCommandsCounter;
     } else {
-        connDealloc<CallbackArgs_t>(cbData);
+        connDealloc(cbData);
     }
     return status;
 }

@@ -50,7 +50,6 @@ Connector::~Connector()
 void Connector::run()
 {
     m_client = new RedisQtAdapter(this);
-
     m_connectionTimer = new QTimer(this);
     m_connectionTimer->setSingleShot(true);
     m_connectionTimer->callOnTimeout(this, [this](){

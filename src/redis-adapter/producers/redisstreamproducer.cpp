@@ -57,10 +57,6 @@ void StreamProducer::onMsg(const Radapter::WorkerMsg &msg)
     if (msg.isEmpty()) {
         return;
     }
-
-    if (!isConnected()) {
-        run();
-    }
     auto json = msg.data();
     auto command = RedisQueryFormatter(json).toAddStreamCommand(m_streamKey, streamSize());
     if (!command.isEmpty()) {

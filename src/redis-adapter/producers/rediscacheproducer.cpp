@@ -31,9 +31,6 @@ int CacheProducer::writeKeys(const JsonDict &json, const Radapter::WorkerMsg &ms
         writeKeysDone(msg);
         return REDIS_ERR;
     }
-    if (!isConnected()) {
-        run();
-    }
     auto msetCommand = RedisQueryFormatter(json.data()).toMultipleSetCommand();
     auto id = enqueueMsg(msg);
     auto status = runAsyncCommand(&CacheProducer::msetCallback, msetCommand, id);
@@ -48,9 +45,6 @@ int CacheProducer::writeIndex(const JsonDict &json, const QString &indexKey, con
     if (json.data().isEmpty() || indexKey.isEmpty()) {
         writeIndexDone(msg);
         return REDIS_ERR;
-    }
-    if (!isConnected()) {
-        run();
     }
     auto indexCommand = RedisQueryFormatter(json.data()).toUpdateIndexCommand(indexKey);
     auto id = enqueueMsg(msg);
