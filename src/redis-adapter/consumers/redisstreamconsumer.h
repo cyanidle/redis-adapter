@@ -35,6 +35,7 @@ signals:
 public slots:
     void run() override;
     void onCommand(const Radapter::WorkerMsg &msg) override;
+    void onReply(const Radapter::WorkerMsg &msg) override;
 
     void blockingRead();
     void readGroup();
@@ -54,7 +55,7 @@ private:
     void ackCompletedImpl();
 
     void readCallback(redisAsyncContext *context, redisReply *replyPtr, void *msgId);
-    void ackCallback(redisAsyncContext *context, redisReply *replyPtr);
+    void ackCallback(redisReply *replyPtr);
     void createGroupCallback(redisAsyncContext *context, redisReply *replyPtr);
     QString id() const override;
 

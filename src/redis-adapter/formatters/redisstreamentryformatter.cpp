@@ -25,7 +25,7 @@ RedisStreamEntryFormatter::RedisStreamEntryFormatter(redisReply *streamReply, QO
         auto fieldKey = QString(itemData->element[i]->str);
         auto fieldValue = QString(itemData->element[i + 1]->str);
         if (!fieldValue.isEmpty()) {
-            fields[fieldKey] = fieldValue;
+            fields.insert(fieldKey.split(":"), fieldValue);
         }
     }
     if (!fields.isEmpty()) {

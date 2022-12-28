@@ -125,7 +125,8 @@ void CacheConsumer::onCommand(const Radapter::WorkerMsg &msg)
     auto requestedKeys = msg.serviceData(Radapter::WorkerMsg::ServiceRequestKeys);
     if (requestedJson.isValid()) {
         requestIndex(m_indexKey, msg);
-    } else if (requestedKeys.isValid()) {
+    }
+    if (requestedKeys.isValid()) {
         requestKeys(requestedKeys.toStringList(), msg);
     }
 }

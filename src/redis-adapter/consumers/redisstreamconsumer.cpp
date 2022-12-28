@@ -213,11 +213,6 @@ void StreamConsumer::readCallback(redisAsyncContext *context, redisReply *reply,
     auto rootEntry = reply->element[0];
     reDebug() << metaInfo(context).c_str() << "stream key:" << rootEntry->element[0]->str;
     auto streamEntries = rootEntry->element[1];
-    if (streamEntries->elements == 0) {
-        finishRead( JsonDict{}, msg);
-        return;
-    }
-
     reDebug() << metaInfo(context).c_str() << "new stream entries count:" << streamEntries->elements;
     qint32 entriesCount = 0u;
     auto jsonEntries = JsonDict{};
@@ -232,12 +227,12 @@ void StreamConsumer::readCallback(redisAsyncContext *context, redisReply *reply,
     finishRead(jsonEntries, msg);
 }
 
-void StreamConsumer::ackCallback(redisAsyncContext *context, redisReply *reply)
+void StreamConsumer::ackCallback(redisReply *reply)
 {
-    if (isNullReply(context, reply)) {
+    if (isNullReply(reply)) {
         return;
     }
-    reDebug() << metaInfo(context).c_str() << "entries acknowledged:" << toString(reply);
+    reDebug() << metaInfo().c_str() << "entries acknowledged:" << toString(reply);
     finishAck();
 }
 
@@ -266,16 +261,17 @@ void StreamConsumer::finishRead(const JsonDict &json, const Radapter::WorkerMsg 
 {
     if (!json.isEmpty()) {
         Radapter::WorkerMsg msgToSend(this, consumers());
+        const auto streamIds = json.topKeys();
         if (msg.isCommand()) {
             msgToSend = prepareReply(msg, Radapter::WorkerMsg::ReplyOk);
         } else {
             msgToSend = prepareMsg();
         }
-        if (msg.isValid()) {
-            msgToSend.setJson(json);
-            emit sendMsg(msg);
-            setLastReadId(json.lastKey());
+        for (const auto& key : streamIds) {
+            msgToSend.merge(json[key].toMap());
         }
+        emit sendMsg(msgToSend);
+        setLastReadId(streamIds.constLast());
     }
     bool needAck = !hasPendingEntries() && !json.isEmpty();
     if (needAck) {
@@ -318,5 +314,14 @@ void StreamConsumer::onCommand(const Radapter::WorkerMsg &msg)
         }
     } else {
         reWarn() << "Incorrect schema used for 'Command' to 'Redis::StreamConsumer'";
+    }
+}
+
+void StreamConsumer::onReply(const Radapter::WorkerMsg &msg)
+{
+    if (sender() == this) {
+        return;
+    } else {
+        reDebug() << "Unexpected Reply from: " << msg.sender();
     }
 }
