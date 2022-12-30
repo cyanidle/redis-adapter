@@ -62,6 +62,11 @@ void Launcher::addWorker(WorkerBase* worker, QList<InterceptorBase*> interceptor
 //! чтобы компилятор не удалил "неиспользуемые переменные"
 void Launcher::prvPreInit()
 {
+    m_filereader->setPath("conf/bindings.toml");
+    auto jsonBindings = JsonBinding::parseList(m_filereader->deserialise("json_bindings").toList());
+    BindingsProvider::init(jsonBindings);
+    reDebug() << "config: Json Bindings count: " << jsonBindings.size();
+    m_filereader->setPath("conf/config.toml");
     auto redisServers = precacheFromToml<Settings::RedisServer>("redis.servers");
     reDebug() << "config: Redis Servers count: " << redisServers.size();
     auto redisStreams = precacheFromToml<Settings::RedisStream>("redis.streams");
@@ -83,10 +88,6 @@ void Launcher::prvPreInit()
     m_filereader->setPath("conf/filters.toml");
     auto filters = precacheFromToml<Settings::Filters>("filters");
     reDebug() << "config: Filters count: " << filters.size();
-    m_filereader->setPath("conf/bindings.toml");
-    auto jsonBindings = JsonBinding::parseList(m_filereader->deserialise("json_bindings").toList());
-    BindingsProvider::init(jsonBindings);
-    reDebug() << "config: Json Bindings count: " << jsonBindings.size();
     m_filereader->setPath("conf/config.toml");
 }
 
