@@ -44,8 +44,8 @@ void ProducerFilter::filterStrictByName(const Radapter::WorkerMsg &srcMsg)
     bool shouldAdd = false;
     for (auto &item : srcMsg) {
         auto currentValue = item.value();
-        auto lastValue = m_last[item.fullKey()];
-        auto currentKey = item.fullKey().join(":");
+        auto lastValue = m_last[item.key()];
+        auto currentKey = item.key().join(":");
         if (!(currentValue.canConvert<double>() &&
               lastValue.canConvert<double>() &&
               m_filters.contains(currentKey))) {

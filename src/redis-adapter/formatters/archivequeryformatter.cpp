@@ -21,7 +21,7 @@ QVariantList ArchiveQueryFormatter::toWriteRecordsList(const JsonDict &keyVaultE
          writeItem != itemsToWrite.end();
          writeItem++)
     {
-        auto associatedKeyBindings = JsonDict(keyVaultEntries.value(writeItem.fullKey()));
+        auto associatedKeyBindings = JsonDict(keyVaultEntries.value(writeItem.key()));
         bool isValidEntry = KeyVaultResultFormatter{}.isValid(associatedKeyBindings);
         if (!isValidEntry) {
             continue;

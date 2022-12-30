@@ -1,1 +1,1 @@
-include($$PWD/src/src-headers.pri)
+include($$PWD/src/redis-adapter-headers.pri)

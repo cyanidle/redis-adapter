@@ -198,22 +198,22 @@ void StreamConsumer::createGroup()
     runAsyncCommand(&StreamConsumer::createGroupCallback, command);
 }
 
-void StreamConsumer::readCallback(redisAsyncContext *context, redisReply *reply, void *msgId)
+void StreamConsumer::readCallback(redisReply *reply, void *msgId)
 {
     auto msg = dequeueMsg(msgId);
-    if (isNullReply(context, reply)) {
+    if (isNullReply(reply)) {
         return;
     }
     if (reply->elements == 0) {
-        reDebug() << metaInfo(context).c_str() << "No new entries";
+        reDebug() << metaInfo().c_str() << "No new entries";
         finishRead( JsonDict{}, msg);
         return;
     }
 
     auto rootEntry = reply->element[0];
-    reDebug() << metaInfo(context).c_str() << "stream key:" << rootEntry->element[0]->str;
+    reDebug() << metaInfo().c_str() << "stream key:" << rootEntry->element[0]->str;
     auto streamEntries = rootEntry->element[1];
-    reDebug() << metaInfo(context).c_str() << "new stream entries count:" << streamEntries->elements;
+    reDebug() << metaInfo().c_str() << "new stream entries count:" << streamEntries->elements;
     qint32 entriesCount = 0u;
     auto jsonEntries = JsonDict{};
     for (quint16 i = 0; i < streamEntries->elements; i++) {
@@ -223,7 +223,7 @@ void StreamConsumer::readCallback(redisAsyncContext *context, redisReply *reply,
         }
         entriesCount += jsonDict.count();
     }
-    reDebug() << metaInfo(context).c_str() << "entries processed:" << entriesCount;
+    reDebug() << metaInfo().c_str() << "entries processed:" << entriesCount;
     finishRead(jsonEntries, msg);
 }
 
@@ -241,14 +241,14 @@ void StreamConsumer::finishAck()
     emit ackCompleted();
 }
 
-void StreamConsumer::createGroupCallback(redisAsyncContext *context, redisReply *reply)
+void StreamConsumer::createGroupCallback(redisReply *reply)
 {
-    if (isNullReply(context, reply)
-            || isEmptyReply(context, reply))
+    if (isNullReply(reply)
+            || isEmptyReply(reply))
     {
         return;
     }
-    reDebug() << metaInfo(context).c_str() << "create group status:" << toString(reply);
+    reDebug() << metaInfo().c_str() << "create group status:" << toString(reply);
 }
 
 QString StreamConsumer::id() const

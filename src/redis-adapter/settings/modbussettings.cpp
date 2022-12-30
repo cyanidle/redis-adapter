@@ -8,7 +8,7 @@ DeviceRegistersInfoMap DeviceRegistersInfoMapParser::parse(const QVariant &src) 
     auto result = DeviceRegistersInfoMap();
     auto json = JsonDict(src.toMap());
     for (auto &iter: json) {
-        auto fullKey = iter.fullKey();
+        auto fullKey = iter.key();
         if (fullKey.constLast() == "table") {
             auto tableType = iter.value().toString();
             auto currentRegs = DeviceRegistersInfo();
@@ -31,7 +31,7 @@ DeviceRegistersInfoMap DeviceRegistersInfoMapParser::parse(const QVariant &src) 
                         currentRegisterMap.insert("endianess", QVariantMap{{"word_order", wordorder}, {"byte_order", byteorder}});
                         currentRegisterMap.insert("is_persistent", currentRegisterMap.value("is_persistent"));
                         auto currentRegister = Serializer::fromQMap<RegisterInfo>(currentRegisterMap);
-                        currentRegs.insert(regInfoIter.fullKey().join(":") + ":" + QString::number(i + 1), currentRegister);
+                        currentRegs.insert(regInfoIter.key().join(":") + ":" + QString::number(i + 1), currentRegister);
                     }
                 } else if (regInfoIter.field() == "index") {
                     auto currentRegisterMap = regInfoMapJson[regInfoIter.domain()].toMap();

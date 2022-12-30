@@ -27,19 +27,19 @@ void KeyEventsConsumer::finishMessageRead(const QVariantList &jsons)
     }
 }
 
-void KeyEventsConsumer::readMessageCallback(redisAsyncContext *context, redisReply *reply)
+void KeyEventsConsumer::readMessageCallback(redisReply *reply)
 {
-    if (isNullReply(context, reply)) {
+    if (isNullReply(reply)) {
         return;
     }
     if (reply->elements == 0) {
-        reDebug() << metaInfo(context).c_str() << "Empty message.";
+        reDebug() << metaInfo().c_str() << "Empty message.";
         finishMessageRead( QVariantList{});
         return;
     }
 
     auto message = QVariantList{};
-    reDebug() << metaInfo(context).c_str() << "message received:" << reply->element[1]->str;
+    reDebug() << metaInfo().c_str() << "message received:" << reply->element[1]->str;
     for (quint16 i = 0; i < reply->elements; i++) {
         auto messageItem = reply->element[i];
         auto messageString = toString(messageItem);

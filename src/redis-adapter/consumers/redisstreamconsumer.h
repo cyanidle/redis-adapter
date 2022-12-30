@@ -54,9 +54,9 @@ private:
     void pendingChangedImpl();
     void ackCompletedImpl();
 
-    void readCallback(redisAsyncContext *context, redisReply *replyPtr, void *msgId);
+    void readCallback(redisReply *replyPtr, void *msgId);
     void ackCallback(redisReply *replyPtr);
-    void createGroupCallback(redisAsyncContext *context, redisReply *replyPtr);
+    void createGroupCallback(redisReply *replyPtr);
     QString id() const override;
 
     void finishRead(const JsonDict &json, const Radapter::WorkerMsg &msg);

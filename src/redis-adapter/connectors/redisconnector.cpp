@@ -262,12 +262,12 @@ int Connector::runAsyncCommand(const QString &command)
 int Connector::runAsyncCommand(StaticCb callback, const QString &command, void *data)
 {
     return runAsyncCommandImplementation<CallbackArgsPlain>(
-            privateCallbackPlain,
-            command,
-            connAlloc<CallbackArgsPlain>(callback, data));
+           privateCallbackStatic,
+           command,
+           connAlloc<CallbackArgsPlain>(callback, data));
 }
 
-void Connector::privateCallbackPlain(redisAsyncContext *context, void *replyPtr, void *data)
+void Connector::privateCallbackStatic(redisAsyncContext *context, void *replyPtr, void *data)
 {
     auto args = static_cast<CallbackArgsPlain*>(data);
     auto sender = static_cast<Connector*>(context->data);
@@ -452,6 +452,7 @@ void *Connector::enqueueMsg(const Radapter::WorkerMsg &msg)
 
 Radapter::WorkerMsg Connector::dequeueMsg(void* msgId)
 {
+    if (!msgId) return {};
     auto key = static_cast<quint64*>(msgId);
     auto result = m_queue.take(*key);
     delete key;
@@ -460,6 +461,7 @@ Radapter::WorkerMsg Connector::dequeueMsg(void* msgId)
 
 void Connector::disposeId(void *msgId)
 {
+    if (!msgId) return;
     auto key = static_cast<quint64*>(msgId);
     m_queue.remove(*key);
     delete key;
@@ -467,8 +469,7 @@ void Connector::disposeId(void *msgId)
 
 QString Connector::id() const
 {
-    auto idString = QString(metaObject()->className());
-    return idString;
+    return metaObject()->className();
 }
 
 QString Connector::toString(const redisReply *reply)

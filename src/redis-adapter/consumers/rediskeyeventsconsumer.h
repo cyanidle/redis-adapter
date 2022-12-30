@@ -27,7 +27,7 @@ private:
     void finishMessageRead(const QVariantList &jsons);
     void eventReceived(const QVariantList &jsonMessage);
     //Redis Callbacks
-    void readMessageCallback(redisAsyncContext *context, redisReply *reply);
+    void readMessageCallback(redisReply *reply);
 
     void subscribeToKeyEventsImpl(const QStringList &eventTypes);
 

@@ -1,8 +1,4 @@
 
-include($$PWD/lib/lib.pri)
-
-INCLUDEPATH += $$PWD
-
 SOURCES += \
     $$PWD/redis-adapter/connectors/modbusconnector.cpp \
     $$PWD/redis-adapter/connectors/mysqlconnector.cpp \
@@ -85,3 +81,6 @@ HEADERS += \
     $$PWD/redis-adapter/settings/modbussettings.h \
     $$PWD/redis-adapter/settings/redissettings.h \
     $$PWD/redis-adapter/settings/settings.h
+
+
+include($$PWD/lib/lib.pri)

@@ -36,8 +36,8 @@ private:
     // Replies
     void writeDone(const QString &newEntryId, const Radapter::WorkerMsg &msg);
 
-    void writeCallback(redisAsyncContext *context, redisReply *replyPtr, void *msgId);
-    void trimCallback(redisAsyncContext *context, redisReply *replyPtr);
+    void writeCallback(redisReply *replyPtr, void *msgId);
+    void trimCallback(redisReply *replyPtr);
     QString id() const override;
 
     QTimer* m_trimTimer;

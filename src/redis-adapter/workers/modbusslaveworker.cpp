@@ -156,7 +156,7 @@ void SlaveWorker::onMsg(const Radapter::WorkerMsg &msg)
 {
     QList<QModbusDataUnit> results;
     for (auto& iter : msg) {
-        auto fullKeyJoined = iter.fullKey().join(":");
+        auto fullKeyJoined = iter.key().join(":");
         if (m_settings.registers.contains(fullKeyJoined)) {
             auto regInfo = m_settings.registers.value(fullKeyJoined);
             auto value = iter.value();

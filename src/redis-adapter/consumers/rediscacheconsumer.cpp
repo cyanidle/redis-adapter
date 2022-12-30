@@ -43,20 +43,20 @@ void CacheConsumer::requestKeys(const QStringList &keys, const Radapter::WorkerM
     }
 }
 
-void CacheConsumer::readIndexCallback(redisAsyncContext *context, redisReply *reply, void *msgId)
+void CacheConsumer::readIndexCallback(redisReply *reply, void *msgId)
 {
     auto msg = dequeueMsg(msgId);
-    if (isNullReply(context, reply)) {
+    if (isNullReply(reply)) {
         return;
     }
     if (reply->elements == 0) {
-        reDebug() << metaInfo(context).c_str() << "Empty index.";
+        reDebug() << metaInfo().c_str() << "Empty index.";
         finishIndex( QVariantList{}, msg);
         return;
     }
 
     auto indexedKeys = QVariantList{};
-    reDebug() << metaInfo(context).c_str() << "Keys added to index:" << reply->elements;
+    reDebug() << metaInfo().c_str() << "Keys added to index:" << reply->elements;
     for (quint16 i = 0; i < reply->elements; i++) {
         auto keyItem = QString(reply->element[i]->str);
         if (!keyItem.isEmpty()) {
@@ -66,10 +66,10 @@ void CacheConsumer::readIndexCallback(redisAsyncContext *context, redisReply *re
     finishIndex(indexedKeys, msg);
 }
 
-void CacheConsumer::readKeysCallback(redisAsyncContext *context, redisReply *reply, void *msgId)
+void CacheConsumer::readKeysCallback(redisReply *reply, void *msgId)
 {
     auto msg = dequeueMsg(msgId);
-    if (isNullReply(context, reply)) {
+    if (isNullReply(reply)) {
         return;
     }
     auto foundEntries = QVariantList{};
@@ -81,7 +81,7 @@ void CacheConsumer::readKeysCallback(redisAsyncContext *context, redisReply *rep
         }
         foundEntries.append(entryItem);
     }
-    reDebug() << metaInfo(context).c_str() << "Key entries found:" << keysMatched;
+    reDebug() << metaInfo().c_str() << "Key entries found:" << keysMatched;
     auto resultJson = mergeWithKeys(foundEntries);
     finishKeys(resultJson, msg);
 }

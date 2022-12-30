@@ -14,9 +14,8 @@ class RADAPTER_SHARED_SRC Connector : public Radapter::WorkerBase
 {
     Q_OBJECT
 public:
-    template <class User> using MethodCbWithData = void(User::*)(redisAsyncContext* ctx, redisReply* reply, void* optData);
-    template <class User> using MethodCb = void(User::*)(redisAsyncContext* ctx, redisReply* reply);
-    template <class User> using MethodCbContextless = void(User::*)(redisReply* reply);
+    template <class User> using MethodCbWithData = void(User::*)(redisReply* reply, void* optData);
+    template <class User> using MethodCb = void(User::*)(redisReply* reply);
                           using StaticCb = void(*)(redisAsyncContext* ctx, void* reply, void* sender);
 
 
@@ -32,11 +31,10 @@ public:
     void setDbIndex(const quint16 dbIndex);
     bool isConnected() const;
 
-    int runAsyncCommand(const QString &command);
+                          int runAsyncCommand(const QString &command);
     template <class User> int runAsyncCommand(MethodCbWithData<User> callback, const QString &command, void* data);
     template <class User> int runAsyncCommand(MethodCb<User> callback, const QString &command);
-    template <class User> int runAsyncCommand(MethodCbContextless<User> callback, const QString &command);
-    int runAsyncCommand(StaticCb callback, const QString &command, void* optData = nullptr);
+                          int runAsyncCommand(StaticCb callback, const QString &command, void* optData = nullptr);
 
     void enablePingKeepalive();
     void disablePingKeepalive();
@@ -91,8 +89,7 @@ private:
 
     template <class User> static void privateCallbackWithData(redisAsyncContext* ctx, void* reply, void* data);
     template <class User> static void privateCallback(redisAsyncContext* ctx, void* reply, void* data);
-    template <class User> static void privateCallbackContextless(redisAsyncContext* ctx, void* reply, void* data);
-                          static void privateCallbackPlain(redisAsyncContext *context, void *replyPtr, void *data);
+                          static void privateCallbackStatic(redisAsyncContext *context, void *replyPtr, void *data);
 
     static void pingCallback(redisAsyncContext *context, void *replyPtr, void *sender);
     void selectCallback(redisAsyncContext *context, redisReply *replyPtr);
@@ -118,7 +115,6 @@ private:
                           struct CallbackArgsPlain {StaticCb callback; void *data;};
     template <class User> struct CallbackArgsWithData {MethodCbWithData<User> callback; void *data;};
     template <class User> struct CallbackArgs {MethodCb<User> callback;};
-    template <class User> struct CallbackArgsContextless {MethodCbContextless<User> callback;};
     template <typename CallbackArgs_t, typename ...Args> static inline CallbackArgs_t* connAlloc(Args... args);
     template <typename CallbackArgs_t> static inline void connDealloc(CallbackArgs_t* ptr);
 };
@@ -143,13 +139,6 @@ int Connector::runAsyncCommand(MethodCb<User> callback, const QString &command) 
                                          privateCallback<User>,
                                          command,
                                          connAlloc<CallbackArgs<User>>(callback));
-}
-template<typename User>
-int Connector::runAsyncCommand(MethodCbContextless<User> callback, const QString &command) {
-    return runAsyncCommandImplementation<CallbackArgsContextless<User>>(
-                                         privateCallbackContextless<User>,
-                                         command,
-                                         connAlloc<CallbackArgsContextless<User>>(callback));
 }
 
 template <typename CallbackArgs_t, typename Callback>
@@ -179,13 +168,6 @@ template<typename User>
 void Connector::privateCallback(redisAsyncContext* ctx, void* reply, void* data) {
     auto args = static_cast<CallbackArgs<User>*>(data);
     (getSender<User>(ctx)->*(args->callback))(ctx, static_cast<redisReply*>(reply));
-    getSender<User>(ctx)->finishAsyncCommand();
-    connDealloc(args);
-}
-template<typename User>
-void Connector::privateCallbackContextless(redisAsyncContext* ctx, void* reply, void* data) {
-    auto args = static_cast<CallbackArgsContextless<User>*>(data);
-    (getSender<User>(ctx)->*(args->callback))(static_cast<redisReply*>(reply));
     getSender<User>(ctx)->finishAsyncCommand();
     connDealloc(args);
 }

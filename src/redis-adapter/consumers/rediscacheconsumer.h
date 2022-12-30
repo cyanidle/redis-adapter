@@ -30,8 +30,8 @@ private:
     void finishIndex(const QVariantList &json, const Radapter::WorkerMsg &msg);
     void finishKeys(const JsonDict &json, const Radapter::WorkerMsg &msg);
 
-    void readIndexCallback(redisAsyncContext *context, redisReply *replyPtr, void *msgId);
-    void readKeysCallback(redisAsyncContext *context, redisReply *replyPtr, void *msgId);
+    void readIndexCallback(redisReply *replyPtr, void *msgId);
+    void readKeysCallback(redisReply *replyPtr, void *msgId);
 
 
     JsonDict mergeWithKeys(const QVariantList &entries);

@@ -55,25 +55,25 @@ int CacheProducer::writeIndex(const JsonDict &json, const QString &indexKey, con
     return status;
 }
 
-void CacheProducer::msetCallback(redisAsyncContext *context, redisReply *reply, void *msgId)
+void CacheProducer::msetCallback(redisReply *reply, void *msgId)
 {
     auto msg = dequeueMsg(msgId);
-    if (isNullReply(context, reply)
-            || isEmptyReply(context, reply))
+    if (isNullReply(reply)
+            || isEmptyReply(reply))
     {
         return;
     }
-    reDebug() << metaInfo(context).c_str() << "mset status:" << reply->str;
+    reDebug() << metaInfo().c_str() << "mset status:" << reply->str;
     writeKeysDone(msg);
 }
 
-void CacheProducer::indexCallback(redisAsyncContext *context, redisReply *reply, void *msgId)
+void CacheProducer::indexCallback(redisReply *reply, void *msgId)
 {
     auto msg = dequeueMsg(msgId);
-    if (isNullReply(context, reply)) {
+    if (isNullReply(reply)) {
         return;
     }
-    reDebug() << metaInfo(context).c_str() << "index members updated:" << reply->integer;
+    reDebug() << metaInfo().c_str() << "index members updated:" << reply->integer;
     writeIndexDone(msg);
 }
 

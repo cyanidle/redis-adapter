@@ -82,15 +82,15 @@ void StreamProducer::tryTrim()
     }
 }
 
-void StreamProducer::writeCallback(redisAsyncContext *context, redisReply *reply, void *msgId)
+void StreamProducer::writeCallback(redisReply *reply, void *msgId)
 {
     auto msg = dequeueMsg(msgId);
-    if (isNullReply(context, reply)
-            || isEmptyReply(context, reply))
+    if (isNullReply(reply)
+            || isEmptyReply(reply))
     {
         return;
     }
-    reDebug() << metaInfo(context).c_str() << "Entry added:" << reply->str;
+    reDebug() << metaInfo().c_str() << "Entry added:" << reply->str;
     writeDone(reply->str, msg);
 }
 
@@ -100,12 +100,12 @@ void StreamProducer::writeDone(const QString &newEntryId, const Radapter::Worker
     emit sendMsg(reply);
 }
 
-void StreamProducer::trimCallback(redisAsyncContext *context, redisReply *reply)
+void StreamProducer::trimCallback(redisReply *reply)
 {
-    if (isNullReply(context, reply)) {
+    if (isNullReply(reply)) {
         return;
     }
-    reDebug() << metaInfo(context).c_str() << "Entries trimmed:" << reply->integer;
+    reDebug() << metaInfo().c_str() << "Entries trimmed:" << reply->integer;
 }
 
 QString StreamProducer::id() const

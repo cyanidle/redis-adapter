@@ -32,8 +32,8 @@ private:
     void writeKeysDone(const Radapter::WorkerMsg &msg);
     void writeIndexDone(const Radapter::WorkerMsg &msg);
 
-    void msetCallback(redisAsyncContext *context, redisReply *replyPtr, void *msgId);
-    void indexCallback(redisAsyncContext *context, redisReply *replyPtr, void *msgId);
+    void msetCallback(redisReply *replyPtr, void *msgId);
+    void indexCallback(redisReply *replyPtr, void *msgId);
 
     QString m_indexKey;
 };

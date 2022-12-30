@@ -243,6 +243,7 @@ int Launcher::initWorkers()
 void Launcher::run()
 {
     Broker::instance()->connectProducersAndConsumers();
+    qSetMessagePattern(CUSTOM_MESSAGE_PATTERN);
     for (auto &factory : m_factories) {
         factory->run();
     }
