@@ -63,7 +63,7 @@ void Launcher::addWorker(WorkerBase* worker, QList<InterceptorBase*> interceptor
 void Launcher::prvPreInit()
 {
     m_filereader->setPath("conf/bindings.toml");
-    auto jsonBindings = JsonBinding::parseList(m_filereader->deserialise("json_bindings").toList());
+    auto jsonBindings = JsonBinding::parseMap(m_filereader->deserialise().toMap());
     BindingsProvider::init(jsonBindings);
     reDebug() << "config: Json Bindings count: " << jsonBindings.size();
     m_filereader->setPath("conf/config.toml");
