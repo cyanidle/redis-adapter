@@ -18,7 +18,6 @@ class Redis::StreamFactory : public Radapter::FactoryBase
 public:
     explicit StreamFactory(const Settings::RedisStream::Map &streamsMap, QObject *parent = nullptr);
 
-    int initSettings() override {return 0;}
     int initWorkers() override;
     void run() override;
 signals:

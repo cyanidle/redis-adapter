@@ -20,7 +20,6 @@ public:
                             MySqlFactory *dbFactory,
                             QObject *parent = nullptr);
 
-    int initSettings() override {return 0;}
     int initWorkers() override;
     void run() override;
     Radapter::WorkersList getWorkers() const;

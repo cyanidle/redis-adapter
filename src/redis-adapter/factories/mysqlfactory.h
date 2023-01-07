@@ -16,7 +16,6 @@ public:
     QList<MySqlConnector*> getWorkers() const;
     MySqlConnector* getWorker(const QString &name);
     int initWorkers() override;
-    int initSettings() override {return 0;}
     void run() override;
 signals:
 

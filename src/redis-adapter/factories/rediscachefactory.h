@@ -21,7 +21,6 @@ public:
 
     Radapter::WorkersList getWorkers() const;
     void run() override;
-    int initSettings() override {return 0;}
     int initWorkers() override;
 
 signals:

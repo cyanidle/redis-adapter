@@ -3,14 +3,14 @@
 
 #include <QObject>
 #include <QThread>
-#include "radapter-broker/singletonbase.h"
+#include "radapter-broker/workerbase.h"
 #include "redis-adapter/settings/settings.h"
 #include "lib/modbus/modbusdevicesgate.h"
 #include "lib/modbus/modbusfactory.h"
 #include "jsondict/jsondict.hpp"
 #include "jsondict/jsondict.hpp"
 
-class RADAPTER_SHARED_SRC ModbusConnector : public Radapter::SingletonBase
+class RADAPTER_SHARED_SRC ModbusConnector : public Radapter::WorkerBase
 {
     Q_OBJECT
 public:
@@ -21,8 +21,6 @@ public:
                      QThread *thread);
 
     Settings::ModbusConnectionSettings settings() const;
-    int initSettings() override {return 0;}
-    int init() override;
     void run() override;
 public slots:
     void onMsg(const Radapter::WorkerMsg &msg) override;

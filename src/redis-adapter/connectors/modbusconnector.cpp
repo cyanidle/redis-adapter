@@ -28,11 +28,6 @@ ModbusConnector *ModbusConnector::instance()
     return &prvInstance();
 }
 
-int ModbusConnector::init()
-{
-    return 0;
-}
-
 void ModbusConnector::writeJsonDone(const JsonDict &jsonDict)
 {
     auto command = prepareCommand(Radapter::WorkerMsg::ServiceAcknowledge, jsonDict.data());

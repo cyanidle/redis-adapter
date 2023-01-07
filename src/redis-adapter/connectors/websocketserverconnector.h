@@ -5,14 +5,14 @@
 #include <QThread>
 #include "jsondict/jsondict.hpp"
 #include "lib/websocket/websocketserver.h"
-#include "radapter-broker/singletonbase.h"
+#include "radapter-broker/workerbase.h"
 #include "redis-adapter/settings/settings.h"
 
 namespace Websocket {
 class RADAPTER_SHARED_SRC ServerConnector;
 }
 
-class Websocket::ServerConnector : public Radapter::SingletonBase
+class Websocket::ServerConnector : public Radapter::WorkerBase
 {
     Q_OBJECT
 public:
@@ -25,8 +25,6 @@ public:
 signals:
     void jsonPublished(const QVariant &nestedJson);
 public slots:
-    int initSettings() override {return 0;}
-    int init() override {return 0;}
     void run() override;
     void onMsg(const Radapter::WorkerMsg &msg) override;
 

@@ -14,7 +14,7 @@
 #include "radapter-broker/workerbasesettings.h"
 #include "radapter-broker/debugging/mockworkersettings.h"
 #include "radapter-broker/debugging/logginginterceptorsettings.h"
-#include <settings-parsing/serializerbase.h>
+#include <settings-parsing/serializerbase.hpp>
 #include <QJsonDocument>
 
 namespace Settings {

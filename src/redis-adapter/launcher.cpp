@@ -20,12 +20,9 @@
 
 using namespace Radapter;
 
-Launcher::Launcher(QList<Radapter::FactoryBase*> factories,
-                   QList<Radapter::SingletonBase*> singletons,
-                   QObject *parent) :
+Launcher::Launcher(QObject *parent) :
     QObject(parent),
-    m_singletons(singletons),
-    m_factories(factories),
+    m_factories(),
     m_workers(),
     m_sqlFactory(nullptr),
     m_filereader(new Settings::FileReader("conf/config.toml", this))
@@ -36,18 +33,6 @@ Launcher::Launcher(QList<Radapter::FactoryBase*> factories,
 
 void Launcher::addFactory(Radapter::FactoryBase* factory) {
     m_factories.append(factory);
-}
-
-void Launcher::addSingleton(Radapter::SingletonBase* singleton) {
-    if (m_singletons.contains(singleton)) {
-        reError() << "Attempt to add same Singleton for class: " <<
-            singleton->metaObject()->className();
-    }
-    if (singleton->thread() == QThread::currentThread()) {
-        reWarn() << "Singleton has same thread as launcher; Class: " <<
-            singleton->metaObject()->className();
-    }
-    m_singletons.append(singleton);
 }
 
 void Launcher::addWorker(WorkerBase* worker, QList<InterceptorBase*> interceptors)
@@ -142,7 +127,7 @@ int Launcher::prvInit()
                               mbRegisters,
                               modbusConnSettings.worker,
                               new QThread(this));
-        addSingleton(ModbusConnector::instance());
+        addWorker(ModbusConnector::instance());
         QList<InterceptorBase*> mbInterceptors{};
         if (!modbusConnSettings.filters.isEmpty()) {
             mbInterceptors.append(new ProducerFilter(modbusConnSettings.filters));
@@ -173,7 +158,7 @@ int Launcher::prvInit()
         auto websocketServer = Serializer::fromQMap<Settings::WebsocketServerInfo>(websocketServerConf);
         if (websocketServer.isValid()) {
             Websocket::ServerConnector::init(websocketServer, websocketServer.worker, new QThread(this));
-            addSingleton(Websocket::ServerConnector::instance());
+            addWorker(Websocket::ServerConnector::instance());
             Radapter::Broker::instance()->registerProxy(Websocket::ServerConnector::instance()->createProxy());
         }
     }
@@ -188,36 +173,15 @@ int Launcher::prvInit()
 }
 
 
-int Launcher::initAll()
+int Launcher::init()
 {
+    qSetMessagePattern(CUSTOM_MESSAGE_PATTERN);
     int status = 0;
-    status = initSettings();
-    if (status != 0) {
-        return status;
-    }
     status = initWorkers();
     if (status != 0) {
         return status;
     }
-    return 0;
-}
-
-int Launcher::initSettings()
-{
-    int status = 0;
-    for (auto &factory : m_factories) {
-        status = factory->initSettings();
-        if (status != 0) {
-            return status;
-        }
-    }
-    for (auto &singleton: m_singletons) {
-        status = singleton->initSettings();
-        if (status != 0) {
-            return status;
-        }
-    }
-    return 0;
+    return status;
 }
 
 int Launcher::initWorkers()
@@ -225,12 +189,6 @@ int Launcher::initWorkers()
     int status = 0;
     for (auto &factory : m_factories) {
         status = factory->initWorkers();
-        if (status != 0) {
-            return status;
-        }
-    }
-    for (auto &singleton: m_singletons) {
-        status = singleton->init();
         if (status != 0) {
             return status;
         }
@@ -244,12 +202,8 @@ int Launcher::initWorkers()
 void Launcher::run()
 {
     Broker::instance()->connectProducersAndConsumers();
-    qSetMessagePattern(CUSTOM_MESSAGE_PATTERN);
     for (auto &factory : m_factories) {
         factory->run();
-    }
-    for (auto &singleton : m_singletons) {
-        singleton->run();
     }
     for (auto worker : m_workers.keys()) {
         worker->run();

@@ -19,7 +19,6 @@ public:
     explicit ClientFactory(const QList<Settings::WebsocketClientInfo> &info,
                                     QObject *parent = nullptr);
     int initWorkers() override;
-    int initSettings() override {return 0;}
     void run() override;
     Radapter::WorkersList getWorkers() const;
 signals:

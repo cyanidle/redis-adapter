@@ -7,7 +7,7 @@ using namespace Websocket;
 ServerConnector::ServerConnector(const Settings::WebsocketServerInfo &serverInfo,
                                  const Radapter::WorkerSettings &settings,
                                  QThread *thread)
-    : SingletonBase(settings, thread),
+    : WorkerBase(settings, thread),
       m_info(serverInfo)
 {
     m_thread = new QThread();
