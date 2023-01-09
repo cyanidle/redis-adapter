@@ -92,7 +92,7 @@ private:
                           static void privateCallbackStatic(redisAsyncContext *context, void *replyPtr, void *data);
 
     static void pingCallback(redisAsyncContext *context, void *replyPtr, void *sender);
-    void selectCallback(redisAsyncContext *context, redisReply *replyPtr);
+    void selectCallback(redisReply *replyPtr);
     static void connectCallback(const redisAsyncContext *context, int status);
     static void disconnectCallback(const redisAsyncContext *context, int status);
 

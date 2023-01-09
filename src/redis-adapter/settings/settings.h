@@ -19,7 +19,7 @@
 
 namespace Settings {
 
-    struct RADAPTER_SHARED_SRC ServerInfo : public Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC ServerInfo : public Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_FIELD(QString, server_host);
@@ -36,7 +36,7 @@ namespace Settings {
         }
     };
 
-    struct RADAPTER_SHARED_SRC TcpDevice : public Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC TcpDevice : public Serializer::SerializableGadget {
         typedef QMap<QString, TcpDevice> Map;
         static Map cacheMap;
         Q_GADGET
@@ -68,7 +68,7 @@ namespace Settings {
     };
 
 
-    struct RADAPTER_SHARED_SRC Filters  : Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC Filters  : Serializer::SerializableGadget {
         typedef QMap<QString /*filterName*/, double> Table;
         typedef QMap<QString /*filterName*/, Table> TableMap;
         static TableMap tableMap;
@@ -84,7 +84,7 @@ namespace Settings {
 
 
     
-    struct RADAPTER_SHARED_SRC SqlClientInfo  : Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC SqlClientInfo  : Serializer::SerializableGadget {
         typedef QMap<QString, SqlClientInfo> Map;
         static Map cacheMap;
         Q_GADGET
@@ -119,7 +119,7 @@ namespace Settings {
         }
     };
 
-    struct RADAPTER_SHARED_SRC SqlKeyVaultInfo : Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC SqlKeyVaultInfo : Serializer::SerializableGadget {
         typedef QMap<QString, SqlKeyVaultInfo> Map;
         static Map cacheMap;
         Q_GADGET
@@ -139,7 +139,7 @@ namespace Settings {
         }
     };
 
-    struct RADAPTER_SHARED_SRC SqlStorageInfo : Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC SqlStorageInfo : Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_NEST(Radapter::WorkerSettings, worker)
@@ -174,7 +174,7 @@ namespace Settings {
         static LoggingInfo parse(const QVariantMap &src);
     };
 
-    struct RADAPTER_SHARED_SRC LocalizationInfo : Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC LocalizationInfo : Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_CUSTOM(QTimeZone, time_zone, initTimeZone, readTimeZone);
@@ -201,7 +201,7 @@ namespace Settings {
         }
     };
 
-    struct RADAPTER_SHARED_SRC WebsocketServerInfo : Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC WebsocketServerInfo : Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_FIELD(quint16, port)
@@ -222,7 +222,7 @@ namespace Settings {
         }
     };
 
-    struct RADAPTER_SHARED_SRC WebsocketClientInfo : Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC WebsocketClientInfo : Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_NEST(Radapter::WorkerSettings, worker)

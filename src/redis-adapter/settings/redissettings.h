@@ -26,7 +26,7 @@ namespace Settings {
         }
     };
 
-    struct RADAPTER_SHARED_SRC RedisKeyEventSubscriber : Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC RedisKeyEventSubscriber : Serializer::SerializableGadget {
         typedef QMap<QString, RedisKeyEventSubscriber> Map;
         static Map cacheMap;
         Q_GADGET
@@ -74,7 +74,7 @@ namespace Settings {
         RedisStartFromLastUnread
      };
 
-    struct RADAPTER_SHARED_SRC RedisStream : Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC RedisStream : Serializer::SerializableGadget {
         typedef QMap<QString, RedisStream> Map;
         static Map cacheMap;
         Q_GADGET
@@ -175,7 +175,7 @@ namespace Settings {
             return !(*this == src);
         }
     };
-    struct RADAPTER_SHARED_SRC RedisCache : Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC RedisCache : Serializer::SerializableGadget {
         typedef QMap<QString, RedisCache> Map;
         static Map cacheMap;
         enum Mode {

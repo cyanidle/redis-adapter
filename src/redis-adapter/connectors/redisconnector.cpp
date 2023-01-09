@@ -214,13 +214,13 @@ void Connector::pingCallback(redisAsyncContext *context, void *replyPtr, void *s
     }
 }
 
-void Connector::selectCallback(redisAsyncContext *context, redisReply *reply)
+void Connector::selectCallback(redisReply *reply)
 {
-    if (isNullReply(context, reply) || isEmptyReply(context, reply))
+    if (isNullReply(reply) || isEmptyReply(reply))
     {
         return;
     }
-    reDebug() << metaInfo(context).c_str() << "select status:" << toString(reply);
+    reDebug() << metaInfo().c_str() << "select status:" << toString(reply);
 }
 
 void Connector::connectCallback(const redisAsyncContext *context, int status)
@@ -313,7 +313,7 @@ void Connector::setConnected(bool state)
         if (m_isConnected) {
             reInfo() << metaInfo().c_str() << "Connection successful.";
             emit connected();
-            m_commandTimeoutsCounter = 0;
+            resetErrorCounter();
         } else {
             reError() << metaInfo().c_str() << "Lost connection.";
             emit disconnected();

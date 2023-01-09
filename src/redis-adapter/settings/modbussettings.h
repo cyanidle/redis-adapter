@@ -6,7 +6,7 @@
 
 namespace Settings {
 
-    struct RADAPTER_SHARED_SRC SerialDevice : public Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC SerialDevice : public Serializer::SerializableGadget {
         typedef QMap<QString, SerialDevice> Map;
         static Map cacheMap;
         Q_GADGET
@@ -64,7 +64,7 @@ namespace Settings {
         Unknown
     };
 
-    struct RADAPTER_SHARED_SRC ModbusQuery : Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC ModbusQuery : Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_CUSTOM(QModbusDataUnit::RegisterType, type, initType, readType)
@@ -112,7 +112,7 @@ namespace Settings {
         }
     };
 
-    struct RADAPTER_SHARED_SRC ModbusConnectionSource : Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC ModbusConnectionSource : Serializer::SerializableGadget {
         typedef QMap<QString, ModbusConnectionSource> Map;
         static Map cacheMap;
         Q_GADGET
@@ -155,7 +155,7 @@ namespace Settings {
         }
     };
 
-    struct RADAPTER_SHARED_SRC ModbusSlaveInfo : Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC ModbusSlaveInfo : Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_FIELD(quint8, address)
@@ -200,7 +200,7 @@ namespace Settings {
         }
     };
 
-    struct RADAPTER_SHARED_SRC ModbusChannelSettings : Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC ModbusChannelSettings : Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_FIELD(QString, name)
@@ -222,7 +222,7 @@ namespace Settings {
         }
     };
 
-    struct RADAPTER_SHARED_SRC PackingMode : Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC PackingMode : Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_CUSTOM(QDataStream::ByteOrder, byte_order, initByteOrder, readByteOrder, QDataStream::BigEndian)
@@ -272,7 +272,7 @@ namespace Settings {
         }
     };
 
-    struct RADAPTER_SHARED_SRC RegisterInfo : Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC RegisterInfo : Serializer::SerializableGadget {
         typedef QMap<QString, QModbusDataUnit::RegisterType> tableMap;
         typedef QMap<QString, QMetaType::Type> typeMap;
         static typeMap stringToType() {
@@ -338,19 +338,19 @@ namespace Settings {
         static DeviceRegistersInfoMap parse(const QVariant &src);
     };
 
-    struct RADAPTER_SHARED_SRC ModbusTcpDevicesSettings : Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC ModbusTcpDevicesSettings : Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_CONTAINER_NEST_PTRS(QList, TcpDevice, devices);
     };
 
-    struct RADAPTER_SHARED_SRC ModbusRtuDevicesSettings : Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC ModbusRtuDevicesSettings : Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_CONTAINER_NEST_PTRS(QList, SerialDevice, devices);
     };
 
-    struct RADAPTER_SHARED_SRC ModbusConnectionSettings : Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC ModbusConnectionSettings : Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_CONTAINER_NEST(QList, ModbusChannelSettings, channels);
@@ -396,7 +396,7 @@ namespace Settings {
         }
     };
 
-    struct RADAPTER_SHARED_SRC ModbusDevice : Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC ModbusDevice : Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_NEST_PTR(TcpDevice, tcp, DEFAULT)
@@ -422,7 +422,7 @@ namespace Settings {
         }
     };
 
-    struct RADAPTER_SHARED_SRC ModbusSlaveWorker : Serializer::SerializerBase {
+    struct RADAPTER_SHARED_SRC ModbusSlaveWorker : Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_NEST(Radapter::WorkerSettings, worker)
