@@ -160,14 +160,14 @@ int Connector::runAsyncCommandImplementation(Callback callback, const QString &c
 template<typename User>
 void Connector::privateCallbackWithData(redisAsyncContext* ctx, void* reply, void* data) {
     auto args = static_cast<CallbackArgsWithData<User>*>(data);
-    (getSender<User>(ctx)->*(args->callback))(ctx, static_cast<redisReply*>(reply), args->data);
+    (getSender<User>(ctx)->*(args->callback))(static_cast<redisReply*>(reply), args->data);
     getSender<User>(ctx)->finishAsyncCommand();
     connDealloc(args);
 }
 template<typename User>
 void Connector::privateCallback(redisAsyncContext* ctx, void* reply, void* data) {
     auto args = static_cast<CallbackArgs<User>*>(data);
-    (getSender<User>(ctx)->*(args->callback))(ctx, static_cast<redisReply*>(reply));
+    (getSender<User>(ctx)->*(args->callback))(static_cast<redisReply*>(reply));
     getSender<User>(ctx)->finishAsyncCommand();
     connDealloc(args);
 }

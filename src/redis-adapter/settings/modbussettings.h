@@ -429,10 +429,10 @@ namespace Settings {
         SERIAL_NEST(ModbusDevice, device)
         SERIAL_FIELD(quint32, reconnect_timeout_ms, 5000)
         SERIAL_FIELD(quint16, slave_id)
-        SERIAL_CUSTOM(quint16, holding_registers, parseHolding, CUSTOM_NO_READ, DEFAULT)
-        SERIAL_CUSTOM(quint16, input_registers, parseInput, CUSTOM_NO_READ, DEFAULT)
-        SERIAL_CUSTOM(quint16, di, parseDi, CUSTOM_NO_READ, DEFAULT)
-        SERIAL_CUSTOM(quint16, coils, parseCoils, CUSTOM_NO_READ, DEFAULT)
+        SERIAL_CUSTOM(quint16, holding_registers, parseHolding, NO_READ, DEFAULT)
+        SERIAL_CUSTOM(quint16, input_registers, parseInput, NO_READ, DEFAULT)
+        SERIAL_CUSTOM(quint16, di, parseDi, NO_READ, DEFAULT)
+        SERIAL_CUSTOM(quint16, coils, parseCoils, NO_READ, DEFAULT)
         DeviceRegistersInfo registers = {};
         SERIAL_POST_INIT(postInit)
         void postInit() const;

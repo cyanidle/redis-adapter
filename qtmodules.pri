@@ -1,4 +1,7 @@
-file (STRINGS ".qtmodules" QTMODULES)
-message("Used modules: $$QTMODULES")
 QT -= gui
-QT += QTMODULES
+QT += core \
+    serialbus \
+    serialport \
+    sql \
+    websockets \
+    network

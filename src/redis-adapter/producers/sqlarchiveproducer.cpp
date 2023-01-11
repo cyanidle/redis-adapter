@@ -26,7 +26,7 @@ void ArchiveProducer::run()
 
 void ArchiveProducer::onMsg(const Radapter::WorkerMsg &msg)
 {
-    saveRedisStreamEntries(msg.data(), msg);
+    saveRedisStreamEntries(msg , msg);
 }
 
 void ArchiveProducer::saveFinished(bool isOk, const Radapter::WorkerMsg &msg)

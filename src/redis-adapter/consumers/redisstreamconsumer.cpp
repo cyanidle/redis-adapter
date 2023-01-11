@@ -111,7 +111,7 @@ void StreamConsumer::acknowledge(const JsonDict &jsonEntries)
         return;
     }
     m_readGroupTimer->stop();
-    auto idList = jsonEntries.keys();
+    auto idList = jsonEntries.keysDeep();
     auto ackCommand = RedisQueryFormatter::toReadStreamAckCommand(m_streamKey, groupName(), idList);
     runAsyncCommand(&StreamConsumer::ackCallback, ackCommand);
 }

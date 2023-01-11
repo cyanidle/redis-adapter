@@ -63,11 +63,11 @@ void ServerConnector::onMsg(const Radapter::WorkerMsg &msg)
         return;
     }
     auto nestedJson = msg.json();
-    if (StreamEntriesMapFormatter::isValid(msg.data())) {
-        nestedJson = StreamEntriesMapFormatter(msg.data()).joinToLatest();
+    if (StreamEntriesMapFormatter::isValid(msg)) {
+        nestedJson = StreamEntriesMapFormatter(msg).joinToLatest();
     }
     nestedJson = nestedJson.nest();
-    emit jsonPublished(nestedJson.data());
+    emit jsonPublished({nestedJson});
 }
 
 void ServerConnector::onRequestReceived(const QVariant &nestedJson)

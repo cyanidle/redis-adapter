@@ -30,7 +30,7 @@ void ProducerFilter::onMsgFromWorker(const Radapter::WorkerMsg &msg)
         return;
     }
     if (m_strategy == StrategyByWildcard) {
-        addFiltersByWildcard(msg.data());
+        addFiltersByWildcard(msg );
     }
     filterStrictByName(msg);
     m_last.merge(msg);

@@ -76,7 +76,7 @@ QString RedisQueryFormatter::toGetIndexCommand(const QString &indexKey)
 QString RedisQueryFormatter::toUpdateIndexCommand(const QString &indexKey) const
 {
     auto command = QString{};
-    auto updatedKeys = flatten().keys();
+    auto updatedKeys = flatten().keysDeep();
     if (!updatedKeys.isEmpty()) {
         command = QString("SADD %1 ").arg(indexKey);
         command += updatedKeys.join(" ");

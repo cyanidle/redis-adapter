@@ -50,7 +50,7 @@ QDateTime RedisStreamEntryFormatter::eventTime() const
 
 QStringList RedisStreamEntryFormatter::entryKeys() const
 {
-    auto keysList = eventDataDict().keys();
+    auto keysList = eventDataDict().keysDeep();
     return QStringList(keysList);
 }
 

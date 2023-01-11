@@ -1,3 +1,3 @@
 
-INCLUDEPATH += $$PWD/..
+INCLUDEPATH += $$PWD/
 include($$PWD/lib/lib-headers.pri)

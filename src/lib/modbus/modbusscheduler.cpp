@@ -1,5 +1,4 @@
 #include "modbusscheduler.h"
-#include "logging.h"
 
 using namespace Modbus;
 

@@ -11,7 +11,7 @@ ModbusConnector::ModbusConnector(const Settings::ModbusConnectionSettings &conne
                                  const Settings::DeviceRegistersInfoMap &registersInfo,
                                  const Radapter::WorkerSettings &settings,
                                  QThread *thread)
-    : SingletonBase(settings, thread),
+    : Radapter::WorkerBase(settings, thread),
       m_lastWriteId{},
       m_lastWriteRequest{}
 {
@@ -30,7 +30,7 @@ ModbusConnector *ModbusConnector::instance()
 
 void ModbusConnector::writeJsonDone(const JsonDict &jsonDict)
 {
-    auto command = prepareCommand(Radapter::WorkerMsg::ServiceAcknowledge, jsonDict.data());
+    auto command = prepareCommand(Radapter::WorkerMsg::ServiceAcknowledge, {jsonDict});
     command.receivers() = producers();
     emit sendMsg(command);
 }
@@ -125,7 +125,7 @@ void ModbusConnector::run()
 
 void ModbusConnector::onMsg(const Radapter::WorkerMsg &msg)
 {
-    auto jsonDict = msg.data();
+    auto jsonDict = msg ;
     if (jsonDict.isEmpty()) {
         return;
     }
@@ -136,7 +136,7 @@ void ModbusConnector::onMsg(const Radapter::WorkerMsg &msg)
     auto jsonUnit = StreamEntriesMapFormatter(jsonDict).joinToLatest();
     auto lastMessageId = jsonDict.lastKey();
     if (lastMessageId == lastWriteId()) {
-        auto jsonKeys = QStringList{ jsonUnit.keys() };
+        auto jsonKeys = QStringList{ jsonUnit.keysDeep() };
         m_lastWriteRequest = jsonDict;
         approvalRequested(jsonKeys);
     } else {
@@ -173,7 +173,7 @@ void ModbusConnector::onApprovalReceived(const JsonDict &jsonDict)
         return;
     }
     auto lastRequest = StreamEntriesMapFormatter(m_lastWriteRequest).joinToLatest();
-    if (lastRequest.contains(jsonDict.data())) {
+    if (lastRequest.contains(jsonDict )) {
         emitWriteDone(m_lastWriteRequest);
     }
 }
@@ -186,7 +186,7 @@ void ModbusConnector::writeJson(const JsonDict &jsonUnit, bool *isAbleToWrite)
 
     auto modbusUnit = ModbusFormatter(jsonUnit).toModbusUnit();
     if (!modbusUnit.isEmpty()) {
-        m_gate->writeJsonToModbusDevice(modbusUnit.data(), isAbleToWrite);
+        m_gate->writeJsonToModbusDevice(modbusUnit.toVariant(), isAbleToWrite);
     }
 }
 

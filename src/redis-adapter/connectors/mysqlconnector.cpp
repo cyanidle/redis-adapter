@@ -42,7 +42,7 @@ QVariantList MySqlConnector::doRead(const QString &tableName, const QVariantList
 bool MySqlConnector::doWrite(const QString &tableName, const JsonDict &jsonRecord, const Radapter::WorkerMsg &msg)
 {
     auto jsonQuery = QVariantList{};
-    jsonQuery.append(jsonRecord.data());
+    jsonQuery.append(jsonRecord.toVariant());
     bool isOk = doWriteList(tableName, jsonQuery, msg);
     return isOk;
 }

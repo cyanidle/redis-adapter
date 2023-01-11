@@ -17,6 +17,7 @@
 #include "redis-adapter/connectors/modbusconnector.h"
 #include "radapter-broker/debugging/logginginterceptor.h"
 #include "redis-adapter/workers/modbusslaveworker.h"
+#include "radapter-broker/metatypes.h"
 
 using namespace Radapter;
 
@@ -27,6 +28,7 @@ Launcher::Launcher(QObject *parent) :
     m_sqlFactory(nullptr),
     m_filereader(new Settings::FileReader("conf/config.toml", this))
 {
+    Metatypes::registerAll();
     m_filereader->initParsingMap();
     prvInit();
 }

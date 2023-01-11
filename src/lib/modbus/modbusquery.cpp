@@ -1,5 +1,4 @@
 #include "modbusquery.h"
-#include "logging.h"
 
 #define MODBUS_POLL_TIME_MS   500
 #define MODBUS_EXEC_DELAY_MS  50

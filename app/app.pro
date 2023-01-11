@@ -8,7 +8,7 @@ CONFIG -= app_bundle
 
 SOURCES += main.cpp
 
-include($$PWD/../src/src-headers.pri)
+include($$PWD/../src/redis-adapter-headers.pri)
 
 LIBS += -L..
 CONFIG(debug, debug|release){

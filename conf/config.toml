@@ -16,7 +16,7 @@ server_host = "127.0.0.1"
 server_port = 7000
 
 [[redis.streams]]
-name = "stationlog"
+worker.name = "stationlog"
 mode = "producer"
 target_server = "local.1"
 stream_key = "station:{station_id}"

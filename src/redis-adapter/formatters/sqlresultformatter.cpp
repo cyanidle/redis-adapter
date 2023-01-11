@@ -22,7 +22,7 @@ QVariantList SqlResultFormatter::toJsonList() const
     auto jsonRecordsList = QVariantList{};
     for (auto &sqlRecord : m_sqlRecords) {
         auto jsonRecord = toJsonRecord(sqlRecord);
-        jsonRecordsList.append(jsonRecord.data());
+        jsonRecordsList.append(jsonRecord.toVariant());
     }
     return jsonRecordsList;
 }

@@ -25,7 +25,7 @@ gcc {
     QMAKE_CXXFLAGS += -fpic
 }
 
-include($$PWD/src/redis-adapter/redis-adapter.pri)
+include($$PWD/redis-adapter.pri)
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

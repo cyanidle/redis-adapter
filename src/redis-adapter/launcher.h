@@ -3,7 +3,7 @@
 
 #include "factories/mysqlfactory.h"
 #include "settings-parsing/filereader.h"
-#include "settings-parsing/serializerbase.hpp"
+#include "settings-parsing/serializer.hpp"
 #include <QObject>
 #include <radapter-broker/factorybase.h>
 

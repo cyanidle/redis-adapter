@@ -57,7 +57,7 @@ void StreamProducer::onMsg(const Radapter::WorkerMsg &msg)
     if (msg.isEmpty()) {
         return;
     }
-    auto json = msg.data();
+    auto json = msg ;
     auto command = RedisQueryFormatter(json).toAddStreamCommand(m_streamKey, streamSize());
     if (!command.isEmpty()) {
         auto id = enqueueMsg(msg);

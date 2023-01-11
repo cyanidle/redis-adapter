@@ -24,7 +24,7 @@ MySql::QueryRecord SqlQueryFieldsFormatter::toSqlRecord() const
          jsonField != m_jsonQueryFields.end();
          jsonField++)
     {
-        auto sqlField = QueryField{ jsonField.key(), jsonField.value() };
+        auto sqlField = QueryField{ jsonField.key().join(":"), jsonField.value() };
         sqlRecord.append(sqlField);
     }
     return sqlRecord;

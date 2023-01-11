@@ -24,8 +24,8 @@ QVariantList StreamEntriesMapFormatter::toEntryList()
          streamItem != m_streamEntriesMap.end();
          streamItem++)
     {
-        auto streamEntry = JsonDict{ QVariantMap{ { streamItem.key(), streamItem.value() } } };
-        entryList.append(streamEntry.data());
+        auto streamEntry = JsonDict{ { streamItem.key().join(":"), streamItem.value() } } ;
+        entryList.append(streamEntry.toVariant());
     }
     return entryList;
 }
