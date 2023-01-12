@@ -7,7 +7,6 @@ CONFIG += c++11 console link_prl
 CONFIG -= app_bundle
 
 SOURCES += main.cpp
-
 include($$PWD/../src/redis-adapter-headers.pri)
 
 LIBS += -L..

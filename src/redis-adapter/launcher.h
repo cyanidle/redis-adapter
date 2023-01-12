@@ -6,6 +6,7 @@
 #include "settings-parsing/serializer.hpp"
 #include <QObject>
 #include <radapter-broker/factorybase.h>
+#include "bindings/bindable.h"
 
 namespace Radapter {
 
