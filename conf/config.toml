@@ -17,6 +17,7 @@ server_port = 7000
 
 [[redis.streams]]
 worker.name = "stationlog"
+log_jsons.filepath = "logs/test.json"
 mode = "producer"
 target_server = "local.1"
 stream_key = "station:{station_id}"

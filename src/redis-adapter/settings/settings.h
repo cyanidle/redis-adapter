@@ -142,7 +142,7 @@ namespace Settings {
     struct RADAPTER_SHARED_SRC SqlStorageInfo : Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
-        SERIAL_NEST(Radapter::WorkerSettings, worker)
+        SERIAL_FIELD(Radapter::WorkerSettings, worker)
         SERIAL_FIELD(QString, name)
         SERIAL_FIELD(QString, client_name)
         SERIAL_FIELD(QString, target_table)
@@ -206,7 +206,7 @@ namespace Settings {
         IS_SERIALIZABLE
         SERIAL_FIELD(quint16, port)
         SERIAL_FIELD(bool, debug, false)
-        SERIAL_NEST(Radapter::WorkerSettings, worker)
+        SERIAL_FIELD(Radapter::WorkerSettings, worker)
 
         bool isValid() const {
             return (port > 0u)
@@ -225,7 +225,7 @@ namespace Settings {
     struct RADAPTER_SHARED_SRC WebsocketClientInfo : Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
-        SERIAL_NEST(Radapter::WorkerSettings, worker)
+        SERIAL_FIELD(Radapter::WorkerSettings, worker)
         SERIAL_FIELD(QString, server_host, "localhost");
         SERIAL_FIELD(quint16, server_port, 0);
     };

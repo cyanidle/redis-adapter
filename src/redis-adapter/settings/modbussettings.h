@@ -160,7 +160,7 @@ namespace Settings {
         IS_SERIALIZABLE
         SERIAL_FIELD(quint8, address)
         SERIAL_CUSTOM(ModbusConnectionSource, source, initSource, readSource)
-        SERIAL_CONTAINER_NEST(QList, ModbusQuery, queries)
+         SERIAL_CONTAINER(QList, ModbusQuery, queries)
         SERIAL_CONTAINER(QList, QString, registers)
 
         bool initSource(const QVariant &src) {
@@ -206,7 +206,7 @@ namespace Settings {
         SERIAL_FIELD(QString, name)
         ModbusChannelType type = MbMaster;
         SERIAL_FIELD(quint8, slave_address, 0)
-        SERIAL_CONTAINER_NEST(QList, ModbusSlaveInfo, slaves, {})
+         SERIAL_CONTAINER(QList, ModbusSlaveInfo, slaves, {})
         QVariant readChannelType() const {
             return QVariant(type);
         }
@@ -290,7 +290,7 @@ namespace Settings {
         SERIAL_CUSTOM(QModbusDataUnit::RegisterType, table, initTable, readTable)
         SERIAL_FIELD(quint16, index)
         SERIAL_CUSTOM(QMetaType::Type, type, initType, readType, QMetaType::UShort)
-        SERIAL_NEST(PackingMode, endianess, DEFAULT)
+         SERIAL_FIELD(PackingMode, endianess, DEFAULT)
         SERIAL_FIELD(bool, is_persistent, false)
 
         bool isValid() const {
@@ -341,29 +341,29 @@ namespace Settings {
     struct RADAPTER_SHARED_SRC ModbusTcpDevicesSettings : Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
-        SERIAL_CONTAINER_NEST_PTRS(QList, TcpDevice, devices);
+         SERIAL_CONTAINER_PTRS(QList, TcpDevice, devices);
     };
 
     struct RADAPTER_SHARED_SRC ModbusRtuDevicesSettings : Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
-        SERIAL_CONTAINER_NEST_PTRS(QList, SerialDevice, devices);
+         SERIAL_CONTAINER_PTRS(QList, SerialDevice, devices);
     };
 
     struct RADAPTER_SHARED_SRC ModbusConnectionSettings : Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
-        SERIAL_CONTAINER_NEST(QList, ModbusChannelSettings, channels);
+         SERIAL_CONTAINER(QList, ModbusChannelSettings, channels);
         SerialDevice::Map serial_devices;
         TcpDevice::Map tcp_devices;
         SERIAL_FIELD(quint16, poll_rate, 500)
         SERIAL_FIELD(quint16, response_time, 150)
         SERIAL_FIELD(quint16, retries, 3)
         SERIAL_FIELD(bool, debug, false)
-        SERIAL_NEST_PTR(Radapter::LoggingInterceptorSettings, log_jsons, DEFAULT)
-        SERIAL_NEST(Radapter::WorkerSettings, worker)
-        SERIAL_NEST(ModbusTcpDevicesSettings, tcp, DEFAULT)
-        SERIAL_NEST(ModbusRtuDevicesSettings, rtu, DEFAULT)
+         SERIAL_FIELD_PTR(Radapter::LoggingInterceptorSettings, log_jsons, DEFAULT)
+         SERIAL_FIELD(Radapter::WorkerSettings, worker)
+         SERIAL_FIELD(ModbusTcpDevicesSettings, tcp, DEFAULT)
+         SERIAL_FIELD(ModbusRtuDevicesSettings, rtu, DEFAULT)
         SERIAL_FIELD(QString, filter_name, DEFAULT)
         Filters::Table filters;
 
@@ -399,8 +399,8 @@ namespace Settings {
     struct RADAPTER_SHARED_SRC ModbusDevice : Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
-        SERIAL_NEST_PTR(TcpDevice, tcp, DEFAULT)
-        SERIAL_NEST_PTR(SerialDevice, rtu, DEFAULT)
+         SERIAL_FIELD_PTR(TcpDevice, tcp, DEFAULT)
+         SERIAL_FIELD_PTR(SerialDevice, rtu, DEFAULT)
         ModbusConnectionType device_type = ModbusConnectionType::Unknown;
         SERIAL_POST_INIT(postInit)
         QString repr() const {
@@ -425,8 +425,8 @@ namespace Settings {
     struct RADAPTER_SHARED_SRC ModbusSlaveWorker : Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
-        SERIAL_NEST(Radapter::WorkerSettings, worker)
-        SERIAL_NEST(ModbusDevice, device)
+         SERIAL_FIELD(Radapter::WorkerSettings, worker)
+         SERIAL_FIELD(ModbusDevice, device)
         SERIAL_FIELD(quint32, reconnect_timeout_ms, 5000)
         SERIAL_FIELD(quint16, slave_id)
         SERIAL_CUSTOM(quint16, holding_registers, parseHolding, NO_READ, DEFAULT)

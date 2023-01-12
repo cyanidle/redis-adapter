@@ -8,10 +8,8 @@
 #include <radapter-broker/factorybase.h>
 
 namespace Radapter {
-class RADAPTER_SHARED_SRC Launcher;
-}
 
-class Radapter::Launcher : public QObject
+class RADAPTER_SHARED_SRC Launcher : public QObject
 {
     Q_OBJECT
 public:
@@ -39,5 +37,6 @@ private:
     MySqlFactory* m_sqlFactory;
     Settings::FileReader* m_filereader;
 };
+}
 
 #endif // LAUNCHER_H
