@@ -8,7 +8,7 @@ using namespace MySql;
 #define REOPEN_DELAY_MS         3000
 #define TEMPORARY_DB_CONNECTION "temp"
 
-MySqlClient::MySqlClient(const Settings::SqlClientInfo &clientInfo,
+MySql::Client::MySql::Client(const Settings::SqlClientInfo &clientInfo,
                          QObject *parent)
     : QObject(parent),
       m_isConnected(false)
@@ -22,13 +22,13 @@ MySqlClient::MySqlClient(const Settings::SqlClientInfo &clientInfo,
 
     m_reconnectTimer = new QTimer(this);
     m_reconnectTimer->setInterval(REOPEN_DELAY_MS);
-    m_reconnectTimer->callOnTimeout(this, &MySqlClient::doReopen);
+    m_reconnectTimer->callOnTimeout(this, &MySql::Client::doReopen);
 
-    connect(this, &MySqlClient::connected,
-            this, &MySqlClient::reopen);
+    connect(this, &MySql::Client::connected,
+            this, &MySql::Client::reopen);
 }
 
-MySqlClient::~MySqlClient()
+MySql::Client::~MySql::Client()
 {
     if (m_db.isOpen()) {
         m_db.close();
@@ -36,7 +36,7 @@ MySqlClient::~MySqlClient()
     m_db.removeDatabase(m_db.connectionName());
 }
 
-QMap<QString, QString> MySqlClient::usernameMap()
+QMap<QString, QString> MySql::Client::usernameMap()
 {
     auto usernameMap = QMap<QString, QString>{
         { "lotos", "mysql" },
@@ -45,7 +45,7 @@ QMap<QString, QString> MySqlClient::usernameMap()
     return usernameMap;
 }
 
-bool MySqlClient::open()
+bool MySql::Client::open()
 {
     auto opened = m_db.open();
     sqlDebug() << "MYSQL:" << QString("%1@%2").arg(m_db.databaseName(), m_db.hostName())
@@ -58,25 +58,25 @@ bool MySqlClient::open()
     return opened;
 }
 
-void MySqlClient::reopen()
+void MySql::Client::reopen()
 {
     if (!m_isConnected && !m_reconnectTimer->isActive()) {
         m_reconnectTimer->start();
     }
 }
 
-void MySqlClient::doReopen()
+void MySql::Client::doReopen()
 {
     m_db.close();
     open();
 }
 
-bool MySqlClient::isOpened() const
+bool MySql::Client::isOpened() const
 {
     return m_db.isOpen();
 }
 
-void MySqlClient::setConnected(bool state)
+void MySql::Client::setConnected(bool state)
 {
     if (m_isConnected != state) {
         m_isConnected = state;
@@ -89,7 +89,7 @@ void MySqlClient::setConnected(bool state)
     }
 }
 
-bool MySqlClient::doSelectQuery(const QString &tableName, QueryRecordList &recordList, const QString &conditions)
+bool MySql::Client::doSelectQuery(const QString &tableName, QueryRecordList &recordList, const QString &conditions)
 {
     auto header = recordList.takeFirst();
     auto queryString = createSelectString(m_db.databaseName(), tableName, header, conditions);
@@ -106,7 +106,7 @@ bool MySqlClient::doSelectQuery(const QString &tableName, QueryRecordList &recor
     return true;
 }
 
-bool MySqlClient::doUpdateQuery(const QString &tableName, const QueryRecord &updateRecord, const QString &conditions)
+bool MySql::Client::doUpdateQuery(const QString &tableName, const QueryRecord &updateRecord, const QString &conditions)
 {
     auto queryString = QString("UPDATE `%1`.`%2` SET ").arg(m_db.databaseName(), tableName);
     auto separator = QString(", ");
@@ -121,7 +121,7 @@ bool MySqlClient::doUpdateQuery(const QString &tableName, const QueryRecord &upd
     return isOk;
 }
 
-bool MySqlClient::doInsertQuery(const QString &tableName, const QueryRecord &insertRecord, bool updateOnDuplicate)
+bool MySql::Client::doInsertQuery(const QString &tableName, const QueryRecord &insertRecord, bool updateOnDuplicate)
 {
     auto queryString = QString("INSERT INTO `%1`.`%2` (").arg(m_db.databaseName(), tableName);
     auto separator = QString(", ");
@@ -151,7 +151,7 @@ bool MySqlClient::doInsertQuery(const QString &tableName, const QueryRecord &ins
     return isOk;
 }
 
-bool MySqlClient::doDeleteQuery(const QString &tableName, const QueryRecord &deleteRecord)
+bool MySql::Client::doDeleteQuery(const QString &tableName, const QueryRecord &deleteRecord)
 {
     auto queryString = QString("DELETE FROM `%1`.`%2` WHERE ")
             .arg(m_db.databaseName(), tableName);
@@ -166,7 +166,7 @@ bool MySqlClient::doDeleteQuery(const QString &tableName, const QueryRecord &del
     return isOk;
 }
 
-QString MySqlClient::createSelectString(const QString &dbName, const QString &tableName, const MySql::QueryRecord &header, const QString &conditions)
+QString MySql::Client::createSelectString(const QString &dbName, const QString &tableName, const MySql::QueryRecord &header, const QString &conditions)
 {
     auto queryString = QString("SELECT ");
     auto separator = QString(", ");
@@ -181,7 +181,7 @@ QString MySqlClient::createSelectString(const QString &dbName, const QString &ta
     return queryString;
 }
 
-RecordValuesMap MySqlClient::readResultRecords(QSqlQuery &finishedQuery)
+RecordValuesMap MySql::Client::readResultRecords(QSqlQuery &finishedQuery)
 {
     auto recordsMap = RecordValuesMap{};
     while (finishedQuery.next()) {
@@ -198,7 +198,7 @@ RecordValuesMap MySqlClient::readResultRecords(QSqlQuery &finishedQuery)
     return recordsMap;
 }
 
-RecordValuesMap MySqlClient::execSelectQuery(const QString &query, bool &isOk)
+RecordValuesMap MySql::Client::execSelectQuery(const QString &query, bool &isOk)
 {
     sqlDebug() << query;
     auto sqlQuery = QSqlQuery(query, m_db);
@@ -224,7 +224,7 @@ RecordValuesMap MySqlClient::execSelectQuery(const QString &query, bool &isOk)
     return recordsMap;
 }
 
-bool MySqlClient::execQuery(const QString &query)
+bool MySql::Client::execQuery(const QString &query)
 {
     sqlDebug() << query;
     auto sqlQuery = QSqlQuery(m_db);
@@ -242,7 +242,7 @@ bool MySqlClient::execQuery(const QString &query)
     return isOk;
 }
 
-QueryRecordList MySqlClient::makeRecordList(const QueryRecord &fieldNames, const RecordValuesMap valuesMap)
+QueryRecordList MySql::Client::makeRecordList(const QueryRecord &fieldNames, const RecordValuesMap valuesMap)
 {
     auto recordList = QueryRecordList{};
     auto skipIdColumn = fieldNames.count() != valuesMap.first().count();
@@ -259,7 +259,7 @@ QueryRecordList MySqlClient::makeRecordList(const QueryRecord &fieldNames, const
     return recordList;
 }
 
-QueryField MySqlClient::getQueryField(const QueryRecord &record, const QString &name)
+QueryField MySql::Client::getQueryField(const QueryRecord &record, const QString &name)
 {
     for (auto field : record) {
         if (field.name == name) {
@@ -269,7 +269,7 @@ QueryField MySqlClient::getQueryField(const QueryRecord &record, const QString &
     return QueryField{};
 }
 
-bool MySqlClient::selectAtOnce(const Settings::SqlClientInfo &clientInfo, const QString &tableName, MySql::QueryRecordList &recordList, const QString &conditions)
+bool MySql::Client::selectAtOnce(const Settings::SqlClientInfo &clientInfo, const QString &tableName, MySql::QueryRecordList &recordList, const QString &conditions)
 {
     bool isOk = false;
     {

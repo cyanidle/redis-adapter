@@ -6,63 +6,35 @@
 #include "redis-adapter/settings/settings.h"
 
 namespace MySql {
-    struct RADAPTER_SHARED_SRC QueryField {
-        QString name;
-        QVariant value;
-        bool isFunction;
+    struct RADAPTER_SHARED_SRC QueryField : Serializer::SerializableGadget{
+        Q_GADGET
+        IS_SERIALIZABLE
+        SERIAL_FIELD(QString, name, DEFAULT)
+        SERIAL_FIELD(QVariant, value, DEFAULT)
+        SERIAL_FIELD(bool, isFunction, false)
 
-        QueryField(const QString &fieldName, const QVariant &fieldValue, const bool isCommand = false) {
-            name = fieldName;
-            value = fieldValue;
-            isFunction = isCommand;
-        }
-        QueryField() : QueryField(QString{}, QVariant{}) {}
-
-        bool isValid() {
-            return !name.isEmpty() && value.isValid();
-        }
-
-        QMetaType::Type type() const {
-            return static_cast<QMetaType::Type>(value.type());
-        }
-
-        QString toString() const {
-            switch (type()) {
-            case QMetaType::QDateTime:
-                if (value.isNull()) {
-                    return QString("NULL");
-                } else {
-                    return value.toDateTime().toString("''yyyy-MM-dd hh:mm:ss''");
-                }
-            case QMetaType::QString:
-                if (isFunction) {
-                    return value.toString();
-                }
-                return QString("'%1'").arg(value.toString());
-            default:
-                return value.toString();
-            }
-        }
-
-        bool operator==(const QueryField &other) {
-            return this->name == other.name
-                    && this->value == other.value
-                    && this->isFunction == other.isFunction;
-        }
+        QueryField(const QString &fieldName, const QVariant &fieldValue, const bool isCommand = false);
+        QueryField();
+        bool isValid();
+        QMetaType::Type type() const;
+        QString toString() const;
+        bool operator==(const QueryField &other);
     };
+
+
     typedef QList<QueryField> QueryRecord;
     typedef QList<QueryRecord> QueryRecordList;
     typedef QList<QVariantList> RecordValuesMap;
-}
 
-class RADAPTER_SHARED_SRC MySqlClient : public QObject
-{
-    Q_OBJECT
-public:
 
-    explicit MySqlClient(const Settings::SqlClientInfo &clientInfo,
+    class RADAPTER_SHARED_SRC Client : public QObject
+    {
+        Q_OBJECT
+    public:
+
+    explicit Client(const Settings::SqlClientInfo &clientInfo,
                          QObject *parent = nullptr);
-    ~MySqlClient() override;
+    ~Client() override;
 
     bool open();
     bool isOpened() const;
@@ -106,6 +78,52 @@ private:
     bool m_isConnected;
 };
 
+
+
+
+
+
+inline QueryField::QueryField(const QString &fieldName, const QVariant &fieldValue, const bool isCommand) :
+    name(fieldName),
+    value(fieldValue),
+    isFunction(isCommand)
+{}
+
+inline QueryField::QueryField() : QueryField(QString{}, QVariant{}) {}
+
+inline bool QueryField::isValid() {
+    return !name.isEmpty() && value.isValid();
+}
+
+inline QMetaType::Type QueryField::type() const {
+    return static_cast<QMetaType::Type>(value.type());
+}
+
+inline QString QueryField::toString() const {
+    switch (type()) {
+    case QMetaType::QDateTime:
+        if (value.isNull()) {
+            return QString("NULL");
+        } else {
+            return value.toDateTime().toString("''yyyy-MM-dd hh:mm:ss''");
+        }
+    case QMetaType::QString:
+        if (isFunction) {
+            return value.toString();
+        }
+        return QString("'%1'").arg(value.toString());
+    default:
+        return value.toString();
+    }
+}
+
+inline bool QueryField::operator==(const QueryField &other) {
+    return this->name == other.name
+           && this->value == other.value
+           && this->isFunction == other.isFunction;
+}
+}
 Q_DECLARE_METATYPE(MySql::QueryField);
+Q_DECLARE_TYPEINFO(MySql::QueryField, Q_MOVABLE_TYPE);
 
 #endif // MYSQLCLIENT_H

@@ -15,8 +15,8 @@ void MySqlConnector::run()
         return;
     }
 
-    m_client = new MySqlClient(m_clientInfo, this);
-    connect(m_client, &MySqlClient::connected, this, &MySqlConnector::connectedChanged);
+    m_client = new MySql::Client(m_clientInfo, this);
+    connect(m_client, &MySql::Client::connected, this, &MySqlConnector::connectedChanged);
     m_client->open();
 }
 

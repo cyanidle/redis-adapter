@@ -27,7 +27,7 @@ public slots:
 
 private:
     Settings::SqlClientInfo m_clientInfo;
-    MySqlClient* m_client;
+    MySql::Client* m_client;
 };
 
 #endif // MYSQLCONNECTOR_H
