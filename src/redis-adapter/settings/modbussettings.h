@@ -360,10 +360,10 @@ namespace Settings {
         SERIAL_FIELD(quint16, response_time, 150)
         SERIAL_FIELD(quint16, retries, 3)
         SERIAL_FIELD(bool, debug, false)
-         SERIAL_FIELD_PTR(Radapter::LoggingInterceptorSettings, log_jsons, DEFAULT)
-         SERIAL_FIELD(Radapter::WorkerSettings, worker)
-         SERIAL_FIELD(ModbusTcpDevicesSettings, tcp, DEFAULT)
-         SERIAL_FIELD(ModbusRtuDevicesSettings, rtu, DEFAULT)
+        SERIAL_FIELD_PTR(Radapter::LoggingInterceptorSettings, log_jsons, DEFAULT)
+        SERIAL_FIELD(Radapter::WorkerSettings, worker)
+        SERIAL_FIELD(ModbusTcpDevicesSettings, tcp, DEFAULT)
+        SERIAL_FIELD(ModbusRtuDevicesSettings, rtu, DEFAULT)
         SERIAL_FIELD(QString, filter_name, DEFAULT)
         Filters::Table filters;
 
@@ -399,8 +399,8 @@ namespace Settings {
     struct RADAPTER_SHARED_SRC ModbusDevice : Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
-         SERIAL_FIELD_PTR(TcpDevice, tcp, DEFAULT)
-         SERIAL_FIELD_PTR(SerialDevice, rtu, DEFAULT)
+        SERIAL_FIELD_PTR(TcpDevice, tcp, DEFAULT)
+        SERIAL_FIELD_PTR(SerialDevice, rtu, DEFAULT)
         ModbusConnectionType device_type = ModbusConnectionType::Unknown;
         SERIAL_POST_INIT(postInit)
         QString repr() const {

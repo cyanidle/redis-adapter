@@ -75,10 +75,10 @@ namespace Settings {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_FIELD(QString, name)
-        SERIAL_MAP(double, fields)
+        SERIAL_MAP(double, filtered_fields)
         SERIAL_POST_INIT(cache)
         void cache() {
-            tableMap.insert(name, fields);
+            tableMap.insert(name, filtered_fields);
         }
     };
 
@@ -126,7 +126,6 @@ namespace Settings {
         IS_SERIALIZABLE
         SERIAL_FIELD(QString, name)
         SERIAL_FIELD(QString, table_name)
-
         bool isValid() const {
             return !name.isEmpty() && !table_name.isEmpty();
         }

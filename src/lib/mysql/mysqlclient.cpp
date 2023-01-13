@@ -8,7 +8,7 @@ using namespace MySql;
 #define REOPEN_DELAY_MS         3000
 #define TEMPORARY_DB_CONNECTION "temp"
 
-MySql::Client::MySql::Client(const Settings::SqlClientInfo &clientInfo,
+Client::Client(const Settings::SqlClientInfo &clientInfo,
                          QObject *parent)
     : QObject(parent),
       m_isConnected(false)
@@ -28,7 +28,7 @@ MySql::Client::MySql::Client(const Settings::SqlClientInfo &clientInfo,
             this, &MySql::Client::reopen);
 }
 
-MySql::Client::~MySql::Client()
+MySql::Client::~Client()
 {
     if (m_db.isOpen()) {
         m_db.close();

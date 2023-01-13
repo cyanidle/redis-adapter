@@ -5,8 +5,6 @@
 
 int main (int argc, char **argv) {
     QCoreApplication app(argc, argv);
-    OsmosActivationsState s("1");
-
     auto launcher = new Radapter::Launcher();
     launcher->init();
     launcher->run();

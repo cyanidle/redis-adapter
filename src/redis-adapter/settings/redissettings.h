@@ -86,7 +86,7 @@ namespace Settings {
         SERIAL_FIELD(QString, source_server, QString())
         RedisServer source;
         SERIAL_FIELD(QString, stream_key)
-         SERIAL_FIELD_PTR(Radapter::LoggingInterceptorSettings, log_jsons, DEFAULT)
+        SERIAL_FIELD_PTR(Radapter::LoggingInterceptorSettings, log_jsons, DEFAULT)
         SERIAL_FIELD(qint32, stream_size, 10000)
         SERIAL_FIELD(QString, consumer_group_name, "")
         SERIAL_CUSTOM(RedisConsumerStartMode, start_from, initStartMode, readStartMode, RedisStartFromTop)
