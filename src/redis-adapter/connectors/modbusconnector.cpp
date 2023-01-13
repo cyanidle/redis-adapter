@@ -30,7 +30,7 @@ ModbusConnector *ModbusConnector::instance()
 
 void ModbusConnector::writeJsonDone(const JsonDict &jsonDict)
 {
-    auto command = prepareCommand(Radapter::WorkerMsg::ServiceAcknowledge, {jsonDict});
+    auto command = prepareCommand(Radapter::WorkerMsg::ServiceAcknowledge, jsonDict.toVariant());
     command.receivers() = producers();
     emit sendMsg(command);
 }

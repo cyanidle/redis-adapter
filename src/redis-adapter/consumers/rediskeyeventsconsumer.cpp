@@ -22,7 +22,7 @@ void KeyEventsConsumer::finishMessageRead(const QVariantList &jsons)
     for (auto &json: jsons) {
         auto jsonDict = json.toMap();
         if (!jsonDict.isEmpty()) {
-            emit sendMsg(prepareMsg(jsonDict));
+            emit sendMsg(prepareMsg(JsonDict{jsonDict}));
         }
     }
 }

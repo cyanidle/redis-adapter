@@ -18,13 +18,9 @@ inline QVector<quint16> toWords(const T& src) {
 }
 
 inline QVector<quint16> toWords(const void* src, int sizeWords) {
-    quint16 result[sizeWords];
-    std::memcpy(result, src, sizeWords*2);
-    auto out = QVector<quint16>(sizeWords);
-    for (int i = 0; i < sizeWords; ++i) {
-        out[i] = result[i];
-    }
-    return out;
+    QVector<quint16> result(sizeWords);
+    std::memcpy(result.data(), src, sizeWords*2);
+    return result;
 }
 
 constexpr QDataStream::ByteOrder getEndianess() {
@@ -42,12 +38,12 @@ inline void applyToWords(quint16 *words, int sizeWords, QDataStream::ByteOrder w
 inline void applyToBytes(quint16 *words, int sizeWords, QDataStream::ByteOrder byteOrder) {
     if (byteOrder != getEndianess()) {
         auto sizeBytes = sizeWords*2;
-        quint8 bytes[sizeBytes];
-        std::memcpy(bytes, words, sizeBytes);
+        QVector<quint8> bytes(sizeBytes);
+        std::memcpy(bytes.data(), words, sizeBytes);
         for (int i = 0; i < sizeBytes/2; ++i) {
             std::swap(bytes[i], bytes[sizeBytes - 1 - i]);
         }
-        std::memcpy(words, bytes, sizeBytes);
+        std::memcpy(words, bytes.data(), sizeBytes);
     }
 }
 

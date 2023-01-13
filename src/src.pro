@@ -11,7 +11,7 @@ CONFIG(release, debug|release){
     OBJECTS_DIR = build/release
     MOC_DIR = build/release
 }
-CONFIG -= debug_and_release
+CONFIG -= debug_and_release staticlib
 
 CONFIG += create_prl
 DESTDIR = ..

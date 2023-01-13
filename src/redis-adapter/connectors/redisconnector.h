@@ -6,7 +6,6 @@
 #include <QStack>
 #include "lib/hiredis/adapters/qt.h"
 #include "radapter-broker/workerbase.h"
-#include <tr1/tuple>
 
 namespace Redis{
 
