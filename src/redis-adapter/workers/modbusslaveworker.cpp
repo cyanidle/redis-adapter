@@ -1,7 +1,7 @@
 #include "modbusslaveworker.h"
 #include <QModbusRtuSerialSlave>
 #include <QModbusTcpServer>
-
+#include "redis-adapter/radapterlogging.h"
 using namespace Modbus;
 using namespace Radapter;
  

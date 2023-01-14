@@ -15,8 +15,7 @@ CONFIG -= debug_and_release
 
 CONFIG += create_prl staticlib
 DESTDIR = ..
-DEFINES -= RADAPTER_SHARED_SRC
-DEFINES += RADAPTER_SHARED_SRC=Q_DECL_EXPORT
+DEFINES += RADAPTER_SHARED_SRC=
 
 # GCC shared library flags
 gcc {

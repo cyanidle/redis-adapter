@@ -10,13 +10,11 @@ ServerConnector::ServerConnector(const Settings::WebsocketServerInfo &serverInfo
     : WorkerBase(settings, thread),
       m_info(serverInfo)
 {
-    m_thread = new QThread();
     m_server = serverInfo.port > 0u ? new Websocket::Server(serverInfo.port)
                                     : new Websocket::Server();
-    m_server->moveToThread(m_thread);
-    connect(m_thread, &QThread::started, m_server, &Websocket::Server::start);
-    connect(m_thread, &QThread::finished, m_server, &Websocket::Server::deleteLater);
-    connect(m_thread, &QThread::finished, m_thread, &QThread::deleteLater);
+    connect(thread, &QThread::started, m_server, &Websocket::Server::start);
+    connect(thread, &QThread::finished, m_server, &Websocket::Server::deleteLater);
+    connect(thread, &QThread::finished, thread, &QThread::deleteLater);
 
     connect(this, &ServerConnector::jsonPublished,
             m_server, &Websocket::Server::publishNewData,
@@ -53,7 +51,6 @@ Settings::WebsocketServerInfo ServerConnector::info() const
 
 void ServerConnector::run()
 {
-    m_thread->start();
     thread()->start();
 }
 

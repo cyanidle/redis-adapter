@@ -1,6 +1,7 @@
 #include "rediscachefactory.h"
 #include "radapter-broker/debugging/logginginterceptor.h"
 #include <radapter-broker/broker.h>
+#include "redis-adapter/radapterlogging.h"
 
 using namespace Redis;
 

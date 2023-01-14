@@ -2,7 +2,7 @@ TEMPLATE = app
 include(../qtmodules.pri)
 TARGET = redis-adapter
 
-DEFINES += RADAPTER_SHARED_SRC=Q_DECL_IMPORT
+DEFINES += RADAPTER_SHARED_SRC=
 CONFIG += c++11 console link_prl
 CONFIG -= app_bundle
 

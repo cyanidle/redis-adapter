@@ -3,6 +3,7 @@
 
 #include "settings.h"
 #include "jsondict/jsondict.hpp"
+#include "radapter-broker/debugging/logginginterceptor.h"
 
 namespace Settings {
 
@@ -206,18 +207,18 @@ namespace Settings {
         SERIAL_FIELD(QString, name)
         ModbusChannelType type = MbMaster;
         SERIAL_FIELD(quint8, slave_address, 0)
-         SERIAL_CONTAINER(QList, ModbusSlaveInfo, slaves, {})
+         SERIAL_CONTAINER(QList, ModbusSlaveInfo, slaves, DEFAULT)
         QVariant readChannelType() const {
             return QVariant(type);
         }
 
-        bool operator==(const ModbusChannelSettings &src)const {
+        bool operator==(const ModbusChannelSettings &src) const {
             return name == src.name
                 && type == src.type
                 && slave_address == src.slave_address
                 && slaves == src.slaves;
         }
-        bool operator!=(const ModbusChannelSettings &src)const {
+        bool operator!=(const ModbusChannelSettings &src) const {
             return !(*this == src);
         }
     };

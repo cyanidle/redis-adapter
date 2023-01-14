@@ -39,7 +39,6 @@ private:
                                         QThread *thread = nullptr);
     Settings::WebsocketServerInfo m_info;
     Websocket::Server* m_server;
-    QThread* m_thread;
 };
 
 #endif // WEBSOCKETSERVERCONNECTOR_H

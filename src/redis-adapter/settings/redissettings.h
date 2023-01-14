@@ -1,6 +1,7 @@
 #ifndef REDISSETTINGS_H
 #define REDISSETTINGS_H
 #include "settings.h"
+#include "radapter-broker/debugging/logginginterceptorsettings.h"
 
 namespace Settings {
     struct RADAPTER_SHARED_SRC RedisServer : ServerInfo {
@@ -70,7 +71,7 @@ namespace Settings {
         }
     };
 
-    enum RADAPTER_SHARED_SRC RedisStreamMode {
+    enum RedisStreamMode {
         RedisStreamConsumer = 0,
         RedisStreamProducer,
         RedisStreamConsumerGroups
