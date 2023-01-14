@@ -56,13 +56,13 @@ void StreamConsumer::run()
     connect(this, &StreamConsumer::ackCompleted, &StreamConsumer::readGroup);
 }
 
-void StreamConsumer::blockingReadCommand(const Radapter::WorkerMsg &msg)
+void StreamConsumer::blockingReadCommand()
 {
     if (hasPendingEntries()) {
         return;
     }
     m_blockingReadTimer->stop();
-    doRead(msg);
+    doRead();
     m_blockingReadTimer->start();
 }
 
@@ -91,7 +91,7 @@ void StreamConsumer::readGroup()
 
 }
 
-void StreamConsumer::readGroupCommand(const Radapter::WorkerMsg &msg)
+void StreamConsumer::readGroupCommand()
 {
     if (!hasPendingEntries()
             || m_blockingReadTimer->isActive()
@@ -99,7 +99,7 @@ void StreamConsumer::readGroupCommand(const Radapter::WorkerMsg &msg)
     {
         return;
     }
-    doRead(msg);
+    doRead();
     m_readGroupTimer->start();
 }
 
@@ -150,7 +150,7 @@ bool StreamConsumer::hasPendingEntries() const
     return areGroupsEnabled() && m_hasPending;
 }
 
-void StreamConsumer::doRead(const Radapter::WorkerMsg &msg)
+void StreamConsumer::doRead()
 {
     auto readCommand = QString{};
     auto startId = lastReadId();
@@ -159,10 +159,7 @@ void StreamConsumer::doRead(const Radapter::WorkerMsg &msg)
     } else {
         readCommand = RedisQueryFormatter::toReadStreamCommand(m_streamKey, BLOCK_TIMEOUT_MS, startId);
     }
-    auto id = enqueueMsg(msg);
-    if (runAsyncCommand(&StreamConsumer::readCallback, readCommand, id) != REDIS_OK) {
-        disposeId(id);
-    }
+    runAsyncCommand(&StreamConsumer::readCallback, readCommand);
 }
 
 void StreamConsumer::updatePingKeepalive()
@@ -198,15 +195,13 @@ void StreamConsumer::createGroup()
     runAsyncCommand(&StreamConsumer::createGroupCallback, command);
 }
 
-void StreamConsumer::readCallback(redisReply *reply, void *msgId)
+void StreamConsumer::readCallback(redisReply *reply)
 {
-    auto msg = dequeueMsg(msgId);
     if (isNullReply(reply)) {
         return;
     }
     if (reply->elements == 0) {
         reDebug() << metaInfo().c_str() << "No new entries";
-        finishRead( JsonDict{}, msg);
         return;
     }
 
@@ -224,7 +219,6 @@ void StreamConsumer::readCallback(redisReply *reply, void *msgId)
         entriesCount += jsonDict.count();
     }
     reDebug() << metaInfo().c_str() << "entries processed:" << entriesCount;
-    finishRead(jsonEntries, msg);
 }
 
 void StreamConsumer::ackCallback(redisReply *reply)
@@ -308,20 +302,11 @@ void StreamConsumer::onCommand(const Radapter::WorkerMsg &msg)
 {
     if (msg.serviceData(Radapter::WorkerMsg::ServiceRequestJson).isValid()) {
         if (m_groupName.isEmpty()) {
-            readGroupCommand(msg);
+            readGroupCommand();
         } else {
-            blockingReadCommand(msg);
+            blockingReadCommand();
         }
     } else {
         reWarn() << "Incorrect schema used for 'Command' to 'Redis::StreamConsumer'";
-    }
-}
-
-void StreamConsumer::onReply(const Radapter::WorkerMsg &msg)
-{
-    if (sender() == this) {
-        return;
-    } else {
-        reDebug() << "Unexpected Reply from: " << msg.sender();
     }
 }

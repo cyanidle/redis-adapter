@@ -445,28 +445,6 @@ std::string Connector::metaInfo() const
     return infoString;
 }
 
-void *Connector::enqueueMsg(const Radapter::WorkerMsg &msg)
-{
-    return new quint64(m_queue.insert(msg.id(), msg).key());
-}
-
-Radapter::WorkerMsg Connector::dequeueMsg(void* msgId)
-{
-    if (!msgId) return {};
-    auto key = static_cast<quint64*>(msgId);
-    auto result = m_queue.take(*key);
-    delete key;
-    return result;
-}
-
-void Connector::disposeId(void *msgId)
-{
-    if (!msgId) return;
-    auto key = static_cast<quint64*>(msgId);
-    m_queue.remove(*key);
-    delete key;
-}
-
 QString Connector::id() const
 {
     return metaObject()->className();

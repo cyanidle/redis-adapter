@@ -25,15 +25,11 @@ public slots:
     void onMsg(const Radapter::WorkerMsg &msg) override;
 
 private:
-    // Commands
-    int writeKeys(const JsonDict &json, const Radapter::WorkerMsg &msg);
-    int writeIndex(const JsonDict &json, const QString &indexKey, const Radapter::WorkerMsg &msg);
-    // Replies
-    void writeKeysDone(const Radapter::WorkerMsg &msg);
-    void writeIndexDone(const Radapter::WorkerMsg &msg);
-
-    void msetCallback(redisReply *replyPtr, void *msgId);
-    void indexCallback(redisReply *replyPtr, void *msgId);
+    // Pipe
+    int writeKeys(const JsonDict &json);
+    int writeIndex(const JsonDict &json, const QString &indexKey);
+    void msetCallback(redisReply *replyPtr);
+    void indexCallback(redisReply *replyPtr);
 
     QString m_indexKey;
 };

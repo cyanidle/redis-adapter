@@ -57,12 +57,9 @@ void StreamProducer::onMsg(const Radapter::WorkerMsg &msg)
     if (msg.isEmpty()) {
         return;
     }
-    auto json = msg ;
-    auto command = RedisQueryFormatter(json).toAddStreamCommand(m_streamKey, streamSize());
+    auto command = RedisQueryFormatter(msg).toAddStreamCommand(m_streamKey, streamSize());
     if (!command.isEmpty()) {
-        auto id = enqueueMsg(msg);
-        if (runAsyncCommand(&StreamProducer::writeCallback, command, id) != REDIS_OK) {
-            disposeId(id);
+        if (runAsyncCommand(&StreamProducer::writeCallback, command) != REDIS_OK) {
             auto reply = prepareReply(msg, Radapter::WorkerMsg::ReplyFail);
             emit sendMsg(reply);
         }
@@ -82,22 +79,14 @@ void StreamProducer::tryTrim()
     }
 }
 
-void StreamProducer::writeCallback(redisReply *reply, void *msgId)
+void StreamProducer::writeCallback(redisReply *reply)
 {
-    auto msg = dequeueMsg(msgId);
     if (isNullReply(reply)
             || isEmptyReply(reply))
     {
         return;
     }
     reDebug() << metaInfo().c_str() << "Entry added:" << reply->str;
-    writeDone(reply->str, msg);
-}
-
-void StreamProducer::writeDone(const QString &newEntryId, const Radapter::WorkerMsg &msg)
-{
-    auto reply = prepareReply(msg, Radapter::WorkerMsg::ReplyOk, newEntryId);
-    emit sendMsg(reply);
 }
 
 void StreamProducer::trimCallback(redisReply *reply)

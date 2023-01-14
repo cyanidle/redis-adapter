@@ -35,26 +35,24 @@ signals:
 public slots:
     void run() override;
     void onCommand(const Radapter::WorkerMsg &msg) override;
-    void onReply(const Radapter::WorkerMsg &msg) override;
 
     void blockingRead();
     void readGroup();
-
 private slots:
-    void doRead(const Radapter::WorkerMsg &msg = {});
+    void doRead();
     void updatePingKeepalive();
     void updateReadTimers();
     void createGroup();
 private:
     // Commands
-    void blockingReadCommand(const Radapter::WorkerMsg &msg);
-    void readGroupCommand(const Radapter::WorkerMsg &msg);
+    void blockingReadCommand();
+    void readGroupCommand();
     // Replies
     void acknowledge(const JsonDict &jsonEntries);
     void pendingChangedImpl();
     void ackCompletedImpl();
 
-    void readCallback(redisReply *replyPtr, void *msgId);
+    void readCallback(redisReply *replyPtr);
     void ackCallback(redisReply *replyPtr);
     void createGroupCallback(redisReply *replyPtr);
     QString id() const override;

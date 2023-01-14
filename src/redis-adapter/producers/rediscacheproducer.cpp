@@ -16,73 +16,46 @@ CacheProducer::CacheProducer(const QString &host,
 
 void CacheProducer::onMsg(const Radapter::WorkerMsg &msg)
 {
-    if (writeIndex(msg , m_indexKey, msg) != REDIS_OK) {
+    if (writeIndex(msg , m_indexKey) != REDIS_OK) {
         emit sendMsg(prepareReply(msg, Radapter::WorkerMsg::ReplyFail));
     }
-    if (writeKeys(msg , msg) != REDIS_OK) {
+    if (writeKeys(msg) != REDIS_OK) {
         emit sendMsg(prepareReply(msg, Radapter::WorkerMsg::ReplyFail));
     }
-    emit sendMsg(prepareMsg(msg));
 }
 
-int CacheProducer::writeKeys(const JsonDict &json, const Radapter::WorkerMsg &msg)
+int CacheProducer::writeKeys(const JsonDict &json)
 {
-    if (json .isEmpty()) {
-        writeKeysDone(msg);
+    if (json.isEmpty()) {
         return REDIS_ERR;
     }
     auto msetCommand = RedisQueryFormatter(json ).toMultipleSetCommand();
-    auto id = enqueueMsg(msg);
-    auto status = runAsyncCommand(&CacheProducer::msetCallback, msetCommand, id);
-    if (status != REDIS_OK) {
-        disposeId(id);
-    }
-    return status;
+    return runAsyncCommand(&CacheProducer::msetCallback, msetCommand);
 }
 
-int CacheProducer::writeIndex(const JsonDict &json, const QString &indexKey, const Radapter::WorkerMsg &msg)
+int CacheProducer::writeIndex(const JsonDict &json, const QString &indexKey)
 {
-    if (json .isEmpty() || indexKey.isEmpty()) {
-        writeIndexDone(msg);
+    if (json.isEmpty() || indexKey.isEmpty()) {
         return REDIS_ERR;
     }
     auto indexCommand = RedisQueryFormatter(json ).toUpdateIndexCommand(indexKey);
-    auto id = enqueueMsg(msg);
-    auto status = runAsyncCommand(&CacheProducer::indexCallback, indexCommand, id);
-    if (status != REDIS_OK) {
-        disposeId(id);
-    }
-    return status;
+    return runAsyncCommand(&CacheProducer::indexCallback, indexCommand);
 }
 
-void CacheProducer::msetCallback(redisReply *reply, void *msgId)
+void CacheProducer::msetCallback(redisReply *reply)
 {
-    auto msg = dequeueMsg(msgId);
     if (isNullReply(reply)
             || isEmptyReply(reply))
     {
         return;
     }
     reDebug() << metaInfo().c_str() << "mset status:" << reply->str;
-    writeKeysDone(msg);
 }
 
-void CacheProducer::indexCallback(redisReply *reply, void *msgId)
+void CacheProducer::indexCallback(redisReply *reply)
 {
-    auto msg = dequeueMsg(msgId);
     if (isNullReply(reply)) {
         return;
     }
     reDebug() << metaInfo().c_str() << "index members updated:" << reply->integer;
-    writeIndexDone(msg);
-}
-
-void CacheProducer::writeKeysDone(const Radapter::WorkerMsg &msg)
-{
-    emit sendMsg(prepareReply(msg, Radapter::WorkerMsg::ReplyOk));
-}
-
-void CacheProducer::writeIndexDone(const Radapter::WorkerMsg &msg)
-{
-    emit sendMsg(prepareReply(msg, Radapter::WorkerMsg::ReplyOk));
 }
