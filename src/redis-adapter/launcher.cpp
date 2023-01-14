@@ -33,15 +33,13 @@ Launcher::Launcher(QObject *parent) :
     prvInit();
 }
 
-void Launcher::addFactory(Radapter::FactoryBase* factory) {
+void Launcher::addFactory(Radapter::FactoryBase* factory)
+{
     m_factories.append(factory);
 }
 
 void Launcher::addWorker(WorkerBase* worker, QList<InterceptorBase*> interceptors)
 {
-    if (worker->thread() == QThread::currentThread()) {
-        reWarn() << "Worker has same thread as launcher! Class: " << worker->metaObject()->className();
-    }
     m_workers.insert(worker, interceptors);
 }
 
@@ -49,6 +47,7 @@ void Launcher::addWorker(WorkerBase* worker, QList<InterceptorBase*> interceptor
 //! чтобы компилятор не удалил "неиспользуемые переменные"
 void Launcher::prvPreInit()
 {
+    qSetMessagePattern(CUSTOM_MESSAGE_PATTERN);
     m_filereader->setPath("conf/bindings.toml");
     auto jsonBindings = JsonBinding::parseMap(m_filereader->deserialise().toMap());
     BindingsProvider::init(jsonBindings);
@@ -129,7 +128,6 @@ int Launcher::prvInit()
                               mbRegisters,
                               modbusConnSettings.worker,
                               new QThread(this));
-        addWorker(ModbusConnector::instance());
         QList<InterceptorBase*> mbInterceptors{};
         if (!modbusConnSettings.filters.isEmpty()) {
             mbInterceptors.append(new ProducerFilter(modbusConnSettings.filters));
@@ -137,8 +135,7 @@ int Launcher::prvInit()
         if (modbusConnSettings.log_jsons) {
             mbInterceptors.append(new LoggingInterceptor(*modbusConnSettings.log_jsons));
         }
-        WorkerProxy* mbProxy = ModbusConnector::instance()->createProxy(mbInterceptors);
-        Radapter::Broker::instance()->registerProxy(mbProxy);
+        addWorker(ModbusConnector::instance(), mbInterceptors);
     }
     m_filereader->setPath("conf/config.toml");
     if (!Settings::SqlClientInfo::cacheMap.isEmpty()) {
@@ -161,7 +158,6 @@ int Launcher::prvInit()
         if (websocketServer.isValid()) {
             Websocket::ServerConnector::init(websocketServer, websocketServer.worker, new QThread(this));
             addWorker(Websocket::ServerConnector::instance());
-            Radapter::Broker::instance()->registerProxy(Websocket::ServerConnector::instance()->createProxy());
         }
     }
     auto localizationInfoMap = m_filereader->deserialise("localization").toMap();
@@ -177,7 +173,6 @@ int Launcher::prvInit()
 
 int Launcher::init()
 {
-    qSetMessagePattern(CUSTOM_MESSAGE_PATTERN);
     int status = 0;
     status = initWorkers();
     if (status != 0) {

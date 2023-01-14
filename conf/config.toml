@@ -24,32 +24,32 @@ stream_key = "station:{station_id}"
 stream_size = 1000000 # producer only. '-1' to ignore
 
 [[redis.streams]]
-name = "commands_writer"
+worker.name = "commands_writer"
 mode = "producer"
 target_server = "local.1"
 stream_key = "station:{station_id}:commands"
 stream_size = 1000000 # producer only. '-1' to ignore
 
 [[redis.streams]]
-name = "station_reader"
+worker.name = "station_reader"
 mode = "consumer"
 source_server = "local.1"
 stream_key = "station:{station_id}"
 
 [[redis.streams]]
-name = "commandlog"
+worker.name = "commandlog"
 mode = "consumer"
 source_server = "remote.1"
 stream_key = "station:{station_id}:commands"
 
 [[redis.streams]]
-name = "commands_local"
+worker.name = "commands_local"
 mode = "consumer"
 source_server = "local.1"
 stream_key = "station:{station_id}:commands"
 
 [[redis.caches]]
-name = "modbuscache" #name_producer and name_consumer are created! REFACTOR THIS!
+worker.name = "modbuscache" #name_producer and name_consumer are created! REFACTOR THIS!
 mode = "producer"
 target_server_name = "local.1"
 db_index = 0
@@ -57,11 +57,13 @@ index_key = "station:{station_id}:index"
 consumers = [ "stationlog" ]
 
 [websocket.server]
+worker.name = "websocket_server"
 port = 1234
 producers = [ "station_reader" ]
 consumers = [ "commands_writer" ]
 
 [websocket.client]
+worker.name = "websocket_client"
 host = "10.40.0.88"
 port = 8002
     

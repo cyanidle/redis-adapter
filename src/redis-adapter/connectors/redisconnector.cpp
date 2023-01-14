@@ -430,7 +430,7 @@ std::string Connector::metaInfo(const redisAsyncContext *context, const int conn
     if (idString.isEmpty() && isValidContext(context)) {
         auto adapter = static_cast<Connector *>(context->data);
         if (adapter) {
-            idString = QStringLiteral("%1: %2").arg(adapter->workerName(), adapter->id());
+            idString = QStringLiteral("%1: %2 |").arg(adapter->workerName(), adapter->id());
         }
     }
     if (!idString.isEmpty()) {

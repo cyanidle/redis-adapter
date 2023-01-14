@@ -26,6 +26,15 @@ namespace Settings {
         }
     };
 
+    struct RADAPTER_SHARED_SRC RedisConnector : Serializer::SerializableGadget {
+        Q_GADGET
+        IS_SERIALIZABLE
+        SERIAL_FIELD(quint16, db_index, 0)
+        SERIAL_FIELD(Radapter::WorkerSettings, worker)
+        SERIAL_FIELD(QString, target_server_name)
+
+    };
+
     struct RADAPTER_SHARED_SRC RedisKeyEventSubscriber : Serializer::SerializableGadget {
         typedef QMap<QString, RedisKeyEventSubscriber> Map;
         static Map cacheMap;
@@ -175,7 +184,8 @@ namespace Settings {
             return !(*this == src);
         }
     };
-    struct RADAPTER_SHARED_SRC RedisCache : Serializer::SerializableGadget {
+
+    struct RADAPTER_SHARED_SRC RedisCache : RedisConnector {
         typedef QMap<QString, RedisCache> Map;
         static Map cacheMap;
         enum Mode {
@@ -185,13 +195,10 @@ namespace Settings {
         };
         Q_GADGET
         IS_SERIALIZABLE
-         SERIAL_FIELD(Radapter::WorkerSettings, worker)
-        SERIAL_FIELD(QString, target_server_name)
         RedisServer target_server;
-        SERIAL_FIELD(quint16, db_index, 0)
         SERIAL_FIELD_PTR(Radapter::LoggingInterceptorSettings, log_jsons, DEFAULT)
         SERIAL_FIELD(QString, index_key)
-        SERIAL_CUSTOM(Mode, mode, initMode, readMode)
+        SERIAL_CUSTOM(Mode, mode, initMode, NO_READ)
         SERIAL_POST_INIT(postInit)
 
         static inline QList<RedisCache> getCaches(const QVariant &src) {
@@ -208,16 +215,6 @@ namespace Settings {
                 return true;
             }
             return false;
-        }
-
-        QVariant readMode() const
-        {
-            switch(mode){
-            case Consumer: return "consumer";
-            case Producer: return "producer";
-            case NotSet: return "unknown";
-            }
-            return "unknown";
         }
 
         void postInit() {

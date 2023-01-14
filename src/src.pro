@@ -11,9 +11,9 @@ CONFIG(release, debug|release){
     OBJECTS_DIR = build/release
     MOC_DIR = build/release
 }
-CONFIG -= debug_and_release staticlib
+CONFIG -= debug_and_release
 
-CONFIG += create_prl
+CONFIG += create_prl staticlib
 DESTDIR = ..
 DEFINES -= RADAPTER_SHARED_SRC
 DEFINES += RADAPTER_SHARED_SRC=Q_DECL_EXPORT

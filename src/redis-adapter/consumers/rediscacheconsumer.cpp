@@ -16,6 +16,16 @@ CacheConsumer::CacheConsumer(const QString &host,
 {
 }
 
+Future<QVariantList> CacheConsumer::requestIndex(const QString &indexKey)
+{
+
+}
+
+Future<JsonDict> CacheConsumer::requestKeys(const QStringList &keys)
+{
+
+}
+
 void CacheConsumer::requestIndex(const QString &indexKey, const Radapter::WorkerMsg &msg)
 {
     if (indexKey.isEmpty()) {
@@ -40,6 +50,24 @@ void CacheConsumer::requestKeys(const QStringList &keys, const Radapter::WorkerM
     auto id = enqueueMsg(msg);
     if (runAsyncCommand(&CacheConsumer::readKeysCallback, command, id) != REDIS_OK) {
         disposeId(id);
+    }
+}
+
+void CacheConsumer::requestIndex(const QString &indexKey, void *data)
+{
+
+    auto command = RedisQueryFormatter::toGetIndexCommand(indexKey);
+    if (runAsyncCommand(&CacheConsumer::readIndexCallback, command, data) != REDIS_OK) {
+
+    }
+}
+
+void CacheConsumer::requestKeys(const QStringList &keys, void *data)
+{
+
+    auto command = RedisQueryFormatter::toMultipleGetCommand(keys);
+    if (runAsyncCommand(&CacheConsumer::readKeysCallback, command, data) != REDIS_OK) {
+
     }
 }
 

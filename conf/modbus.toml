@@ -1,28 +1,49 @@
 [modbus]
-poll_rate = 500
+poll_rate = 500 # ms
 response_time = 150 # ms
-retries = 0
-byteorder = "BigEndian" # { "BigEndian" | "LittleEndian" }
-wordorder = "BigEndian" # { "BigEndian" | "LittleEndian" }
-filter_name = "modbusfilter"
-producers = [ "commandlog", "commands_local" ]
-consumers = [ "modbuscache" ]
-
+retries = 3
+[modbus.worker]
+debug = true
+name = "modbus"
 [[modbus.channels]]
-    name = "spk"
-    type = "master" # { "master" | "slave" }
-    #slave_address = 10 # slave mode only
-    
+    name = "post.1.di"
     [[modbus.channels.slaves]]
-    address = 255
-    source = "tcp.1" # modbus.rtu.devices.name OR modbus.tcp.devices.name
-    registers = [ "station.*", "polder.*" ]
-    queries = [ { reg_index = 0, reg_count = 50, type = "input" },
-                { reg_index = 50, reg_count = 42, type = "input" },
-                { reg_index = 0, reg_count = 50, type = "holding", poll_rate = 3000 } ]
+    address = 1
+    source = "gateway.1" # modbus.rtu.devices.name
+    registers = [ "post.1.di" ]
+    queries = [ { reg_index = 0, reg_count = 6, type = "discrete_inputs" } ]
+    [[modbus.channels.slaves]]
+    address = 1
+    source = "gateway.1" 
+    registers = [ "post.1" ]
+    queries = [ { reg_index = 0, reg_count = 25, type = "holding" } ]
+    [[modbus.channels.slaves]]
+    address = 2
+    source = "gateway.1" 
+    registers = [ "post.2" ]
+    queries = [ { reg_index = 0, reg_count = 25, type = "holding" } ]
 
 [modbus.tcp]
     [[modbus.tcp.devices]]
-    name = "tcp.1"
-    ip = "10.40.0.66"
+    name = "gateway.1"
+    #ip = "192.168.0.52"
+    ip = "192.168.1.10"
     port = 502
+
+# [[modbus_slave]]
+#     slave_id = 1
+#     [modbus_slave.device.tcp]
+#     ip = "127.0.0.1"
+#     port = 4000
+#     [modbus_slave.holding_registers]
+#     holding.0 = {index = 0, type = "float32"}
+#     holding.3 = {index = 2, type = "float32"}
+#     [modbus_slave.input_registers]
+#     input.0 = {index = 0, type = "float32"}
+#     [modbus_slave.di]   
+#     di.0 = {index = 0}
+#     [modbus_slave.coils]
+#     coils.0 = {index = 0}
+#     [modbus_slave.worker]
+#     name = "mb_slave"
+#     #debug = true

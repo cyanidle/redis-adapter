@@ -5,6 +5,7 @@
 #include <QTimer>
 #include <QStack>
 #include "lib/hiredis/adapters/qt.h"
+#include <QFuture>
 #include "radapter-broker/workerbase.h"
 
 namespace Redis{

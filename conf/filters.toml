@@ -1,6 +1,6 @@
 [[filters]]
 name = "modbusfilter"
-[filters.fields]
+[filters.filtered_fields]
 "station:{station_id}:temperature:readings" = 0.1
 "station:{station_id}:level:readings:*" = 0.005
 "station:{station_id}:level:change_speed" = 0.005
