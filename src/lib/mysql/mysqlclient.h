@@ -6,13 +6,12 @@
 #include "redis-adapter/settings/settings.h"
 
 namespace MySql {
-    struct RADAPTER_SHARED_SRC QueryField : Serializer::SerializableGadget{
+    struct RADAPTER_SHARED_SRC QueryField : Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_FIELD(QString, name, DEFAULT)
         SERIAL_FIELD(QVariant, value, DEFAULT)
         SERIAL_FIELD(bool, isFunction, false)
-
         QueryField(const QString &fieldName, const QVariant &fieldValue, const bool isCommand = false);
         QueryField();
         bool isValid();
