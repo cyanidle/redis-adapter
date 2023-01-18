@@ -8,24 +8,21 @@
 class SqlSerializable : protected Serializer::Serializable
 {
 public:
-    explicit SqlSerializable(MySql::Client *dbClient);
-    bool tryFetch();
-    bool trySave();
-private:
-    bool checkConnection();
-    MySql::Client *m_dbClient;
+    explicit SqlSerializable();
+    MySql::QueryRecord fetchRecord();
+    MySql::QueryRecord saveRecord();
 };
 
 class SqlGadget : public Serializer::GadgetMixin<SqlSerializable>
 {
-    explicit SqlGadget(MySql::Client *dbClient);
+    explicit SqlGadget();
 };
 
 class SqlQObject : public Serializer::QObjectMixin<SqlSerializable>
 {
     Q_OBJECT
 public:
-    explicit SqlQObject(MySql::Client *dbClient, QObject *parent = nullptr);
+    explicit SqlQObject(QObject *parent = nullptr);
 };
 
 #endif // MYSQLSERIALIZABLE_H
