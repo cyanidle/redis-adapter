@@ -20,7 +20,6 @@ namespace MySql {
         bool operator==(const QueryField &other);
     };
 
-
     typedef QList<QueryField> QueryRecord;
     typedef QList<QueryRecord> QueryRecordList;
     typedef QList<QVariantList> RecordValuesMap;
@@ -76,10 +75,6 @@ private:
     QTimer* m_reconnectTimer;
     bool m_isConnected;
 };
-
-
-
-
 
 
 inline QueryField::QueryField(const QString &fieldName, const QVariant &fieldValue, const bool isCommand) :

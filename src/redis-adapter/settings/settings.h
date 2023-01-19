@@ -18,34 +18,8 @@ namespace Settings {
     struct RADAPTER_SHARED_SRC ServerInfo : public Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
-        public:
-            QString server_host = {};
-            bool
-            server_host_WasUpdated()
-            const {return wasUpdated() && updatedFields().contains(QStringLiteral("server_host"));}
-            protected:
-            static QString
-            server_host_Default()
-        {return QString{};}
-            constexpr static bool
-            server_host_hasDefault()
-        {return !QLatin1String().isEmpty();}
-            private:
-            friend Serializer::Priv::FieldConcept<QString, QString, int>;
-            Q_PROPERTY(QVariant server_host READ read_server_host WRITE write_server_host)
-            Q_PROPERTY(QVariant server_host_hasDefault READ server_host_hasDefault)
-            Q_PROPERTY(QVariantMap server_host_getMap READ server_host_getMap)
-            QVariantMap server_host_getMap() const {_check_if_has_is_serializable();
-                return Serializer::Priv::FieldConcept<QString, QString, int>::
-                get_map(this, server_host, _VAL_NAME(server_host), 0);}
-            void write_server_host(const QVariant &v) {
-            if (Serializer::Priv::FieldConcept<QString, QString, int>::
-                set_val(this, server_host, v, _VAL_NAME(server_host), 0)) {};}
-            QVariant read_server_host() const {
-                return Serializer::Priv::FieldConcept<QString, QString, int>::
-                get_val(this, server_host, _VAL_NAME(server_host), 0);}
-        public:
-                SERIAL_FIELD(quint16, server_port);
+        SERIAL_FIELD(QString, server_host);
+        SERIAL_FIELD(quint16, server_port);
         bool isValid() {
             return !server_host.isEmpty() && (server_port > 0u);
         }
@@ -97,10 +71,10 @@ namespace Settings {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_FIELD(QString, name)
-        SERIAL_MAP(double, filtered_fields)
+        SERIAL_MAP(double, to_filter)
         SERIAL_POST_INIT(cache)
         void cache() {
-            tableMap.insert(name, filtered_fields);
+            tableMap.insert(name, to_filter);
         }
     };
 

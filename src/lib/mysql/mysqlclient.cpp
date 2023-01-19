@@ -38,7 +38,7 @@ MySql::Client::~Client()
 
 QMap<QString, QString> MySql::Client::usernameMap()
 {
-    auto usernameMap = QMap<QString, QString>{
+    static auto usernameMap = QMap<QString, QString>{
         { "lotos", "mysql" },
         { "root", QString{} }
     };
