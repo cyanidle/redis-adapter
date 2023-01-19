@@ -17,7 +17,7 @@ public:
     MySqlFactory* mySqlFactory() const {return m_sqlFactory;}
 public slots:
     void addFactory(Radapter::FactoryBase* factory);
-    void addWorker(Radapter::WorkerBase *worker, QList<Radapter::InterceptorBase *> interceptors = {});
+    void addWorker(Radapter::WorkerBase *worker, QSet<Radapter::InterceptorBase *> interceptors = {});
 
     int init();
     void run();
@@ -33,7 +33,7 @@ private:
         return Serializer::fromQList<T>(m_filereader->deserialise(tomlPath,true).toList());
     }
     QList<FactoryBase*> m_factories;
-    QHash<WorkerBase*, QList<InterceptorBase*>> m_workers;
+    QHash<WorkerBase*, QSet<InterceptorBase*>> m_workers;
     MySqlFactory* m_sqlFactory;
     Settings::FileReader* m_filereader;
 };

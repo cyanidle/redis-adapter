@@ -38,7 +38,7 @@ void Launcher::addFactory(Radapter::FactoryBase* factory)
     m_factories.append(factory);
 }
 
-void Launcher::addWorker(WorkerBase* worker, QList<InterceptorBase*> interceptors)
+void Launcher::addWorker(WorkerBase* worker, QSet<InterceptorBase*> interceptors)
 {
     m_workers.insert(worker, interceptors);
 }
@@ -128,12 +128,12 @@ int Launcher::prvInit()
                               mbRegisters,
                               modbusConnSettings.worker,
                               new QThread(this));
-        QList<InterceptorBase*> mbInterceptors{};
+        QSet<InterceptorBase*> mbInterceptors{};
         if (!modbusConnSettings.filters.isEmpty()) {
-            mbInterceptors.append(new ProducerFilter(modbusConnSettings.filters));
+            mbInterceptors.insert(new ProducerFilter(modbusConnSettings.filters));
         }
         if (modbusConnSettings.log_jsons) {
-            mbInterceptors.append(new LoggingInterceptor(*modbusConnSettings.log_jsons));
+            mbInterceptors.insert(new LoggingInterceptor(*modbusConnSettings.log_jsons));
         }
         addWorker(ModbusConnector::instance(), mbInterceptors);
     }

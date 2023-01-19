@@ -20,9 +20,9 @@ int PubSubFactory::initWorkers()
     for (auto &subscriberInfo : m_subscribersList) {
         auto thread = new QThread{};
         auto settings = Radapter::WorkerSettings();
-        QList<Radapter::InterceptorBase*> loggers;
+        QSet<Radapter::InterceptorBase*> loggers;
         if (subscriberInfo.log_jsons) {
-            loggers.append(new Radapter::LoggingInterceptor(*subscriberInfo.log_jsons));
+            loggers.insert(new Radapter::LoggingInterceptor(*subscriberInfo.log_jsons));
         }
         connect(thread, &QThread::finished, thread, &QThread::deleteLater);
         auto consumer = new KeyEventsConsumer(subscriberInfo.source_server.server_host,
@@ -32,7 +32,7 @@ int PubSubFactory::initWorkers()
                                               thread);
         connect(thread, &QThread::started, consumer, &KeyEventsConsumer::run);
         connect(thread, &QThread::finished, consumer, &KeyEventsConsumer::deleteLater);
-        m_workersPool.append(consumer);
+        m_workersPool.insert(consumer);
         Radapter::Broker::instance()->registerProxy(consumer->createProxy(loggers));
     }
     return 0;

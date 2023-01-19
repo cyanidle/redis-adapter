@@ -23,7 +23,7 @@ int ArchiveFactory::initWorkers()
         auto archiveProducer = new ArchiveProducer(dbWorker, archiveInfo, archiveInfo.worker, new QThread(this));
         connect(archiveProducer->thread(), &QThread::started, archiveProducer, &ArchiveProducer::run);
         connect(archiveProducer->thread(), &QThread::finished, archiveProducer, &ArchiveProducer::deleteLater);
-        m_workerPool.append(archiveProducer);
+        m_workerPool.insert(archiveProducer);
         Radapter::Broker::instance()->registerProxy(archiveProducer->createProxy());
     }
     return 0;

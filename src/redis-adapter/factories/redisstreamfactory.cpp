@@ -20,9 +20,9 @@ int StreamFactory::initWorkers()
     const auto streamsInfoList = m_streamsInfoMap.values();
     for (auto &streamInfo : streamsInfoList) {
         auto thread = new QThread(this);
-        QList<Radapter::InterceptorBase*> loggers;
+        QSet<Radapter::InterceptorBase*> loggers;
         if (streamInfo.log_jsons) {
-            loggers.append(new Radapter::LoggingInterceptor(*streamInfo.log_jsons));
+            loggers.insert(new Radapter::LoggingInterceptor(*streamInfo.log_jsons));
         }
         QObject::connect(thread, &QThread::finished, thread, &QThread::deleteLater);
         if ((streamInfo.mode == Settings::RedisStreamConsumer)
@@ -38,7 +38,7 @@ int StreamFactory::initWorkers()
             QObject::connect(thread, &QThread::started, consumer, &StreamConsumer::run);
             QObject::connect(thread, &QThread::finished, consumer, &StreamConsumer::deleteLater);
             Radapter::Broker::instance()->registerProxy(consumer->createProxy(loggers));
-            m_workersPool.append(consumer);
+            m_workersPool.insert(consumer);
         }
         if ((streamInfo.mode == Settings::RedisStreamProducer)) {
             auto producer = new StreamProducer(streamInfo.target.server_host,
@@ -50,7 +50,7 @@ int StreamFactory::initWorkers()
             QObject::connect(thread, &QThread::started, producer, &StreamProducer::run);
             QObject::connect(thread, &QThread::finished, producer, &StreamProducer::deleteLater);
             Radapter::Broker::instance()->registerProxy(producer->createProxy(loggers));
-            m_workersPool.append(producer);
+            m_workersPool.insert(producer);
         }
     }
     return 0;

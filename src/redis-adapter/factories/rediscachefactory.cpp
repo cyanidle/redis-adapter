@@ -21,9 +21,9 @@ int CacheFactory::initWorkers()
     for (auto &cacheInfo : m_cachesInfoList) {
         auto thread = new QThread{};
         QObject::connect(thread, &QThread::finished, thread, &QThread::deleteLater);
-        QList<Radapter::InterceptorBase*> loggers;
+        QSet<Radapter::InterceptorBase*> loggers;
         if (cacheInfo.log_jsons) {
-            loggers.append(new Radapter::LoggingInterceptor(*cacheInfo.log_jsons));
+            loggers.insert(new Radapter::LoggingInterceptor(*cacheInfo.log_jsons));
         }
         if (cacheInfo.mode == Settings::RedisCache::Producer) {
             auto worker = new CacheProducer(cacheInfo.target_server.server_host,
@@ -34,7 +34,7 @@ int CacheFactory::initWorkers()
                                             thread);
             QObject::connect(thread, &QThread::started, worker, &CacheProducer::run);
             QObject::connect(thread, &QThread::finished, worker, &CacheProducer::deleteLater);
-            m_workersPool.append(worker);
+            m_workersPool.insert(worker);
             Radapter::Broker::instance()->registerProxy(worker->createProxy(loggers));
         } else if (cacheInfo.mode == Settings::RedisCache::Consumer) {
             auto worker = new CacheConsumer(cacheInfo.target_server.server_host,
@@ -45,7 +45,7 @@ int CacheFactory::initWorkers()
                                             thread);
             QObject::connect(thread, &QThread::started, worker, &CacheConsumer::run);
             QObject::connect(thread, &QThread::finished, worker, &CacheConsumer::deleteLater);
-            m_workersPool.append(worker);
+            m_workersPool.insert(worker);
             Radapter::Broker::instance()->registerProxy(worker->createProxy(loggers));
         } else {
             reDebug() << "Cache worker mode not set for: " << cacheInfo.worker.name;
