@@ -10,7 +10,6 @@
 #include "radapterlogging.h"
 #include "localstorage.h"
 #include "localization.h"
-#include "jsondict/jsondict.hpp"
 #include "bindings/bindingsprovider.h"
 #include "redis-adapter/settings/modbussettings.h"
 #include "redis-adapter/settings/redissettings.h"
@@ -48,6 +47,7 @@ void Launcher::addWorker(WorkerBase* worker, QSet<InterceptorBase*> interceptors
 void Launcher::prvPreInit()
 {
     qSetMessagePattern(CUSTOM_MESSAGE_PATTERN);
+    setLoggingFilters(Settings::LoggingInfoParser::parse(m_filereader->deserialise("log_debug").toMap()));
     m_filereader->setPath("conf/bindings.toml");
     auto jsonBindings = JsonBinding::parseMap(m_filereader->deserialise().toMap());
     BindingsProvider::init(jsonBindings);
@@ -99,7 +99,6 @@ void Launcher::setLoggingFilters(const Settings::LoggingInfo &loggers)
 int Launcher::prvInit()
 {
     prvPreInit();
-    setLoggingFilters(Settings::LoggingInfoParser::parse(m_filereader->deserialise("log_debug").toMap()));
     addFactory(new Redis::StreamFactory(Settings::RedisStream::cacheMap, this));
     addFactory(new Redis::CacheFactory(Settings::RedisCache::cacheMap.values(), this));
     addFactory(new Redis::PubSubFactory(Settings::RedisKeyEventSubscriber::cacheMap.values(), this));
@@ -205,5 +204,6 @@ void Launcher::run()
     for (auto worker = m_workers.keyBegin(); worker != m_workers.keyEnd(); ++worker) {
         (*worker)->run();
     }
+    Broker::instance()->runAll();
 }
 
