@@ -36,42 +36,6 @@ Connector::Connector(const QString &host,
     m_canSelect(true),
     m_pingConnection()
 {
-    m_client = new RedisQtAdapter(this);
-    m_connectionTimer = new QTimer(this);
-    m_connectionTimer->setSingleShot(true);
-    m_connectionTimer->callOnTimeout(this, [this](){
-        reError() << metaInfo().c_str() << "Connection timeout. Trying new connection...";
-        increaseConnectionTimeout();
-        clearContext();
-        tryConnect();
-    });
-    resetConnectionTimeout();
-    connect(this, &Connector::connected, &Connector::resetConnectionTimeout);
-    connect(this, &Connector::connected, &Connector::stopConnectionTimer);
-
-    m_reconnectCooldown = new QTimer(this);
-    m_reconnectCooldown->setSingleShot(true);
-    m_reconnectCooldown->setInterval(RECONNECT_DELAY_MS);
-    m_reconnectCooldown->callOnTimeout(this, &Connector::tryConnect);
-    connect(this, &Connector::disconnected, m_reconnectCooldown, QOverload<>::of(&QTimer::start));
-
-    m_pingTimer = new QTimer(this);
-    m_pingTimer->setSingleShot(false);
-    m_pingTimer->setInterval(PING_TIMEOUT_MS);
-    enablePingKeepalive();
-
-    m_commandTimer = new QTimer(this);
-    m_commandTimer->setSingleShot(true);
-    m_commandTimer->setInterval(COMMAND_TIMEOUT_MS);
-    m_commandTimer->callOnTimeout([this](){
-        if (m_commandTimeoutsCounter < MAX_COMMAND_ERRORS) {
-            reDebug() << metaInfo().c_str() << "command timeout";
-        }
-        incrementErrorCounter();
-    });
-
-    connect(this, &Connector::connected, &Connector::selectDb);
-    tryConnect();
 }
 
 Connector::~Connector()
@@ -466,4 +430,45 @@ QString Connector::toString(const redisReply *reply)
     default: break;
     }
     return replyString;
+}
+
+void Connector::onRun()
+{
+    m_client = new RedisQtAdapter(this);
+    m_connectionTimer = new QTimer(this);
+    m_connectionTimer->setSingleShot(true);
+    m_connectionTimer->callOnTimeout(this, [this](){
+        reError() << metaInfo().c_str() << "Connection timeout. Trying new connection...";
+        increaseConnectionTimeout();
+        clearContext();
+        tryConnect();
+    });
+    resetConnectionTimeout();
+    connect(this, &Connector::connected, &Connector::resetConnectionTimeout);
+    connect(this, &Connector::connected, &Connector::stopConnectionTimer);
+
+    m_reconnectCooldown = new QTimer(this);
+    m_reconnectCooldown->setSingleShot(true);
+    m_reconnectCooldown->setInterval(RECONNECT_DELAY_MS);
+    m_reconnectCooldown->callOnTimeout(this, &Connector::tryConnect);
+    connect(this, &Connector::disconnected, m_reconnectCooldown, QOverload<>::of(&QTimer::start));
+
+    m_pingTimer = new QTimer(this);
+    m_pingTimer->setSingleShot(false);
+    m_pingTimer->setInterval(PING_TIMEOUT_MS);
+    enablePingKeepalive();
+
+    m_commandTimer = new QTimer(this);
+    m_commandTimer->setSingleShot(true);
+    m_commandTimer->setInterval(COMMAND_TIMEOUT_MS);
+    m_commandTimer->callOnTimeout([this](){
+        if (m_commandTimeoutsCounter < MAX_COMMAND_ERRORS) {
+            reDebug() << metaInfo().c_str() << "command timeout";
+        }
+        incrementErrorCounter();
+    });
+
+    connect(this, &Connector::connected, &Connector::selectDb);
+    tryConnect();
+    Radapter::WorkerBase::onRun();
 }

@@ -3,7 +3,7 @@
 
 #include <QObject>
 #include <QFuture>
-#include "radapter-broker/future.h"
+#include "future/future.h"
 #include "redis-adapter/connectors/redisconnector.h"
 #include "jsondict/jsondict.hpp"
 #include <QQueue>

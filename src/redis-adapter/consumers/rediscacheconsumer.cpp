@@ -1,5 +1,4 @@
 #include "rediscacheconsumer.h"
-#include "radapter-broker/future.h"
 #include "redis-adapter/formatters/redisqueryformatter.h"
 #include "redis-adapter/radapterlogging.h"
 
@@ -18,24 +17,26 @@ CacheConsumer::CacheConsumer(const QString &host,
 
 Future<QVariantList> CacheConsumer::requestIndex(const QString &indexKey)
 {
-    auto futurePair = createFuture<QVariantList>();
+    auto future = Future<QVariantList>();
+    auto setter = future.createSetter();
     if (!indexKey.isEmpty()) {
-        requestIndex(indexKey, futurePair.setter);
+        requestIndex(indexKey, setter);
     } else if (!m_indexKey.isEmpty()) {
         return requestIndex(m_indexKey);
     } else {
-        futurePair.setter->setDone();
+        setter.setDone();
     }
-    return futurePair.future;
+    return future;
 }
 
 Future<JsonDict> CacheConsumer::requestKeys(const QStringList &keys)
 {
-    auto futurePair = createFuture<JsonDict>();
+    auto future = Future<JsonDict>();
+    auto setter = future.createSetter();
     if (keys.isEmpty()) {
-        futurePair.setter->setDone();
+        setter.setDone();
     }
-    return futurePair.future;
+    return future;
 }
 
 void CacheConsumer::requestIndex(const QString &indexKey, FutureSetter<QVariantList> setter)
@@ -43,7 +44,7 @@ void CacheConsumer::requestIndex(const QString &indexKey, FutureSetter<QVariantL
     auto command = RedisQueryFormatter::toGetIndexCommand(indexKey);
     m_indexSetters.append(setter);
     if (runAsyncCommand(&CacheConsumer::readKeysCallback, command, &m_keysSetters.last()) != REDIS_OK) {
-        m_keysSetters.last()->setDone();
+        m_keysSetters.last().setDone();
         m_keysSetters.removeLast();
     }
 }
@@ -55,7 +56,7 @@ void CacheConsumer::readIndexCallback(redisReply *reply, FutureSetter<QVariantLi
     }
     if (reply->elements == 0) {
         reDebug() << metaInfo().c_str() << "Empty index.";
-        setter->get()->setDone();
+        setter->setDone();
         return;
     }
 
@@ -67,8 +68,8 @@ void CacheConsumer::readIndexCallback(redisReply *reply, FutureSetter<QVariantLi
             indexedKeys.append(keyItem);
         }
     }
-    setter->get()->setResult(indexedKeys);
-    setter->get()->setDone();
+    setter->setResult(indexedKeys);
+    setter->setDone();
     m_indexSetters.removeOne(*setter);
 }
 
@@ -78,7 +79,7 @@ void CacheConsumer::requestKeys(const QStringList &keys, FutureSetter<JsonDict> 
     m_requestedKeysBuffer.enqueue(keys);
     m_keysSetters.append(setter);
     if (runAsyncCommand(&CacheConsumer::readKeysCallback, command, &m_keysSetters.last()) != REDIS_OK) {
-        m_keysSetters.last()->setDone();
+        m_keysSetters.last().setDone();
         m_keysSetters.removeLast();
     }
 }
@@ -95,8 +96,8 @@ void CacheConsumer::readKeysCallback(redisReply *replyPtr, FutureSetter<JsonDict
         foundEntries.append(entryItem);
     }
     reDebug() << metaInfo().c_str() << "Key entries found:" << keysMatched;
-    (*setter)->setResult(mergeWithKeys(foundEntries));
-    (*setter)->setDone();
+    setter->setResult(mergeWithKeys(foundEntries));
+    setter->setDone();
     m_keysSetters.removeOne(*setter);
 }
 

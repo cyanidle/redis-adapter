@@ -62,6 +62,7 @@ signals:
     void commandsFinished();
 
 private slots:
+    void onRun() override;
     void tryConnect();
     void doPing();
     void clearContext();
