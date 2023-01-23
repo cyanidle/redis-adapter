@@ -16,6 +16,8 @@
 
 using namespace Redis;
 
+timeval Connector::timeout{.tv_sec = 0, .tv_usec = TCP_CONNECT_TIMEOUT_MS};
+
 Connector::Connector(const QString &host,
                      const quint16 port,
                      const quint16 dbIndex,
@@ -63,8 +65,6 @@ void Connector::tryConnect()
 
     auto options = redisOptions{};
     REDIS_OPTIONS_SET_TCP(&options, m_host.toStdString().c_str(), m_port);
-    auto timeout = timeval{};
-    timeout.tv_usec = TCP_CONNECT_TIMEOUT_MS;
     options.connect_timeout = &timeout;
     m_redisContext = redisAsyncConnectWithOptions(&options);
     m_redisContext->data = this;

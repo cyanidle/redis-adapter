@@ -10,7 +10,7 @@
 
 namespace Redis{
 
-class RADAPTER_SHARED_SRC Connector : public Radapter::WorkerBase
+class RADAPTER_SHARED_SRC   Connector : public Radapter::WorkerBase
 {
     Q_OBJECT
 public:
@@ -106,6 +106,7 @@ private:
     quint16 m_dbIndex;
     bool m_canSelect;
     QMetaObject::Connection m_pingConnection;
+    static timeval timeout;
 
                           struct CallbackArgsPlain {StaticCb callback; void *data;};
     template <class User, class Data>
