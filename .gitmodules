@@ -1,6 +1,6 @@
 [submodule "src/lib/hiredis"]
 	path = src/lib/hiredis
-	url = https://github.com/cyanidle/hiredis.git
+	url = https://github.com/redis/hiredis.git
 [submodule "src/lib/googletest"]
 	path = src/lib/googletest
 	url = https://github.com/google/googletest
