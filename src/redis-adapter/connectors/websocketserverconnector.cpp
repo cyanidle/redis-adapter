@@ -49,7 +49,7 @@ Settings::WebsocketServerInfo ServerConnector::info() const
     return m_info;
 }
 
-void ServerConnector::run()
+void ServerConnector::onRun()
 {
     thread()->start();
 }

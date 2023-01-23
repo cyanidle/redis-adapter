@@ -3,7 +3,6 @@
 
 #include <QObject>
 #include "redis-adapter/connectors/mysqlconnector.h"
-#include "radapter-broker/workerbase.h"
 #include "redis-adapter/settings/settings.h"
 
 namespace Sql {
@@ -21,7 +20,7 @@ public:
     JsonDict readJsonEntries(const QStringList &keys);
 
 public slots:
-    void run();
+    void onRun();
 
 private:
 

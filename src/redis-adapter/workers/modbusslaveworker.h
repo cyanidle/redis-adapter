@@ -5,7 +5,6 @@
 #include <QTimer>
 #include "radapter-broker/workerbase.h"
 #include "redis-adapter/settings/modbussettings.h"
-#include "redis-adapter/formatters/wordoperations.h"
 
 namespace Modbus {
 
@@ -14,7 +13,6 @@ class RADAPTER_SHARED_SRC SlaveWorker : public Radapter::WorkerBase
     Q_OBJECT
 public:
     SlaveWorker(const Settings::ModbusSlaveWorker &settings, QThread *thread);
-    void run() override;
     ~SlaveWorker();
 public slots:
     virtual void onMsg(const Radapter::WorkerMsg &msg) override;

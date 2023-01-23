@@ -23,7 +23,7 @@ signals:
     void writeDone(bool isOk, const Radapter::WorkerMsg &msg);
 
 public slots:
-    void run();
+    void onRun();
 
 private:
     Settings::SqlClientInfo m_clientInfo;

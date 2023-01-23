@@ -61,9 +61,6 @@ signals:
     void disconnected();
     void commandsFinished();
 
-public slots:
-    virtual void run() override;
-
 private slots:
     void tryConnect();
     void doPing();

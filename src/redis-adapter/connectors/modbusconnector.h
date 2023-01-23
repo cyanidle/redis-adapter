@@ -21,7 +21,7 @@ public:
                      QThread *thread);
 
     Settings::ModbusConnectionSettings settings() const;
-    void run() override;
+    void onRun() override;
 public slots:
     void onMsg(const Radapter::WorkerMsg &msg) override;
     void onReply(const Radapter::WorkerMsg &msg) override;

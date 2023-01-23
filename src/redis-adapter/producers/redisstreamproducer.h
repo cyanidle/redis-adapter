@@ -26,7 +26,6 @@ public:
     quint32 streamSize() const;
 
 public slots:
-    void run() override;
     void onMsg(const Radapter::WorkerMsg &msg) override;
 
 private slots:

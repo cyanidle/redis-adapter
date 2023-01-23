@@ -117,10 +117,11 @@ Settings::ModbusConnectionSettings ModbusConnector::settings() const
     return m_modbusFactory->connectionSettings();
 }
 
-void ModbusConnector::run()
+void ModbusConnector::onRun()
 {
-    m_modbusThread->start();
-    thread()->start(QThread::HighPriority);
+    m_modbusThread->start(QThread::HighPriority);
+    thread()->setPriority(QThread::HighPriority);
+    WorkerBase::onRun();
 }
 
 void ModbusConnector::onMsg(const Radapter::WorkerMsg &msg)

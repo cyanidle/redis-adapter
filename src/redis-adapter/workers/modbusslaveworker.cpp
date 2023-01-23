@@ -2,6 +2,7 @@
 #include <QModbusRtuSerialSlave>
 #include <QModbusTcpServer>
 #include "redis-adapter/radapterlogging.h"
+#include "redis-adapter/formatters/wordoperations.h"
 using namespace Modbus;
 using namespace Radapter;
  
@@ -201,7 +202,3 @@ QModbusDataUnit SlaveWorker::parseValueToDataUnit(const QVariant &src, const Set
 
 // Аяяйяйяйяйяйййя убили SlaveWorker`а убили,
 // аяаяаяаяаяаяаая ни за что ни про что
-void SlaveWorker::run()
-{
-    thread()->start();
-}

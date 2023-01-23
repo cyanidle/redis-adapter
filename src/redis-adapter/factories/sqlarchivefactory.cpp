@@ -36,7 +36,7 @@ Radapter::WorkersList ArchiveFactory::getWorkers() const
 
 void ArchiveFactory::run()
 {
-    for (auto &worker : m_workerPool) {
+    for (auto &worker : qAsConst(m_workerPool)) {
         worker->thread()->start();
     }
 }

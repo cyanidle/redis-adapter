@@ -26,13 +26,7 @@ StreamConsumer::StreamConsumer(const QString &host,
       m_lastStreamId{}
 {
     m_hasPending = areGroupsEnabled();
-}
-
-void StreamConsumer::run()
-{
-    Connector::run();
     disablePingKeepalive();
-
     auto readInterval = static_cast<qint32>(BLOCK_TIMEOUT_MS * 1.5);
     m_blockingReadTimer = new QTimer(this);
     m_blockingReadTimer->setInterval(readInterval);

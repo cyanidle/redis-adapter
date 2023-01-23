@@ -25,9 +25,6 @@ int MySqlFactory::initWorkers()
         auto thread = new QThread(this);
         QObject::connect(thread, &QThread::finished, thread, &QThread::deleteLater);
         auto connector = new MySqlConnector(clientInfo);
-        connector->moveToThread(thread);
-        QObject::connect(thread, &QThread::started, connector, &MySqlConnector::run);
-        QObject::connect(thread, &QThread::finished, connector, &MySqlConnector::deleteLater);
         m_workersPool.append(connector);
     }
     return 0;

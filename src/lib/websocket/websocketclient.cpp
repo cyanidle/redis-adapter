@@ -61,10 +61,10 @@ void Client::init()
 void Client::start()
 {
     init();
-    run();
+    onRun();
 }
 
-void Client::run()
+void Client::onRun()
 {
     if (isRunning()) {
         doStop();

@@ -16,12 +16,12 @@ ArchiveProducer::ArchiveProducer(MySqlConnector *client,
 {
 }
 
-void ArchiveProducer::run()
+void ArchiveProducer::onRun()
 {
     m_keyVaultClient = new KeyVaultConsumer(m_dbClient, m_archiveInfo.key_vault, this);
     connect(m_dbClient, &MySqlConnector::writeDone,
             this, &ArchiveProducer::saveFinished);
-    m_keyVaultClient->run();
+    m_keyVaultClient->onRun();
 }
 
 void ArchiveProducer::onMsg(const Radapter::WorkerMsg &msg)

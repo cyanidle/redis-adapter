@@ -15,8 +15,6 @@ int ClientFactory::initWorkers()
         auto thread = new QThread(this);
         connect(thread, &QThread::finished, thread, &QThread::deleteLater);
         auto client = new Websocket::Client(info.server_host, info.server_port, info.worker, thread);
-        connect(client->thread(), &QThread::started, client, &Websocket::Client::start);
-        connect(client->thread(), &QThread::finished, client, &Websocket::Client::deleteLater);
         m_workersPool.insert(client);
         Radapter::Broker::instance()->registerProxy(client->createProxy());
     }
@@ -30,7 +28,7 @@ Radapter::WorkersList ClientFactory::getWorkers() const
 
 void ClientFactory::run()
 {
-    for (auto &worker : m_workersPool) {
+    for (auto &worker : qAsConst(m_workersPool)) {
         worker->thread()->start();
     }
 }

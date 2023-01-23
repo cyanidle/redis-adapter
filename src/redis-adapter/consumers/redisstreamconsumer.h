@@ -33,7 +33,6 @@ signals:
     void ackCompleted();
     void pendingChanged(bool state);
 public slots:
-    void run() override;
     void onCommand(const Radapter::WorkerMsg &msg) override;
 
     void blockingRead();

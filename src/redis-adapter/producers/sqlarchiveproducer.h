@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include "redis-adapter/settings/settings.h"
+#include "radapter-broker/workerbase.h"
 #include "redis-adapter/connectors/mysqlconnector.h"
 #include "redis-adapter/consumers/sqlkeyvaultconsumer.h"
 
@@ -18,7 +19,7 @@ public:
                              const Settings::SqlStorageInfo &archiveInfo,
                              const Radapter::WorkerSettings &settings, QThread *thread);
 public slots:
-    void run() override;
+    void onRun() override;
     void onMsg(const Radapter::WorkerMsg &msg) override;
     //Replies
     void saveFinished(bool isOk, const Radapter::WorkerMsg &msg);

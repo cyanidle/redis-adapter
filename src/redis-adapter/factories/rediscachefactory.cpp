@@ -32,8 +32,6 @@ int CacheFactory::initWorkers()
                                             cacheInfo.index_key,
                                             cacheInfo.worker,
                                             thread);
-            QObject::connect(thread, &QThread::started, worker, &CacheProducer::run);
-            QObject::connect(thread, &QThread::finished, worker, &CacheProducer::deleteLater);
             m_workersPool.insert(worker);
             Radapter::Broker::instance()->registerProxy(worker->createProxy(loggers));
         } else if (cacheInfo.mode == Settings::RedisCache::Consumer) {
@@ -43,8 +41,6 @@ int CacheFactory::initWorkers()
                                             cacheInfo.index_key,
                                             cacheInfo.worker,
                                             thread);
-            QObject::connect(thread, &QThread::started, worker, &CacheConsumer::run);
-            QObject::connect(thread, &QThread::finished, worker, &CacheConsumer::deleteLater);
             m_workersPool.insert(worker);
             Radapter::Broker::instance()->registerProxy(worker->createProxy(loggers));
         } else {

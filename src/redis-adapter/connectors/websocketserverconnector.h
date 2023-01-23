@@ -25,7 +25,7 @@ public:
 signals:
     void jsonPublished(const QVariant &nestedJson);
 public slots:
-    void run() override;
+    void onRun() override;
     void onMsg(const Radapter::WorkerMsg &msg) override;
 
 private slots:

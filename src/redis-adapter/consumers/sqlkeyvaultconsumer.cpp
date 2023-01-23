@@ -20,7 +20,7 @@ KeyVaultConsumer::KeyVaultConsumer(MySqlConnector *client,
     };
 }
 
-void KeyVaultConsumer::run()
+void KeyVaultConsumer::onRun()
 {
 }
 

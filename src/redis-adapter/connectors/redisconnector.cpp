@@ -36,19 +36,6 @@ Connector::Connector(const QString &host,
     m_canSelect(true),
     m_pingConnection()
 {
-}
-
-Connector::~Connector()
-{
-    if (m_isConnected) {
-        redisAsyncDisconnect(m_redisContext);
-    } else if (m_redisContext) {
-        redisAsyncFree(m_redisContext);
-    }
-}
-
-void Connector::run()
-{
     m_client = new RedisQtAdapter(this);
     m_connectionTimer = new QTimer(this);
     m_connectionTimer->setSingleShot(true);
@@ -85,6 +72,15 @@ void Connector::run()
 
     connect(this, &Connector::connected, &Connector::selectDb);
     tryConnect();
+}
+
+Connector::~Connector()
+{
+    if (m_isConnected) {
+        redisAsyncDisconnect(m_redisContext);
+    } else if (m_redisContext) {
+        redisAsyncFree(m_redisContext);
+    }
 }
 
 void Connector::finishAsyncCommand()
@@ -336,8 +332,10 @@ void Connector::enablePingKeepalive()
 
 void Connector::disablePingKeepalive()
 {
-    disconnect(m_pingTimer);
-    m_pingTimer->disconnect();
+    if (m_pingTimer) {
+        disconnect(m_pingTimer);
+        m_pingTimer->disconnect();
+    }
     m_pingConnection = {};
 }
 

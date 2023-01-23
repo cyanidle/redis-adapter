@@ -22,6 +22,11 @@ StreamProducer::StreamProducer(const QString &host,
       m_streamKey(streamKey)
 {
     m_streamSize = streamSize > 0 ? static_cast<quint32>(streamSize) : DEFAULT_STREAM_SIZE;
+    m_trimTimer = new QTimer(this);
+    m_trimTimer->setInterval(TRIM_TIMEOUT_MS);
+    m_trimTimer->setSingleShot(false);
+    m_trimTimer->callOnTimeout(this, &StreamProducer::tryTrim);
+    m_trimTimer->start();
 }
 
 StreamProducer::~StreamProducer()
@@ -40,16 +45,6 @@ QString StreamProducer::streamKey() const
 quint32 StreamProducer::streamSize() const
 {
     return m_streamSize;
-}
-
-void StreamProducer::run()
-{
-    Connector::run();
-    m_trimTimer = new QTimer(this);
-    m_trimTimer->setInterval(TRIM_TIMEOUT_MS);
-    m_trimTimer->setSingleShot(false);
-    m_trimTimer->callOnTimeout(this, &StreamProducer::tryTrim);
-    m_trimTimer->start();
 }
 
 void StreamProducer::onMsg(const Radapter::WorkerMsg &msg)

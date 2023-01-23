@@ -28,7 +28,7 @@ public slots:
     void start();
 
 private slots:
-    void run() override;
+    void onRun() override;
     void onConnected();
     void onDisconnected();
     void onError();

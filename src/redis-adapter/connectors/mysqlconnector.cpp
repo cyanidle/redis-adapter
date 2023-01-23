@@ -9,7 +9,7 @@ MySqlConnector::MySqlConnector(const Settings::SqlClientInfo &clientInfo, QObjec
 {
 }
 
-void MySqlConnector::run()
+void MySqlConnector::onRun()
 {
     if (m_client && m_client->isOpened()) {
         return;

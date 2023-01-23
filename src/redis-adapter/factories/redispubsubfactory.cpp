@@ -30,8 +30,6 @@ int PubSubFactory::initWorkers()
                                               subscriberInfo.keyEvents,
                                               subscriberInfo.worker,
                                               thread);
-        connect(thread, &QThread::started, consumer, &KeyEventsConsumer::run);
-        connect(thread, &QThread::finished, consumer, &KeyEventsConsumer::deleteLater);
         m_workersPool.insert(consumer);
         Radapter::Broker::instance()->registerProxy(consumer->createProxy(loggers));
     }
@@ -46,7 +44,7 @@ Radapter::WorkersList PubSubFactory::getWorkers() const
 
 void PubSubFactory::run()
 {
-    for (auto &worker : m_workersPool) {
+    for (auto &worker : qAsConst(m_workersPool)) {
         worker->thread()->start();
     }
 }

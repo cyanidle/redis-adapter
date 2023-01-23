@@ -35,8 +35,6 @@ int StreamFactory::initWorkers()
                                                streamInfo.start_from,
                                                streamInfo.worker,
                                                thread);
-            QObject::connect(thread, &QThread::started, consumer, &StreamConsumer::run);
-            QObject::connect(thread, &QThread::finished, consumer, &StreamConsumer::deleteLater);
             Radapter::Broker::instance()->registerProxy(consumer->createProxy(loggers));
             m_workersPool.insert(consumer);
         }
@@ -47,8 +45,6 @@ int StreamFactory::initWorkers()
                                                streamInfo.worker,
                                                thread,
                                                streamInfo.stream_size);
-            QObject::connect(thread, &QThread::started, producer, &StreamProducer::run);
-            QObject::connect(thread, &QThread::finished, producer, &StreamProducer::deleteLater);
             Radapter::Broker::instance()->registerProxy(producer->createProxy(loggers));
             m_workersPool.insert(producer);
         }
