@@ -30,7 +30,7 @@ ModbusConnector *ModbusConnector::instance()
 
 void ModbusConnector::writeJsonDone(const JsonDict &jsonDict)
 {
-    auto command = prepareCommand(Radapter::WorkerMsg::ServiceAcknowledge, jsonDict.toVariant());
+    auto command = prepareCommand(Radapter::WorkerMsg::CommandAcknowledge, jsonDict.toVariant());
     command.receivers() = producers();
     emit sendMsg(command);
 }
@@ -38,14 +38,14 @@ void ModbusConnector::writeJsonDone(const JsonDict &jsonDict)
 void ModbusConnector::jsonItemWritten(const JsonDict &modbusJsonUnit)
 {
     Q_UNUSED(modbusJsonUnit);
-    auto command = prepareCommand(Radapter::WorkerMsg::ServiceRequestJson);
+    auto command = prepareCommand(Radapter::WorkerMsg::CommandRequestJson);
     command.receivers() = producers();
     emit sendMsg(command);
 }
 
 void ModbusConnector::allDevicesConnected()
 {
-    auto command = prepareCommand(Radapter::WorkerMsg::ServiceRequestJson);
+    auto command = prepareCommand(Radapter::WorkerMsg::CommandRequestJson);
     command.receivers() = producers();
     emit sendMsg(command);
 }
@@ -153,18 +153,16 @@ void ModbusConnector::onMsg(const Radapter::WorkerMsg &msg)
 
 void ModbusConnector::approvalRequested(const QStringList &jsonKeys)
 {
-    auto command = prepareCommand(Radapter::WorkerMsg::ServiceRequestKeys, jsonKeys);
+    auto command = prepareCommand(Radapter::WorkerMsg::CommandRequestKeys, jsonKeys);
     command.receivers() = producers();
     emit sendMsg(command);
 }
 
 void ModbusConnector::onReply(const Radapter::WorkerMsg &msg)
 {
-    auto ack = msg.serviceData(Radapter::WorkerMsg::ServiceAcknowledge);
-    if (ack.isValid()) {
-        onApprovalReceived(ack.toMap());
-    } else {
-        reDebug() << "ModbusConnector received reply with non 'AcknowledgeSchema'";
+    auto ack = msg.commandType() == Radapter::WorkerMsg::CommandAcknowledge;
+    if (ack) {
+        onApprovalReceived(msg.commandData().toMap());
     }
 }
 

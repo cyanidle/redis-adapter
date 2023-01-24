@@ -29,7 +29,7 @@ int CacheProducer::writeKeys(const JsonDict &json)
     if (json.isEmpty()) {
         return REDIS_ERR;
     }
-    auto msetCommand = RedisQueryFormatter(json ).toMultipleSetCommand();
+    auto msetCommand = RedisQueryFormatter(json).toMultipleSetCommand();
     return runAsyncCommand(&CacheProducer::msetCallback, msetCommand);
 }
 
@@ -38,7 +38,7 @@ int CacheProducer::writeIndex(const JsonDict &json, const QString &indexKey)
     if (json.isEmpty() || indexKey.isEmpty()) {
         return REDIS_ERR;
     }
-    auto indexCommand = RedisQueryFormatter(json ).toUpdateIndexCommand(indexKey);
+    auto indexCommand = RedisQueryFormatter(json).toUpdateIndexCommand(indexKey);
     return runAsyncCommand(&CacheProducer::indexCallback, indexCommand);
 }
 

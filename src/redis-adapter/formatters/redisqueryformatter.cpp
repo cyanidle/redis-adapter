@@ -120,23 +120,14 @@ QString RedisQueryFormatter::toPatternSubscribeCommand(const QStringList &patter
     return command;
 }
 
- JsonDict RedisQueryFormatter::flatten() const
+JsonDict RedisQueryFormatter::flatten() const
 {
-    return m_json.flatten();
+    return m_json.flatten(":");
 }
 
 QString RedisQueryFormatter::toEntryFields() const
 {
-    auto flattenedJson = flatten();
-    auto fieldsList = QStringList{};
-    for (auto jsonItem = flattenedJson.begin();
-         jsonItem != flattenedJson.end();
-         jsonItem++)
-    {
-        fieldsList.append(jsonItem.key());
-        fieldsList.append(jsonItem.value().toString());
-    }
-    return fieldsList.join(" ");
+    return flatten().topKeys().join(" ");
 }
 
 QString RedisQueryFormatter::toKeysFields(const QStringList &keysList)

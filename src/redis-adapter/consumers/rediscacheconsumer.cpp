@@ -15,48 +15,31 @@ CacheConsumer::CacheConsumer(const QString &host,
 {
 }
 
-Future<QVariantList> CacheConsumer::requestIndex(const QString &indexKey)
+void CacheConsumer::requestIndex(const QString &indexKey, const Radapter::WorkerMsg &msg)
 {
-    auto future = Future<QVariantList>();
-    auto setter = future.createSetter();
-    if (!indexKey.isEmpty()) {
-        requestIndex(indexKey, setter);
-    } else if (!m_indexKey.isEmpty()) {
-        return requestIndex(m_indexKey);
-    } else {
-        setter.setDone();
+    if (indexKey.isEmpty()) {
+        requestIndex(m_indexKey, msg);
+        return;
     }
-    return future;
-}
-
-Future<JsonDict> CacheConsumer::requestKeys(const QStringList &keys)
-{
-    auto future = Future<JsonDict>();
-    auto setter = future.createSetter();
-    if (keys.isEmpty()) {
-        setter.setDone();
-    }
-    return future;
-}
-
-void CacheConsumer::requestIndex(const QString &indexKey, FutureSetter<QVariantList> setter)
-{
     auto command = RedisQueryFormatter::toGetIndexCommand(indexKey);
-    m_indexSetters.append(setter);
-    if (runAsyncCommand(&CacheConsumer::readKeysCallback, command, &m_keysSetters.last()) != REDIS_OK) {
-        m_keysSetters.last().setDone();
-        m_keysSetters.removeLast();
+    auto ptr = new Radapter::WorkerMsg(msg);
+    if (runAsyncCommand(&CacheConsumer::readKeysCallback, command, ptr) != REDIS_OK) {
+        emit sendMsg(prepareReply(msg, Radapter::WorkerMsg::ReplyFail));
+        delete ptr;
     }
 }
 
-void CacheConsumer::readIndexCallback(redisReply *reply, FutureSetter<QVariantList> *setter)
+void CacheConsumer::readIndexCallback(redisReply *reply, Radapter::WorkerMsg *msg)
 {
     if (isNullReply(reply)) {
+        emit sendMsg(prepareReply(*msg, Radapter::WorkerMsg::ReplyFail, "Null reply"));
+        delete msg;
         return;
     }
     if (reply->elements == 0) {
         reDebug() << metaInfo().c_str() << "Empty index.";
-        setter->setDone();
+        emit sendMsg(prepareReply(*msg, Radapter::WorkerMsg::ReplyFail));
+        delete msg;
         return;
     }
 
@@ -68,23 +51,21 @@ void CacheConsumer::readIndexCallback(redisReply *reply, FutureSetter<QVariantLi
             indexedKeys.append(keyItem);
         }
     }
-    setter->setResult(indexedKeys);
-    setter->setDone();
-    m_indexSetters.removeOne(*setter);
+    emit sendMsg(prepareReply(*msg, Radapter::WorkerMsg::ReplyOk, indexedKeys));
+    delete msg;
 }
 
-void CacheConsumer::requestKeys(const QStringList &keys, FutureSetter<JsonDict> setter)
+void CacheConsumer::requestKeys(const QStringList &keys, const Radapter::WorkerMsg &msg)
 {
     auto command = RedisQueryFormatter::toMultipleGetCommand(keys);
-    m_requestedKeysBuffer.enqueue(keys);
-    m_keysSetters.append(setter);
-    if (runAsyncCommand(&CacheConsumer::readKeysCallback, command, &m_keysSetters.last()) != REDIS_OK) {
-        m_keysSetters.last().setDone();
-        m_keysSetters.removeLast();
+    auto ptr = new Radapter::WorkerMsg(msg);
+    if (runAsyncCommand(&CacheConsumer::readKeysCallback, command, ptr) != REDIS_OK) {
+        emit sendMsg(prepareReply(msg, Radapter::WorkerMsg::ReplyFail));
+        delete ptr;
     }
 }
 
-void CacheConsumer::readKeysCallback(redisReply *replyPtr, FutureSetter<JsonDict> *setter)
+void CacheConsumer::readKeysCallback(redisReply *replyPtr, Radapter::WorkerMsg *msg)
 {
     auto foundEntries = QVariantList{};
     quint16 keysMatched = 0u;
@@ -96,9 +77,10 @@ void CacheConsumer::readKeysCallback(redisReply *replyPtr, FutureSetter<JsonDict
         foundEntries.append(entryItem);
     }
     reDebug() << metaInfo().c_str() << "Key entries found:" << keysMatched;
-    setter->setResult(mergeWithKeys(foundEntries));
-    setter->setDone();
-    m_keysSetters.removeOne(*setter);
+    auto reply = prepareReply(*msg, Radapter::WorkerMsg::ReplyOk);
+    reply.setJson(mergeWithKeys(foundEntries));
+    emit sendMsg(reply);
+    delete msg;
 }
 
 JsonDict CacheConsumer::mergeWithKeys(const QVariantList &entries)
@@ -120,13 +102,17 @@ JsonDict CacheConsumer::mergeWithKeys(const QVariantList &entries)
 
 void CacheConsumer::onCommand(const Radapter::WorkerMsg &msg)
 {
-    auto requestedJson = msg.serviceData(Radapter::WorkerMsg::ServiceRequestJson);
-    auto requestedKeys = msg.serviceData(Radapter::WorkerMsg::ServiceRequestKeys);
-    if (requestedJson.isValid()) {
-        requestIndex(requestedJson.toString());
-    }
-    if (requestedKeys.isValid()) {
-        requestKeys(requestedKeys.toStringList());
+    auto command = msg.commandType();
+    auto data = msg.commandData();
+    switch (command) {
+    case Radapter::WorkerMsg::CommandRequestIndex:
+        requestIndex(data.toString(), msg);
+        break;
+    case Radapter::WorkerMsg::CommandRequestKeys:
+        requestKeys(data.toStringList(), msg);
+        break;
+    default:
+        break;
     }
 }
 

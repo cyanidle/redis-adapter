@@ -2,7 +2,7 @@
 #define REDISKEYEVENTSCONSUMER_H
 
 #include <QObject>
-#include "rediscacheconsumer.h"
+#include "redis-adapter/connectors/redisconnector.h"
 
 namespace Redis {
 class RADAPTER_SHARED_SRC KeyEventsConsumer;

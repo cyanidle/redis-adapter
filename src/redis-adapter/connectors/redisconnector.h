@@ -88,6 +88,7 @@ private:
                           static void privateCallbackStatic(redisAsyncContext *context, void *replyPtr, void *data);
 
     static void pingCallback(redisAsyncContext *context, void *replyPtr, void *sender);
+    static timeval timeout;
     void selectCallback(redisReply *replyPtr);
     static void connectCallback(const redisAsyncContext *context, int status);
     static void disconnectCallback(const redisAsyncContext *context, int status);
@@ -106,7 +107,6 @@ private:
     quint16 m_dbIndex;
     bool m_canSelect;
     QMetaObject::Connection m_pingConnection;
-    static timeval timeout;
 
                           struct CallbackArgsPlain {StaticCb callback; void *data;};
     template <class User, class Data>

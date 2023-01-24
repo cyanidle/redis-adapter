@@ -294,13 +294,11 @@ void StreamConsumer::setPending(bool state)
 
 void StreamConsumer::onCommand(const Radapter::WorkerMsg &msg)
 {
-    if (msg.serviceData(Radapter::WorkerMsg::ServiceRequestJson).isValid()) {
+    if (msg.commandType() == Radapter::WorkerMsg::CommandRequestJson) {
         if (m_groupName.isEmpty()) {
             readGroupCommand();
         } else {
             blockingReadCommand();
         }
-    } else {
-        reWarn() << "Incorrect schema used for 'Command' to 'Redis::StreamConsumer'";
     }
 }
