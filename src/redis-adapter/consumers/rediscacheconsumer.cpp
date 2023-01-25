@@ -102,12 +102,13 @@ JsonDict CacheConsumer::mergeWithKeys(const QVariantList &entries)
 void CacheConsumer::onCommand(const Radapter::WorkerMsg &msg)
 {
     using Radapter::CommandType;
+    using namespace Cache;
     auto command = msg.command();
-    if (command->type() == CommandType<ReadIndex>()) {
+    if (command->is<ReadIndex>()) {
         requestIndex(command->as<ReadIndex>()->index(), msg);
-    } else if (command->type() == CommandType<ReadKeys>()) {
+    } else if (command->is<ReadKeys>()) {
         requestKeys(command->as<ReadKeys>()->keys(), msg);
-    } else if (command->type() == CommandType<ReadSet>()) {
+    } else if (command->is<ReadSet>()) {
         requestSet(command->as<ReadSet>()->set(), msg);
     }
 }

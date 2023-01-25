@@ -154,7 +154,7 @@ void ModbusConnector::onMsg(const Radapter::WorkerMsg &msg)
 
 void ModbusConnector::approvalRequested(const QStringList &jsonKeys)
 {
-    auto command = prepareCommand(new Redis::ReadKeys(jsonKeys));
+    auto command = prepareCommand(new Redis::Cache::ReadKeys(jsonKeys));
     command.receivers() = producers();
     emit sendMsg(command);
 }

@@ -4,7 +4,7 @@
 #include <radapter-broker/command.h>
 #include "redis-adapter/replies/redis/redisreplies.h"
 namespace Redis {
-
+namespace Cache{
 class RADAPTER_SHARED_SRC ReadIndex : public Radapter::Command
 {
     Q_GADGET
@@ -36,11 +36,11 @@ public:
 private:
     QString m_set;
 };
-
+} // namespace Cache
 } // namespace Redis
 
-RADAPTER_DECLARE_COMMAND(Redis::ReadIndex)
-RADAPTER_DECLARE_COMMAND(Redis::ReadSet)
-RADAPTER_DECLARE_COMMAND(Redis::ReadKeys)
+RADAPTER_DECLARE_COMMAND(Redis::Cache::ReadIndex)
+RADAPTER_DECLARE_COMMAND(Redis::Cache::ReadSet)
+RADAPTER_DECLARE_COMMAND(Redis::Cache::ReadKeys)
 
 #endif // REDIS_CACHECOMMANDS_H
