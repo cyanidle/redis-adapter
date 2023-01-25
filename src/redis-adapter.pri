@@ -4,6 +4,7 @@ SOURCES += \
     $$PWD/redis-adapter/connectors/mysqlconnector.cpp \
     $$PWD/redis-adapter/connectors/redisconnector.cpp \
     $$PWD/redis-adapter/connectors/websocketserverconnector.cpp \
+    $$PWD/redis-adapter/commands/redis/rediscachecommands.cpp \
     $$PWD/redis-adapter/consumers/rediscacheconsumer.cpp \
     $$PWD/redis-adapter/consumers/rediskeyeventsconsumer.cpp \
     $$PWD/redis-adapter/consumers/redisstreamconsumer.cpp \
@@ -33,6 +34,7 @@ SOURCES += \
     $$PWD/redis-adapter/localization.cpp \
     $$PWD/redis-adapter/localstorage.cpp \
     $$PWD/redis-adapter/radapterlogging.cpp \
+    $$PWD/redis-adapter/replies/redis/redisreplies.cpp \
     $$PWD/redis-adapter/settings/mysqlserializable.cpp \
     $$PWD/redis-adapter/workers/modbusslaveworker.cpp \
     $$PWD/redis-adapter/settings/modbussettings.cpp \
@@ -44,6 +46,7 @@ HEADERS += \
     $$PWD/redis-adapter/connectors/mysqlconnector.h \
     $$PWD/redis-adapter/connectors/redisconnector.h \
     $$PWD/redis-adapter/connectors/websocketserverconnector.h \
+    $$PWD/redis-adapter/commands/redis/rediscachecommands.h \
     $$PWD/redis-adapter/consumers/rediscacheconsumer.h \
     $$PWD/redis-adapter/consumers/rediskeyeventsconsumer.h \
     $$PWD/redis-adapter/consumers/redisstreamconsumer.h \
@@ -78,6 +81,7 @@ HEADERS += \
     $$PWD/redis-adapter/localization.h \
     $$PWD/redis-adapter/localstorage.h \
     $$PWD/redis-adapter/radapterlogging.h \
+    $$PWD/redis-adapter/replies/redis/redisreplies.h \
     $$PWD/redis-adapter/settings/mysqlserializable.h \
     $$PWD/redis-adapter/workers/modbusslaveworker.h \
     $$PWD/redis-adapter/settings/modbussettings.h \

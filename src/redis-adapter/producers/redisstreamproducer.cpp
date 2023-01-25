@@ -55,7 +55,7 @@ void StreamProducer::onMsg(const Radapter::WorkerMsg &msg)
     auto command = RedisQueryFormatter(msg).toAddStreamCommand(m_streamKey, streamSize());
     if (!command.isEmpty()) {
         if (runAsyncCommand(&StreamProducer::writeCallback, command) != REDIS_OK) {
-            auto reply = prepareReply(msg, Radapter::WorkerMsg::ReplyFail);
+            auto reply = prepareReply(msg, new Radapter::ReplyFail);
             emit sendMsg(reply);
         }
         m_addCounter++;

@@ -196,6 +196,18 @@ void Connector::connectCallback(const redisAsyncContext *context, int status)
     }
 }
 
+QString Connector::replyTypeToString(const int replyType)
+{
+    switch (replyType) {
+    case REDIS_REPLY_STRING:
+        return "string";
+    case REDIS_REPLY_ARRAY:
+        return "array";
+    default:
+        return QString{};
+    }
+}
+
 void Connector::disconnectCallback(const redisAsyncContext *context, int status)
 {
     auto adapter = static_cast<Connector *>(context->data);

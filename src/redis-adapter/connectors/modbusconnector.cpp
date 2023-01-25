@@ -4,6 +4,7 @@
 #include "redis-adapter/include/modbuskeys.h"
 #include "radapter-broker/broker.h"
 #include "redis-adapter/radapterlogging.h"
+#include "redis-adapter/commands/redis/rediscachecommands.h"
 
 using namespace Radapter;
 
@@ -30,7 +31,7 @@ ModbusConnector *ModbusConnector::instance()
 
 void ModbusConnector::writeJsonDone(const JsonDict &jsonDict)
 {
-    auto command = prepareCommand(Radapter::WorkerMsg::CommandAcknowledge, jsonDict.toVariant());
+    auto command = prepareCommand(new Radapter::CommandAck(jsonDict));
     command.receivers() = producers();
     emit sendMsg(command);
 }
@@ -38,14 +39,14 @@ void ModbusConnector::writeJsonDone(const JsonDict &jsonDict)
 void ModbusConnector::jsonItemWritten(const JsonDict &modbusJsonUnit)
 {
     Q_UNUSED(modbusJsonUnit);
-    auto command = prepareCommand(Radapter::WorkerMsg::CommandRequestJson);
+    auto command = prepareCommand(new Radapter::CommandRequestJson);
     command.receivers() = producers();
     emit sendMsg(command);
 }
 
 void ModbusConnector::allDevicesConnected()
 {
-    auto command = prepareCommand(Radapter::WorkerMsg::CommandRequestJson);
+    auto command = prepareCommand(new Radapter::CommandRequestJson);
     command.receivers() = producers();
     emit sendMsg(command);
 }
@@ -153,16 +154,16 @@ void ModbusConnector::onMsg(const Radapter::WorkerMsg &msg)
 
 void ModbusConnector::approvalRequested(const QStringList &jsonKeys)
 {
-    auto command = prepareCommand(Radapter::WorkerMsg::CommandRequestKeys, jsonKeys);
+    auto command = prepareCommand(new Redis::ReadKeys(jsonKeys));
     command.receivers() = producers();
     emit sendMsg(command);
 }
 
 void ModbusConnector::onReply(const Radapter::WorkerMsg &msg)
 {
-    auto ack = msg.commandType() == Radapter::WorkerMsg::CommandAcknowledge;
+    auto ack = msg.command()->as<Radapter::CommandAck>();
     if (ack) {
-        onApprovalReceived(msg.commandData().toMap());
+        onApprovalReceived(ack->json());
     }
 }
 

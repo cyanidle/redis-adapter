@@ -31,7 +31,13 @@ void ArchiveProducer::onMsg(const Radapter::WorkerMsg &msg)
 
 void ArchiveProducer::saveFinished(bool isOk, const Radapter::WorkerMsg &msg)
 {
-    auto reply = prepareReply(msg, isOk ? Radapter::WorkerMsg::ReplyOk : Radapter::WorkerMsg::ReplyFail);
+    Radapter::Reply *ptr;
+    if (isOk) {
+        ptr = new Radapter::ReplyOk;
+    } else {
+        ptr = new Radapter::ReplyFail;
+    }
+    auto reply = prepareReply(msg, ptr);
     emit sendMsg(reply);
 }
 

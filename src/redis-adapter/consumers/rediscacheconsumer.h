@@ -19,10 +19,12 @@ public:
                            const QString &indexKey,
                            const Radapter::WorkerSettings &settings,
                            QThread *thread);
-
 public slots:
     void onCommand(const Radapter::WorkerMsg &msg) override;
 private:
+    void requestSet(const QString &setKey, const Radapter::WorkerMsg &msg);
+    void readSetCallback(redisReply *replyPtr, Radapter::WorkerMsg *msg);
+
     void requestIndex(const QString &indexKey, const Radapter::WorkerMsg &msg);
     void readIndexCallback(redisReply *replyPtr, Radapter::WorkerMsg *msg);
 
@@ -30,8 +32,8 @@ private:
     void readKeysCallback(redisReply *replyPtr, Radapter::WorkerMsg *msg);
 
     JsonDict mergeWithKeys(const QVariantList &entries);
-    QString m_indexKey;
     QQueue<QStringList> m_requestedKeysBuffer{};
+    QString m_indexKey;
 };
 }
 

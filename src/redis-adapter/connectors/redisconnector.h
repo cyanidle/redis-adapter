@@ -10,7 +10,7 @@
 
 namespace Redis{
 
-class RADAPTER_SHARED_SRC   Connector : public Radapter::WorkerBase
+class RADAPTER_SHARED_SRC Connector : public Radapter::WorkerBase
 {
     Q_OBJECT
 public:
@@ -78,6 +78,7 @@ protected:
     template <class User> inline static User* getSender(redisAsyncContext* ctx);
     const redisAsyncContext* context() const {return m_redisContext;}
     void finishAsyncCommand();
+    QString replyTypeToString(const int replyType);
 private:
     template <typename CallbackArgs_t, typename Callback>
     int runAsyncCommandImplementation(Callback callback, const QString &command, CallbackArgs_t* optData);

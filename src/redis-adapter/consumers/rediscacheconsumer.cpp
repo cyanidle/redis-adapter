@@ -1,6 +1,8 @@
 #include "rediscacheconsumer.h"
 #include "redis-adapter/formatters/redisqueryformatter.h"
 #include "redis-adapter/radapterlogging.h"
+#include "radapter-broker/reply.h"
+#include "redis-adapter/commands/redis/rediscachecommands.h"
 
 using namespace Redis;
 
@@ -17,14 +19,10 @@ CacheConsumer::CacheConsumer(const QString &host,
 
 void CacheConsumer::requestIndex(const QString &indexKey, const Radapter::WorkerMsg &msg)
 {
-    if (indexKey.isEmpty()) {
-        requestIndex(m_indexKey, msg);
-        return;
-    }
     auto command = RedisQueryFormatter::toGetIndexCommand(indexKey);
     auto ptr = new Radapter::WorkerMsg(msg);
     if (runAsyncCommand(&CacheConsumer::readKeysCallback, command, ptr) != REDIS_OK) {
-        emit sendMsg(prepareReply(msg, Radapter::WorkerMsg::ReplyFail));
+        emit sendMsg(prepareReply(msg, new Radapter::ReplyPlain(false)));
         delete ptr;
     }
 }
@@ -32,18 +30,18 @@ void CacheConsumer::requestIndex(const QString &indexKey, const Radapter::Worker
 void CacheConsumer::readIndexCallback(redisReply *reply, Radapter::WorkerMsg *msg)
 {
     if (isNullReply(reply)) {
-        emit sendMsg(prepareReply(*msg, Radapter::WorkerMsg::ReplyFail, "Null reply"));
+        emit sendMsg(prepareReply(*msg, new Radapter::ReplyFail("Null redis reply")));
         delete msg;
         return;
     }
     if (reply->elements == 0) {
         reDebug() << metaInfo().c_str() << "Empty index.";
-        emit sendMsg(prepareReply(*msg, Radapter::WorkerMsg::ReplyFail));
+        emit sendMsg(prepareReply(*msg, new Radapter::ReplyFail("Empty index")));
         delete msg;
         return;
     }
 
-    auto indexedKeys = QVariantList{};
+    auto indexedKeys = QStringList{};
     reDebug() << metaInfo().c_str() << "Keys added to index:" << reply->elements;
     for (quint16 i = 0; i < reply->elements; i++) {
         auto keyItem = QString(reply->element[i]->str);
@@ -51,7 +49,8 @@ void CacheConsumer::readIndexCallback(redisReply *reply, Radapter::WorkerMsg *ms
             indexedKeys.append(keyItem);
         }
     }
-    emit sendMsg(prepareReply(*msg, Radapter::WorkerMsg::ReplyOk, indexedKeys));
+    auto finalReply = prepareReply(*msg, new Redis::IndexReply(indexedKeys));
+    emit sendMsg(finalReply);
     delete msg;
 }
 
@@ -60,7 +59,7 @@ void CacheConsumer::requestKeys(const QStringList &keys, const Radapter::WorkerM
     auto command = RedisQueryFormatter::toMultipleGetCommand(keys);
     auto ptr = new Radapter::WorkerMsg(msg);
     if (runAsyncCommand(&CacheConsumer::readKeysCallback, command, ptr) != REDIS_OK) {
-        emit sendMsg(prepareReply(msg, Radapter::WorkerMsg::ReplyFail));
+        emit sendMsg(prepareReply(msg, new Radapter::ReplyPlain(false)));
         delete ptr;
     }
 }
@@ -77,7 +76,7 @@ void CacheConsumer::readKeysCallback(redisReply *replyPtr, Radapter::WorkerMsg *
         foundEntries.append(entryItem);
     }
     reDebug() << metaInfo().c_str() << "Key entries found:" << keysMatched;
-    auto reply = prepareReply(*msg, Radapter::WorkerMsg::ReplyOk);
+    auto reply = prepareReply(*msg, new Radapter::ReplyOk);
     reply.setJson(mergeWithKeys(foundEntries));
     emit sendMsg(reply);
     delete msg;
@@ -102,17 +101,23 @@ JsonDict CacheConsumer::mergeWithKeys(const QVariantList &entries)
 
 void CacheConsumer::onCommand(const Radapter::WorkerMsg &msg)
 {
-    auto command = msg.commandType();
-    auto data = msg.commandData();
-    switch (command) {
-    case Radapter::WorkerMsg::CommandRequestIndex:
-        requestIndex(data.toString(), msg);
-        break;
-    case Radapter::WorkerMsg::CommandRequestKeys:
-        requestKeys(data.toStringList(), msg);
-        break;
-    default:
-        break;
+    using Radapter::CommandType;
+    auto command = msg.command();
+    if (command->type() == CommandType<ReadIndex>()) {
+        requestIndex(command->as<ReadIndex>()->index(), msg);
+    } else if (command->type() == CommandType<ReadKeys>()) {
+        requestKeys(command->as<ReadKeys>()->keys(), msg);
+    } else if (command->type() == CommandType<ReadSet>()) {
+        requestSet(command->as<ReadSet>()->set(), msg);
     }
 }
 
+void CacheConsumer::requestSet(const QString &setKey, const Radapter::WorkerMsg &msg)
+{
+
+}
+
+void CacheConsumer::readSetCallback(redisReply *replyPtr, Radapter::WorkerMsg *msg)
+{
+
+}

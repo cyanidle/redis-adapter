@@ -251,7 +251,7 @@ void StreamConsumer::finishRead(const JsonDict &json, const Radapter::WorkerMsg 
         Radapter::WorkerMsg msgToSend(this, consumers());
         const auto streamIds = json.topKeys();
         if (msg.isCommand()) {
-            msgToSend = prepareReply(msg, Radapter::WorkerMsg::ReplyOk);
+            msgToSend = prepareReply(msg, new Radapter::ReplyOk);
         } else {
             msgToSend = prepareMsg();
         }
@@ -294,7 +294,7 @@ void StreamConsumer::setPending(bool state)
 
 void StreamConsumer::onCommand(const Radapter::WorkerMsg &msg)
 {
-    if (msg.commandType() == Radapter::WorkerMsg::CommandRequestJson) {
+    if (msg.command()->is<Radapter::CommandRequestJson>()) {
         if (m_groupName.isEmpty()) {
             readGroupCommand();
         } else {

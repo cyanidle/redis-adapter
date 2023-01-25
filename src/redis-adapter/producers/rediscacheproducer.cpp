@@ -17,10 +17,10 @@ CacheProducer::CacheProducer(const QString &host,
 void CacheProducer::onMsg(const Radapter::WorkerMsg &msg)
 {
     if (writeIndex(msg , m_indexKey) != REDIS_OK) {
-        emit sendMsg(prepareReply(msg, Radapter::WorkerMsg::ReplyFail));
+        emit sendMsg(prepareReply(msg, new Radapter::ReplyFail));
     }
     if (writeKeys(msg) != REDIS_OK) {
-        emit sendMsg(prepareReply(msg, Radapter::WorkerMsg::ReplyFail));
+        emit sendMsg(prepareReply(msg, new Radapter::ReplyFail));
     }
 }
 
