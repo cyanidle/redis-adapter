@@ -24,7 +24,8 @@ void CacheConsumer::requestIndex(const QString &indexKey, const WorkerMsg &msg)
     auto command = RedisQueryFormatter::toGetIndexCommand(indexKey);
     auto ptr = new WorkerMsg(msg);
     if (runAsyncCommand(&CacheConsumer::readKeysCallback, command, ptr) != REDIS_OK) {
-        emit sendMsg(prepareReply(msg, new ReplyPlain(false)));
+        m_requestedKeysBuffer.dequeue();
+        emit sendMsg(prepareReply(msg, new ReplyFail));
         delete ptr;
     }
 }
@@ -32,11 +33,13 @@ void CacheConsumer::requestIndex(const QString &indexKey, const WorkerMsg &msg)
 void CacheConsumer::readIndexCallback(redisReply *reply, WorkerMsg *msg)
 {
     if (isNullReply(reply)) {
+        m_requestedKeysBuffer.dequeue();
         emit sendMsg(prepareReply(*msg, new ReplyFail("Null redis reply")));
         delete msg;
         return;
     }
     if (reply->elements == 0) {
+        m_requestedKeysBuffer.dequeue();
         reDebug() << metaInfo().c_str() << "Empty index.";
         emit sendMsg(prepareReply(*msg, new ReplyFail("Empty index")));
         delete msg;
