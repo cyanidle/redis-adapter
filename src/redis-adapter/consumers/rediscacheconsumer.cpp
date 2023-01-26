@@ -24,7 +24,6 @@ void CacheConsumer::requestIndex(const QString &indexKey, const WorkerMsg &msg)
     auto command = RedisQueryFormatter::toGetIndexCommand(indexKey);
     auto ptr = new WorkerMsg(msg);
     if (runAsyncCommand(&CacheConsumer::readKeysCallback, command, ptr) != REDIS_OK) {
-        m_requestedKeysBuffer.dequeue();
         emit sendMsg(prepareReply(msg, new ReplyFail));
         delete ptr;
     }
@@ -33,13 +32,11 @@ void CacheConsumer::requestIndex(const QString &indexKey, const WorkerMsg &msg)
 void CacheConsumer::readIndexCallback(redisReply *reply, WorkerMsg *msg)
 {
     if (isNullReply(reply)) {
-        m_requestedKeysBuffer.dequeue();
         emit sendMsg(prepareReply(*msg, new ReplyFail("Null redis reply")));
         delete msg;
         return;
     }
     if (reply->elements == 0) {
-        m_requestedKeysBuffer.dequeue();
         reDebug() << metaInfo().c_str() << "Empty index.";
         emit sendMsg(prepareReply(*msg, new ReplyFail("Empty index")));
         delete msg;
@@ -67,7 +64,6 @@ void CacheConsumer::requestKeys(const QStringList &keys, const WorkerMsg &msg)
         emit sendMsg(prepareReply(msg, new ReplyFail));
         delete ptr;
     }
-    m_requestedKeysBuffer.enqueue(keys);
 }
 
 void CacheConsumer::readKeysCallback(redisReply *replyPtr, WorkerMsg *msg)
@@ -83,23 +79,22 @@ void CacheConsumer::readKeysCallback(redisReply *replyPtr, WorkerMsg *msg)
     }
     reDebug() << metaInfo().c_str() << "Key entries found:" << keysMatched;
     auto reply = prepareReply(*msg, ReadKeys::makeReply(foundEntries));
-    reply.setJson(mergeWithKeys(foundEntries));
+    reply.setJson(mergeWithKeys(msg->command()->as<ReadKeys>()->keys(), foundEntries));
     emit sendMsg(reply);
     delete msg;
 }
 
-JsonDict CacheConsumer::mergeWithKeys(const QStringList &entries)
+JsonDict CacheConsumer::mergeWithKeys(const QStringList &keys, const QStringList &entries)
 {
-    auto requestedKeys = m_requestedKeysBuffer.dequeue();
-    if (requestedKeys.isEmpty()) {
+    if (keys.isEmpty()) {
         return JsonDict{};
     }
     auto jsonDict = JsonDict{};
     for (quint16 i = 0; i < entries.count(); i++) {
         auto entryValue = entries.at(i);
         if (!entryValue.isEmpty()) {
-            auto key = requestedKeys.at(i);
-            jsonDict.insert(key, entryValue);
+            auto key = keys.at(i);
+            jsonDict.insert(key.split(":"), entryValue);
         }
     }
     return jsonDict;
