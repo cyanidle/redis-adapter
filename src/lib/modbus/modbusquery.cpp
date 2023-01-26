@@ -79,7 +79,7 @@ void ModbusQuery::captureReplyError()
     emit receivedError(slaveAddress(), Q_FUNC_INFO + reply->errorString());
 }
 
-void ModbusQuery::emitError(const QString errorString)
+void ModbusQuery::emitError(const QString &errorString)
 {
     setHasSucceeded(false);
     emit receivedError(slaveAddress(), errorString);
@@ -95,9 +95,7 @@ void ModbusQuery::setIsFinished(bool isFinished)
 
 void ModbusQuery::setHasSucceeded(bool state)
 {
-    if (m_isOk != state) {
-        m_isOk = state;
-    }
+    m_isOk = state;
 }
 
 void ModbusQuery::startPoll()

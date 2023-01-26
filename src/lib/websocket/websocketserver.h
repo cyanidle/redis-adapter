@@ -15,7 +15,7 @@ class Websocket::Server : public QObject
 {
     Q_OBJECT
 public:
-    explicit Server(quint16 port = 0u, QObject *parent = nullptr);
+    explicit Server(quint16 port, QObject *parent);
     ~Server() override; 
 
     void start();
@@ -60,10 +60,10 @@ private:
     QJsonDocument getFullData(bool &ok) const;
 
     quint16 m_port;
-    QTimer* m_reconnectTimer;
-    QTimer* m_fullDataSender;
+    QTimer* m_reconnectTimer{};
+    QTimer* m_fullDataSender{};
     QWebSocketServer* m_websocketServer;
-    QList<QWebSocket*> m_clients;
+    QSet<QWebSocket*> m_clients;
     QJsonObject m_localData;
     bool m_persistentDataInited;
 };

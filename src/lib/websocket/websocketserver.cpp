@@ -52,7 +52,7 @@ void Server::start()
 void Server::doRun()
 {
     if (m_websocketServer == nullptr) {
-        m_websocketServer = new QWebSocketServer("LotosGate", QWebSocketServer::NonSecureMode, this);
+        m_websocketServer = new QWebSocketServer("Radapter", QWebSocketServer::NonSecureMode, this);
     }
 
     if (m_websocketServer->listen(QHostAddress::Any, m_port)) {
@@ -95,6 +95,7 @@ void Server::reconnect()
 void Server::connectClient()
 {
     auto socket = m_websocketServer->nextPendingConnection();
+    socket->setParent(this);
     if (socket) {
         connect(socket, &QWebSocket::disconnected,
                 this, &Server::disconnectClient);
@@ -137,13 +138,13 @@ void Server::initClient(QWebSocket *client)
 
 void Server::addClient(QWebSocket *client)
 {
-    m_clients.append(client);
+    m_clients.insert(client);
     emit clientsAmountChanged(clientsCounter());
 }
 
 void Server::removeClient(QWebSocket *client)
 {
-    m_clients.removeAll(client);
+    m_clients.remove(client);
     emit clientsAmountChanged(clientsCounter());
 }
 

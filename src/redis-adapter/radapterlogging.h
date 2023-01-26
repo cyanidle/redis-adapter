@@ -10,6 +10,7 @@ Q_DECLARE_LOGGING_CATEGORY(mysql);
 Q_DECLARE_LOGGING_CATEGORY(wsockserver);
 Q_DECLARE_LOGGING_CATEGORY(wsockserverjson);
 Q_DECLARE_LOGGING_CATEGORY(wsockclient);
+Q_DECLARE_LOGGING_CATEGORY(resmon);
 
 #define reDebug()   qCDebug(radapter)
 #define reInfo()    qCInfo(radapter)
@@ -20,6 +21,8 @@ Q_DECLARE_LOGGING_CATEGORY(wsockclient);
 #define wseDebug()  qCDebug(wsockserver)
 #define wseJsonDebug() qCDebug(wsockserverjson).noquote()
 #define wclDebug()  qCDebug(wsockclient)
+#define rmonDebug()     qCDebug(resmon)
+
 
 #define RADAPTER_CUSTOM_MESSAGE_PATTERN  "[%{time yyyy-MM-dd hh:mm:ss.zzz}] [%{if-debug}D%{endif}%{if-info}I%{endif}%{if-warning}W%{endif}%{if-critical}C%{endif}%{if-fatal}F%{endif}] "\
                                 "%{if-category}%{category}: %{endif}%{message}"

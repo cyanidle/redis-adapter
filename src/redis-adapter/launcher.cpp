@@ -17,6 +17,9 @@
 #include "radapter-broker/debugging/logginginterceptor.h"
 #include "redis-adapter/workers/modbusslaveworker.h"
 #include "radapter-broker/metatypes.h"
+#ifdef Q_OS_UNIX
+#include "redis-adapter/utils/resourcemonitor.h"
+#endif
 
 using namespace Radapter;
 
@@ -155,8 +158,7 @@ int Launcher::prvInit()
     if (!websocketServerConf.isEmpty()) {
         auto websocketServer = Serializer::fromQMap<Settings::WebsocketServerInfo>(websocketServerConf);
         if (websocketServer.isValid()) {
-            Websocket::ServerConnector::init(websocketServer, websocketServer.worker, new QThread(this));
-            addWorker(Websocket::ServerConnector::instance());
+            addWorker(new Websocket::ServerConnector(websocketServer, websocketServer.worker, new QThread(this)));
         }
     }
     auto localizationInfoMap = m_filereader->deserialise("localization").toMap();
@@ -177,6 +179,10 @@ int Launcher::init()
     if (status != 0) {
         return status;
     }
+#ifdef Q_OS_UNIX
+    auto resmon = new ResourceMonitor(this);
+    resmon->run();
+#endif
     return status;
 }
 

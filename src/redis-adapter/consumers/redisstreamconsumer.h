@@ -39,7 +39,7 @@ public slots:
     void readGroup();
 private slots:
     void doRead();
-    void updatePingKeepalive();
+    void updateKeepaliveTimers();
     void updateReadTimers();
     void createGroup();
 private:
@@ -56,6 +56,7 @@ private:
     void createGroupCallback(redisReply *replyPtr);
     QString id() const override;
 
+    int toCommandTimeout(int timeoutMsecs) const;
     void finishRead(const JsonDict &json, const Radapter::WorkerMsg &msg);
     void finishAck();
     void setLastReadId(const QString &lastId);

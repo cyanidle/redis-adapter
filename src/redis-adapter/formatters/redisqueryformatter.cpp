@@ -26,13 +26,13 @@ QString RedisQueryFormatter::toTrimCommand(const QString &streamKey, quint32 max
     return command;
 }
 
-QString RedisQueryFormatter::toReadStreamCommand(const QString &streamKey, qint32 blockTimeout, const QString &lastId)
+QString RedisQueryFormatter::toReadStreamCommand(const QString &streamKey, const qint32 count, qint32 blockTimeout, const QString &lastId)
 {
     if (streamKey.isEmpty()) {
         return QString{};
     }
     auto id = lastId.isEmpty() ? "$" : lastId;
-    auto command = QString("XREAD BLOCK %1 STREAMS %2 %3").arg(blockTimeout).arg(streamKey, id);
+    auto command = QString("XREAD COUNT %1 BLOCK %2 STREAMS %3 %4").arg(count).arg(blockTimeout).arg(streamKey, id);
     return command;
 }
 

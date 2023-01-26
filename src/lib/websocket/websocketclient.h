@@ -20,7 +20,8 @@ class Websocket::Client : public Radapter::WorkerBase
 public:
     explicit Client(const QString &serverHost,
                     quint16 serverPort,
-                    const Radapter::WorkerSettings &settings, QThread *thread);
+                    const Radapter::WorkerSettings &settings,
+                    QThread *thread);
     ~Client() override;
     bool isRunning() const;
 
@@ -53,12 +54,12 @@ private:
     QString m_serverHost;
     quint16 m_serverPort;
     QString m_userName;
-    QWebSocket* m_sock;
     qint32 m_reconnectTimeout;
-    QTimer* m_reconnectTimer;
-    QTimer* m_heartbeatTimer;
     qint32 m_heartbeatCounter;
-    QTimer* m_connectionLostTimer;
+    QWebSocket* m_sock{};
+    QTimer* m_reconnectTimer{};
+    QTimer* m_heartbeatTimer{};
+    QTimer* m_connectionLostTimer{};
 };
 
 #endif // WEBSOCKETCLIENT_H

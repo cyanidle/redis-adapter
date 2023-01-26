@@ -2,7 +2,7 @@
 #define REDIS_CACHECOMMANDS_H
 
 #include <radapter-broker/command.h>
-#include "redis-adapter/replies/redis/redisreplies.h"
+#include "redis-adapter/replies/redisreplies.h"
 namespace Redis {
 namespace Cache{
 class RADAPTER_SHARED_SRC ReadIndex : public Radapter::Command
@@ -11,7 +11,7 @@ class RADAPTER_SHARED_SRC ReadIndex : public Radapter::Command
 public:
     ReadIndex(const QString &index);
     QString index() const {return m_index;}
-    GADGET_BODY
+    RADAPTER_COMMAND_WANTS(Radapter::ReplyOk)
 private:
     QString m_index;
 };
@@ -21,7 +21,7 @@ class RADAPTER_SHARED_SRC ReadKeys : public Radapter::Command
 public:
     ReadKeys(const QStringList &keys);
     const QStringList &keys() const {return m_keys;}
-    GADGET_BODY
+    RADAPTER_COMMAND_WANTS(Redis::Cache::ReplyKeys)
 private:
     QStringList m_keys;
 };
@@ -31,8 +31,7 @@ class RADAPTER_SHARED_SRC ReadSet : public Radapter::Command
 public:
     ReadSet(const QString &set);
     const QString &set() const {return m_set;};
-    using Reply = IndexReply;
-    GADGET_BODY
+    RADAPTER_COMMAND_WANTS(Redis::Cache::ReplySet)
 private:
     QString m_set;
 };

@@ -10,14 +10,15 @@ KeyVaultConsumer::KeyVaultConsumer(MySqlConnector *client,
                                          QObject *parent) :
     QObject(parent),
     m_dbClient(client),
-    m_info(info)
+    m_info(info),
+    m_tableFields {
+                    SQL_KEYVAULT_FIELD_REDIS_KEY,
+                    SQL_KEYVAULT_FIELD_SOURCE_TYPE,
+                    SQL_KEYVAULT_FIELD_SOURCE,
+                    SQL_KEYVAULT_FIELD_PARAM
+                  }
 {
-    m_tableFields = QVariantList{
-            SQL_KEYVAULT_FIELD_REDIS_KEY,
-            SQL_KEYVAULT_FIELD_SOURCE_TYPE,
-            SQL_KEYVAULT_FIELD_SOURCE,
-            SQL_KEYVAULT_FIELD_PARAM
-    };
+
 }
 
 void KeyVaultConsumer::onRun()

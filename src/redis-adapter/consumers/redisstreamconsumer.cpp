@@ -6,8 +6,10 @@
 #include "redis-adapter/formatters/streamentriesmapformatter.h"
 #include "redis-adapter/radapterlogging.h"
 
-#define BLOCK_TIMEOUT_MS    30000
-#define POLL_TIMEOUT_MS     3000
+#define ENTRIES_PER_READ            1000
+#define BLOCK_TIMEOUT_MS            30000
+#define POLL_TIMEOUT_MS             3000
+#define COMMAND_TIMEOUT_DELAY_MS    150
 
 using namespace Redis;
 
@@ -32,11 +34,13 @@ StreamConsumer::StreamConsumer(const QString &host,
     m_blockingReadTimer->setInterval(readInterval);
     m_blockingReadTimer->setSingleShot(true);
     m_blockingReadTimer->callOnTimeout(this, &StreamConsumer::blockingRead);
+    connect(this, &StreamConsumer::disconnected, m_blockingReadTimer, &QTimer::stop);
 
     m_readGroupTimer = new QTimer(this);
     m_readGroupTimer->setInterval(POLL_TIMEOUT_MS);
     m_readGroupTimer->setSingleShot(true);
     m_readGroupTimer->callOnTimeout(this, &StreamConsumer::readGroup);
+    connect(this, &StreamConsumer::disconnected, m_readGroupTimer, &QTimer::stop);
 
     connect(this, &StreamConsumer::commandsFinished, this, &StreamConsumer::blockingRead);
     connect(this, &StreamConsumer::connected, this, [this](){
@@ -45,7 +49,7 @@ StreamConsumer::StreamConsumer(const QString &host,
     connect(this, &StreamConsumer::connected, this, &StreamConsumer::createGroup);
     connect(this, &StreamConsumer::connected, this, &StreamConsumer::blockingRead);
     connect(this, &StreamConsumer::connected, this, &StreamConsumer::readGroup);
-    connect(this, &StreamConsumer::pendingChanged, &StreamConsumer::updatePingKeepalive);
+    connect(this, &StreamConsumer::pendingChanged, &StreamConsumer::updateKeepaliveTimers);
     connect(this, &StreamConsumer::pendingChanged, &StreamConsumer::updateReadTimers);
     connect(this, &StreamConsumer::ackCompleted, &StreamConsumer::readGroup);
 }
@@ -146,17 +150,20 @@ bool StreamConsumer::hasPendingEntries() const
 
 void StreamConsumer::doRead()
 {
-    auto readCommand = QString{};
-    auto startId = lastReadId();
-    if (areGroupsEnabled()) {
-        readCommand = RedisQueryFormatter::toReadGroupCommand(m_streamKey, groupName(), workerName(), BLOCK_TIMEOUT_MS, startId);
+    if (hasPendingEntries()) {
+        resetCommandTimeout();
     } else {
-        readCommand = RedisQueryFormatter::toReadStreamCommand(m_streamKey, BLOCK_TIMEOUT_MS, startId);
+        setCommandTimeout(toCommandTimeout(BLOCK_TIMEOUT_MS));
     }
+
+    auto startId = lastReadId();
+    auto readCommand = areGroupsEnabled()
+            ? RedisQueryFormatter::toReadGroupCommand(m_streamKey, groupName(), workerName(), BLOCK_TIMEOUT_MS, startId)
+            : RedisQueryFormatter::toReadStreamCommand(m_streamKey, ENTRIES_PER_READ, BLOCK_TIMEOUT_MS, startId);
     runAsyncCommand(&StreamConsumer::readCallback, readCommand);
 }
 
-void StreamConsumer::updatePingKeepalive()
+void StreamConsumer::updateKeepaliveTimers()
 {
     if (!areGroupsEnabled()) {
         return;
@@ -301,4 +308,10 @@ void StreamConsumer::onCommand(const Radapter::WorkerMsg &msg)
             blockingReadCommand();
         }
     }
+}
+
+int StreamConsumer::toCommandTimeout(int timeoutMsecs) const
+{
+    auto commandTimeout = timeoutMsecs + COMMAND_TIMEOUT_DELAY_MS;
+    return commandTimeout;
 }

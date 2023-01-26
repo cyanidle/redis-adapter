@@ -12,7 +12,7 @@ public:
 
     QString toAddStreamCommand(const QString &streamKey, quint32 maxLen = 0u) const;
     QString toTrimCommand(const QString &streamKey, quint32 maxLen) const;
-    static QString toReadStreamCommand(const QString &streamKey, qint32 blockTimeout, const QString &lastId = QString{});
+    static QString toReadStreamCommand(const QString &streamKey, const qint32 count, qint32 blockTimeout, const QString &lastId = QString{});
     static QString toReadGroupCommand(const QString &streamKey,
                                const QString &groupName,
                                const QString &consumerName,

@@ -31,7 +31,7 @@ private:
     void requestKeys(const QStringList &keys, const Radapter::WorkerMsg &msg);
     void readKeysCallback(redisReply *replyPtr, Radapter::WorkerMsg *msg);
 
-    JsonDict mergeWithKeys(const QVariantList &entries);
+    JsonDict mergeWithKeys(const QStringList &entries);
     QQueue<QStringList> m_requestedKeysBuffer{};
     QString m_indexKey;
 };

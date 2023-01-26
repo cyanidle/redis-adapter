@@ -4,7 +4,7 @@
 #include "redis-adapter/include/modbuskeys.h"
 #include "radapter-broker/broker.h"
 #include "redis-adapter/radapterlogging.h"
-#include "redis-adapter/commands/redis/rediscachecommands.h"
+#include "redis-adapter/commands/rediscommands.h"
 
 using namespace Radapter;
 
@@ -108,9 +108,7 @@ QString ModbusConnector::lastWriteId() const
 
 void ModbusConnector::setLastWriteId(const QString &id)
 {
-    if (m_lastWriteId != id) {
-        m_lastWriteId = id;
-    }
+    m_lastWriteId = id;
 }
 
 Settings::ModbusConnectionSettings ModbusConnector::settings() const

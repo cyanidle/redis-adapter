@@ -60,7 +60,7 @@ public slots:
 private slots:
     void doRun();
     void captureReplyError();
-    void emitError(const QString errorString);
+    void emitError(const QString &errorString);
     void emitResponseTimeout();
 
 private:

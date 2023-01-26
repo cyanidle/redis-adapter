@@ -14,7 +14,6 @@ using namespace Websocket;
 Client::Client(const QString &serverHost, quint16 serverPort, const Radapter::WorkerSettings &settings, QThread *thread)
     : WorkerBase(settings, thread),
       m_serverHost(serverHost),
-      m_sock(nullptr),
       m_reconnectTimeout(RECONNECT_TIMEOUT_MS),
       m_heartbeatCounter(1)
 {

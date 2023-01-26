@@ -18,7 +18,6 @@ KeyEventsConsumer::KeyEventsConsumer(const QString &host,
     connect(this, &KeyEventsConsumer::connected, this, &KeyEventsConsumer::subscribeToKeyEvents);
     connect(this, &KeyEventsConsumer::disconnected, this, &KeyEventsConsumer::unsubscribe);
     blockSelectDb();
-    disablePingKeepalive();
 }
 
 void KeyEventsConsumer::finishMessageRead(const QVariantList &jsons)
@@ -61,7 +60,8 @@ void KeyEventsConsumer::subscribeToKeyEventsImpl(const QStringList &eventTypes)
         return;
     }
     auto command = RedisQueryFormatter{}.toKeyEventsSubscribeCommand(eventTypes);
-    runAsyncCommand(&KeyEventsConsumer::readMessageCallback, command);
+    bool bypassTracking = true;
+    runAsyncCommand(&KeyEventsConsumer::readMessageCallback, command, bypassTracking);
     reDebug() << metaInfo().c_str() << "Listening to key events of types:" << eventTypes;
 }
 
