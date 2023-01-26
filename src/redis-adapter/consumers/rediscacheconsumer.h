@@ -31,6 +31,7 @@ private:
     void requestKeys(const QStringList &keys, const Radapter::WorkerMsg &msg);
     void readKeysCallback(redisReply *replyPtr, Radapter::WorkerMsg *msg);
 
+    void failMsg(Radapter::WorkerMsg *msg, const QString &reason = "Not Given");
     static JsonDict mergeWithKeys(const QStringList &keys, const QStringList &entries);
 
     QString m_indexKey;

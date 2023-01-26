@@ -106,6 +106,7 @@ protected:
     const redisAsyncContext* context() const {return m_redisContext;}
     void finishAsyncCommand();
     void nullifyContext();
+    static QVariant readReply(redisReply *reply);
 private:
     template <class User, class Data>
     static void privateCallbackWithData(redisAsyncContext* ctx, void* reply, void* data);

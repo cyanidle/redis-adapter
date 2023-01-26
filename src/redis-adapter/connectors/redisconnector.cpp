@@ -216,6 +216,49 @@ void Connector::nullifyContext()
     m_redisContext = nullptr;
 }
 
+QVariant Connector::readReply(redisReply *reply)
+{
+    auto array = QVariantList{};
+    switch (reply->type) {
+    case ReplyString:
+        return reply->str;
+    case ReplyArray:
+        for (size_t i = 0; i < reply->elements; ++i) {
+            array.append(readReply(reply->element[i]));
+        }
+        return array;
+    case ReplyInteger:
+        return reply->integer;
+    case ReplyNil:
+        return {};
+    case ReplyStatus:
+        return reply->str;
+    case ReplyError:
+        return reply->str;
+    case ReplyDouble:
+        return reply->dval;
+    case ReplyBool:
+        return bool(reply->integer);
+    case ReplyMap:
+        throw std::runtime_error("REDIS_REPLY_MAP Unsupported");
+    case ReplySet:
+        for (size_t i = 0; i < reply->elements; ++i) {
+            array.append(readReply(reply->element[i]));
+        }
+        return array;
+    case ReplyAttr:
+        throw std::runtime_error("REDIS_REPLY_ATTR Unsupported");
+    case ReplyPush:
+        throw std::runtime_error("REDIS_REPLY_PUSH Unsupported");
+    case ReplyBignum:
+        return reply->str;
+    case ReplyVerb:
+        return reply->str;
+    default:
+        return {};
+    }
+}
+
 void Connector::disconnectCallback(const redisAsyncContext *context, int status)
 {
     auto adapter = static_cast<Connector *>(context->data);
