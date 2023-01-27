@@ -34,7 +34,6 @@ private slots:
 private:
     void writeCallback(redisReply *replyPtr);
     void trimCallback(redisReply *replyPtr);
-    QString id() const override;
 
     QTimer* m_trimTimer;
     quint16 m_addCounter;

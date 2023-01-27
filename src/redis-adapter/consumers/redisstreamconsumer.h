@@ -54,7 +54,6 @@ private:
     void readCallback(redisReply *replyPtr);
     void ackCallback(redisReply *replyPtr);
     void createGroupCallback(redisReply *replyPtr);
-    QString id() const override;
 
     int toCommandTimeout(int timeoutMsecs) const;
     void finishRead(const JsonDict &json, const Radapter::WorkerMsg &msg);

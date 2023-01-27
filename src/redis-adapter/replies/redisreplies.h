@@ -2,6 +2,7 @@
 #define REDIS_REPLIES_H
 
 #include "radapter-broker/reply.h"
+#include "radapter-broker/basicreplies.h"
 
 namespace Redis {
 namespace Cache {

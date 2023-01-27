@@ -198,7 +198,7 @@ void StreamConsumer::createGroup()
 
 void StreamConsumer::readCallback(redisReply *reply)
 {
-    if (isNullReply(reply)) {
+    if (!isValidReply(reply)) {
         return;
     }
     if (reply->elements == 0) {
@@ -224,7 +224,7 @@ void StreamConsumer::readCallback(redisReply *reply)
 
 void StreamConsumer::ackCallback(redisReply *reply)
 {
-    if (isNullReply(reply)) {
+    if (!isValidReply(reply)) {
         return;
     }
     reDebug() << metaInfo().c_str() << "entries acknowledged:" << toString(reply);
@@ -238,18 +238,11 @@ void StreamConsumer::finishAck()
 
 void StreamConsumer::createGroupCallback(redisReply *reply)
 {
-    if (isNullReply(reply)
-            || isEmptyReply(reply))
+    if (!isValidReply(reply))
     {
         return;
     }
     reDebug() << metaInfo().c_str() << "create group status:" << toString(reply);
-}
-
-QString StreamConsumer::id() const
-{
-    auto idString = QString("%1 | %2").arg(metaObject()->className(), streamKey());
-    return idString;
 }
 
 void StreamConsumer::finishRead(const JsonDict &json, const Radapter::WorkerMsg &msg)

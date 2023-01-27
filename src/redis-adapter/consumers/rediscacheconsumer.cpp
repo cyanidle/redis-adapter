@@ -31,7 +31,7 @@ void CacheConsumer::requestIndex(const QString &indexKey, const WorkerMsg &msg)
 
 void CacheConsumer::readIndexCallback(redisReply *reply, WorkerMsg *msg)
 {
-    if (isNullReply(reply)) {
+    if (!isValidReply(reply)) {
         failMsg(msg, "Null redis reply");
         return;
     }
@@ -39,16 +39,19 @@ void CacheConsumer::readIndexCallback(redisReply *reply, WorkerMsg *msg)
         failMsg(msg, "Empty index");
         return;
     }
-
-    auto indexedKeys = QStringList{};
-    reDebug() << metaInfo().c_str() << "Keys added to index:" << reply->elements;
-    for (quint16 i = 0; i < reply->elements; i++) {
-        auto keyItem = QString(reply->element[i]->str);
-        if (!keyItem.isEmpty()) {
-            indexedKeys.append(keyItem);
+    auto result = parseReply(reply).toStringList();
+    for (auto &entry : result) {
+        if (entry.startsWith(REDIS_SET_PREFIX)) {
+            //todo
+        } else if (entry.startsWith(REDIS_STR_PREFIX)) {
+            //todo
+        } else if (entry.startsWith(REDIS_HASH_PREFIX)) {
+            //todo
+        } else {
+            //todo
         }
     }
-    auto finalReply = prepareReply(*msg, Cache::ReadIndex::makeReply());
+    auto finalReply = prepareReply(*msg, ReadIndex::makeReply(JsonDict{}));
     emit sendMsg(finalReply);
     delete msg;
 }
@@ -64,26 +67,34 @@ void CacheConsumer::requestKeys(const QStringList &keys, const WorkerMsg &msg)
 
 void CacheConsumer::readKeysCallback(redisReply *replyPtr, WorkerMsg *msg)
 {
-    auto foundEntries = QStringList{};
-    quint16 keysMatched = 0u;
-    for (quint16 i = 0; i < replyPtr->elements; i++) {
-        auto entryItem = QString(replyPtr->element[i]->str);
-        if (!entryItem.isEmpty()) {
-            keysMatched++;
-        }
-        foundEntries.append(entryItem);
-    }
-    reDebug() << metaInfo().c_str() << "Key entries found:" << keysMatched;
-    auto reply = prepareReply(*msg, ReadKeys::makeReply(foundEntries));
-    reply.setJson(mergeWithKeys(msg->command()->as<ReadKeys>()->keys(), foundEntries));
+    auto readKeys = msg->command()->as<ReadKeys>();
+    auto foundEntries = parseReply(replyPtr).toStringList();
+    reDebug() << metaInfo() << "Key entries found:" << foundEntries.size();
+    auto reply = prepareReply(*msg, readKeys->makeReply(foundEntries));
+    reply.setJson(mergeWithKeys(readKeys->keys(), foundEntries));
     emit sendMsg(reply);
     delete msg;
 }
 
+void CacheConsumer::requestHash(const QString &hash, const Radapter::WorkerMsg &msg)
+{
+    auto command = QStringLiteral("HGETALL ") + hash;
+    auto ptr = new WorkerMsg(msg);
+    if (runAsyncCommand(&CacheConsumer::readHashCallback, command, ptr) != REDIS_OK) {
+        failMsg(ptr);
+    }
+}
+
+void CacheConsumer::readHashCallback(redisReply *replyPtr, Radapter::WorkerMsg *msg)
+{
+    auto result = parseReply(replyPtr);
+    reDebug() << result;
+}
+
 void CacheConsumer::failMsg(Radapter::WorkerMsg *msg, const QString &reason)
 {
-    if (reason != "Not Given") {
-        reDebug() << metaInfo().c_str() << reason;
+    if (reason != QStringLiteral("Not Given")) {
+        reDebug() << metaInfo() << reason;
     }
     emit sendMsg(prepareReply(*msg, new Radapter::ReplyFail(reason)));
     delete msg;
@@ -117,15 +128,11 @@ void CacheConsumer::requestSet(const QString &setKey, const WorkerMsg &msg)
 void CacheConsumer::readSetCallback(redisReply *replyPtr, WorkerMsg *msg)
 {
     auto cmd = msg->command()->as<ReadSet>();
-    if (isNullReply(replyPtr)) {
-        failMsg(msg);
+    auto parsed = parseReply(replyPtr).toStringList();
+    if (parsed.isEmpty()) {
+        failMsg(msg, "Empty set");
         return;
     }
-    if (!replyPtr->elements) {
-        failMsg(msg, QStringLiteral("Empty Set: ") + cmd->set());
-        return;
-    }
-    auto parsed = readReply(replyPtr).toStringList();
     auto reply = prepareReply(*msg, cmd->makeReply(parsed));
     emit sendMsg(reply);
     delete msg;
@@ -134,17 +141,28 @@ void CacheConsumer::readSetCallback(redisReply *replyPtr, WorkerMsg *msg)
 
 void CacheConsumer::onCommand(const WorkerMsg &msg)
 {
-    auto command = msg.command();
+    handleCommand(msg.command(), msg);
+}
+
+void CacheConsumer::handleCommand(const Radapter::Command *command, const Radapter::WorkerMsg &msg)
+{
     if (command->is<ReadIndex>()) {
         requestIndex(command->as<ReadIndex>()->index(), msg);
     } else if (command->is<ReadKeys>()) {
         requestKeys(command->as<ReadKeys>()->keys(), msg);
     } else if (command->is<ReadSet>()) {
         requestSet(command->as<ReadSet>()->set(), msg);
+    } else if (command->is<CommandPack>()) {
+        requestMultiple(command->as<CommandPack>()->commands(), msg);
+    } else {
+        reError() << metaInfo() << "Command type unsupported: " << command->metaObject()->className();
     }
 }
 
-
-
-
+void CacheConsumer::requestMultiple(const QSet<Radapter::Command *> &commands, const Radapter::WorkerMsg &msg)
+{
+    for (auto &command : commands) {
+        handleCommand(command, msg);
+    }
+}
 

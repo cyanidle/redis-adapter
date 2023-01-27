@@ -44,8 +44,7 @@ int CacheProducer::writeIndex(const JsonDict &json, const QString &indexKey)
 
 void CacheProducer::msetCallback(redisReply *reply)
 {
-    if (isNullReply(reply)
-            || isEmptyReply(reply))
+    if (!isValidReply(reply))
     {
         return;
     }
@@ -54,7 +53,7 @@ void CacheProducer::msetCallback(redisReply *reply)
 
 void CacheProducer::indexCallback(redisReply *reply)
 {
-    if (isNullReply(reply)) {
+    if (!isValidReply(reply)) {
         return;
     }
     reDebug() << metaInfo().c_str() << "index members updated:" << reply->integer;

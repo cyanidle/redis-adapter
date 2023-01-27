@@ -1,7 +1,7 @@
 #ifndef REDIS_CACHECOMMANDS_H
 #define REDIS_CACHECOMMANDS_H
 
-#include <radapter-broker/command.h>
+#include "radapter-broker/basiccommands.h"
 #include "redis-adapter/replies/redisreplies.h"
 namespace Redis {
 namespace Cache{
@@ -11,7 +11,7 @@ class RADAPTER_SHARED_SRC ReadIndex : public Radapter::Command
 public:
     ReadIndex(const QString &index);
     QString index() const {return m_index;}
-    RADAPTER_COMMAND_WANTS(Radapter::ReplyOk)
+    RADAPTER_COMMAND_WANTS(Radapter::ReplyWithJsonOk)
 private:
     QString m_index;
 };

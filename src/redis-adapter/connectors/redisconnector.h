@@ -7,6 +7,8 @@
 #include "lib/hiredis/adapters/qt.h"
 #include <QFuture>
 #include "radapter-broker/workerbase.h"
+#include "redis-adapter/commands/rediscommands.h"
+#include "redis-adapter/replies/redisreplies.h"
 
 namespace Redis {
 
@@ -56,33 +58,26 @@ public:
     template <class User> int runAsyncCommand(MethodCb<User> callback, const QString &command, bool needBypassTracking = false);
                           int runAsyncCommand(StaticCb callback, const QString &command, void* optData = nullptr, bool needBypassTracking = false);
 
-    void enablePingKeepalive();
-    void disablePingKeepalive();
-    void allowSelectDb();
-    void blockSelectDb();
 
-    void setConnected(bool state);
     bool isValidContext();
-    bool isNullReply(redisReply *reply);
-    bool isEmptyReply(redisReply *replyPtr);
+    static bool isValidReply(redisReply *reply);
     static bool isValidContext(const redisAsyncContext *context);
-    static bool isNullReply(redisAsyncContext *context, void *replyPtr);
-    static bool isEmptyReply(redisAsyncContext *context, void *replyPtr);
     static quint16 port(const redisAsyncContext *context);
-    static std::string metaInfo(const redisAsyncContext *context, const int connectionPort = -1, const QString &id = QString{});
-    std::string metaInfo() const;
-    virtual QString id() const;
+    static QString metaInfo(const redisAsyncContext *context, const int connectionPort = -1, const QString &id = QString{});
+    QString metaInfo() const;
+    QString id() const;
     static QString toString(const redisReply *reply);
     void setCommandTimeout(int milliseconds);
-    void resetCommandTimeout();
 signals:
     void connected();
     void disconnected();
     void commandsFinished();
+    void alive();
 public slots:
     void confirmAlive();
-private slots:
+protected slots:
     void onRun() override;
+    void resetCommandTimeout();
     void tryConnect();
     void reconnect();
     void doPing();
@@ -97,6 +92,12 @@ private slots:
     void stopCommandTimer();
     void selectDb();
 protected:
+    void setConnected(bool state, const QString &reason = {});
+    void enablePingKeepalive();
+    void disablePingKeepalive();
+    void allowSelectDb();
+    void blockSelectDb();
+
     static QString replyTypeToString(const int replyType);
     static QString toHex(const void *pointer);
     static QString toHex(const quintptr &pointer);
@@ -106,7 +107,7 @@ protected:
     const redisAsyncContext* context() const {return m_redisContext;}
     void finishAsyncCommand();
     void nullifyContext();
-    static QVariant readReply(redisReply *reply);
+    QVariant parseReply(redisReply *reply);
 private:
     template <class User, class Data>
     static void privateCallbackWithData(redisAsyncContext* ctx, void* reply, void* data);
@@ -133,8 +134,6 @@ private:
     quint16 m_port;
     quint16 m_dbIndex;
     bool m_canSelect;
-    QMetaObject::Connection m_pingConnection;
-
     struct CallbackArgsPlain {
         StaticCb callback;
         void *data;

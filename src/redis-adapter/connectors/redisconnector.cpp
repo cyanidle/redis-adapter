@@ -24,9 +24,9 @@ Connector::Connector(const QString &host,
                      const Radapter::WorkerSettings &settings,
                      QThread *thread) :
     WorkerBase(settings, thread),
-    m_pingTimer(nullptr),
+    m_pingTimer(new QTimer(this)),
     m_redisContext(nullptr),
-    m_reconnectTimer(nullptr),
+    m_reconnectTimer(new QTimer(this)),
     m_commandTimer(nullptr),
     m_isConnected(false),
     m_commandTimeoutsCounter{},
@@ -34,9 +34,24 @@ Connector::Connector(const QString &host,
     m_host(host),
     m_port(port),
     m_dbIndex(dbIndex),
-    m_canSelect(true),
-    m_pingConnection()
+    m_canSelect(true)
 {
+    m_reconnectTimer->setSingleShot(true);
+    m_reconnectTimer->callOnTimeout(this, &Connector::reconnect);
+    resetReconnectTimeout();
+    connect(this, &Connector::connected, &Connector::resetReconnectTimeout);
+    connect(this, &Connector::connected, &Connector::stopReconnectTimer);
+    connect(this, &Connector::disconnected, m_reconnectTimer, QOverload<>::of(&QTimer::start));
+    m_pingTimer->setSingleShot(false);
+    m_pingTimer->setInterval(PING_TIMEOUT_MS);
+    enablePingKeepalive();
+    m_commandTimer = new QTimer(this);
+    m_commandTimer->setSingleShot(true);
+    m_commandTimer->callOnTimeout(this, &Connector::registerCommandTimeout);
+    resetCommandTimeout();
+
+    connect(this, &Connector::connected, &Connector::selectDb);
+    connect(this, &Connector::alive, &Connector::resetErrorCounter);
 }
 
 Connector::~Connector()
@@ -53,7 +68,7 @@ Connector::~Connector()
 void Connector::finishAsyncCommand()
 {
     confirmAlive();
-    if (!--m_pendingCommandsCounter) {
+    if (m_pendingCommandsCounter && !--m_pendingCommandsCounter) {
         m_pingTimer->start();
         emit commandsFinished();
     }
@@ -61,7 +76,7 @@ void Connector::finishAsyncCommand()
 
 void Connector::reconnect()
 {
-    reError() << metaInfo().c_str() << "Connection error or timeout. Trying new connection...";
+    reError() << metaInfo()  << "Connection error or timeout. Trying new connection...";
     increaseReconnectTimeout();
     clearContext();
     tryConnect();
@@ -88,7 +103,7 @@ void Connector::tryConnect()
     redisAsyncSetDisconnectCallback(m_redisContext, disconnectCallback);
     startReconnectTimer();
     if (m_redisContext->err) {
-        reDebug() << metaInfo().c_str() << "Error: " << m_redisContext->errstr;
+        reDebug() << metaInfo()  << "Error: " << m_redisContext->errstr;
         clearContext();
         return;
     }
@@ -164,15 +179,13 @@ void Connector::selectDb()
 void Connector::pingCallback(redisAsyncContext *context, void *replyPtr, void *sender)
 {
     auto adapter = static_cast<Connector *>(sender);
+    auto reply = static_cast<redisReply *>(replyPtr);
     if (adapter) {
         adapter->stopCommandTimer();
     }
-
     bool connected = false;
-    if (!isNullReply(context, replyPtr)
-            && !isEmptyReply(context, replyPtr))
+    if (isValidReply(reply))
     {
-        auto reply = static_cast<redisReply *>(replyPtr);
         // pubsub mode generates reply array
         auto pongMessage = (reply->type == REDIS_REPLY_ARRAY)
                 ? QString(reply->element[0]->str)
@@ -182,9 +195,10 @@ void Connector::pingCallback(redisAsyncContext *context, void *replyPtr, void *s
         }
     }
     if (connected) {
-        reDebug() << metaInfo(context).c_str() << "ping ok";
+        reDebug() << metaInfo(context)
+                  << "ping ok";
     } else {
-        reDebug() << metaInfo(context).c_str() << "ping error: no connection";
+        reDebug() << metaInfo(context) << "ping error: no connection";
     }
     if (adapter) {
         adapter->setConnected(connected);
@@ -193,18 +207,18 @@ void Connector::pingCallback(redisAsyncContext *context, void *replyPtr, void *s
 
 void Connector::selectCallback(redisReply *reply)
 {
-    if (isNullReply(reply) || isEmptyReply(reply))
+    if (!isValidReply(reply))
     {
         return;
     }
     confirmAlive();
-    reDebug() << metaInfo().c_str() << "select status:" << toString(reply);
+    reDebug() << metaInfo()  << "select status:" << toString(reply);
 }
 
 void Connector::connectCallback(const redisAsyncContext *context, int status)
 {
     auto adapter = static_cast<Connector *>(context->data);
-    reDebug() << metaInfo(context).c_str() << "Connected with status" << status;
+    reDebug() << metaInfo(context)  << "Connected with status" << status;
     if (status != REDIS_OK) {
         // hiredis already freed the context
         adapter->nullifyContext();
@@ -216,15 +230,18 @@ void Connector::nullifyContext()
     m_redisContext = nullptr;
 }
 
-QVariant Connector::readReply(redisReply *reply)
+QVariant Connector::parseReply(redisReply *reply)
 {
+    if (isValidReply(reply)) {
+        return {};
+    }
     auto array = QVariantList{};
     switch (reply->type) {
     case ReplyString:
         return reply->str;
     case ReplyArray:
         for (size_t i = 0; i < reply->elements; ++i) {
-            array.append(readReply(reply->element[i]));
+            array.append(parseReply(reply->element[i]));
         }
         return array;
     case ReplyInteger:
@@ -243,7 +260,7 @@ QVariant Connector::readReply(redisReply *reply)
         throw std::runtime_error("REDIS_REPLY_MAP Unsupported");
     case ReplySet:
         for (size_t i = 0; i < reply->elements; ++i) {
-            array.append(readReply(reply->element[i]));
+            array.append(parseReply(reply->element[i]));
         }
         return array;
     case ReplyAttr:
@@ -262,7 +279,7 @@ QVariant Connector::readReply(redisReply *reply)
 void Connector::disconnectCallback(const redisAsyncContext *context, int status)
 {
     auto adapter = static_cast<Connector *>(context->data);
-    reDebug() << metaInfo(context).c_str() << "Disconnected with status" << status;
+    reDebug() << metaInfo(context)  << "Disconnected with status" << status;
     if (adapter) {
         adapter->setConnected(false);
         // hiredis already freed the context
@@ -313,24 +330,9 @@ void Connector::privateCallbackStatic(redisAsyncContext *context, void *replyPtr
     connDealloc(args);
 }
 
-bool Connector::isNullReply(redisAsyncContext *context, void *replyPtr)
+bool Connector::isValidReply(redisReply *reply)
 {
-    auto reply = static_cast<redisReply *>(replyPtr);
-    if (reply == nullptr) {
-        if (context) {
-            reDebug() << metaInfo(context).c_str() << "Error: null reply"
-                      << context->err << context->errstr;
-        } else {
-            reDebug() << "Error: null reply. No context found.";
-        }
-        return true;
-    }
-    return false;
-}
-
-bool Connector::isEmptyReply(redisAsyncContext *context, void *replyPtr)
-{
-    auto reply = static_cast<redisReply *>(replyPtr);
+    if (!reply) return false;
     auto replyType = reply->type;
     bool isEmptyString = (replyType == REDIS_REPLY_STRING)
             && QString(reply->str).isEmpty();
@@ -339,27 +341,22 @@ bool Connector::isEmptyReply(redisAsyncContext *context, void *replyPtr)
     if (isEmptyString || isEmptyArray) {
         auto typeString = replyTypeToString(replyType);
         auto message = QString("Error: reply %1 is empty").arg(typeString).toStdString();
-        if (isValidContext(context)) {
-            reDebug() << metaInfo(context).c_str() << "Error: reply string is empty";
-        } else {
-            reDebug() << "Error: reply string is empty";
-        }
-        return true;
+        return false;
     }
-    return false;
+    return true;
 }
 
-void Connector::setConnected(bool state)
+void Connector::setConnected(bool state, const QString &reason)
 {
     if (m_isConnected != state) {
         m_isConnected = state;
-
         if (m_isConnected) {
-            reInfo() << metaInfo().c_str() << "Connection successful.";
+            reInfo() << metaInfo() << "Connection successful. Reason:" <<
+                        (reason.isEmpty() ? "Not Given" : reason);
             emit connected();
-            resetErrorCounter();
         } else {
-            reError() << metaInfo().c_str() << "Lost connection.";
+            reError() << metaInfo() << "Lost connection.Reason:" <<
+                         (reason.isEmpty() ? "Not Given" : reason);;
             emit disconnected();
         }
     }
@@ -367,10 +364,9 @@ void Connector::setConnected(bool state)
 
 void Connector::enablePingKeepalive()
 {
-    if (!m_pingConnection)
-        m_pingConnection = m_pingTimer->callOnTimeout(this, &Connector::doPing);
-    connect(this, &Connector::connected, m_pingTimer, QOverload<>::of(&QTimer::start));
-    connect(this, &Connector::disconnected, m_pingTimer, &QTimer::stop);
+    m_pingTimer->callOnTimeout(this, &Connector::doPing, Qt::UniqueConnection);
+    connect(this, &Connector::connected, m_pingTimer, QOverload<>::of(&QTimer::start), Qt::UniqueConnection);
+    connect(this, &Connector::disconnected, m_pingTimer, &QTimer::stop, Qt::UniqueConnection);
 }
 
 void Connector::disablePingKeepalive()
@@ -379,7 +375,6 @@ void Connector::disablePingKeepalive()
         disconnect(m_pingTimer);
         m_pingTimer->disconnect();
     }
-    m_pingConnection = {};
 }
 
 void Connector::allowSelectDb()
@@ -395,35 +390,7 @@ void Connector::blockSelectDb()
 
 bool Connector::isValidContext()
 {
-    bool isValid = context() && !context()->err;
-    return isValid;
-}
-
-bool Connector::isNullReply(redisReply *reply)
-{
-    if (reply == nullptr) {
-        if (context()) {
-            reDebug() << metaInfo().c_str() << "Error: null reply"
-                      << context()->err << context()->errstr;
-        } else {
-            reDebug() << "Error: null reply. No context found.";
-        }
-        return true;
-    }
-    return false;
-}
-
-bool Connector::isEmptyReply(redisReply *reply)
-{
-    if (QString(reply->str).isEmpty()) {
-        if (isValidContext(context())) {
-            reDebug() << metaInfo().c_str() << "Error: reply string is empty";
-        } else {
-            reDebug() << "Error: reply string is empty";
-        }
-        return true;
-    }
-    return false;
+    return context() && !context()->err;
 }
 
 bool Connector::isValidContext(const redisAsyncContext *context)
@@ -464,7 +431,7 @@ quint16 Connector::port(const redisAsyncContext *context)
     return redisPort;
 }
 
-std::string Connector::metaInfo(const redisAsyncContext *context, const int connectionPort, const QString &id)
+QString Connector::metaInfo(const redisAsyncContext *context, const int connectionPort, const QString &id)
 {
     auto serverPort = connectionPort < 0 ? port(context) : connectionPort;
     auto info = QString("[ %1 ] { %2 }").arg(serverPort)
@@ -479,10 +446,10 @@ std::string Connector::metaInfo(const redisAsyncContext *context, const int conn
     if (!idString.isEmpty()) {
         info += " " + idString;
     }
-    return info.toStdString();
+    return info;
 }
 
-std::string Connector::metaInfo() const
+QString Connector::metaInfo() const
 {
     auto infoString = metaInfo(m_redisContext, port(), id());
     return infoString;
@@ -515,32 +482,12 @@ QString Connector::toString(const redisReply *reply)
 
 void Connector::confirmAlive()
 {
-    stopCommandTimer();
-    resetErrorCounter();
+    emit alive();
 }
 
 void Connector::onRun()
 {
     m_client = new RedisQtAdapter(this);
-    m_reconnectTimer = new QTimer(this);
-    m_reconnectTimer->setSingleShot(true);
-    m_reconnectTimer->callOnTimeout(this, &Connector::reconnect);
-    resetReconnectTimeout();
-    connect(this, &Connector::connected, &Connector::resetReconnectTimeout);
-    connect(this, &Connector::connected, &Connector::stopReconnectTimer);
-    connect(this, &Connector::disconnected, m_reconnectTimer, QOverload<>::of(&QTimer::start));
-
-    m_pingTimer = new QTimer(this);
-    m_pingTimer->setSingleShot(false);
-    m_pingTimer->setInterval(PING_TIMEOUT_MS);
-    enablePingKeepalive();
-
-    m_commandTimer = new QTimer(this);
-    m_commandTimer->setSingleShot(true);
-    m_commandTimer->callOnTimeout(this, &Connector::registerCommandTimeout);
-    resetCommandTimeout();
-
-    connect(this, &Connector::connected, &Connector::selectDb);
     tryConnect();
     Radapter::WorkerBase::onRun();
 }

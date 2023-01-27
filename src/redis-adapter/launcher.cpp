@@ -92,7 +92,7 @@ void Launcher::setLoggingFilters(const Settings::LoggingInfo &loggers)
         filterRules.append(rule);
     }
     if (!filterRules.isEmpty()) {
-        Broker::instance()->setIsDebugMode(loggers);
+        Broker::instance()->setDebugMode(loggers);
         auto filterString = filterRules.join("\n");
         QLoggingCategory::setFilterRules(filterString);
     }

@@ -32,7 +32,7 @@ void KeyEventsConsumer::finishMessageRead(const QVariantList &jsons)
 
 void KeyEventsConsumer::readMessageCallback(redisReply *reply)
 {
-    if (isNullReply(reply)) {
+    if (!isValidReply(reply)) {
         return;
     }
     if (reply->elements == 0) {

@@ -76,8 +76,7 @@ void StreamProducer::tryTrim()
 
 void StreamProducer::writeCallback(redisReply *reply)
 {
-    if (isNullReply(reply)
-            || isEmptyReply(reply))
+    if (!isValidReply(reply))
     {
         return;
     }
@@ -86,14 +85,9 @@ void StreamProducer::writeCallback(redisReply *reply)
 
 void StreamProducer::trimCallback(redisReply *reply)
 {
-    if (isNullReply(reply)) {
+    if (!isValidReply(reply)) {
         return;
     }
     reDebug() << metaInfo().c_str() << "Entries trimmed:" << reply->integer;
 }
 
-QString StreamProducer::id() const
-{
-    auto idString = QString("%1 | %2").arg(metaObject()->className(), streamKey());
-    return idString;
-}

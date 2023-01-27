@@ -22,6 +22,9 @@ public:
 public slots:
     void onCommand(const Radapter::WorkerMsg &msg) override;
 private:
+    void handleCommand(const Radapter::Command* command, const Radapter::WorkerMsg &msg);
+    void requestMultiple(const QSet<Radapter::Command*> &commands, const Radapter::WorkerMsg &msg);
+
     void requestSet(const QString &setKey, const Radapter::WorkerMsg &msg);
     void readSetCallback(redisReply *replyPtr, Radapter::WorkerMsg *msg);
 
@@ -30,6 +33,9 @@ private:
 
     void requestKeys(const QStringList &keys, const Radapter::WorkerMsg &msg);
     void readKeysCallback(redisReply *replyPtr, Radapter::WorkerMsg *msg);
+
+    void requestHash(const QString &hash, const Radapter::WorkerMsg &msg);
+    void readHashCallback(redisReply *replyPtr, Radapter::WorkerMsg *msg);
 
     void failMsg(Radapter::WorkerMsg *msg, const QString &reason = "Not Given");
     static JsonDict mergeWithKeys(const QStringList &keys, const QStringList &entries);
