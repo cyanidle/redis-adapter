@@ -27,9 +27,21 @@ public:
 private:
     QStringList m_keys;
 };
+
+class ReplyHash : public Radapter::Reply
+{
+    Q_GADGET
+public:
+    ReplyHash(const QVariantMap &flatHash);
+    RADAPTER_REPLY
+    const QVariantMap &flatHash() const {return m_flatHash;}
+private:
+    QVariantMap m_flatHash;
+};
 }  // namespace Cache
 
 } // namespace Redis
 RADAPTER_DECLARE_REPLY(Redis::Cache::ReplyKeys)
 RADAPTER_DECLARE_REPLY(Redis::Cache::ReplySet)
+RADAPTER_DECLARE_REPLY(Redis::Cache::ReplyHash)
 #endif // REDIS_REPLIES_H

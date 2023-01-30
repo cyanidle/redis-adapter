@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QTimer>
 #include <QStack>
+#include "context/contextmanager.h"
 #include "lib/hiredis/adapters/qt.h"
 #include <QFuture>
 #include "radapter-broker/workerbase.h"
@@ -134,6 +135,7 @@ private:
     quint16 m_port;
     quint16 m_dbIndex;
     bool m_canSelect;
+
     struct CallbackArgsPlain {
         StaticCb callback;
         void *data;
@@ -151,7 +153,6 @@ private:
     template <typename CallbackArgs_t>
     static void connDealloc(CallbackArgs_t* ptr);
 };
-
 
 template<typename User>
 inline User* Connector::getSender(redisAsyncContext* ctx) {
@@ -183,13 +184,12 @@ int Connector::runAsyncCommandImplementation(Callback callback, const QString &c
     }
     m_pingTimer->stop();
     auto status = redisAsyncCommand(m_redisContext, callback, cbData, command.toStdString().c_str());
-    if (status == REDIS_OK) {
-        if (!needTrackingBypass) {
-            startCommandTimer();
-            ++m_pendingCommandsCounter;
-        }
-    } else {
+    if (status != REDIS_OK) {
         connDealloc(cbData);
+    }
+    if (!needTrackingBypass) {
+        startCommandTimer();
+        ++m_pendingCommandsCounter;
     }
     return status;
 }

@@ -198,18 +198,19 @@ void StreamConsumer::createGroup()
 
 void StreamConsumer::readCallback(redisReply *reply)
 {
+    doRead();
     if (!isValidReply(reply)) {
         return;
     }
     if (reply->elements == 0) {
-        reDebug() << metaInfo().c_str() << "No new entries";
+        reDebug() << metaInfo() << "No new entries";
         return;
     }
 
     auto rootEntry = reply->element[0];
-    reDebug() << metaInfo().c_str() << "stream key:" << rootEntry->element[0]->str;
+    reDebug() << metaInfo() << "stream key:" << rootEntry->element[0]->str;
     auto streamEntries = rootEntry->element[1];
-    reDebug() << metaInfo().c_str() << "new stream entries count:" << streamEntries->elements;
+    reDebug() << metaInfo() << "new stream entries count:" << streamEntries->elements;
     qint32 entriesCount = 0u;
     auto jsonEntries = JsonDict{};
     for (quint16 i = 0; i < streamEntries->elements; i++) {
@@ -219,7 +220,7 @@ void StreamConsumer::readCallback(redisReply *reply)
         }
         entriesCount += jsonDict.count();
     }
-    reDebug() << metaInfo().c_str() << "entries processed:" << entriesCount;
+    reDebug() << metaInfo() << "entries processed:" << entriesCount;
 }
 
 void StreamConsumer::ackCallback(redisReply *reply)
@@ -227,7 +228,7 @@ void StreamConsumer::ackCallback(redisReply *reply)
     if (!isValidReply(reply)) {
         return;
     }
-    reDebug() << metaInfo().c_str() << "entries acknowledged:" << toString(reply);
+    reDebug() << metaInfo() << "entries acknowledged:" << toString(reply);
     finishAck();
 }
 
@@ -242,7 +243,7 @@ void StreamConsumer::createGroupCallback(redisReply *reply)
     {
         return;
     }
-    reDebug() << metaInfo().c_str() << "create group status:" << toString(reply);
+    reDebug() << metaInfo() << "create group status:" << toString(reply);
 }
 
 void StreamConsumer::finishRead(const JsonDict &json, const Radapter::WorkerMsg &msg)

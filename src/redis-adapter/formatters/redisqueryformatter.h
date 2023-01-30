@@ -20,11 +20,7 @@ public:
                                const QString &lastId = QString{});
     static QString toReadStreamAckCommand(const QString &streamKey, const QString &groupName, const QStringList &idList);
     static QString toCreateGroupCommand(const QString &streamKey, const QString &groupName, const QString &startId = QString{});
-
-    static QString toGetIndexCommand(const QString &indexKey);
     QString toUpdateIndexCommand(const QString &indexKey) const;
-
-    static QString toMultipleGetCommand(const QStringList &keysList);
     QString toMultipleSetCommand() const;
 
     QString toKeyEventsSubscribeCommand(const QStringList &eventTypes) const;

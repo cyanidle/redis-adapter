@@ -48,7 +48,7 @@ void CacheProducer::msetCallback(redisReply *reply)
     {
         return;
     }
-    reDebug() << metaInfo().c_str() << "mset status:" << reply->str;
+    reDebug() << metaInfo() << "mset status:" << reply->str;
 }
 
 void CacheProducer::indexCallback(redisReply *reply)
@@ -56,5 +56,5 @@ void CacheProducer::indexCallback(redisReply *reply)
     if (!isValidReply(reply)) {
         return;
     }
-    reDebug() << metaInfo().c_str() << "index members updated:" << reply->integer;
+    reDebug() << metaInfo() << "index members updated:" << reply->integer;
 }

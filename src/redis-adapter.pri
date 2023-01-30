@@ -9,7 +9,6 @@ SOURCES += \
     $$PWD/redis-adapter/consumers/rediskeyeventsconsumer.cpp \
     $$PWD/redis-adapter/consumers/redisstreamconsumer.cpp \
     $$PWD/redis-adapter/consumers/sqlkeyvaultconsumer.cpp \
-    $$PWD/redis-adapter/contexts/rediscontext.cpp \
     $$PWD/redis-adapter/factories/mysqlfactory.cpp \
     $$PWD/redis-adapter/factories/rediscachefactory.cpp \
     $$PWD/redis-adapter/factories/redispubsubfactory.cpp \
@@ -55,7 +54,6 @@ HEADERS += \
     $$PWD/redis-adapter/consumers/rediskeyeventsconsumer.h \
     $$PWD/redis-adapter/consumers/redisstreamconsumer.h \
     $$PWD/redis-adapter/consumers/sqlkeyvaultconsumer.h \
-    $$PWD/redis-adapter/contexts/rediscontext.h \
     $$PWD/redis-adapter/factories/mysqlfactory.h \
     $$PWD/redis-adapter/factories/rediscachefactory.h \
     $$PWD/redis-adapter/factories/redispubsubfactory.h \
@@ -94,7 +92,7 @@ HEADERS += \
     $$PWD/redis-adapter/settings/settings.h \
     $$PWD/redis-adapter/utils/doubleutils.h \
     $$PWD/redis-adapter/utils/resourcemonitor.h \
-    $$PWD/redis-adapter/utils/timeutils.hp
+    $$PWD/redis-adapter/utils/timeutils.h
 
 
 include($$PWD/lib/lib.pri)

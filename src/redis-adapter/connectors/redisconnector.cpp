@@ -194,10 +194,7 @@ void Connector::pingCallback(redisAsyncContext *context, void *replyPtr, void *s
             connected = true;
         }
     }
-    if (connected) {
-        reDebug() << metaInfo(context)
-                  << "ping ok";
-    } else {
+    if (!connected) {
         reDebug() << metaInfo(context) << "ping error: no connection";
     }
     if (adapter) {
@@ -232,7 +229,7 @@ void Connector::nullifyContext()
 
 QVariant Connector::parseReply(redisReply *reply)
 {
-    if (isValidReply(reply)) {
+    if (!isValidReply(reply)) {
         return {};
     }
     auto array = QVariantList{};
@@ -332,18 +329,7 @@ void Connector::privateCallbackStatic(redisAsyncContext *context, void *replyPtr
 
 bool Connector::isValidReply(redisReply *reply)
 {
-    if (!reply) return false;
-    auto replyType = reply->type;
-    bool isEmptyString = (replyType == REDIS_REPLY_STRING)
-            && QString(reply->str).isEmpty();
-    bool isEmptyArray = (replyType == REDIS_REPLY_ARRAY)
-            && (reply->elements == 0);
-    if (isEmptyString || isEmptyArray) {
-        auto typeString = replyTypeToString(replyType);
-        auto message = QString("Error: reply %1 is empty").arg(typeString).toStdString();
-        return false;
-    }
-    return true;
+    return reply;
 }
 
 void Connector::setConnected(bool state, const QString &reason)
@@ -351,8 +337,7 @@ void Connector::setConnected(bool state, const QString &reason)
     if (m_isConnected != state) {
         m_isConnected = state;
         if (m_isConnected) {
-            reInfo() << metaInfo() << "Connection successful. Reason:" <<
-                        (reason.isEmpty() ? "Not Given" : reason);
+            reInfo() << metaInfo() << "Connection successful.";
             emit connected();
         } else {
             reError() << metaInfo() << "Lost connection.Reason:" <<

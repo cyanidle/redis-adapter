@@ -11,7 +11,7 @@ class RADAPTER_SHARED_SRC ReadIndex : public Radapter::Command
 public:
     ReadIndex(const QString &index);
     QString index() const {return m_index;}
-    RADAPTER_COMMAND_WANTS(Radapter::ReplyWithJsonOk)
+    RADAPTER_COMMAND_WANTS(Radapter::ReplyWithJson)
 private:
     QString m_index;
 };
@@ -35,11 +35,22 @@ public:
 private:
     QString m_set;
 };
+class RADAPTER_SHARED_SRC ReadHash : public Radapter::Command
+{
+    Q_GADGET
+public:
+    ReadHash(const QString &hash);
+    const QString &hash() const {return m_hash;};
+    RADAPTER_COMMAND_WANTS(Redis::Cache::ReplyHash)
+private:
+    QString m_hash;
+};
 } // namespace Cache
 } // namespace Redis
 
 RADAPTER_DECLARE_COMMAND(Redis::Cache::ReadIndex)
 RADAPTER_DECLARE_COMMAND(Redis::Cache::ReadSet)
 RADAPTER_DECLARE_COMMAND(Redis::Cache::ReadKeys)
+RADAPTER_DECLARE_COMMAND(Redis::Cache::ReadHash)
 
 #endif // REDIS_CACHECOMMANDS_H

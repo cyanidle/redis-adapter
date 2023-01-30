@@ -67,12 +67,6 @@ QString RedisQueryFormatter::toCreateGroupCommand(const QString &streamKey, cons
     return command;
 }
 
-QString RedisQueryFormatter::toGetIndexCommand(const QString &indexKey)
-{
-    auto command = QString("SMEMBERS %1").arg(indexKey);
-    return command;
-}
-
 QString RedisQueryFormatter::toUpdateIndexCommand(const QString &indexKey) const
 {
     auto command = QString{};
@@ -81,17 +75,6 @@ QString RedisQueryFormatter::toUpdateIndexCommand(const QString &indexKey) const
         command = QString("SADD %1 ").arg(indexKey);
         command += updatedKeys.join(" ");
     }
-    return command;
-}
-
-QString RedisQueryFormatter::toMultipleGetCommand(const QStringList &keysList)
-{
-    if (keysList.isEmpty()) {
-        return QString{};
-    }
-
-    auto command = QString("MGET ");
-    command += toKeysFields(keysList);
     return command;
 }
 

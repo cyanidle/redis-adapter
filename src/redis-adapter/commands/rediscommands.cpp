@@ -23,5 +23,12 @@ ReadSet::ReadSet(const QString &set) :
 
 }
 
+ReadHash::ReadHash(const QString &hash) :
+    Radapter::Command(typeInConstructor(this)),
+    m_hash(hash)
+{
+
+}
+
 } // namespace Cache
 } // namespace Redis

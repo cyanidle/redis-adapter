@@ -36,13 +36,13 @@ void KeyEventsConsumer::readMessageCallback(redisReply *reply)
         return;
     }
     if (reply->elements == 0) {
-        reDebug() << metaInfo().c_str() << "Empty message.";
+        reDebug() << metaInfo() << "Empty message.";
         finishMessageRead( QVariantList{});
         return;
     }
 
     auto message = QVariantList{};
-    reDebug() << metaInfo().c_str() << "message received:" << reply->element[1]->str;
+    reDebug() << metaInfo() << "message received:" << reply->element[1]->str;
     for (quint16 i = 0; i < reply->elements; i++) {
         auto messageItem = reply->element[i];
         auto messageString = toString(messageItem);
@@ -62,7 +62,7 @@ void KeyEventsConsumer::subscribeToKeyEventsImpl(const QStringList &eventTypes)
     auto command = RedisQueryFormatter{}.toKeyEventsSubscribeCommand(eventTypes);
     bool bypassTracking = true;
     runAsyncCommand(&KeyEventsConsumer::readMessageCallback, command, bypassTracking);
-    reDebug() << metaInfo().c_str() << "Listening to key events of types:" << eventTypes;
+    reDebug() << metaInfo() << "Listening to key events of types:" << eventTypes;
 }
 
 void KeyEventsConsumer::eventReceived(const QVariantList &jsonMessage)

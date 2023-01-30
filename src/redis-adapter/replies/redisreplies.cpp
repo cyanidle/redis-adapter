@@ -4,15 +4,22 @@ namespace Redis {
 namespace Cache {
 
 ReplyKeys::ReplyKeys(const QStringList &keys) :
-    Reply(Radapter::ReplyType<ReplyKeys>(), true),
+    Reply(typeInConstructor(this), true),
     m_keys(keys)
 {
 
 }
 
 ReplySet::ReplySet(const QStringList &keys) :
-    Reply(Radapter::ReplyType<ReplySet>(), true),
+    Reply(typeInConstructor(this), true),
     m_keys(keys)
+{
+
+}
+
+ReplyHash::ReplyHash(const QVariantMap &flatHash) :
+    Reply(typeInConstructor(this), true),
+    m_flatHash(flatHash)
 {
 
 }

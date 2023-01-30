@@ -80,7 +80,7 @@ void StreamProducer::writeCallback(redisReply *reply)
     {
         return;
     }
-    reDebug() << metaInfo().c_str() << "Entry added:" << reply->str;
+    reDebug() << metaInfo() << "Entry added:" << reply->str;
 }
 
 void StreamProducer::trimCallback(redisReply *reply)
@@ -88,6 +88,6 @@ void StreamProducer::trimCallback(redisReply *reply)
     if (!isValidReply(reply)) {
         return;
     }
-    reDebug() << metaInfo().c_str() << "Entries trimmed:" << reply->integer;
+    reDebug() << metaInfo() << "Entries trimmed:" << reply->integer;
 }
 
