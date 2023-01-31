@@ -14,17 +14,6 @@ namespace Settings {
         void cache() {
             cacheMap.insert(name, *this);
         }
-        bool isValid() {
-            return ServerInfo::isValid() && !name.isEmpty();
-        }
-        bool operator==(const RedisServer &src) const {
-           return name == src.name
-               && server_host == src.server_host
-               && server_port == src.server_port;
-        }
-        bool operator!=(const RedisServer &src)const {
-            return !(*this == src);
-        }
     };
 
     struct RADAPTER_SHARED_SRC RedisConnector : Serializer::SerializableGadget {
@@ -33,7 +22,7 @@ namespace Settings {
         SERIAL_FIELD(quint16, db_index, 0)
         SERIAL_FIELD(Radapter::WorkerSettings, worker)
         SERIAL_FIELD(QString, target_server_name)
-
+        SERIAL_FIELD_PTR(Radapter::LoggingInterceptorSettings, log_jsons, DEFAULT)
     };
 
     struct RADAPTER_SHARED_SRC RedisKeyEventSubscriber : Serializer::SerializableGadget {
@@ -46,28 +35,10 @@ namespace Settings {
         SERIAL_FIELD_PTR(Radapter::LoggingInterceptorSettings, log_jsons, DEFAULT)
         RedisServer source_server;
         SERIAL_CONTAINER(QList, QString, keyEvents)
-
         SERIAL_POST_INIT(postInit)
-
         void postInit() {
             source_server = RedisServer::cacheMap.value(source_server_name);
             cacheMap.insert(worker.name, *this);
-        }
-
-        bool isValid() {
-            return !worker.name.isEmpty() && !source_server_name.isEmpty()
-                    && source_server.isValid() && !keyEvents.isEmpty();
-        }
-
-        bool operator==(const RedisKeyEventSubscriber &other) const {
-            return worker.name == other.worker.name
-                    && source_server_name == other.source_server_name
-                    && source_server == other.source_server
-                    && keyEvents == other.keyEvents;
-        }
-
-        bool operator!=(const RedisKeyEventSubscriber &other) const {
-            return !(*this == other);
         }
     };
 
@@ -82,7 +53,36 @@ namespace Settings {
         RedisStartFromTop,
         RedisStartFromFirst,
         RedisStartFromLastUnread
-     };
+    };
+
+    struct RADAPTER_SHARED_SRC RedisStreamBase : RedisConnector {
+        Q_GADGET
+        IS_SERIALIZABLE
+        SERIAL_FIELD(QString, stream_key)
+        SERIAL_FIELD(qint32, stream_size, 10000)
+    };
+    struct RADAPTER_SHARED_SRC RedisStreamConsumer : RedisStreamBase {
+        enum StartMode {
+            StartPersistentId = 0,
+            StartFromTop,
+            StartFromFirst
+        };
+        Q_ENUM(StartMode)
+        Q_GADGET
+        IS_SERIALIZABLE
+        SERIAL_FIELD_MAPPED(StartMode, start_from, startModesMap, StartPersistentId)
+        static QMap<QString, StartMode> startModesMap;
+    };
+    struct RADAPTER_SHARED_SRC RedisStreamGroupConsumer : RedisStreamConsumer {
+        Q_GADGET
+        IS_SERIALIZABLE
+        SERIAL_FIELD(QString, consumer_group_name)
+        SERIAL_FIELD(bool, start_from_last_unread, true)
+    };
+    struct RADAPTER_SHARED_SRC RedisStreamProducer : RedisStreamBase {
+        Q_GADGET
+        IS_SERIALIZABLE
+    };
 
     struct RADAPTER_SHARED_SRC RedisStream : Serializer::SerializableGadget {
         typedef QMap<QString, RedisStream> Map;
@@ -158,32 +158,6 @@ namespace Settings {
             }
             return "unknown";
         }
-
-        bool isValid() {
-            if (worker.name.isEmpty() || stream_key.isEmpty()) {
-                return false;
-            }
-            bool isValid = false;
-            if (mode == RedisStreamConsumer) {
-                isValid = !source_server.isEmpty() && source.isValid();
-            } else if (mode == RedisStreamProducer) {
-                isValid = !target_server.isEmpty() && target.isValid() && (stream_size != 0);
-            }
-            return isValid;
-        }
-        bool operator==(const RedisStream &src)const {
-           return worker.name == src.worker.name
-               && mode == src.mode
-               && target_server == src.target_server
-               && target == src.target
-               && source_server == src.source_server
-               && source == src.source
-               && stream_key == src.stream_key
-               && stream_size == src.stream_size;
-        }
-        bool operator!=(const RedisStream &src)const {
-            return !(*this == src);
-        }
     };
 
     struct RADAPTER_SHARED_SRC RedisCache : RedisConnector {
@@ -194,50 +168,17 @@ namespace Settings {
             Consumer,
             Producer
         };
+        Q_ENUM(Mode)
         Q_GADGET
         IS_SERIALIZABLE
         RedisServer target_server;
-        SERIAL_FIELD_PTR(Radapter::LoggingInterceptorSettings, log_jsons, DEFAULT)
         SERIAL_FIELD(QString, index_key)
-        SERIAL_CUSTOM(Mode, mode, initMode, NO_READ)
+        SERIAL_FIELD_MAPPED(Mode, mode, modeMap)
         SERIAL_POST_INIT(postInit)
-
-        static inline QList<RedisCache> getCaches(const QVariant &src) {
-            return Serializer::fromQList<RedisCache>(src.toList());
-        }
-
-        bool initMode(const QVariant &src) {
-            auto srcStr = src.toString();
-            if (srcStr == "consumer") {
-                mode = Consumer;
-                return true;
-            } else if (srcStr == "producer") {
-                mode = Producer;
-                return true;
-            }
-            return false;
-        }
-
+        static QMap<QString, Mode> modeMap;
         void postInit() {
             target_server = RedisServer::cacheMap.value(target_server_name);
             cacheMap.insert(worker.name, *this);
-        }
-
-        bool isValid() {
-            return !worker.name.isEmpty() && !target_server_name.isEmpty()
-                    && target_server.isValid() && !index_key.isEmpty();
-        }
-
-        bool operator==(const RedisCache &src)const {
-            return worker.name == src.worker.name
-                && target_server_name == src.target_server_name
-                && target_server == src.target_server
-                && index_key == src.index_key
-                && worker.producers == src.worker.producers
-                && worker.consumers == src.worker.consumers;
-        }
-        bool operator!=(const RedisCache &src)const {
-            return !(*this == src);
         }
     };
 

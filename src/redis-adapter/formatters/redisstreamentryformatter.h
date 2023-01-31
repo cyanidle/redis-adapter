@@ -15,7 +15,7 @@ public:
 
     QString entryId() const;
     QDateTime eventTime() const;
-   QStringList entryKeys() const;
+    QStringList entryKeys() const;
     JsonDict eventDataDict() const;
     JsonDict toJson() const;
 signals:

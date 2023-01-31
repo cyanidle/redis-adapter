@@ -20,16 +20,6 @@ namespace Settings {
         IS_SERIALIZABLE
         SERIAL_FIELD(QString, server_host);
         SERIAL_FIELD(quint16, server_port);
-        bool isValid() {
-            return !server_host.isEmpty() && (server_port > 0u);
-        }
-        bool operator==(const ServerInfo &src) const {
-           return server_host == src.server_host
-                && server_port == src.server_port;
-        }
-        bool operator!=(const ServerInfo &src) const {
-            return !(*this == src);
-        }
     };
 
     struct RADAPTER_SHARED_SRC TcpDevice : public Serializer::SerializableGadget {

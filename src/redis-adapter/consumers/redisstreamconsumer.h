@@ -57,7 +57,6 @@ private:
 
     int toCommandTimeout(int timeoutMsecs) const;
     void finishRead(const JsonDict &json, const Radapter::WorkerMsg &msg);
-    void finishAck();
     void setLastReadId(const QString &lastId);
     void setPending(bool state);
 

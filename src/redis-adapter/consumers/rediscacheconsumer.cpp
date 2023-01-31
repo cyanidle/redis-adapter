@@ -22,7 +22,7 @@ CacheConsumer::CacheConsumer(const QString &host,
 
 void CacheConsumer::requestIndex(const QString &indexKey, CtxHandle handle)
 {
-    auto command = QStringLiteral("SMEMBERS ") + indexKey;
+    auto command = QStringLiteral("HGETALL ") + indexKey;
     if (runAsyncCommand(&CacheConsumer::readIndexCallback, command, handle) != REDIS_OK) {
         getCtx(handle).fail(metaInfo());
     }
@@ -44,7 +44,6 @@ void CacheConsumer::readIndexCallback(redisReply *reply, CtxHandle handle)
             getCtx(handle).addCommand(ReadHash(entry.right(REDIS_SET_PREFIX.length())));
         } else {
             //todo (add to msg Json)
-
         }
     }
     getCtx(handle).addCommand(ReadKeys(keysToRead));

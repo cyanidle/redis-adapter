@@ -206,7 +206,6 @@ void StreamConsumer::readCallback(redisReply *reply)
         reDebug() << metaInfo() << "No new entries";
         return;
     }
-
     auto rootEntry = reply->element[0];
     reDebug() << metaInfo() << "stream key:" << rootEntry->element[0]->str;
     auto streamEntries = rootEntry->element[1];
@@ -229,13 +228,9 @@ void StreamConsumer::ackCallback(redisReply *reply)
         return;
     }
     reDebug() << metaInfo() << "entries acknowledged:" << toString(reply);
-    finishAck();
-}
-
-void StreamConsumer::finishAck()
-{
     emit ackCompleted();
 }
+
 
 void StreamConsumer::createGroupCallback(redisReply *reply)
 {
