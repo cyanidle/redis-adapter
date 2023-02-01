@@ -1,33 +1,27 @@
 #include "localization.h"
 #include "radapterlogging.h"
 
-Localization::Localization(const Settings::LocalizationInfo &localizationInfo, QObject *parent)
-    : QObject(parent),
-      m_info(localizationInfo)
+Localization::Localization()
 {
-    if (!m_info.time_zone.isValid()) {
-        reDebug() << "Localization: incorrect timezone. Using the system default one...";
-        m_info.time_zone = QTimeZone::systemTimeZone();
-    }
 }
 
 Localization *Localization::instance()
 {
-    return prvInstance();
-}
-
-Localization *Localization::prvInstance(const Settings::LocalizationInfo &info, QObject *parent)
-{
-    static Localization localization(info, parent);
-    return &localization;
-}
-
-void Localization::init(const Settings::LocalizationInfo &localizationInfo, QObject *parent)
-{
-    prvInstance(localizationInfo, parent);
+    static Localization inst{};
+    return &inst;
 }
 
 QTimeZone Localization::timeZone() const
 {
+    QMutexLocker lock(&m_mutex);
     return m_info.time_zone;
+}
+
+QTimeZone Localization::applyInfo(const Settings::LocalizationInfo &timeZone)
+{
+    QMutexLocker lock(&m_mutex);
+    if (!timeZone.time_zone.isValid()) {
+        throw std::invalid_argument("Localization: incorrect timezone!");
+    }
+    m_info = timeZone;
 }

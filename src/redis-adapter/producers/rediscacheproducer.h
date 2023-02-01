@@ -3,7 +3,6 @@
 
 #include <QObject>
 #include "redis-adapter/connectors/redisconnector.h"
-#include "redis-adapter/formatters/redisqueryformatter.h"
 #include "jsondict/jsondict.hpp"
 
 namespace Redis {
@@ -14,11 +13,7 @@ class Redis::CacheProducer : public Connector
 {
     Q_OBJECT
 public:
-    explicit CacheProducer(const QString &host,
-                           const quint16 port,
-                           const quint16 dbIndex,
-                           const QString &indexKey,
-                           const Radapter::WorkerSettings &settings, QThread *thread);
+    explicit CacheProducer(const Settings::RedisCacheProducer &config, QThread *thread);
 signals:
 
 public slots:

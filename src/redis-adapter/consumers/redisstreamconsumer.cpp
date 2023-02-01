@@ -3,7 +3,6 @@
 #include "redis-adapter/localstorage.h"
 #include "redis-adapter/formatters/redisqueryformatter.h"
 #include "redis-adapter/formatters/redisstreamentryformatter.h"
-#include "redis-adapter/formatters/streamentriesmapformatter.h"
 #include "redis-adapter/radapterlogging.h"
 
 #define ENTRIES_PER_READ            1000
@@ -13,188 +12,47 @@
 
 using namespace Redis;
 
-StreamConsumer::StreamConsumer(const QString &host,
-                               const quint16 port,
-                               const QString &streamKey,
-                               const QString &groupName,
-                               const Settings::RedisConsumerStartMode startFrom,
-                               const Radapter::WorkerSettings &settings,
+StreamConsumer::StreamConsumer(const Settings::RedisStreamConsumer &config,
                                QThread *thread)
-    : Connector(host, port, 0u, settings, thread),
-      m_streamKey(streamKey),
-      m_groupName(groupName),
-      m_blockingReadTimer(nullptr),
-      m_startMode(startFrom),
+    : Connector(config, thread),
+      m_streamKey(config.stream_key),
+      m_startMode(config.start_from),
       m_lastStreamId{}
 {
-    m_hasPending = areGroupsEnabled();
     disablePingKeepalive();
-    auto readInterval = static_cast<qint32>(BLOCK_TIMEOUT_MS * 1.5);
-    m_blockingReadTimer = new QTimer(this);
-    m_blockingReadTimer->setInterval(readInterval);
-    m_blockingReadTimer->setSingleShot(true);
-    m_blockingReadTimer->callOnTimeout(this, &StreamConsumer::blockingRead);
-    connect(this, &StreamConsumer::disconnected, m_blockingReadTimer, &QTimer::stop);
-
-    m_readGroupTimer = new QTimer(this);
-    m_readGroupTimer->setInterval(POLL_TIMEOUT_MS);
-    m_readGroupTimer->setSingleShot(true);
-    m_readGroupTimer->callOnTimeout(this, &StreamConsumer::readGroup);
-    connect(this, &StreamConsumer::disconnected, m_readGroupTimer, &QTimer::stop);
-
-    connect(this, &StreamConsumer::commandsFinished, this, &StreamConsumer::blockingRead);
+    connect(this, &StreamConsumer::commandsFinished, this, &StreamConsumer::doRead);
     connect(this, &StreamConsumer::connected, this, [this](){
         Connector::runAsyncCommand(QString("INCR readers:%1").arg(m_streamKey));
     });
-    connect(this, &StreamConsumer::connected, this, &StreamConsumer::createGroup);
-    connect(this, &StreamConsumer::connected, this, &StreamConsumer::blockingRead);
-    connect(this, &StreamConsumer::connected, this, &StreamConsumer::readGroup);
-    connect(this, &StreamConsumer::pendingChanged, &StreamConsumer::updateKeepaliveTimers);
-    connect(this, &StreamConsumer::pendingChanged, &StreamConsumer::updateReadTimers);
-    connect(this, &StreamConsumer::ackCompleted, &StreamConsumer::readGroup);
-}
-
-void StreamConsumer::blockingReadCommand()
-{
-    if (hasPendingEntries()) {
-        return;
-    }
-    m_blockingReadTimer->stop();
-    doRead();
-    m_blockingReadTimer->start();
-}
-
-
-void StreamConsumer::blockingRead()
-{
-    if (hasPendingEntries()) {
-        return;
-    }
-    m_blockingReadTimer->stop();
-    doRead();
-    m_blockingReadTimer->start();
-
-}
-
-void StreamConsumer::readGroup()
-{
-    if (!hasPendingEntries()
-        || m_blockingReadTimer->isActive()
-        || m_readGroupTimer->isActive())
-    {
-        return;
-    }
-    doRead();
-    m_readGroupTimer->start();
-
-}
-
-void StreamConsumer::readGroupCommand()
-{
-    if (!hasPendingEntries()
-            || m_blockingReadTimer->isActive()
-            || m_readGroupTimer->isActive())
-    {
-        return;
-    }
-    doRead();
-    m_readGroupTimer->start();
-}
-
-void StreamConsumer::acknowledge(const JsonDict &jsonEntries)
-{
-    if (!hasPendingEntries()
-            || !StreamEntriesMapFormatter::isValid(jsonEntries))
-    {
-        return;
-    }
-    m_readGroupTimer->stop();
-    auto idList = jsonEntries.keysDeep();
-    auto ackCommand = RedisQueryFormatter::toReadStreamAckCommand(m_streamKey, groupName(), idList);
-    runAsyncCommand(&StreamConsumer::ackCallback, ackCommand);
+    connect(this, &StreamConsumer::connected, this, &StreamConsumer::doRead);
 }
 
 QString StreamConsumer::lastReadId() const
 {
     auto lastId = m_lastStreamId;
-    if (m_startMode == Settings::RedisStartPersistentId) {
+    if (m_startMode == Settings::RedisStreamConsumer::StartPersistentId) {
         lastId = LocalStorage::instance()->getLastStreamId(m_streamKey);
     }
-    if ((lastId.isEmpty() && (m_startMode == Settings::RedisStartFromFirst))
-            || hasPendingEntries())
+    if ((lastId.isEmpty() && (m_startMode == Settings::RedisStreamConsumer::StartFromFirst)))
     {
         lastId = "0-0";
     }
     return lastId;
 }
 
-QString StreamConsumer::streamKey() const
+const QString &StreamConsumer::streamKey() const
 {
     return m_streamKey;
 }
 
-QString StreamConsumer::groupName() const
-{
-    return m_groupName;
-}
-
-bool StreamConsumer::areGroupsEnabled() const
-{
-    return !m_groupName.isEmpty();
-}
-
-bool StreamConsumer::hasPendingEntries() const
-{
-    return areGroupsEnabled() && m_hasPending;
-}
-
 void StreamConsumer::doRead()
 {
-    if (hasPendingEntries()) {
-        resetCommandTimeout();
-    } else {
-        setCommandTimeout(toCommandTimeout(BLOCK_TIMEOUT_MS));
-    }
-
+    resetCommandTimeout();
     auto startId = lastReadId();
-    auto readCommand = areGroupsEnabled()
-            ? RedisQueryFormatter::toReadGroupCommand(m_streamKey, groupName(), workerName(), BLOCK_TIMEOUT_MS, startId)
-            : RedisQueryFormatter::toReadStreamCommand(m_streamKey, ENTRIES_PER_READ, BLOCK_TIMEOUT_MS, startId);
+    auto readCommand = RedisQueryFormatter::toReadStreamCommand(m_streamKey, ENTRIES_PER_READ, BLOCK_TIMEOUT_MS, startId);
     runAsyncCommand(&StreamConsumer::readCallback, readCommand);
 }
 
-void StreamConsumer::updateKeepaliveTimers()
-{
-    if (!areGroupsEnabled()) {
-        return;
-    }
-    if (hasPendingEntries()) {
-        enablePingKeepalive();
-    } else {
-        disablePingKeepalive();
-    }
-}
-
-void StreamConsumer::updateReadTimers()
-{
-    if (!areGroupsEnabled()) {
-        return;
-    }
-    if (hasPendingEntries()) {
-        m_blockingReadTimer->stop();
-    } else {
-        m_readGroupTimer->stop();
-    }
-}
-
-void StreamConsumer::createGroup()
-{
-    if (!areGroupsEnabled()) {
-        return;
-    }
-    auto command = RedisQueryFormatter::toCreateGroupCommand(m_streamKey, groupName());
-    runAsyncCommand(&StreamConsumer::createGroupCallback, command);
-}
 
 void StreamConsumer::readCallback(redisReply *reply)
 {
@@ -213,94 +71,26 @@ void StreamConsumer::readCallback(redisReply *reply)
     qint32 entriesCount = 0u;
     auto jsonEntries = JsonDict{};
     for (quint16 i = 0; i < streamEntries->elements; i++) {
-        auto jsonDict = RedisStreamEntryFormatter(streamEntries->element[i]).toJson();
+        auto formatted = RedisStreamEntryFormatter(streamEntries->element[i]);
+        auto jsonDict = formatted.toJson();
         if (!jsonDict.isEmpty()) {
-            jsonEntries.insert(jsonDict);
+            jsonEntries.merge(jsonDict);
         }
         entriesCount += jsonDict.count();
+        if (i == streamEntries->elements - 1) {
+            setLastReadId(formatted.entryId());
+        }
     }
     reDebug() << metaInfo() << "entries processed:" << entriesCount;
-}
-
-void StreamConsumer::ackCallback(redisReply *reply)
-{
-    if (!isValidReply(reply)) {
-        return;
-    }
-    reDebug() << metaInfo() << "entries acknowledged:" << toString(reply);
-    emit ackCompleted();
-}
-
-
-void StreamConsumer::createGroupCallback(redisReply *reply)
-{
-    if (!isValidReply(reply))
-    {
-        return;
-    }
-    reDebug() << metaInfo() << "create group status:" << toString(reply);
-}
-
-void StreamConsumer::finishRead(const JsonDict &json, const Radapter::WorkerMsg &msg)
-{
-    if (!json.isEmpty()) {
-        Radapter::WorkerMsg msgToSend(this, consumers());
-        const auto streamIds = json.topKeys();
-        if (msg.isCommand()) {
-            msgToSend = prepareReply(msg, new Radapter::ReplyOk);
-        } else {
-            msgToSend = prepareMsg();
-        }
-        for (const auto& key : streamIds) {
-            msgToSend.merge(json[key].toMap());
-        }
-        emit sendMsg(msgToSend);
-        setLastReadId(streamIds.constLast());
-    }
-    bool needAck = !hasPendingEntries() && !json.isEmpty();
-    if (needAck) {
-        setPending(true);
-    }
-    bool isDoneAck = hasPendingEntries() && json.isEmpty();
-    if (isDoneAck) {
-        setPending(false);
-        setLastReadId(QString{});
-    }
+    emit sendMsg(prepareMsg(jsonEntries));
 }
 
 void StreamConsumer::setLastReadId(const QString &lastId)
 {
-    if (m_startMode == Settings::RedisStartPersistentId) {
+    if (m_startMode == Settings::RedisStreamConsumer::StartPersistentId) {
         LocalStorage::instance()->setLastStreamId(m_streamKey, lastId);
     } else {
         m_lastStreamId = lastId;
     }
 }
 
-void StreamConsumer::setPending(bool state)
-{
-    if (!areGroupsEnabled()) {
-        return;
-    }
-    if (m_hasPending != state) {
-        m_hasPending = state;
-        emit pendingChanged(state);
-    }
-}
-
-void StreamConsumer::onCommand(const Radapter::WorkerMsg &msg)
-{
-    if (msg.command()->is<Radapter::CommandRequestJson>()) {
-        if (m_groupName.isEmpty()) {
-            readGroupCommand();
-        } else {
-            blockingReadCommand();
-        }
-    }
-}
-
-int StreamConsumer::toCommandTimeout(int timeoutMsecs) const
-{
-    auto commandTimeout = timeoutMsecs + COMMAND_TIMEOUT_DELAY_MS;
-    return commandTimeout;
-}

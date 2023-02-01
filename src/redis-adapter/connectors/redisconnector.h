@@ -10,6 +10,7 @@
 #include "radapter-broker/workerbase.h"
 #include "redis-adapter/commands/rediscommands.h"
 #include "redis-adapter/replies/redisreplies.h"
+#include "redis-adapter/settings/redissettings.h"
 
 namespace Redis {
 
@@ -41,11 +42,7 @@ public:
                           using StaticCb = void(*)(redisAsyncContext* ctx, void* reply, void* sender);
 
 
-    explicit Connector(const QString &host,
-                       const quint16 port,
-                       const quint16 dbIndex,
-                       const Radapter::WorkerSettings &settings,
-                       QThread *thread);
+    explicit Connector(const Settings::RedisConnector &settings, QThread *thread);
     ~Connector() override;
     QString host() const;
     quint16 port() const;

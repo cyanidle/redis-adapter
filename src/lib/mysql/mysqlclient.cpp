@@ -8,13 +8,12 @@ using namespace MySql;
 #define REOPEN_DELAY_MS         3000
 #define TEMPORARY_DB_CONNECTION "temp"
 
-Client::Client(const Settings::SqlClientInfo &clientInfo,
-                         QObject *parent)
+Client::Client(const Settings::SqlClientInfo &clientInfo, QObject *parent)
     : QObject(parent),
       m_isConnected(false)
 {
     m_db = QSqlDatabase::addDatabase("QMYSQL", clientInfo.name);
-    m_db.setHostName(clientInfo.ip);
+    m_db.setHostName(clientInfo.host);
     m_db.setPort(clientInfo.port);
     m_db.setDatabaseName(clientInfo.database);
     m_db.setUserName(clientInfo.username);
@@ -274,7 +273,7 @@ bool MySql::Client::selectAtOnce(const Settings::SqlClientInfo &clientInfo, cons
     bool isOk = false;
     {
         auto dbClient = QSqlDatabase::addDatabase("QMYSQL", TEMPORARY_DB_CONNECTION);
-        dbClient.setHostName(clientInfo.ip);
+        dbClient.setHostName(clientInfo.host);
         dbClient.setPort(clientInfo.port);
         dbClient.setDatabaseName(clientInfo.database);
         isOk = dbClient.open(clientInfo.username, usernameMap().value(clientInfo.username));

@@ -9,14 +9,9 @@ using namespace Redis;
 using namespace Cache;
 using namespace Radapter;
 
-CacheConsumer::CacheConsumer(const QString &host,
-                             const quint16 port,
-                             const quint16 dbIndex,
-                             const QString &indexKey,
-                             const WorkerSettings &settings,
-                             QThread *thread) :
-    Connector(host, port, dbIndex, settings, thread),
-    m_indexKey(indexKey)
+CacheConsumer::CacheConsumer(const Settings::RedisCacheConsumer &config, QThread *thread) :
+    Connector(config, thread),
+    m_indexKey(config.index_key)
 {
 }
 
@@ -200,6 +195,7 @@ void CacheContext::replyIndex(Radapter::Reply &reply)
     } else {
         auto replyMsg = m_parent->prepareReply(m_msg, reply.newCopy());
         emit m_parent->sendMsg(replyMsg);
+        m_isDone = true;
     }
 }
 
@@ -207,6 +203,7 @@ void CacheContext::replySimple(Radapter::Reply &reply)
 {
     auto replyMsg = m_parent->prepareReply(m_msg, reply.newCopy());
     emit m_parent->sendMsg(replyMsg);
+    m_isDone = true;
 }
 
 void CacheContext::replyPack(Radapter::Reply &reply)
@@ -215,6 +212,7 @@ void CacheContext::replyPack(Radapter::Reply &reply)
     if (++m_executedCount >= packFromMsg()->commands().count()) {
         auto replyMsg = m_parent->prepareReply(m_msg, m_replyPack.newCopy());
         emit m_parent->sendMsg(replyMsg);
+        m_isDone = true;
     } else {
         m_parent->handleCommand(packFromMsg()->commands()[m_executedCount].data(), m_parent->getHandle(*this));
     }
@@ -228,6 +226,7 @@ CacheContext &CacheConsumer::getCtx(CtxHandle handle)
 void CacheConsumer::onCommand(const WorkerMsg &msg)
 {
     handleCommand(msg.command(), m_manager.manage(CacheContext(msg, this)));
+    m_manager.clearBasedOn(&CacheContext::isDone);
 }
 
 CacheConsumer::CtxHandle CacheConsumer::getHandle(const CacheContext &ctx)

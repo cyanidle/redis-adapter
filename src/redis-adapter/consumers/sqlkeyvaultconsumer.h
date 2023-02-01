@@ -4,31 +4,28 @@
 #include <QObject>
 #include "redis-adapter/connectors/mysqlconnector.h"
 #include "redis-adapter/settings/settings.h"
+#include "radapter-broker/workerbase.h"
 
 namespace Sql {
-class RADAPTER_SHARED_SRC KeyVaultConsumer;
-}
-
-class Sql::KeyVaultConsumer : public QObject
+class RADAPTER_SHARED_SRC KeyVaultConsumer : public Radapter::WorkerBase
 {
     Q_OBJECT
 public:
-    explicit KeyVaultConsumer(MySqlConnector *client,
-                              const Settings::SqlKeyVaultInfo &info,
-                              QObject *parent = nullptr);
-
-    JsonDict readJsonEntries(const QStringList &keys);
-
+    explicit KeyVaultConsumer(const Settings::SqlStorageInfo &info, QThread *thread);
 public slots:
-    void onRun();
+    void run();
+
+private slots:
+    void updateCache();
 
 private:
-
-
+    JsonDict readSqlEntries();
 
     MySqlConnector* m_dbClient;
-    Settings::SqlKeyVaultInfo m_info;
+    Settings::SqlStorageInfo m_info;
     QVariantList m_tableFields;
+    JsonDict m_cache;
+    QTimer* m_pollTimer;
 };
-
+}
 #endif // SQLKEYVAULTCONSUMER_H

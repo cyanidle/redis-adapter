@@ -20,9 +20,6 @@ HEADERS += \
     $$PWD/modbus/modbusscheduler.h \
     $$PWD/modbus/modbusdeviceinfo.h \
     $$PWD/mysql/mysqlclient.h \
-    $$PWD/websocket/websocketclient.h \
-    $$PWD/websocket/websocketconstants.h \
-    $$PWD/websocket/websocketserver.h 
 
 
 SOURCES += \
@@ -40,9 +37,7 @@ SOURCES += \
     $$PWD/modbus/modbusquery.cpp \
     $$PWD/modbus/modbusscheduler.cpp \
     $$PWD/modbus/modbusdeviceinfo.cpp \
-    $$PWD/mysql/mysqlclient.cpp \
-    $$PWD/websocket/websocketclient.cpp \
-    $$PWD/websocket/websocketserver.cpp 
+    $$PWD/mysql/mysqlclient.cpp 
 
 INCLUDEPATH += \
     $$PWD \

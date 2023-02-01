@@ -9,12 +9,6 @@ SOURCES += \
     $$PWD/redis-adapter/consumers/rediskeyeventsconsumer.cpp \
     $$PWD/redis-adapter/consumers/redisstreamconsumer.cpp \
     $$PWD/redis-adapter/consumers/sqlkeyvaultconsumer.cpp \
-    $$PWD/redis-adapter/factories/mysqlfactory.cpp \
-    $$PWD/redis-adapter/factories/rediscachefactory.cpp \
-    $$PWD/redis-adapter/factories/redispubsubfactory.cpp \
-    $$PWD/redis-adapter/factories/redisstreamfactory.cpp \
-    $$PWD/redis-adapter/factories/sqlarchivefactory.cpp \
-    $$PWD/redis-adapter/factories/websocketclientfactory.cpp \
     $$PWD/redis-adapter/formatters/archivequeryformatter.cpp \
     $$PWD/redis-adapter/formatters/keyvaultresultformatter.cpp \
     $$PWD/redis-adapter/formatters/modbusformatter.cpp \
@@ -38,11 +32,11 @@ SOURCES += \
     $$PWD/redis-adapter/settings/mysqlserializable.cpp \
     $$PWD/redis-adapter/workers/modbusslaveworker.cpp \
     $$PWD/redis-adapter/settings/modbussettings.cpp \
-    $$PWD/redis-adapter/settings/redissettings.cpp \
-    $$PWD/redis-adapter/settings/settings.cpp \
     $$PWD/redis-adapter/utils/doubleutils.cpp \
     $$PWD/redis-adapter/utils/resourcemonitor.cpp \
-    $$PWD/redis-adapter/utils/timeutils.cpp
+    $$PWD/redis-adapter/utils/timeutils.cpp \
+    $$PWD/redis-adapter/websocket/websocketclient.cpp \
+    $$PWD/redis-adapter/websocket/websocketserver.cpp 
 
 HEADERS += \
     $$PWD/redis-adapter/commands/rediscommands.h \
@@ -54,12 +48,6 @@ HEADERS += \
     $$PWD/redis-adapter/consumers/rediskeyeventsconsumer.h \
     $$PWD/redis-adapter/consumers/redisstreamconsumer.h \
     $$PWD/redis-adapter/consumers/sqlkeyvaultconsumer.h \
-    $$PWD/redis-adapter/factories/mysqlfactory.h \
-    $$PWD/redis-adapter/factories/rediscachefactory.h \
-    $$PWD/redis-adapter/factories/redispubsubfactory.h \
-    $$PWD/redis-adapter/factories/redisstreamfactory.h \
-    $$PWD/redis-adapter/factories/sqlarchivefactory.h \
-    $$PWD/redis-adapter/factories/websocketclientfactory.h \
     $$PWD/redis-adapter/formatters/archivequeryformatter.h \
     $$PWD/redis-adapter/formatters/keyvaultresultformatter.h \
     $$PWD/redis-adapter/formatters/modbusformatter.h \
@@ -92,7 +80,9 @@ HEADERS += \
     $$PWD/redis-adapter/settings/settings.h \
     $$PWD/redis-adapter/utils/doubleutils.h \
     $$PWD/redis-adapter/utils/resourcemonitor.h \
-    $$PWD/redis-adapter/utils/timeutils.h
+    $$PWD/redis-adapter/utils/timeutils.h \
+    $$PWD/redis-adapter/websocket/websocketclient.h \
+    $$PWD/redis-adapter/websocket/websocketserver.h 
 
 
 include($$PWD/lib/lib.pri)

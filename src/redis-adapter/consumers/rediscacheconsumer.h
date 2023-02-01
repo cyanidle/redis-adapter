@@ -10,6 +10,7 @@ struct CacheContext
 public:
     using CtxHandle = void*;
     enum Type {
+        Error = 0,
         IndexRead,
         SimpleRead,
         PackRead
@@ -22,6 +23,7 @@ public:
     void fail(const QString &reason = {});
     void reply(Radapter::Reply &reply);
     void reply(Radapter::Reply &&reply) {this->reply(reply);}
+    bool isDone() const {return m_isDone;}
     Radapter::CommandPack *packFromMsg();
     void executeNextForIndex();
     bool operator==(const CacheContext &other) const {
@@ -36,6 +38,7 @@ private:
     Radapter::WorkerMsg m_msg{};
     Type m_type{};
     quint16 m_executedCount{0};
+    bool m_isDone{false};
     Radapter::CommandPack m_pack{};
     Radapter::ReplyPack m_replyPack{};
 };
@@ -45,12 +48,7 @@ class RADAPTER_SHARED_SRC CacheConsumer : public Connector
     Q_OBJECT
     using CtxHandle = void*;
 public:
-    explicit CacheConsumer(const QString &host,
-                           const quint16 port,
-                           const quint16 dbIndex,
-                           const QString &indexKey,
-                           const Radapter::WorkerSettings &settings,
-                           QThread *thread);
+    explicit CacheConsumer(const Settings::RedisCacheConsumer &config, QThread *thread);
 public slots:
     void onCommand(const Radapter::WorkerMsg &msg) override;
 private:

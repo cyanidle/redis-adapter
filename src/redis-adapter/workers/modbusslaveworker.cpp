@@ -20,7 +20,7 @@ SlaveWorker::SlaveWorker(const Settings::ModbusSlaveWorker &settings, QThread *t
     if (settings.device.device_type == Settings::Tcp) {
         modbusDevice = new QModbusTcpServer(this);
         modbusDevice->setConnectionParameter(QModbusDevice::NetworkPortParameter, settings.device.tcp->port);
-        modbusDevice->setConnectionParameter(QModbusDevice::NetworkAddressParameter, settings.device.tcp->ip);
+        modbusDevice->setConnectionParameter(QModbusDevice::NetworkAddressParameter, settings.device.tcp->host);
     } else {
         modbusDevice = new QModbusRtuSerialSlave(this);
         modbusDevice->setConnectionParameter(QModbusDevice::SerialPortNameParameter, settings.device.rtu->port_name);

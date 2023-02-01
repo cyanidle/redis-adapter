@@ -1,4 +1,5 @@
 #include "redisconnector.h"
+#include "radapter-broker/debugging/logginginterceptor.h"
 #include "redis-adapter/radapterlogging.h"
 #ifdef _MSC_VER
 #include <WinSock2.h>
@@ -18,12 +19,8 @@
 
 using namespace Redis;
 
-Connector::Connector(const QString &host,
-                     const quint16 port,
-                     const quint16 dbIndex,
-                     const Radapter::WorkerSettings &settings,
-                     QThread *thread) :
-    WorkerBase(settings, thread),
+Connector::Connector(const Settings::RedisConnector &settings, QThread *thread) :
+    WorkerBase(settings.worker, thread),
     m_pingTimer(new QTimer(this)),
     m_redisContext(nullptr),
     m_reconnectTimer(new QTimer(this)),
@@ -31,9 +28,9 @@ Connector::Connector(const QString &host,
     m_isConnected(false),
     m_commandTimeoutsCounter{},
     m_client(nullptr),
-    m_host(host),
-    m_port(port),
-    m_dbIndex(dbIndex),
+    m_host(settings.server.host),
+    m_port(settings.server.port),
+    m_dbIndex(settings.db_index),
     m_canSelect(true)
 {
     m_reconnectTimer->setSingleShot(true);
@@ -49,9 +46,11 @@ Connector::Connector(const QString &host,
     m_commandTimer->setSingleShot(true);
     m_commandTimer->callOnTimeout(this, &Connector::registerCommandTimeout);
     resetCommandTimeout();
-
     connect(this, &Connector::connected, &Connector::selectDb);
     connect(this, &Connector::alive, &Connector::resetErrorCounter);
+    if (settings.log_jsons) {
+        addInterceptor(new Radapter::LoggingInterceptor(*settings.log_jsons));
+    }
 }
 
 Connector::~Connector()

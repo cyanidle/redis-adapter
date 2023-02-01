@@ -17,7 +17,6 @@ public:
     static ModbusConnector* instance();
     static void init(const Settings::ModbusConnectionSettings &connectionSettings,
                      const Settings::DeviceRegistersInfoMap &devices,
-                     const Radapter::WorkerSettings &settings,
                      QThread *thread);
 
     Settings::ModbusConnectionSettings settings() const;
@@ -44,12 +43,10 @@ private:
 private:
     explicit ModbusConnector(const Settings::ModbusConnectionSettings &connectionSettings,
                              const Settings::DeviceRegistersInfoMap &registersInfo,
-                             const Radapter::WorkerSettings &settings,
                              QThread *thread);
     ~ModbusConnector() override;
     static ModbusConnector& prvInstance(const Settings::ModbusConnectionSettings &connectionSettings = Settings::ModbusConnectionSettings{},
                                         const Settings::DeviceRegistersInfoMap &devices = Settings::DeviceRegistersInfoMap{},
-                                        const Radapter::WorkerSettings &settings = Radapter::WorkerSettings(),
                                         QThread *thread = nullptr);
     void initServices(const Settings::ModbusConnectionSettings &connectionSettings,
                       const Settings::DeviceRegistersInfoMap &registersInfo);

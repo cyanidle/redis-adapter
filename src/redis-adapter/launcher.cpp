@@ -1,20 +1,23 @@
 #include "radapter-broker/broker.h"
 #include "radapter-broker/debugging/mockworker.h"
-#include "redis-adapter/factories/rediscachefactory.h"
-#include "redis-adapter/factories/redispubsubfactory.h"
-#include "redis-adapter/factories/redisstreamfactory.h"
-#include "redis-adapter/factories/sqlarchivefactory.h"
-#include "redis-adapter/factories/websocketclientfactory.h"
 #include "redis-adapter/connectors/websocketserverconnector.h"
 #include "launcher.h"
 #include "radapterlogging.h"
 #include "localstorage.h"
 #include "localization.h"
 #include "bindings/bindingsprovider.h"
+#include "redis-adapter/consumers/redisstreamconsumer.h"
+#include "redis-adapter/consumers/rediscacheconsumer.h"
+#include "redis-adapter/consumers/rediskeyeventsconsumer.h"
+#include "redis-adapter/producers/producerfilter.h"
+#include "redis-adapter/producers/sqlarchiveproducer.h"
+#include "redis-adapter/producers/redisstreamproducer.h"
+#include "redis-adapter/producers/rediscacheproducer.h"
 #include "redis-adapter/settings/modbussettings.h"
 #include "redis-adapter/settings/redissettings.h"
 #include "redis-adapter/connectors/modbusconnector.h"
 #include "radapter-broker/debugging/logginginterceptor.h"
+#include "redis-adapter/websocket/websocketclient.h"
 #include "redis-adapter/workers/modbusslaveworker.h"
 #include "radapter-broker/metatypes.h"
 #ifdef Q_OS_UNIX
@@ -25,20 +28,15 @@ using namespace Radapter;
 
 Launcher::Launcher(QObject *parent) :
     QObject(parent),
-    m_factories(),
     m_workers(),
-    m_sqlFactory(nullptr),
     m_filereader(new Settings::FileReader("conf/config.toml", this))
 {
-    Metatypes::registerAll();
-    m_filereader->initParsingMap();
     prvInit();
+    m_parser.setApplicationDescription("Redis Adapter");
+    m_filereader->initParsingMap();
+    Metatypes::registerAll();
 }
 
-void Launcher::addFactory(Radapter::FactoryBase* factory)
-{
-    m_factories.append(factory);
-}
 
 void Launcher::addWorker(WorkerBase* worker, QSet<InterceptorBase*> interceptors)
 {
@@ -47,37 +45,32 @@ void Launcher::addWorker(WorkerBase* worker, QSet<InterceptorBase*> interceptors
 
 //! Все эти классы сохраняютс япри инициализации, логгинг их количества нужен,
 //! чтобы компилятор не удалил "неиспользуемые переменные"
-void Launcher::prvPreInit()
+void Launcher::preInit()
 {
+    parseCommandlineArgs();
     qSetMessagePattern(CUSTOM_MESSAGE_PATTERN);
     setLoggingFilters(Settings::LoggingInfoParser::parse(m_filereader->deserialise("log_debug").toMap()));
-    m_filereader->setPath("conf/bindings.toml");
+
+    setTomlPath("bindings.toml");
     auto jsonBindings = JsonBinding::parseMap(m_filereader->deserialise().toMap());
     BindingsProvider::init(jsonBindings);
     reDebug() << "config: Json Bindings count: " << jsonBindings.size();
-    m_filereader->setPath("conf/config.toml");
-    auto redisServers = precacheFromToml<Settings::RedisServer>("redis.servers");
-    reDebug() << "config: Redis Servers count: " << redisServers.size();
-    auto redisStreams = precacheFromToml<Settings::RedisStream>("redis.streams");
-    reDebug() << "config: Redis Streams count: " << redisStreams.size();
-    auto redisCaches = precacheFromToml<Settings::RedisCache>("redis.caches");
-    reDebug() << "config: Caches count: " << redisCaches.size();
-    auto sqlClientsInfo = precacheFromToml<Settings::SqlClientInfo>("mysql.client");
+
+    setTomlPath("redis.toml");
+    auto redisServers = parseTomlArray<Settings::RedisServer>("redis.server");
+    reDebug() << "config: RedisServer count: " << redisServers.size();
+    setTomlPath("sql.toml");
+    auto sqlClientsInfo = parseTomlArray<Settings::SqlClientInfo>("mysql.client");
+    for (auto &client : sqlClientsInfo) {
+        client.table().insert(client.name, client);
+    }
     reDebug() << "config: Sql clients count: " << sqlClientsInfo.size();
-    auto redisSubscribers = precacheFromToml<Settings::RedisKeyEventSubscriber>("redis.subscribers");
-    reDebug() << "config: Redis Subs count: " << redisSubscribers.size();
-    m_filereader->setPath("conf/modbus.toml");
-    auto tcpDevices = precacheFromToml<Settings::TcpDevice>("modbus.tcp.devices");
+
+    setTomlPath("modbus.toml");
+    auto tcpDevices = parseTomlArray<Settings::TcpDevice>("modbus.tcp.devices");
     reDebug() << "config: Tcp devices count: " << tcpDevices.size();
-    auto rtuDevices = precacheFromToml<Settings::SerialDevice>("modbus.rtu.devices");
+    auto rtuDevices = parseTomlArray<Settings::SerialDevice>("modbus.rtu.devices");
     reDebug() << "config: Rtu devices count: " << rtuDevices.size();
-    m_filereader->setPath("conf/config.toml");
-    auto keyvaults = precacheFromToml<Settings::SqlKeyVaultInfo>("mysql.keyvault");
-    reDebug() << "config: Sql Keyvaults count: " << keyvaults.size();
-    m_filereader->setPath("conf/filters.toml");
-    auto filters = precacheFromToml<Settings::Filters>("filters");
-    reDebug() << "config: Filters count: " << filters.size();
-    m_filereader->setPath("conf/config.toml");
 }
 
 
@@ -92,124 +85,152 @@ void Launcher::setLoggingFilters(const Settings::LoggingInfo &loggers)
         filterRules.append(rule);
     }
     if (!filterRules.isEmpty()) {
-        Broker::instance()->setDebugMode(loggers);
+        Broker::instance()->addDebugMode(loggers);
         auto filterString = filterRules.join("\n");
         QLoggingCategory::setFilterRules(filterString);
     }
 }
 
-
-int Launcher::prvInit()
+void Launcher::preInitFilters()
 {
-    prvPreInit();
-    addFactory(new Redis::StreamFactory(Settings::RedisStream::cacheMap, this));
-    addFactory(new Redis::CacheFactory(Settings::RedisCache::cacheMap.values(), this));
-    addFactory(new Redis::PubSubFactory(Settings::RedisKeyEventSubscriber::cacheMap.values(), this));
-    m_filereader->setPath("conf/mocks.toml");
-    const auto mocks = Serializer::fromQList<Radapter::MockWorkerSettings>(
-            m_filereader->deserialise("mock").toList()
-        );
-    for (const auto &mockSettings : mocks) {
-        addWorker(new Radapter::MockWorker(mockSettings, new QThread()));
+    setTomlPath("filters.toml");
+    auto rawFilters = readToml("filters").toMap();
+    for (auto iter = rawFilters.constBegin(); iter != rawFilters.constEnd(); ++iter) {
+        Settings::Filters::table().insert(iter.key(), Serializer::convertQMap<double>(iter.value().toMap()));
     }
-    m_filereader->setPath("conf/modbus.toml");
-    auto slavesList = m_filereader->deserialise("modbus_slave").toList();
-    if (!slavesList.isEmpty()) {
-        auto mbSlaves = Serializer::fromQList<Settings::ModbusSlaveWorker>(slavesList);
-        for (const auto& slaveInfo : qAsConst(mbSlaves)) {
-            addWorker(new Modbus::SlaveWorker(slaveInfo, new QThread(this)));
-        }
-    }
-    auto modbusConnSettingsRaw = m_filereader->deserialise("modbus", true).toMap();
-    if (!modbusConnSettingsRaw.isEmpty()) {
-        auto modbusConnSettings = Serializer::fromQMap<Settings::ModbusConnectionSettings>(modbusConnSettingsRaw);
-        m_filereader->setPath("conf/registers.toml");
-        auto mbRegisters = Settings::DeviceRegistersInfoMapParser::parse(
-            m_filereader->deserialise("registers", true).toMap());
-        ModbusConnector::init(modbusConnSettings,
-                              mbRegisters,
-                              modbusConnSettings.worker,
-                              new QThread(this));
-        QSet<InterceptorBase*> mbInterceptors{};
-        if (!modbusConnSettings.filters.isEmpty()) {
-            mbInterceptors.insert(new ProducerFilter(modbusConnSettings.filters));
-        }
-        if (modbusConnSettings.log_jsons) {
-            mbInterceptors.insert(new LoggingInterceptor(*modbusConnSettings.log_jsons));
-        }
-        addWorker(ModbusConnector::instance(), mbInterceptors);
-    }
-    m_filereader->setPath("conf/config.toml");
-    if (!Settings::SqlClientInfo::cacheMap.isEmpty()) {
-        m_sqlFactory = new MySqlFactory(Settings::SqlClientInfo::cacheMap.values(), this);
-        m_sqlFactory->initWorkers();
-        auto archivesInfo = Serializer::fromQList<Settings::SqlStorageInfo>(
-            m_filereader->deserialise("mysql.storage.archive", true).toList());
-        if (!archivesInfo.isEmpty()) {
-            addFactory(new Sql::ArchiveFactory(archivesInfo, m_sqlFactory, this));
-        }
-    }
-    auto websocketClients = Serializer::fromQList<Settings::WebsocketClientInfo>(
-        m_filereader->deserialise("websocket.client", true).toList());
-    if (!websocketClients.isEmpty()) {
-        addFactory(new Websocket::ClientFactory(websocketClients, this));
-    }
-    auto websocketServerConf = m_filereader->deserialise("websocket.server", true).toMap();
-    if (!websocketServerConf.isEmpty()) {
-        auto websocketServer = Serializer::fromQMap<Settings::WebsocketServerInfo>(websocketServerConf);
-        if (websocketServer.isValid()) {
-            addWorker(new Websocket::ServerConnector(websocketServer, websocketServer.worker, new QThread(this)));
-        }
-    }
-    auto localizationInfoMap = m_filereader->deserialise("localization").toMap();
-    if (!localizationInfoMap.isEmpty()) {
-        auto localizationInfo = Serializer::fromQMap<Settings::LocalizationInfo>(localizationInfoMap);
-        Localization::init(localizationInfo, this);
-    }
-    m_filereader->setPath("conf/config.toml");
-    LocalStorage::init(this);
-    return 0;
 }
 
 
-int Launcher::init()
+void Launcher::prvInit()
 {
-    int status = 0;
-    status = initWorkers();
-    if (status != 0) {
-        return status;
+    preInit();
+    initRedis();
+    initModbus();
+    initWebsockets();
+    initSql();
+    setTomlPath("mocks.toml");
+    for (const auto &mockSettings : parseTomlArray<Radapter::MockWorkerSettings>("mock")) {
+        addWorker(new Radapter::MockWorker(mockSettings, new QThread()));
+    }
+    setTomlPath("config.toml");
+    auto localizationInfo = parseTomlObj<Settings::LocalizationInfo>("localization");
+    Localization::instance()->applyInfo(localizationInfo);
+    LocalStorage::init(this);
+}
+
+void Launcher::initRedis()
+{
+    setTomlPath("redis.toml");
+    for (auto &streamConsumer : parseTomlArray<Settings::RedisStreamConsumer>("redis.stream.consumer")) {
+        addWorker(new Redis::StreamConsumer(streamConsumer, new QThread(this)));
+    }
+    for (auto &streamProducer : parseTomlArray<Settings::RedisStreamProducer>("redis.stream.producer")) {
+        addWorker(new Redis::StreamProducer(streamProducer, new QThread(this)));
+    }
+    for (auto &cacheConsumer : parseTomlArray<Settings::RedisCacheConsumer>("redis.cache.consumer")) {
+        addWorker(new Redis::CacheConsumer(cacheConsumer, new QThread(this)));
+    }
+    for (auto &cacheProducer : parseTomlArray<Settings::RedisCacheProducer>("redis.cache.producer")) {
+        addWorker(new Redis::CacheProducer(cacheProducer, new QThread(this)));
+    }
+    for (auto &keyEventConsumer : parseTomlArray<Settings::RedisKeyEventSubscriber>("redis.keyevents.subscriber")) {
+        addWorker(new Redis::KeyEventsConsumer(keyEventConsumer, new QThread(this)));
+    }
+    //auto redisStreamGroupConsumers = readFromToml<Settings::RedisStreamGroupConsumer>("redis.stream.group_consumer");
+}
+
+void Launcher::initModbus()
+{
+    setTomlPath("modbus.toml");
+    for (const auto& slaveInfo : parseTomlArray<Settings::ModbusSlaveWorker>("modbus_slave")) {
+        addWorker(new Modbus::SlaveWorker(slaveInfo, new QThread(this)));
+    }
+    auto modbusConnSettings = parseTomlObj<Settings::ModbusConnectionSettings>("modbus");
+    if (modbusConnSettings.isValid()) {
+        setTomlPath("registers.toml");
+        auto mbRegisters = Settings::DeviceRegistersInfoMapParser::parse(readToml("registers").toMap());
+        ModbusConnector::init(modbusConnSettings, mbRegisters, new QThread(this));
+        addWorker(ModbusConnector::instance());
+    }
+}
+
+void Launcher::initWebsockets()
+{
+    setTomlPath("websockets.toml");
+    for (auto &wsClient : parseTomlArray<Settings::WebsocketClientInfo>("websocket.client")) {
+        addWorker(new Websocket::Client(wsClient, new QThread(this)));
+    }
+    auto websocketServer = parseTomlObj<Settings::WebsocketServerInfo>("websocket.server");
+    if (websocketServer.isValid()) {
+        addWorker(new Websocket::ServerConnector(websocketServer, new QThread(this)));
+    }
+
+}
+
+void Launcher::initSql()
+{
+    setTomlPath("sql.toml");
+    for (auto &archive : parseTomlArray<Settings::SqlStorageInfo>("mysql.storage.archive")) {
+        addWorker(new Sql::ArchiveProducer(archive, new QThread(this)));
+    }
+    for (auto &archive : parseTomlArray<Settings::SqlStorageInfo>("mysql.storage.archive")) {
+        addWorker(new Sql::ArchiveProducer(archive, new QThread(this)));
+    }
+}
+
+void Launcher::parseCommandlineArgs()
+{
+    m_parser.addHelpOption();
+    m_parser.addVersionOption();
+    m_parser.addOptions({
+                      {{"d", "directory"},
+                        "Config will be read from <directory>", "directory", "conf"}
+                      });
+    m_parser.process(*QCoreApplication::instance());
+    m_configsDir = m_parser.value("directory");
+}
+
+QVariant Launcher::readToml(const QString &tomlPath) {
+    return m_filereader->deserialise(tomlPath);
+}
+
+bool Launcher::setTomlPath(const QString &tomlPath) {
+    return m_filereader->setPath(m_configsDir + "/" + tomlPath);
+}
+
+void Launcher::init()
+{
+    if (QCoreApplication::applicationName().isEmpty()) {
+        QCoreApplication::setApplicationName("redis-adapter");
+    }
+    if (QCoreApplication::applicationVersion().isEmpty()) {
+        QCoreApplication::setApplicationVersion(RADAPTER_VERSION);
+    }
+    for (auto workerIter = m_workers.begin(); workerIter != m_workers.end(); ++workerIter) {
+        Broker::instance()->registerProxy(workerIter.key()->createProxy(workerIter.value()));
     }
 #ifdef Q_OS_UNIX
     auto resmon = new ResourceMonitor(this);
     resmon->run();
 #endif
-    return status;
-}
-
-int Launcher::initWorkers()
-{
-    int status = 0;
-    for (auto &factory : m_factories) {
-        status = factory->initWorkers();
-        if (status != 0) {
-            return status;
-        }
-    }
-    for (auto workerIter = m_workers.begin(); workerIter != m_workers.end(); ++workerIter) {
-        Broker::instance()->registerProxy(workerIter.key()->createProxy(workerIter.value()));
-    }
-    return 0;
 }
 
 void Launcher::run()
 {
     Broker::instance()->connectProducersAndConsumers();
-    for (auto &factory : m_factories) {
-        factory->run();
-    }
     for (auto worker = m_workers.keyBegin(); worker != m_workers.keyEnd(); ++worker) {
         (*worker)->run();
     }
     Broker::instance()->runAll();
+}
+
+QCommandLineParser &Launcher::commandLineParser()
+{
+    return m_parser;
+}
+
+const QString &Launcher::configsDirectory() const
+{
+    return m_configsDir;
 }
 

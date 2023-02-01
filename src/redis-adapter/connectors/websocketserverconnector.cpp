@@ -1,13 +1,10 @@
 #include "websocketserverconnector.h"
 #include "redis-adapter/formatters/streamentriesmapformatter.h"
-#include "radapter-broker/broker.h"
 
 using namespace Websocket;
 
-ServerConnector::ServerConnector(const Settings::WebsocketServerInfo &serverInfo,
-                                 const Radapter::WorkerSettings &settings,
-                                 QThread *thread) :
-    WorkerBase(settings, thread),
+ServerConnector::ServerConnector(const Settings::WebsocketServerInfo &serverInfo, QThread *thread) :
+    WorkerBase(serverInfo.worker, thread),
     m_info(serverInfo)
 {
     new Websocket::Server(serverInfo.port, this);

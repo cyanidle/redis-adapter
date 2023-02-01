@@ -5,27 +5,18 @@
 #include <QDateTime>
 #include <QTimeZone>
 
-class RADAPTER_SHARED_SRC TimeFormatter : public QObject
+class RADAPTER_SHARED_SRC TimeFormatter
 {
-    Q_OBJECT
 public:
-    explicit TimeFormatter(QObject *parent = nullptr);
-    explicit TimeFormatter(const QString &timeString, QObject *parent = nullptr);
-    explicit TimeFormatter(const qint64 &timestamp,
-                           const QTimeZone &timeZone,
-                           QObject *parent = nullptr);
-    explicit TimeFormatter(const qint64 &timestamp,
-                           const QString &timeZoneString = QString{},
-                           QObject *parent = nullptr);
+    TimeFormatter() = default;
+    explicit TimeFormatter(const QString &timeString);
+    explicit TimeFormatter(const qint64 &timestamp);
 
     QDateTime dateTime() const;
     QString toMSecsString() const;
     QDateTime now() const;
-
-signals:
-
 private:
-    QDateTime m_dateTime;
+    QDateTime m_dateTime{};
 };
 
 #endif // TIMEFORMATTER_H

@@ -12,10 +12,7 @@ class Redis::KeyEventsConsumer : public Connector
 {
     Q_OBJECT
 public:
-    explicit KeyEventsConsumer(const QString &host,
-                               const quint16 port,
-                               const QStringList &keyEvents,
-                               const Radapter::WorkerSettings &settings, QThread *thread);
+    explicit KeyEventsConsumer(const Settings::RedisKeyEventSubscriber &config, QThread *thread);
 private slots:
     void subscribeToKeyEvents();
     void unsubscribe();
@@ -28,8 +25,8 @@ private:
 
     void subscribeToKeyEventsImpl(const QStringList &eventTypes);
 
-   QStringList m_keyEventNotifications;
-    bool m_isSubscribed;
+    QStringList m_keyEventNotifications;
+    bool m_isSubscribed{false};
 };
 
 #endif // REDISKEYEVENTSCONSUMER_H

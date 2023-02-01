@@ -4,23 +4,22 @@
 #include <QObject>
 #include "jsondict/jsondict.hpp"
 #include "lib/mysql/mysqlclient.h"
-#include "radapter-broker/workermsg.h"
 
 class RADAPTER_SHARED_SRC MySqlConnector : public QObject
 {
     Q_OBJECT
 public:
-    explicit MySqlConnector(const Settings::SqlClientInfo &clientInfo, QObject *parent = nullptr);
+    explicit MySqlConnector(const Settings::SqlClientInfo &clientInfo, QObject *parent);
 
     QVariantList doRead(const QString &tableName, const QVariantList &fieldsList, const QString &sqlConditions = QString{});
-    bool doWrite(const QString &tableName, const JsonDict &jsonRecord, const Radapter::WorkerMsg &msg);
-    bool doWriteList(const QString &tableName, const QVariantList &jsonRecords, const Radapter::WorkerMsg &msg);
+    bool doWrite(const QString &tableName, const JsonDict &jsonRecord, void* data);
+    bool doWriteList(const QString &tableName, const QVariantList &jsonRecords, void* data);
     const QString &name() const {return m_clientInfo.name;}
 
 signals:
     void connectedChanged(bool isConnected);
     void readDone(const QString &tableName, const QVariantList &jsonRecordsList);
-    void writeDone(bool isOk, const Radapter::WorkerMsg &msg);
+    void writeDone(bool isOk, void* data);
 
 public slots:
     void onRun();

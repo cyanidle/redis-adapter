@@ -39,15 +39,15 @@ QVariantList MySqlConnector::doRead(const QString &tableName, const QVariantList
     return jsonResult;
 }
 
-bool MySqlConnector::doWrite(const QString &tableName, const JsonDict &jsonRecord, const Radapter::WorkerMsg &msg)
+bool MySqlConnector::doWrite(const QString &tableName, const JsonDict &jsonRecord, void* data)
 {
     auto jsonQuery = QVariantList{};
     jsonQuery.append(jsonRecord.toVariant());
-    bool isOk = doWriteList(tableName, jsonQuery, msg);
+    bool isOk = doWriteList(tableName, jsonQuery, data);
     return isOk;
 }
 
-bool MySqlConnector::doWriteList(const QString &tableName, const QVariantList &jsonRecords, const Radapter::WorkerMsg &msg)
+bool MySqlConnector::doWriteList(const QString &tableName, const QVariantList &jsonRecords, void* data)
 {
     if (jsonRecords.isEmpty()) {
         return false;
@@ -58,6 +58,6 @@ bool MySqlConnector::doWriteList(const QString &tableName, const QVariantList &j
         auto writeRecord = SqlQueryFieldsFormatter( JsonDict(recordToWrite)).toSqlRecord();
         isOk &= m_client->doInsertQuery(tableName, writeRecord);
     }
-    emit writeDone(isOk, msg);
+    emit writeDone(isOk, data);
     return isOk;
 }

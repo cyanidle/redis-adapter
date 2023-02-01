@@ -1,42 +1,54 @@
 #include "sqlkeyvaultconsumer.h"
-#include "redis-adapter/formatters/sqlqueryformatter.h"
 #include "redis-adapter/formatters/keyvaultresultformatter.h"
 #include "redis-adapter/include/sqlkeyvaultfields.h"
+#include "redis-adapter/radapterlogging.h"
 
 using namespace Sql;
 
-KeyVaultConsumer::KeyVaultConsumer(MySqlConnector *client,
-                                         const Settings::SqlKeyVaultInfo &info,
-                                         QObject *parent) :
-    QObject(parent),
-    m_dbClient(client),
+#define KEYVAULT_POLL_RATE_MS   60000
+
+KeyVaultConsumer::KeyVaultConsumer(const Settings::SqlStorageInfo &info, QThread *thread) :
+    WorkerBase(info.worker, thread),
+    m_dbClient(new MySqlConnector(Settings::SqlClientInfo::table().value(info.client_name), this)),
     m_info(info),
-    m_tableFields {
-                    SQL_KEYVAULT_FIELD_REDIS_KEY,
-                    SQL_KEYVAULT_FIELD_SOURCE_TYPE,
-                    SQL_KEYVAULT_FIELD_SOURCE,
-                    SQL_KEYVAULT_FIELD_PARAM
-                  }
+    m_cache{},
+    m_pollTimer(nullptr)
 {
-
+    m_tableFields = QVariantList{ QVariantList{
+            SQL_KEYVAULT_FIELD_REDIS_KEY,
+            SQL_KEYVAULT_FIELD_SOURCE_TYPE,
+            SQL_KEYVAULT_FIELD_SOURCE,
+            SQL_KEYVAULT_FIELD_PARAM,
+            SQL_KEYVAULT_ATTR_EVENT_TIME
+    } };
 }
 
-void KeyVaultConsumer::onRun()
+void KeyVaultConsumer::run()
 {
+    m_pollTimer = new QTimer(this);
+    m_pollTimer->setSingleShot(false);
+    m_pollTimer->setInterval(KEYVAULT_POLL_RATE_MS);
+    m_pollTimer->callOnTimeout(this, &KeyVaultConsumer::updateCache);
+    m_pollTimer->start();
+    updateCache();
 }
 
-JsonDict KeyVaultConsumer::readJsonEntries(const QStringList &keys)
-{   if (keys.isEmpty()) {
-        return JsonDict();
-    }
-    auto keysFilter = SqlQueryFormatter().toRegExpFilter(SQL_KEYVAULT_FIELD_REDIS_KEY, keys);
-    auto sqlEntries = m_dbClient->doRead(m_info.table_name, m_tableFields, keysFilter);
+JsonDict KeyVaultConsumer::readSqlEntries()
+{
+    auto sqlEntries = m_dbClient->doRead(m_info.table_name, m_tableFields);
     if (sqlEntries.isEmpty()) {
         return JsonDict{};
     }
     auto keyedEntriesDict = KeyVaultResultFormatter(sqlEntries).toJsonEntries();
-//    if (!keyedEntriesDict.isEmpty()) {
-//        emit msgToBroker(prepareMsg(keyedEntriesDict));
-//    }
     return keyedEntriesDict;
 }
+
+void KeyVaultConsumer::updateCache()
+{
+    auto keyVaultEntries = readSqlEntries();
+    if (keyVaultEntries.isEmpty()) {
+        return;
+    }
+    m_cache = keyVaultEntries;
+}
+

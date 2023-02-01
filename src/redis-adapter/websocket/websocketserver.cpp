@@ -1,7 +1,6 @@
 #include "websocketserver.h"
 #include <QTimer>
 #include <QJsonDocument>
-#include "websocketconstants.h"
 #include "redis-adapter/radapterlogging.h"
 
 using namespace Websocket;
@@ -14,12 +13,12 @@ using namespace Websocket;
 
 Server::Server(quint16 port, QObject *parent)
     : QObject(parent),
+      m_port(port),
       m_websocketServer(nullptr),
       m_clients{},
       m_localData{},
       m_persistentDataInited(false)
 {
-    m_port = port > 0u ? port : DEFAULT_WS_PORT;
 }
 
 Server::~Server()

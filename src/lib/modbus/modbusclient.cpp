@@ -551,7 +551,7 @@ void ModbusClient::setConnectionParameters()
         break;
     case ModbusConnectionType::Tcp:
         m_client->setConnectionParameter(QModbusDevice::NetworkAddressParameter,
-                                         tcpSettings.ip);
+                                         tcpSettings.host);
         m_client->setConnectionParameter(QModbusDevice::NetworkPortParameter,
                                          tcpSettings.port);
         mbDebug() << channelId() << m_queryDataMap.first().dataUnit.startAddress();
@@ -598,7 +598,7 @@ ModbusDeviceInfo ModbusClient::createDeviceInfo(const quint8 deviceAddress)
         deviceInfo = ModbusDeviceInfo(deviceAddress, m_connectionSettings.serial.port_name, m_deviceNames);
     } else if (type() == ModbusConnectionType::Tcp) {
         deviceInfo = ModbusDeviceInfo(deviceAddress,
-                                      m_connectionSettings.tcp.ip,
+                                      m_connectionSettings.tcp.host,
                                       m_connectionSettings.tcp.port,
                                       m_deviceNames);
     }

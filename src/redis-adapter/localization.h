@@ -2,25 +2,19 @@
 #define LOCALIZATION_H
 
 #include <QObject>
+#include <QMutex>
 #include "settings/settings.h"
 
-class RADAPTER_SHARED_SRC Localization : public QObject
+class RADAPTER_SHARED_SRC Localization
 {
-    Q_OBJECT
 public:
     static Localization* instance();
-    static void init(const Settings::LocalizationInfo &localizationInfo, QObject *parent);
-
     QTimeZone timeZone() const;
-
-signals:
-
+    QTimeZone applyInfo(const Settings::LocalizationInfo &timeZone);
 private:
-    explicit Localization(const Settings::LocalizationInfo &localizationInfo, QObject *parent = nullptr);
-    static Localization* prvInstance(const Settings::LocalizationInfo &info = Settings::LocalizationInfo{},
-                                     QObject *parent = nullptr);
-
-    Settings::LocalizationInfo m_info;
+    Localization();
+    Settings::LocalizationInfo m_info{};
+    mutable QMutex m_mutex{};
 };
 
 #endif // LOCALIZATION_H

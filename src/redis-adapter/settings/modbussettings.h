@@ -102,15 +102,6 @@ namespace Settings {
                 return QVariant();
             }
         }
-        bool operator==(const ModbusQuery &src)const {
-            return reg_index == src.reg_index
-                && type == src.type
-                && reg_count == src.reg_count
-                && poll_rate == src.poll_rate;
-        }
-        bool operator!=(const ModbusQuery &src)const {
-            return !(*this == src);
-        }
     };
 
     struct RADAPTER_SHARED_SRC ModbusConnectionSource : Serializer::SerializableGadget {
@@ -125,10 +116,9 @@ namespace Settings {
         SERIAL_FIELD(int, response_time, 200)
         SERIAL_FIELD(int, number_of_retries, 3)
         SERIAL_POST_INIT(initDevice)
-
         void initDevice() {
-            if (TcpDevice::cacheMap.contains(name)) {
-                tcp = TcpDevice::cacheMap.value(name);
+            if (TcpDevice::cacheMap().contains(name)) {
+                tcp = TcpDevice::cacheMap().value(name);
                 type = ModbusConnectionType::Tcp;
             } else if (SerialDevice::cacheMap.contains(name)) {
                 serial = SerialDevice::cacheMap.value(name);
@@ -137,23 +127,6 @@ namespace Settings {
                 throw std::runtime_error("Missing device: " + name.toStdString());
             }
         }
-
-        bool isValid() {
-            return !serial.port_name.isEmpty()
-                    || (!tcp.ip.isEmpty()
-                        && tcp.port != 0u);
-        }
-        bool operator==(const ModbusConnectionSource &src) const {
-            return name == src.name
-                && type == src.type
-                && serial == src.serial
-                && tcp == src.tcp
-                && response_time == src.response_time
-                && number_of_retries == src.number_of_retries;
-        }
-        bool operator!=(const ModbusConnectionSource &src)const {
-            return !(*this == src);
-        }
     };
 
     struct RADAPTER_SHARED_SRC ModbusSlaveInfo : Serializer::SerializableGadget {
@@ -161,14 +134,14 @@ namespace Settings {
         IS_SERIALIZABLE
         SERIAL_FIELD(quint8, address)
         SERIAL_CUSTOM(ModbusConnectionSource, source, initSource, readSource)
-         SERIAL_CONTAINER(QList, ModbusQuery, queries)
+        SERIAL_CONTAINER(QList, ModbusQuery, queries)
         SERIAL_CONTAINER(QList, QString, registers)
 
         bool initSource(const QVariant &src) {
             auto sourceName = src.toString();
             source.name = sourceName;
-            if (TcpDevice::cacheMap.contains(sourceName)) {
-                auto tcpDevice = TcpDevice::cacheMap.value(sourceName);
+            if (TcpDevice::cacheMap().contains(sourceName)) {
+                auto tcpDevice = TcpDevice::cacheMap().value(sourceName);
                 source.type = ModbusConnectionType::Tcp;
                 source.tcp = tcpDevice;
                 return true;
@@ -180,24 +153,8 @@ namespace Settings {
             }
             return false;
         }
-
         QVariant readSource() const {
             return source.name;
-        }
-
-        bool isValid() {
-            return address != 0u
-                    && !queries.isEmpty()
-                    && source.isValid();
-        }
-        bool operator==(const ModbusSlaveInfo &src)const {
-            return address == src.address
-                && source == src.source
-                && queries == src.queries
-                && registers == src.registers;
-        }
-        bool operator!=(const ModbusSlaveInfo &src)const {
-            return !(*this == src);
         }
     };
 
@@ -207,19 +164,9 @@ namespace Settings {
         SERIAL_FIELD(QString, name)
         ModbusChannelType type = MbMaster;
         SERIAL_FIELD(quint8, slave_address, 0)
-         SERIAL_CONTAINER(QList, ModbusSlaveInfo, slaves, DEFAULT)
+        SERIAL_CONTAINER(QList, ModbusSlaveInfo, slaves, DEFAULT)
         QVariant readChannelType() const {
             return QVariant(type);
-        }
-
-        bool operator==(const ModbusChannelSettings &src) const {
-            return name == src.name
-                && type == src.type
-                && slave_address == src.slave_address
-                && slaves == src.slaves;
-        }
-        bool operator!=(const ModbusChannelSettings &src) const {
-            return !(*this == src);
         }
     };
 
@@ -354,7 +301,7 @@ namespace Settings {
     struct RADAPTER_SHARED_SRC ModbusConnectionSettings : Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
-         SERIAL_CONTAINER(QList, ModbusChannelSettings, channels);
+        SERIAL_CONTAINER(QList, ModbusChannelSettings, channels);
         SerialDevice::Map serial_devices;
         TcpDevice::Map tcp_devices;
         SERIAL_FIELD(quint16, poll_rate, 500)
@@ -366,10 +313,7 @@ namespace Settings {
         SERIAL_FIELD(ModbusTcpDevicesSettings, tcp, DEFAULT)
         SERIAL_FIELD(ModbusRtuDevicesSettings, rtu, DEFAULT)
         SERIAL_FIELD(QString, filter_name, DEFAULT)
-        Filters::Table filters;
-
         SERIAL_POST_INIT(postInit)
-
         void postInit() {
             for (auto &device : rtu.devices) {
                 serial_devices.insert(device->name, *device);
@@ -383,17 +327,9 @@ namespace Settings {
                     slave.source.response_time = response_time;
                 }
             }
-            filters = Filters::tableMap.value(filter_name);
         }
-
-        bool operator==(const ModbusConnectionSettings &src) const{
-            return channels == channels
-                && worker.producers == src.worker.producers
-                && worker.consumers == src.worker.consumers;
-        }
-
-        bool operator!=(const ModbusConnectionSettings &other) {
-            return !(*this == other);
+        bool isValid() const {
+            return worker.isValid();
         }
     };
 
@@ -426,8 +362,8 @@ namespace Settings {
     struct RADAPTER_SHARED_SRC ModbusSlaveWorker : Serializer::SerializableGadget {
         Q_GADGET
         IS_SERIALIZABLE
-         SERIAL_FIELD(Radapter::WorkerSettings, worker)
-         SERIAL_FIELD(ModbusDevice, device)
+        SERIAL_FIELD(Radapter::WorkerSettings, worker)
+        SERIAL_FIELD(ModbusDevice, device)
         SERIAL_FIELD(quint32, reconnect_timeout_ms, 5000)
         SERIAL_FIELD(quint16, slave_id)
         SERIAL_CUSTOM(quint16, holding_registers, parseHolding, NO_READ, DEFAULT)

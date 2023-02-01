@@ -1,15 +1,20 @@
 #include "redisstreamentryformatter.h"
 #include "timeformatter.h"
 
-RedisStreamEntryFormatter::RedisStreamEntryFormatter(const JsonDict &redisStreamJsonEntry, QObject *parent)
-    : QObject(parent),
-      m_streamEntry(redisStreamJsonEntry)
+RedisStreamEntryFormatter::RedisStreamEntryFormatter(const JsonDict &streamReply) :
+    m_streamEntry(streamReply)
 {
+
 }
 
-RedisStreamEntryFormatter::RedisStreamEntryFormatter(redisReply *streamReply, QObject *parent)
-    : QObject(parent),
-      m_streamEntry{}
+RedisStreamEntryFormatter::RedisStreamEntryFormatter(JsonDict &&streamReply) :
+    m_streamEntry(std::move(streamReply))
+{
+
+}
+
+RedisStreamEntryFormatter::RedisStreamEntryFormatter(redisReply *streamReply)
+    : m_streamEntry{}
 {
     auto entryId = QString(streamReply->element[0]->str);
     if (entryId.isEmpty()) {

@@ -4,11 +4,10 @@
 #include <QObject>
 #include "jsondict/jsondict.hpp"
 
-class StreamEntriesMapFormatter : public QObject
+class StreamEntriesMapFormatter
 {
-    Q_OBJECT
 public:
-    explicit StreamEntriesMapFormatter(const JsonDict &streamEntriesJson, QObject *parent = nullptr);
+    explicit StreamEntriesMapFormatter(const JsonDict &streamEntriesJson);
 
     static bool isValid(const JsonDict &streamEntriesJson);
     QVariantList toEntryList();

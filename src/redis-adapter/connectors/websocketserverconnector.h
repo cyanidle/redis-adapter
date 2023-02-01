@@ -4,7 +4,7 @@
 #include <QObject>
 #include <QThread>
 #include "jsondict/jsondict.hpp"
-#include "lib/websocket/websocketserver.h"
+#include "redis-adapter/websocket/websocketserver.h"
 #include "radapter-broker/workerbase.h"
 #include "redis-adapter/settings/settings.h"
 
@@ -13,9 +13,7 @@ class RADAPTER_SHARED_SRC ServerConnector : public Radapter::WorkerBase
 {
     Q_OBJECT
 public:
-    explicit ServerConnector(const Settings::WebsocketServerInfo &serverInfo,
-                             const Radapter::WorkerSettings &settings,
-                             QThread *thread);
+    explicit ServerConnector(const Settings::WebsocketServerInfo &serverInfo, QThread *thread);
     const Settings::WebsocketServerInfo &info() const;
 signals:
     void jsonPublished(const QVariant &nestedJson);

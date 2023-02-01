@@ -1,16 +1,12 @@
 #include "rediscacheproducer.h"
 #include "redis-adapter/radapterlogging.h"
+#include "redis-adapter/formatters/redisqueryformatter.h"
 
 using namespace Redis;
 
-CacheProducer::CacheProducer(const QString &host,
-                             const quint16 port,
-                             const quint16 dbIndex,
-                             const QString &indexKey,
-                             const Radapter::WorkerSettings &settings,
-                             QThread *thread) :
-    Connector(host, port, dbIndex, settings, thread),
-    m_indexKey(indexKey)
+CacheProducer::CacheProducer(const Settings::RedisCacheProducer &config, QThread *thread) :
+    Connector(config, thread),
+    m_indexKey(config.index_key)
 {
 }
 

@@ -7,8 +7,8 @@
 #include <QJsonObject>
 #include <QQueue>
 #include <QTimer>
-#include "jsondict/jsondict.hpp"
 #include "radapter-broker/workerbase.h"
+#include "redis-adapter/settings/settings.h"
 
 namespace Websocket {
     class Client;
@@ -18,10 +18,7 @@ class Websocket::Client : public Radapter::WorkerBase
 {
     Q_OBJECT
 public:
-    explicit Client(const QString &serverHost,
-                    quint16 serverPort,
-                    const Radapter::WorkerSettings &settings,
-                    QThread *thread);
+    explicit Client(const Settings::WebsocketClientInfo &config, QThread *thread);
     ~Client() override;
     bool isRunning() const;
 

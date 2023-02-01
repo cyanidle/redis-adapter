@@ -6,18 +6,15 @@ ProducerFilter::ProducerFilter(const Settings::Filters::Table &filters)
       m_filters(filters),
       m_last()
 {
-    bool hasWildcard = false;
     for (auto filter = m_filters.begin();
          filter != m_filters.end();
          filter++)
     {
         if (filter.key().contains("*")) {
             m_wildcardFilters.insert(filter.key(), filter.value());
-            hasWildcard = true;
+            m_strategy = StrategyByWildcard;
+            break;
         }
-    }
-    if (hasWildcard) {
-        m_strategy = StrategyByWildcard;
     }
 }
 
@@ -30,7 +27,7 @@ void ProducerFilter::onMsgFromWorker(const Radapter::WorkerMsg &msg)
         return;
     }
     if (m_strategy == StrategyByWildcard) {
-        addFiltersByWildcard(msg );
+        addFiltersByWildcard(msg);
     }
     filterStrictByName(msg);
     m_last.merge(msg);
@@ -46,14 +43,17 @@ void ProducerFilter::filterStrictByName(const Radapter::WorkerMsg &srcMsg)
         auto currentValue = item.value();
         auto lastValue = m_last[item.key()];
         auto currentKey = item.key().join(":");
-        if (!(currentValue.canConvert<double>() &&
-              lastValue.canConvert<double>() &&
-              m_filters.contains(currentKey))) {
-            emit msgToBroker(srcMsg);
-            return;
+        if (!m_filters.contains(currentKey)) {
+            shouldAdd = true;
+            break;
+        }
+        if (!currentValue.canConvert<double>() || !lastValue.canConvert<double>()) {
+            shouldAdd = true;
+            break;
         }
         if (qAbs(currentValue.toDouble() - lastValue.toDouble()) > m_filters[currentKey]) {
             shouldAdd = true;
+            break;
         }
     }
     if (shouldAdd) {

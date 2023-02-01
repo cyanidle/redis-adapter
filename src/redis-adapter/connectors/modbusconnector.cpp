@@ -3,6 +3,7 @@
 #include "redis-adapter/formatters/streamentriesmapformatter.h"
 #include "redis-adapter/include/modbuskeys.h"
 #include "radapter-broker/broker.h"
+#include "redis-adapter/producers/producerfilter.h"
 #include "redis-adapter/radapterlogging.h"
 #include "redis-adapter/commands/rediscommands.h"
 
@@ -10,12 +11,17 @@ using namespace Radapter;
 
 ModbusConnector::ModbusConnector(const Settings::ModbusConnectionSettings &connectionSettings,
                                  const Settings::DeviceRegistersInfoMap &registersInfo,
-                                 const Radapter::WorkerSettings &settings,
                                  QThread *thread)
-    : Radapter::WorkerBase(settings, thread),
+    : Radapter::WorkerBase(connectionSettings.worker, thread),
       m_lastWriteId{},
       m_lastWriteRequest{}
 {
+    if (connectionSettings.log_jsons) {
+        addInterceptor(new Radapter::LoggingInterceptor(*connectionSettings.log_jsons));
+    }
+    if (!connectionSettings.filter_name.isEmpty()) {
+        addInterceptor(new ProducerFilter(Settings::Filters::table().value(connectionSettings.filter_name)));
+    }
     initServices(connectionSettings, registersInfo);
 }
 
@@ -53,18 +59,17 @@ void ModbusConnector::allDevicesConnected()
 
 ModbusConnector &ModbusConnector::prvInstance(const Settings::ModbusConnectionSettings &connectionSettings,
                                               const Settings::DeviceRegistersInfoMap &devices,
-                                              const Radapter::WorkerSettings &settings,
                                               QThread *thread)
 {
-    static ModbusConnector conn(connectionSettings, devices, settings, thread);
+    static ModbusConnector conn(connectionSettings, devices, thread);
     return conn;
 }
 
 void ModbusConnector::init(const Settings::ModbusConnectionSettings &connectionSettings,
                            const Settings::DeviceRegistersInfoMap &devices,
-                           const Radapter::WorkerSettings &settings, QThread *thread)
+                           QThread *thread)
 {
-    prvInstance(connectionSettings, devices, settings, thread);
+    prvInstance(connectionSettings, devices, thread);
 }
 
 void ModbusConnector::initServices(const Settings::ModbusConnectionSettings &connectionSettings, const Settings::DeviceRegistersInfoMap &registersInfo)

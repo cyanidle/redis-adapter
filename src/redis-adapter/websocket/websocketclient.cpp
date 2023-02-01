@@ -3,7 +3,6 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include "redis-adapter/radapterlogging.h"
-#include "websocketconstants.h"
 
 using namespace Websocket;
 
@@ -11,13 +10,13 @@ using namespace Websocket;
 #define HEARTBEAT_PERIOD_MS         1000
 #define HEARTBEAT_REPLY_TIMEOUT_MS  10000
 
-Client::Client(const QString &serverHost, quint16 serverPort, const Radapter::WorkerSettings &settings, QThread *thread)
-    : WorkerBase(settings, thread),
-      m_serverHost(serverHost),
+Client::Client(const Settings::WebsocketClientInfo &config, QThread *thread)
+    : WorkerBase(config.worker, thread),
+      m_serverHost(config.host),
+      m_serverPort(config.port),
       m_reconnectTimeout(RECONNECT_TIMEOUT_MS),
       m_heartbeatCounter(1)
 {
-    m_serverPort = serverPort > 0u ? serverPort : DEFAULT_WS_PORT;
     m_serverUrl = QString("ws://%1:%2").arg(m_serverHost).arg(m_serverPort);
 }
 

@@ -14,12 +14,7 @@ class Redis::StreamProducer : public Connector
 {
     Q_OBJECT
 public:
-    explicit StreamProducer(const QString &host,
-                            const quint16 port,
-                            const QString &streamKey,
-                            const Radapter::WorkerSettings &settings,
-                            QThread *thread,
-                            const qint32 streamSize = 0u);
+    explicit StreamProducer(const Settings::RedisStreamProducer &config, QThread *thread);
     ~StreamProducer() override;
 
     QString streamKey() const;

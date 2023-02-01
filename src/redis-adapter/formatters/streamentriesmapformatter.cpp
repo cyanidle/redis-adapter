@@ -1,9 +1,8 @@
 #include "streamentriesmapformatter.h"
 #include "redisstreamentryformatter.h"
 
-StreamEntriesMapFormatter::StreamEntriesMapFormatter(const JsonDict &streamEntriesJson, QObject *parent)
-    : QObject(parent),
-      m_streamEntriesMap(streamEntriesJson)
+StreamEntriesMapFormatter::StreamEntriesMapFormatter(const JsonDict &streamEntriesJson) :
+    m_streamEntriesMap(streamEntriesJson)
 {
 }
 

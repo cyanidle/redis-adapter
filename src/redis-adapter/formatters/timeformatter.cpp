@@ -4,13 +4,7 @@
 
 #define MILLISECONDS_FORMAT "yyyy-MM-ddThh:mm:ss.zzz"
 
-TimeFormatter::TimeFormatter(QObject *parent)
-    : QObject(parent)
-{
-}
-
-TimeFormatter::TimeFormatter(const QString &timeString, QObject *parent)
-    : QObject(parent)
+TimeFormatter::TimeFormatter(const QString &timeString)
 {
     m_dateTime = QDateTime::fromString(timeString, MILLISECONDS_FORMAT);
     if (!m_dateTime.isValid()) {
@@ -18,20 +12,9 @@ TimeFormatter::TimeFormatter(const QString &timeString, QObject *parent)
     }
 }
 
-TimeFormatter::TimeFormatter(const qint64 &timestamp, const QTimeZone &timeZone, QObject *parent)
-    : QObject(parent)
+TimeFormatter::TimeFormatter(const qint64 &timestamp)
 {
-    m_dateTime = QDateTime::fromMSecsSinceEpoch(timestamp, timeZone);
-}
-
-TimeFormatter::TimeFormatter(const qint64 &timestamp, const QString &timeZoneString, QObject *parent)
-    : QObject(parent)
-{
-    auto timeZone = QTimeZone(timeZoneString.toLatin1());
-    if (!timeZone.isValid()) {
-        timeZone = Localization::instance()->timeZone();
-    }
-    m_dateTime = QDateTime::fromMSecsSinceEpoch(timestamp, timeZone);
+    m_dateTime = QDateTime::fromMSecsSinceEpoch(timestamp, Localization::instance()->timeZone());
 }
 
 QDateTime TimeFormatter::dateTime() const
