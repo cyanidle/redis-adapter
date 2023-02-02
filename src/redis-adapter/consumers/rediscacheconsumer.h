@@ -17,9 +17,9 @@ public:
     };
     CacheContext() = default;
     CacheContext(const Radapter::WorkerMsg &msgToReply, CacheConsumer *parent);
+    Radapter::WorkerMsg &msg() {return m_msg;}
     const Radapter::WorkerMsg &msg() const {return m_msg;}
-    void addCommand(Radapter::Command &command);
-    void addCommand(Radapter::Command &&command);
+    void addNestedObjectResult(Radapter::Command &nextStep, const QString &key, const QString &value);
     void fail(const QString &reason = {});
     void reply(Radapter::Reply &reply);
     void reply(Radapter::Reply &&reply) {this->reply(reply);}
@@ -38,8 +38,10 @@ private:
     Radapter::WorkerMsg m_msg{};
     Type m_type{};
     quint16 m_executedCount{0};
+    quint8 m_inReply{};
     bool m_isDone{false};
     Radapter::CommandPack m_pack{};
+
     Radapter::ReplyPack m_replyPack{};
 };
 
@@ -61,8 +63,8 @@ private:
     void requestSet(const QString &setKey, CtxHandle handle);
     void readSetCallback(redisReply *replyPtr, CtxHandle handle);
 
-    void requestIndex(const QString &indexKey, CtxHandle handle);
-    void readIndexCallback(redisReply *replyPtr, CtxHandle handle);
+    void requestObject(const QString &objectKey, CtxHandle handle);
+    void readObjectCallback(redisReply *replyPtr, CtxHandle handle);
 
     void requestKeys(const QStringList &keys, CtxHandle handle);
     void readKeysCallback(redisReply *replyPtr, CtxHandle handle);

@@ -226,6 +226,16 @@ void Connector::nullifyContext()
     m_redisContext = nullptr;
 }
 
+QVariantMap Connector::parseHashReply(redisReply *reply)
+{
+    auto subresult = parseReply(reply).toList();
+    QVariantMap result;
+    for (int i = 1; i < subresult.size(); i+=2) {
+        result.insert(subresult[i-1].toString(), subresult[i]);
+    }
+    return result;
+}
+
 QVariant Connector::parseReply(redisReply *reply)
 {
     if (!isValidReply(reply)) {

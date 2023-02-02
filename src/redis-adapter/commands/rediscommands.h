@@ -5,15 +5,15 @@
 #include "redis-adapter/replies/redisreplies.h"
 namespace Redis {
 namespace Cache{
-class RADAPTER_SHARED_SRC ReadIndex : public Radapter::Command
+class RADAPTER_SHARED_SRC ReadObject : public Radapter::Command
 {
     Q_GADGET
 public:
-    ReadIndex(const QString &index);
-    QString index() const {return m_index;}
+    ReadObject(const QString &index);
+    QString key() const {return m_key;}
     RADAPTER_COMMAND_WANTS(Radapter::ReplyWithJson)
 private:
-    QString m_index;
+    QString m_key;
 };
 class RADAPTER_SHARED_SRC ReadKeys : public Radapter::Command
 {
@@ -48,7 +48,7 @@ private:
 } // namespace Cache
 } // namespace Redis
 
-RADAPTER_DECLARE_COMMAND(Redis::Cache::ReadIndex)
+RADAPTER_DECLARE_COMMAND(Redis::Cache::ReadObject)
 RADAPTER_DECLARE_COMMAND(Redis::Cache::ReadSet)
 RADAPTER_DECLARE_COMMAND(Redis::Cache::ReadKeys)
 RADAPTER_DECLARE_COMMAND(Redis::Cache::ReadHash)

@@ -1,6 +1,7 @@
 #ifndef MODBUSSETTINGS_H
 #define MODBUSSETTINGS_H
 
+#include "redis-adapter/radapterlogging.h"
 #include "settings.h"
 #include "jsondict/jsondict.hpp"
 #include "radapter-broker/debugging/logginginterceptor.h"
@@ -71,7 +72,7 @@ namespace Settings {
         SERIAL_CUSTOM(QModbusDataUnit::RegisterType, type, initType, readType)
         SERIAL_FIELD(quint16, reg_index)
         SERIAL_FIELD(quint8, reg_count)
-        SERIAL_FIELD(quint16, poll_rate, 0)
+        SERIAL_FIELD(quint16, poll_rate, 500)
 
         bool initType (const QVariant &src) {
             auto strRep = src.toString().toLower();
@@ -151,6 +152,7 @@ namespace Settings {
                 source.serial = serialDevice;
                 return true;
             }
+            reError() << "Missing TCP/RTU Source with name:" << sourceName;
             return false;
         }
         QVariant readSource() const {
@@ -162,12 +164,8 @@ namespace Settings {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_FIELD(QString, name)
-        ModbusChannelType type = MbMaster;
         SERIAL_FIELD(quint8, slave_address, 0)
         SERIAL_CONTAINER(QList, ModbusSlaveInfo, slaves, DEFAULT)
-        QVariant readChannelType() const {
-            return QVariant(type);
-        }
     };
 
     struct RADAPTER_SHARED_SRC PackingMode : Serializer::SerializableGadget {
@@ -325,6 +323,9 @@ namespace Settings {
                 for (auto &slave: channel.slaves) {
                     slave.source.number_of_retries = retries;
                     slave.source.response_time = response_time;
+                    for (auto &query : slave.queries) {
+                        query.poll_rate = poll_rate;
+                    }
                 }
             }
         }

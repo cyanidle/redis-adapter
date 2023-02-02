@@ -15,33 +15,27 @@ CacheConsumer::CacheConsumer(const Settings::RedisCacheConsumer &config, QThread
 {
 }
 
-void CacheConsumer::requestIndex(const QString &indexKey, CtxHandle handle)
+void CacheConsumer::requestObject(const QString &objectKey, CtxHandle handle)
 {
-    auto command = QStringLiteral("HGETALL ") + indexKey;
-    if (runAsyncCommand(&CacheConsumer::readIndexCallback, command, handle) != REDIS_OK) {
+    auto command = QStringLiteral("HGETALL ") + objectKey;
+    if (runAsyncCommand(&CacheConsumer::readObjectCallback, command, handle) != REDIS_OK) {
         getCtx(handle).fail(metaInfo());
     }
 }
 
-void CacheConsumer::readIndexCallback(redisReply *reply, CtxHandle handle)
+void CacheConsumer::readObjectCallback(redisReply *reply, CtxHandle handle)
 {
-    auto result = parseReply(reply).toStringList();
+    auto result = parseHashReply(reply);
     if (result.isEmpty()) {
         getCtx(handle).fail("Empty index");
     }
     auto keysToRead = QStringList();
-    for (auto &entry : result) {
-        if (entry.startsWith(REDIS_SET_PREFIX)) {
-            getCtx(handle).addCommand(ReadSet(entry.right(REDIS_SET_PREFIX.length())));
-        } else if (entry.startsWith(REDIS_STR_PREFIX)) {
-            keysToRead.append(entry.right(REDIS_SET_PREFIX.length()));
-        } else if (entry.startsWith(REDIS_HASH_PREFIX)) {
-            getCtx(handle).addCommand(ReadHash(entry.right(REDIS_SET_PREFIX.length())));
-        } else {
-            //todo (add to msg Json)
-        }
+    //! \todo finish
+    for (auto iter = result.begin(); iter != result.end(); ++iter) {
+        auto &key = iter.key();
+        auto stringValue = iter.value().toString();
+
     }
-    getCtx(handle).addCommand(ReadKeys(keysToRead));
     getCtx(handle).executeNextForIndex();
 }
 
@@ -75,8 +69,12 @@ void CacheConsumer::requestHash(const QString &hash, CtxHandle handle)
 
 void CacheConsumer::readHashCallback(redisReply *replyPtr, CtxHandle handle)
 {
-    auto result = parseReply(replyPtr);
-    reDebug() << result;
+    auto result = parseHashReply(replyPtr);
+    if (result.isEmpty()) {
+        getCtx(handle).fail("Empty Hash");
+    } else {
+        getCtx(handle).reply(ReplyHash(result));
+    }
 }
 
 void CacheConsumer::requestSet(const QString &setKey, CtxHandle handle)
@@ -100,8 +98,8 @@ void CacheConsumer::readSetCallback(redisReply *replyPtr, CtxHandle handle)
 
 void CacheConsumer::handleCommand(const Radapter::Command *command, CtxHandle handle)
 {
-    if (command->is<ReadIndex>()) {
-        requestIndex(command->as<ReadIndex>()->index(), handle);
+    if (command->is<ReadObject>()) {
+        requestObject(command->as<ReadObject>()->key(), handle);
     } else if (command->is<ReadKeys>()) {
         requestKeys(command->as<ReadKeys>()->keys(), handle);
     } else if (command->is<ReadSet>()) {
@@ -126,12 +124,13 @@ CacheContext::CacheContext(const Radapter::WorkerMsg &msgToReply, CacheConsumer 
     m_parent(parent),
     m_msg(msgToReply)
 {
-    if (msgToReply.command()->is<ReadIndex>()) {
+    if (msgToReply.command()->is<ReadObject>()) {
         m_type = IndexRead;
     }
     if (msgToReply.command()->is<CommandPack>()) {
-        for (auto &command : msgToReply.command()->as<CommandPack>()->commands()) {
-            if (command->is<ReadIndex>()) {
+        auto pack = msgToReply.command()->as<CommandPack>();
+        for (auto &command : pack->commands()) {
+            if (command->is<ReadObject>()) {
                 throw std::invalid_argument("Cannot ReadIndex inside CommandPack");
             }
         }
@@ -141,16 +140,11 @@ CacheContext::CacheContext(const Radapter::WorkerMsg &msgToReply, CacheConsumer 
     }
 }
 
-void CacheContext::addCommand(Radapter::Command &command)
+void CacheContext::addNestedObjectResult(Command &nextStep, const QString &key, const QString &value)
 {
     if (m_type != IndexRead) throw std::runtime_error("Non index read attemt to add commands");
-    m_pack.append(command.newCopy());
 }
 
-void CacheContext::addCommand(Radapter::Command &&command)
-{
-    addCommand(command);
-}
 
 void CacheContext::fail(const QString &reason)
 {
@@ -179,7 +173,12 @@ CommandPack *CacheContext::packFromMsg()
 
 void CacheContext::executeNextForIndex()
 {
-    if (++m_executedCount >= m_pack.commands().count()) {
+    //! \todo exec all, but wait to end async
+    auto commandsLeft = m_pack.commands().count();
+    if (m_executedCount + m_inReply >= commandsLeft) {
+        return;
+    }
+    if (++m_executedCount >= commandsLeft) {
         auto replyMsg = m_parent->prepareReply(m_msg, new ReplyWithJson(m_replyPack.ok()));
         emit m_parent->sendMsg(replyMsg);
     } else {
@@ -189,7 +188,7 @@ void CacheContext::executeNextForIndex()
 
 void CacheContext::replyIndex(Radapter::Reply &reply)
 {
-    m_replyPack.append(reply.newCopy());
+    --m_inReply;
     if (m_pack.commands()[m_executedCount]->replyOk(&reply)) {
         executeNextForIndex();
     } else {

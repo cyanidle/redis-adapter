@@ -106,6 +106,7 @@ protected:
     void finishAsyncCommand();
     void nullifyContext();
     QVariant parseReply(redisReply *reply);
+    QVariantMap parseHashReply(redisReply *reply);
 private:
     template <class User, class Data>
     static void privateCallbackWithData(redisAsyncContext* ctx, void* reply, void* data);

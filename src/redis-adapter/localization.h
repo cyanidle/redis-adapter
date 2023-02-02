@@ -10,7 +10,7 @@ class RADAPTER_SHARED_SRC Localization
 public:
     static Localization* instance();
     QTimeZone timeZone() const;
-    QTimeZone applyInfo(const Settings::LocalizationInfo &timeZone);
+    void applyInfo(const Settings::LocalizationInfo &timeZone);
 private:
     Localization();
     Settings::LocalizationInfo m_info{};

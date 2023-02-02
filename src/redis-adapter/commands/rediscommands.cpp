@@ -2,9 +2,9 @@
 
 namespace Redis {
 namespace Cache {
-ReadIndex::ReadIndex(const QString &index) :
+ReadObject::ReadObject(const QString &index) :
     Radapter::Command(typeInConstructor(this)),
-    m_index(index)
+    m_key(index)
 {
 
 }

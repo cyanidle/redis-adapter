@@ -17,7 +17,7 @@ QTimeZone Localization::timeZone() const
     return m_info.time_zone;
 }
 
-QTimeZone Localization::applyInfo(const Settings::LocalizationInfo &timeZone)
+void Localization::applyInfo(const Settings::LocalizationInfo &timeZone)
 {
     QMutexLocker lock(&m_mutex);
     if (!timeZone.time_zone.isValid()) {
