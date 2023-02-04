@@ -30,5 +30,12 @@ ReadHash::ReadHash(const QString &hash) :
 
 }
 
+ReadKey::ReadKey(const QString &key) :
+    Radapter::Command(typeInConstructor(this)),
+    m_key(key)
+{
+
+}
+
 } // namespace Cache
 } // namespace Redis

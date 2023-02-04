@@ -6,6 +6,7 @@
 #include <QMap>
 #include <QMetaType>
 #include "redis-adapter/settings/modbussettings.h"
+#include "redis-adapter/settings/settings.h"
 
 namespace Modbus {
     class RADAPTER_SHARED_SRC ModbusDeviceInfo;
@@ -18,10 +19,12 @@ class Modbus::ModbusDeviceInfo
 public:
     explicit ModbusDeviceInfo(const quint8 address,
                               const QString &serialPort,
+                              const QString &sourceName,
                               const QStringList &deviceNames);
     explicit ModbusDeviceInfo(const quint8 address,
                               const QString &ip,
                               const quint16 port,
+                              const QString &sourceName,
                               const QStringList &deviceNames);
     explicit ModbusDeviceInfo();
 
@@ -32,7 +35,9 @@ public:
     QString connectionString() const;
     void setConnectionString(const QString &serialPort);
     void setConnectionString(const QString &ip, const quint16 port);
-   QStringList relatedDevices() const;
+    QString sourceName() const;
+    QString name() const;
+    QStringList relatedDevices() const;
     void setRelatedDevices(const QStringList &deviceNames);
     Settings::ModbusConnectionType type();
 
@@ -45,7 +50,8 @@ private:
 
     quint8 m_slaveAddress;
     QString m_connectionString;
-   QStringList m_relatedDevicesList;
+    QString m_sourceName;
+    QStringList m_relatedDevicesList;
     Settings::ModbusConnectionType m_type;
 };
 

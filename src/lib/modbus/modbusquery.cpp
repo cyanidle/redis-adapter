@@ -1,4 +1,6 @@
 #include "modbusquery.h"
+#include "logging.h"
+#include <QThread>
 
 #define MODBUS_POLL_TIME_MS   500
 #define MODBUS_EXEC_DELAY_MS  50
@@ -18,31 +20,24 @@ ModbusQuery::ModbusQuery(QModbusClient *client,
       m_serverAddress(serverAddress),
       m_pollMode{},
       m_pollRate(pollRate > 0u ? pollRate : MODBUS_POLL_TIME_MS),
-      m_pollTimer(nullptr),
+      m_pollTimer(this),
+      m_responseTimer(this),
+      m_execDelayTimer(this),
       m_queryDoneOnce(false),
       m_quit(false),
       m_isFinished(true),
       m_isOk(false)
 {
-    m_responseTimer = new QTimer(this);
-    m_responseTimer->setSingleShot(true);
-    m_responseTimer->setInterval(m_client->timeout());
-    connect(m_responseTimer, &QTimer::timeout, this, &ModbusQuery::emitResponseTimeout);
+    m_pollTimer.setInterval(m_pollRate);
+    m_pollTimer.callOnTimeout(this, &ModbusQuery::doRun);
 
-    m_execDelayTimer = new QTimer(this);
-    m_execDelayTimer->setSingleShot(true);
-    m_execDelayTimer->setInterval(pollRate > 0u ? pollRate : MODBUS_EXEC_DELAY_MS);
-    m_execDelayTimer->callOnTimeout(this, &ModbusQuery::execOnce);
-}
+    m_responseTimer.setSingleShot(true);
+    m_responseTimer.setInterval(m_client->timeout());
+    m_responseTimer.callOnTimeout(this, &ModbusQuery::emitResponseTimeout);
 
-ModbusQuery::~ModbusQuery()
-{
-    if (m_pollTimer) {
-        m_pollTimer->stop();
-        delete m_pollTimer;
-        m_pollTimer = nullptr;
-    }
-    m_client = nullptr;
+    m_execDelayTimer.setSingleShot(true);
+    m_execDelayTimer.setInterval(pollRate > 0u ? pollRate : MODBUS_EXEC_DELAY_MS);
+    m_execDelayTimer.callOnTimeout(this, &ModbusQuery::execOnce);
 }
 
 void ModbusQuery::doRun()
@@ -61,8 +56,9 @@ void ModbusQuery::doRun()
             connect(reply, &QModbusReply::finished, this, &ModbusQuery::replyReady);
             connect(reply, &QModbusReply::errorOccurred, this, &ModbusQuery::captureReplyError);
             connect(this, &ModbusQuery::finished, reply, &QModbusReply::deleteLater);
+            connect(this, &ModbusQuery::receivedError, reply, &QModbusReply::deleteLater);
             setIsFinished(false);
-            m_responseTimer->start();
+            m_responseTimer.start();
         } else {
             delete reply; // broadcast replies return immediately
         }
@@ -75,7 +71,7 @@ void ModbusQuery::captureReplyError()
 {
     setHasSucceeded(false);
     auto reply = qobject_cast<QModbusReply*>(sender());
-    m_responseTimer->stop();
+    m_responseTimer.stop();
     emit receivedError(slaveAddress(), Q_FUNC_INFO + reply->errorString());
 }
 
@@ -95,16 +91,15 @@ void ModbusQuery::setIsFinished(bool isFinished)
 
 void ModbusQuery::setHasSucceeded(bool state)
 {
-    m_isOk = state;
+    if (m_isOk != state) {
+        m_isOk = state;
+    }
 }
 
 void ModbusQuery::startPoll()
 {
     m_pollMode = PollMode::Permanent;
-    m_pollTimer = new QTimer(this);
-    m_pollTimer->callOnTimeout(this, &ModbusQuery::doRun);
-    m_pollTimer->setInterval(m_pollRate);
-    m_pollTimer->start();
+    m_pollTimer.start();
 }
 
 void ModbusQuery::execOnce()
@@ -115,8 +110,8 @@ void ModbusQuery::execOnce()
 
 void ModbusQuery::execOnceDelayed()
 {
-    if (!m_execDelayTimer->isActive() && isFinished()) {
-        m_execDelayTimer->start();
+    if (!m_execDelayTimer.isActive() && isFinished()) {
+        m_execDelayTimer.start();
     }
 }
 
@@ -161,7 +156,7 @@ void ModbusQuery::replyReady()
     if (!reply) // what kind of error?
         return;
 
-    m_responseTimer->stop();
+    m_responseTimer.stop();
     if (reply->error() == QModbusDevice::NoError) {
         setHasSucceeded(true);
         emit receivedReply(slaveAddress(), reply->result());
@@ -177,12 +172,12 @@ void ModbusQuery::replyReady()
 
 void ModbusQuery::start()
 {
-    m_pollTimer->start();
+    m_pollTimer.start();
 }
 
 void ModbusQuery::pause()
 {
-    m_pollTimer->stop();
+    m_pollTimer.stop();
 }
 
 void ModbusQuery::stop()

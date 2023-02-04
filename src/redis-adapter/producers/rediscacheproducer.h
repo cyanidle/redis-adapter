@@ -22,7 +22,7 @@ public slots:
 private:
     // Pipe
     int writeKeys(const JsonDict &json);
-    int writeIndex(const JsonDict &json, const QString &indexKey);
+    int writeObject(const JsonDict &json, const QString &indexKey);
     void msetCallback(redisReply *replyPtr);
     void indexCallback(redisReply *replyPtr);
 

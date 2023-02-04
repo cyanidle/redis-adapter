@@ -4,14 +4,13 @@
 #include <QObject>
 #include "jsondict/jsondict.hpp"
 
-class RADAPTER_SHARED_SRC RedisQueryFormatter : public QObject
+class RADAPTER_SHARED_SRC RedisQueryFormatter
 {
-    Q_OBJECT
 public:
-    explicit RedisQueryFormatter(const JsonDict &jsonDict = JsonDict{}, QObject *parent = nullptr);
+    explicit RedisQueryFormatter(const JsonDict &jsonDict = JsonDict{});
 
     QString toAddStreamCommand(const QString &streamKey, quint32 maxLen = 0u) const;
-    QString toTrimCommand(const QString &streamKey, quint32 maxLen) const;
+    static QString toTrimCommand(const QString &streamKey, quint32 maxLen);
     static QString toReadStreamCommand(const QString &streamKey, const qint32 count, qint32 blockTimeout, const QString &lastId = QString{});
     static QString toReadGroupCommand(const QString &streamKey,
                                const QString &groupName,

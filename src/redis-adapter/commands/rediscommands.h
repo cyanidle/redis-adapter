@@ -25,6 +25,16 @@ public:
 private:
     QStringList m_keys;
 };
+class RADAPTER_SHARED_SRC ReadKey : public Radapter::Command
+{
+    Q_GADGET
+public:
+    ReadKey(const QString &key);
+    const QString &key() const {return m_key;}
+    RADAPTER_COMMAND_WANTS(Redis::Cache::ReplyKey)
+private:
+    QString m_key;
+};
 class RADAPTER_SHARED_SRC ReadSet : public Radapter::Command
 {
     Q_GADGET
@@ -51,6 +61,7 @@ private:
 RADAPTER_DECLARE_COMMAND(Redis::Cache::ReadObject)
 RADAPTER_DECLARE_COMMAND(Redis::Cache::ReadSet)
 RADAPTER_DECLARE_COMMAND(Redis::Cache::ReadKeys)
+RADAPTER_DECLARE_COMMAND(Redis::Cache::ReadKey)
 RADAPTER_DECLARE_COMMAND(Redis::Cache::ReadHash)
 
 #endif // REDIS_CACHECOMMANDS_H

@@ -13,8 +13,8 @@
 #define REDIS_PMESSAGE_INDEX_PAYLOAD    3
 #define REDIS_PMESSAGE_SIZE             4
 
-#define REDIS_SET_PREFIX QStringLiteral("__sref__")
-#define REDIS_HASH_PREFIX QStringLiteral("__href__")
-#define REDIS_STR_PREFIX QStringLiteral("__ref__")
+#define REDIS_SET_PREFIX QStringLiteral("__sref__:")
+#define REDIS_HASH_PREFIX QStringLiteral("__href__:")
+#define REDIS_STR_PREFIX QStringLiteral("__ref__:")
 
 #endif // REDISMESSAGEKEYS_H

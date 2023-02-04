@@ -32,7 +32,6 @@ public:
                          const quint8 serverAddress,
                          const quint16 pollRate = 0u,
                          QObject *parent = nullptr);
-    ~ModbusQuery() override;
 
     void startPoll();
     bool isFinished() const;
@@ -46,7 +45,7 @@ public:
 
 signals:
     void receivedReply(const quint8 address, const QModbusDataUnit reply);
-    void receivedError(const quint8 address, const QString error);
+    void receivedError(const quint8 address, const QString &error);
     void finished();
 
 public slots:
@@ -73,9 +72,9 @@ private:
     quint8 m_serverAddress;
     PollMode m_pollMode;
     quint16 m_pollRate;
-    QTimer* m_pollTimer;
-    QTimer* m_responseTimer;
-    QTimer* m_execDelayTimer;
+    QTimer m_pollTimer;
+    QTimer m_responseTimer;
+    QTimer m_execDelayTimer;
     bool m_queryDoneOnce;
     bool m_quit;
     bool m_isFinished;

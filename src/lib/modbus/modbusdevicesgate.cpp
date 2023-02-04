@@ -1,8 +1,7 @@
 #include "modbusdevicesgate.h"
 #include <QDataStream>
 #include <QSysInfo>
-#include "redis-adapter/radapterlogging.h"
-#include "redis-adapter/include/modbuskeys.h"
+#include "logging.h"
 
 using namespace Modbus;
 using namespace Settings;
@@ -50,7 +49,7 @@ void ModbusDevicesGate::initDevicesDataMap()
         const auto regInfoList = device->values();
         auto registersTableMap = RegistersTableMap{};
         auto registersTypesMap = AddressTypesTableMap{};
-        for (auto &regInfo : regInfoList) {
+        for (auto regInfo : regInfoList) {
             auto regData = createRegisterData(regInfo);
             registersTableMap[regInfo.table][regInfo.index] = regData;
             registersTypesMap[regInfo.table][regInfo.index] = regInfo.type;
@@ -75,9 +74,6 @@ void ModbusDevicesGate::initDevicesRegAddressMap()
              deviceReg++)
         {
             addressNames[deviceReg.value().table][deviceReg.value().index] = FullRegisterName{device.key(), deviceReg.key()};
-            if (!deviceReg.value().isValid()) {
-
-            }
         }
     }
 }
@@ -140,7 +136,7 @@ void ModbusDevicesGate::writeJsonToModbusDevice(const QVariant &jsonData, bool *
     {
         auto jsonDevice = QVariantMap{ { jsonUnit.key(), jsonUnit.value() } };
         auto registersMap = jsonUnitToRegistersMap(jsonDevice);
-                for (auto registersMapItem = registersMap.begin();
+        for (auto registersMapItem = registersMap.begin();
              registersMapItem != registersMap.end();
              registersMapItem++)
         {
@@ -153,7 +149,6 @@ void ModbusDevicesGate::writeJsonToModbusDevice(const QVariant &jsonData, bool *
                 emit deviceWriteRequested(deviceName, deviceId, tableToWrite, registersToWrite);
                 hasRegistersToWrite = true;
             }
-
         }
     }
     if (isAbleToWrite) {
@@ -161,11 +156,7 @@ void ModbusDevicesGate::writeJsonToModbusDevice(const QVariant &jsonData, bool *
     }
 }
 
-void ModbusDevicesGate::receiveDeviceWriteResult(const QStringList &deviceNames,
-                                                 const quint8 deviceId,
-                                                 const QModbusDataUnit::RegisterType tableType,
-                                                 const quint16 startAddress,
-                                                 bool hasSucceeded)
+void ModbusDevicesGate::receiveDeviceWriteResult(const QStringList &deviceNames, const quint8 deviceId, const QModbusDataUnit::RegisterType tableType, const quint16 startAddress, bool hasSucceeded)
 {
     auto writeRequest = dequeueWriteRequest(deviceNames, deviceId, tableType, startAddress);
     if (writeRequest.isValid()) {
@@ -185,7 +176,7 @@ void ModbusDevicesGate::publishModbusAsJson(const quint8 deviceId, const QModbus
 void ModbusDevicesGate::initModbusDevice(const quint8 deviceId)
 {
     auto deviceNames = deviceNamesListById(deviceId);
-    for (auto &deviceName : deviceNames) {
+    for (const auto &deviceName : deviceNames) {
         emit deviceInitRequested(deviceName);
     }
 }
@@ -200,7 +191,7 @@ QVariantMap ModbusDevicesGate::modbusToJson(const quint8 deviceId, const QModbus
     }
 
     auto jsonData = QVariantMultiMap{};
-    for (auto &deviceName : deviceNames) {
+    for (const auto &deviceName : deviceNames) {
         auto jsonUnit = createDeviceInfoUnit(deviceName, tableType, regAddresses);
         if (!jsonUnit.isEmpty()) {
             packedJsonUnit = packDeviceInfoUnit(deviceName, jsonUnit);
@@ -237,7 +228,7 @@ QVariantMap ModbusDevicesGate::createDeviceInfoUnit(const QString &deviceName, c
 bool ModbusDevicesGate::areValuesValid(const QList<RegisterInfo> &regInfoList) const
 {
     auto allValuesValid = true;
-    for (auto &regInfo : regInfoList) {
+    for (auto regInfo : regInfoList) {
         QMetaType regType(regInfo.type);
         if (!regType.isValid()) {
             allValuesValid = false;
@@ -561,7 +552,7 @@ QVariantList ModbusDevicesGate::buildRegValuesList(const QString &deviceName, co
     auto regValues = QVariantList{};
     auto sortedRegList = regInfoList;
     sortRegistersInfo(sortedRegList);
-    for (auto &regInfo : qAsConst(sortedRegList)) {
+    for (const auto &regInfo : qAsConst(sortedRegList)) {
         auto regValue = buildRegValue(deviceName, regInfo);
         regValues.append(regValue);
     }
@@ -612,7 +603,7 @@ QByteArray ModbusDevicesGate::packRegisterData(const QString &deviceName, const 
     return bytes;
 }
 
-QVariant ModbusDevicesGate::extractRegValueByType(const QMetaType::Type &type, const QByteArray &dataBytes, const QDataStream::ByteOrder byteOrder)
+QVariant ModbusDevicesGate::extractRegValueByType(const QMetaType::Type &type, const QByteArray &dataBytes, const QDataStream::ByteOrder byteOrder) const
 {
     auto regValue = QVariant{};
     auto bytes = dataBytes;
@@ -644,7 +635,7 @@ QVariant ModbusDevicesGate::extractRegValueByType(const QMetaType::Type &type, c
     return regValue;
 }
 
-QList<quint16> ModbusDevicesGate::splitRegValue(const QVariant &regValue, const QMetaType::Type type)
+QList<quint16> ModbusDevicesGate::splitRegValue(const QVariant &regValue, const QMetaType::Type type) const
 {
     auto bytes = QByteArray{};
     QDataStream writeStream{ &bytes, QIODevice::WriteOnly };
@@ -894,15 +885,13 @@ void ModbusDevicesGate::setDeviceRegistersData(const QString &deviceName, const 
     }
 }
 
-void ModbusDevicesGate::enqueueWriteRequest(const QVariantMap &requestData, const quint8 deviceId,
- const QModbusDataUnit::RegisterType tableType, const quint16 startAddress)
+void ModbusDevicesGate::enqueueWriteRequest(const QVariantMap &requestData, const quint8 deviceId, const QModbusDataUnit::RegisterType tableType, const quint16 startAddress)
 {
     auto request = WriteRequestInfo { requestData, deviceId, tableType, startAddress };
     m_writeRequests.append(request);
 }
 
-ModbusDevicesGate::WriteRequestInfo ModbusDevicesGate::dequeueWriteRequest(const QStringList &deviceNames, const quint8 deviceId,
-     const QModbusDataUnit::RegisterType tableType, const quint16 startAddress)
+ModbusDevicesGate::WriteRequestInfo ModbusDevicesGate::dequeueWriteRequest(const QStringList &deviceNames, const quint8 deviceId, const QModbusDataUnit::RegisterType tableType, const quint16 startAddress)
 {
     for (quint16 reqIndex = 0u; reqIndex < m_writeRequests.size(); reqIndex++) {
         auto request = m_writeRequests.at(reqIndex);

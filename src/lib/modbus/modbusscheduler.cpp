@@ -1,4 +1,5 @@
 #include "modbusscheduler.h"
+#include "logging.h"
 
 using namespace Modbus;
 
@@ -7,13 +8,13 @@ using namespace Modbus;
 ModbusScheduler::ModbusScheduler(QObject *parent)
     : QObject(parent),
       m_isStopped(false),
+      m_sleepTimer(this),
       m_activeQuery(nullptr),
       m_queue{},
       m_pollTable{}
 {
-    m_sleepTimer = new QTimer(this);
-    m_sleepTimer->setSingleShot(true);
-    m_sleepTimer->callOnTimeout(this, &ModbusScheduler::runQueue);
+    m_sleepTimer.setSingleShot(true);
+    m_sleepTimer.callOnTimeout(this, &ModbusScheduler::runQueue);
 }
 
 void ModbusScheduler::start()
@@ -54,6 +55,12 @@ void ModbusScheduler::remove(ModbusQuery *query)
     if (m_pollTable.contains(query)) {
         m_pollTable.remove(query);
     }
+}
+
+void ModbusScheduler::clear()
+{
+    stop();
+    m_pollTable.clear();
 }
 
 void ModbusScheduler::runQueue()
@@ -109,7 +116,7 @@ void ModbusScheduler::resetActiveQuery()
 
 void ModbusScheduler::sleep()
 {
-    m_sleepTimer->start(nextPollDelay());
+    m_sleepTimer.start(nextPollDelay());
 }
 
 qint32 ModbusScheduler::nextPollDelay()

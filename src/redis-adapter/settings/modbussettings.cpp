@@ -21,7 +21,6 @@ DeviceRegistersInfoMap DeviceRegistersInfoMapParser::parse(const QVariant &src) 
                 throw std::runtime_error("'byte_order' or 'word_order' not set in registers config!");
             }
             auto regInfoMapJson = JsonDict(domainJson.value("registers").toMap());
-
             for (auto &regInfoIter: regInfoMapJson){
                 if (regInfoIter.value().canConvert<QVariantList>()) {
                     auto currentRegisterMapsList = regInfoIter.value().toList();

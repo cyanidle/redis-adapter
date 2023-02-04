@@ -93,8 +93,7 @@ void ModbusFactory::notifyDataChange(quint8 deviceId, const ModbusRegistersTable
     emit dataChanged(deviceId, registersMap);
 }
 
-void ModbusFactory::changeDeviceData(const QString &deviceName, const quint8 deviceId, 
-    const QModbusDataUnit::RegisterType tableType, const ModbusRegistersTable &registersTable)
+void ModbusFactory::changeDeviceData(const QString &deviceName, const quint8 deviceId, const QModbusDataUnit::RegisterType tableType, const ModbusRegistersTable &registersTable)
 {
     auto channelId = getConnectionString(deviceName, deviceId);
     if (channelId.isEmpty()) {
@@ -113,14 +112,9 @@ void ModbusFactory::onConnectionChanged(bool connected)
         return;
     }
 
-    const auto devicesIdList = client->devicesIdList();
-    for (auto deviceId : devicesIdList) {
-        auto devices = deviceInfoByAddress(deviceId);
-        auto devicesNames = QStringList{};
-        for (auto &device : devices) {
-            devicesNames.append(device.relatedDevices());
-        }
-        emit connectionChanged(devicesNames, connected);
+    const auto devices = client->devicesInfo();
+    for (const auto &deviceInfo : devices) {
+        emit connectionChanged(deviceInfo, connected);
     }
 }
 
@@ -146,7 +140,7 @@ QModbusDataUnit ModbusFactory::queryToDataUnit(const Settings::ModbusQuery &quer
 ModbusQueryMap ModbusFactory::createQueryMap(const QList<Settings::ModbusSlaveInfo> &slaveInfoList)
 {
     auto queryMap = ModbusQueryMap{};
-    for (auto &slave : slaveInfoList) {
+    for (const auto &slave : slaveInfoList) {
         auto slaveQueryMap = createQueryMap(slave);
         queryMap.unite(slaveQueryMap);
     }
@@ -274,7 +268,7 @@ QStringList ModbusFactory::getRegistersPackNames(const QList<ModbusSlaveInfo> &s
 QList<ModbusSlaveInfo> ModbusFactory::extractDevices(const QList<ModbusChannelSettings> &channelsList)
 {
     auto devicesList = QList<ModbusSlaveInfo>{};
-    for (auto &channel : channelsList) {
+    for (auto channel : channelsList) {
         devicesList.append(channel.slaves);
     }
     return devicesList;

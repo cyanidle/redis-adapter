@@ -6,7 +6,7 @@
 #include "modbusquery.h"
 #include "modbusscheduler.h"
 #include "modbusdeviceinfo.h"
-#include "redis-adapter/settings/modbussettings.h"
+#include "redis-adapter/settings/settings.h"
 
 namespace Modbus {
     typedef QMap<quint16 /*regAddress*/, quint16 /*regValue*/> ModbusRegistersTable;
@@ -48,6 +48,7 @@ public:
     QString description() const;
     Settings::ModbusConnectionType type() const;
     QString sourceName() const;
+    bool isFirstReadDone() const;
 
     Modbus::ModbusDeviceInfoList devicesInfo() const;
     QVector<quint8> devicesIdList() const;
@@ -58,10 +59,10 @@ signals:
     void connectionChanged(bool state);
     void writeRequested(const quint8 slaveAddress, const QModbusDataUnit &request);
     void writeResultReady(const QStringList &deviceNames,
-                        const quint8 slaveAddress,
-                        const QModbusDataUnit::RegisterType tableType,
-                        const quint16 startAddress,
-                        bool hasSucceeded);
+                          const quint8 slaveAddress,
+                          const QModbusDataUnit::RegisterType tableType,
+                          const quint16 startAddress,
+                          bool hasSucceeded);
     void readQueriesFinished();
     void firstReadDone();
     void allSlavesDisconnected();
@@ -70,19 +71,18 @@ signals:
 protected:
     void setConnected(bool state);
 
-public slots: 
+public slots:
     void writeReg(const quint8 slaveAddress,
-                const QModbusDataUnit::RegisterType tableType,
-                const quint16 address,
-                const quint16 value);
+                  const QModbusDataUnit::RegisterType tableType,
+                  const quint16 address,
+                  const quint16 value);
     void writeRegs(const quint8 slaveAddress,
-                const QModbusDataUnit::RegisterType tableType,
-                const quint16 startAddress,
-                const QVector<quint16> &values);
+                   const QModbusDataUnit::RegisterType tableType,
+                   const quint16 startAddress,
+                   const QVector<quint16> &values);
     void changeData(const quint8 slaveAddress,
                     const QModbusDataUnit::RegisterType tableType,
                     const Modbus::ModbusRegistersTable &registersTable);
-
     void restartDevice();
 
 #ifdef TEST_MODE
@@ -95,19 +95,21 @@ private slots:
     void deviceDisconnect();
     void startPoll();
     void stopSlavePoll(const quint8 slaveAddress);
-    void deviceStateChanged(const QModbusDevice::State state);
-    void readReady(const quint8 slaveAddress, const QModbusDataUnit reply);
-    void queryFailed(const quint8 slaveAddress, const QString error);
+    void onDeviceStateChanged(const QModbusDevice::State state);
+    void onDeviceErrorOccured(const QModbusDevice::Error error);
+    void onReadReady(const quint8 slaveAddress, const QModbusDataUnit reply);
+    void onQueryFailed(const quint8 slaveAddress, const QString &error);
     void sendWriteRequest(const quint8 slaveAddress, const QModbusDataUnit &request);
     void sendWriteResult();
     void clearWriteQuery();
     void outputDataUnit(const quint8 slaveAddress, const QModbusDataUnit unit);
-    void emitFirstReadDone();
+    void updateFirstReadDone();
     void countErrors(const quint8 slaveAddress);
     void resetConnectionState(const quint8 slaveAddress);
     void resetAllConnections();
     void updateDisconnectedState();
     void onSlaveStateChanged(const quint8 slaveAddress, bool connected);
+    void onConnectionChanged();
 
 private:
     void init();
@@ -134,6 +136,7 @@ private:
     QString searchNewPort();
 
     void setDeviceConnected(const quint8 slaveAddress, ModbusConnectionState *deviceState, bool connected);
+    void setFirstReadDone(bool state);
 
     ModbusRegistersTableMap updateRegisters(DeviceBuffersMap &regMap, quint8 slaveAddress, const QModbusDataUnit &reply);
 
@@ -150,7 +153,9 @@ private:
         return slaveQueries;
     }
     QList<ModbusReadQuery*> getReadQueriesBySlaveAddress(const quint8 slaveAddress) const;
+
     std::string registerTypeToString(const QModbusDataUnit::RegisterType registerType) const;
+
     QModbusClient* m_client;
     Settings::ModbusConnectionType m_connectionType;
     ModbusQueryMap m_queryDataMap;
@@ -159,10 +164,11 @@ private:
     ModbusScheduler* m_scheduler;
     DeviceBuffersMap m_deviceBuffersMap;
     Settings::ModbusConnectionSource m_connectionSettings;
-   QStringList m_deviceNames;
+    QStringList m_deviceNames;
     ModbusDeviceInfoList m_deviceInfoList;
     QString m_remappedPort;
     quint8 m_reconnectCounter;
+    QTimer* m_reconnectTimer;
     ModbusConnectionStatesMap m_connectionStatesMap;
     bool m_clientConnected;
     bool m_firstReadDone;

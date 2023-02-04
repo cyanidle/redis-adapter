@@ -4,9 +4,11 @@ using namespace Modbus;
 
 ModbusDeviceInfo::ModbusDeviceInfo(const quint8 address,
                                    const QString &serialPort,
+                                   const QString &sourceName,
                                    const QStringList &deviceNames)
     : m_slaveAddress(address),
       m_connectionString(serialPort),
+      m_sourceName(sourceName),
       m_relatedDevicesList(deviceNames),
       m_type(Settings::ModbusConnectionType::Serial)
 {
@@ -15,15 +17,17 @@ ModbusDeviceInfo::ModbusDeviceInfo(const quint8 address,
 ModbusDeviceInfo::ModbusDeviceInfo(const quint8 address,
                                    const QString &ip,
                                    const quint16 port,
+                                   const QString &sourceName,
                                    const QStringList &deviceNames)
     : m_slaveAddress(address),
+      m_sourceName(sourceName),
       m_relatedDevicesList(deviceNames),
       m_type(Settings::ModbusConnectionType::Tcp)
 {
     m_connectionString = toConnectionString(ip, port);
 }
 
-ModbusDeviceInfo::ModbusDeviceInfo() : ModbusDeviceInfo(0u, QString{}, QStringList{})
+ModbusDeviceInfo::ModbusDeviceInfo() : ModbusDeviceInfo(0u, QString{}, QString{}, QStringList{})
 {
 }
 
@@ -66,6 +70,18 @@ void ModbusDeviceInfo::setConnectionString(const QString &ip, const quint16 port
     {
         m_connectionString = toConnectionString(ip, port);
     }
+}
+
+QString ModbusDeviceInfo::sourceName() const
+{
+    return m_sourceName;
+}
+
+QString ModbusDeviceInfo::name() const
+{
+    auto name = QStringList{ sourceName(), QString::number(slaveAddress()) }
+            .join(":");
+    return name;
 }
 
 QStringList ModbusDeviceInfo::relatedDevices() const

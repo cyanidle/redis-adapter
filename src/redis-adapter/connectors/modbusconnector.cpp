@@ -209,11 +209,31 @@ void ModbusConnector::onWriteResultReady(const QVariant &modbusUnitData, bool su
     }
 }
 
-void ModbusConnector::onConnectionChanged(const QStringList&, const bool connected)
+QString ModbusConnector::channelNameBySource(const QString &sourceName)
+{
+    for (const auto &channelInfo : settings().channels) {
+        for (const auto &slaveInfo : channelInfo.slaves) {
+            if (slaveInfo.source.name == sourceName) {
+                return channelInfo.name;
+            }
+        }
+    }
+    return QString{};
+}
+
+void ModbusConnector::onConnectionChanged(const Modbus::ModbusDeviceInfo &deviceInfo, const bool connected)
 {
     if (connected && m_modbusFactory->areAllDevicesConnected()) {
         allDevicesConnected();
     }
+
+    auto channelName = channelNameBySource(deviceInfo.sourceName());
+    if (channelName.isEmpty()) {
+        return;
+    }
+    auto connectionState = JsonDict{};
+    connectionState(channelName, deviceInfo.name(), MODBUS_KEY_CONNECTED) = connected;
+
 }
 
 void ModbusConnector::emitWriteDone(const JsonDict &writeRequest)

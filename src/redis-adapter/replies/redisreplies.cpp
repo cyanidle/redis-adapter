@@ -24,5 +24,12 @@ ReplyHash::ReplyHash(const QVariantMap &flatHash) :
 
 }
 
+ReplyKey::ReplyKey(const QString &key) :
+    Reply(typeInConstructor(this), true),
+    m_key(key)
+{
+
+}
+
 } // namespace Cache
 } // namespace Redis

@@ -22,6 +22,7 @@ public slots:
     void append(Modbus::ModbusQuery *query);
     void push(Modbus::ModbusQuery *query);
     void remove(Modbus::ModbusQuery *query);
+    void clear();
 
 signals:
 
@@ -46,7 +47,7 @@ private:
     QDateTime now() const;
 
     bool m_isStopped;
-    QTimer* m_sleepTimer;
+    QTimer m_sleepTimer;
     ModbusQuery* m_activeQuery;
     QList<ModbusQuery*> m_queue;
     PollTable m_pollTable;

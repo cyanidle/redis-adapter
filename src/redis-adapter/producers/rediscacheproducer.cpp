@@ -6,16 +6,13 @@ using namespace Redis;
 
 CacheProducer::CacheProducer(const Settings::RedisCacheProducer &config, QThread *thread) :
     Connector(config, thread),
-    m_indexKey(config.index_key)
+    m_indexKey(config.object_hash_key)
 {
 }
 
 void CacheProducer::onMsg(const Radapter::WorkerMsg &msg)
 {
-    if (writeIndex(msg , m_indexKey) != REDIS_OK) {
-        emit sendMsg(prepareReply(msg, new Radapter::ReplyFail));
-    }
-    if (writeKeys(msg) != REDIS_OK) {
+    if (writeObject(msg , m_indexKey) != REDIS_OK) {
         emit sendMsg(prepareReply(msg, new Radapter::ReplyFail));
     }
 }
@@ -29,7 +26,7 @@ int CacheProducer::writeKeys(const JsonDict &json)
     return runAsyncCommand(&CacheProducer::msetCallback, msetCommand);
 }
 
-int CacheProducer::writeIndex(const JsonDict &json, const QString &indexKey)
+int CacheProducer::writeObject(const JsonDict &json, const QString &indexKey)
 {
     if (json.isEmpty() || indexKey.isEmpty()) {
         return REDIS_ERR;

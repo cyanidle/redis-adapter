@@ -9,6 +9,7 @@ SOURCES += \
     $$PWD/redis-adapter/consumers/rediskeyeventsconsumer.cpp \
     $$PWD/redis-adapter/consumers/redisstreamconsumer.cpp \
     $$PWD/redis-adapter/consumers/sqlkeyvaultconsumer.cpp \
+    $$PWD/redis-adapter/contexts/rediscachecontext.cpp \
     $$PWD/redis-adapter/formatters/archivequeryformatter.cpp \
     $$PWD/redis-adapter/formatters/keyvaultresultformatter.cpp \
     $$PWD/redis-adapter/formatters/modbusformatter.cpp \
@@ -48,6 +49,7 @@ HEADERS += \
     $$PWD/redis-adapter/consumers/rediskeyeventsconsumer.h \
     $$PWD/redis-adapter/consumers/redisstreamconsumer.h \
     $$PWD/redis-adapter/consumers/sqlkeyvaultconsumer.h \
+    $$PWD/redis-adapter/contexts/rediscachecontext.h \
     $$PWD/redis-adapter/formatters/archivequeryformatter.h \
     $$PWD/redis-adapter/formatters/keyvaultresultformatter.h \
     $$PWD/redis-adapter/formatters/modbusformatter.h \

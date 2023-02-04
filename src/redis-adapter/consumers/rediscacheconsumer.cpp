@@ -4,14 +4,18 @@
 #include "radapter-broker/reply.h"
 #include "redis-adapter/commands/rediscommands.h"
 #include "redis-adapter/include/redismessagekeys.h"
+#include "templates/algorithms.hpp"
 
 using namespace Redis;
 using namespace Cache;
 using namespace Radapter;
 
+QRegExp CacheConsumer::m_firstIsIntChecker{"^[0-9]*:.*$"};
+QRegExp CacheConsumer::m_intChecker{"^[0-9]*$"};
+
 CacheConsumer::CacheConsumer(const Settings::RedisCacheConsumer &config, QThread *thread) :
     Connector(config, thread),
-    m_indexKey(config.index_key)
+    m_indexKey(config.object_hash_key)
 {
 }
 
@@ -23,20 +27,74 @@ void CacheConsumer::requestObject(const QString &objectKey, CtxHandle handle)
     }
 }
 
+JsonDict CacheConsumer::parseNestedArrays(const JsonDict &target) {
+    JsonDict result;
+    bool hadInt = false;
+    for (auto &iter : target) {
+        auto branchHadInt = false;
+        auto key = iter.key();
+        for (auto subkey : enumerate(key)) {
+            bool isInt = false;
+            subkey.value.toInt(&isInt);
+            if (!isInt) {
+                continue;
+            }
+            hadInt = branchHadInt = true;
+            auto currentKeyToArray = QStringList(key.begin(), key.begin() + subkey.count);
+            auto &currentValue = result[currentKeyToArray];
+            auto currentArray = QVariantList{};
+            const auto &mapInside = target[currentKeyToArray].toMap();
+            for (auto iter = mapInside.constBegin(); iter != mapInside.constEnd(); ++iter) {
+                bool isSubInt = false;
+                auto arrayInd = iter.key().toInt(&isSubInt);
+                if (isSubInt && arrayInd > -1) {
+                    while (currentArray.size() <= arrayInd) {
+                        currentArray.append(QVariant{});
+                    }
+                    currentArray[arrayInd] = iter.value();
+                } else {
+                    reWarn() << "Object nested array collision! (Or index < 0)";
+                }
+            }
+            for (auto &val : currentArray) {
+                if (val.type() == QVariant::Map) {
+                    auto temp = parseNestedArrays(*reinterpret_cast<const JsonDict*>(val.data())).toVariant();
+                    val = std::move(temp);
+                }
+            }
+            currentValue.setValue(currentArray);
+        }
+        if (!branchHadInt) {
+            auto keyToInsert = iter.key();
+            auto valToInsert = iter.value();
+            result.insert(keyToInsert, valToInsert);
+        }
+    }
+    if (hadInt) {
+        result = parseNestedArrays(result);
+    }
+    return result;
+}
+
 void CacheConsumer::readObjectCallback(redisReply *reply, CtxHandle handle)
 {
     auto result = parseHashReply(reply);
     if (result.isEmpty()) {
-        getCtx(handle).fail("Empty index");
+        getCtx(handle).fail("Empty object hash!");
     }
-    auto keysToRead = QStringList();
-    //! \todo finish
+    JsonDict foundJson;
     for (auto iter = result.begin(); iter != result.end(); ++iter) {
-        auto &key = iter.key();
-        auto stringValue = iter.value().toString();
-
+        bool isFirstInt = !iter.key().indexOf(m_firstIsIntChecker);
+        if (isFirstInt) {
+            reWarn() << "Number is first in index hash";
+            continue;
+        }
+        auto toMerge = JsonDict();
+        toMerge.insert(iter.key().split(':'), iter.value());
+        foundJson.merge(toMerge);
     }
-    getCtx(handle).executeNextForIndex();
+    foundJson = parseNestedArrays(foundJson);
+    getCtx(handle).reply(ReplyJson(foundJson));
 }
 
 void CacheConsumer::requestKeys(const QStringList &keys, CtxHandle handle)
@@ -51,14 +109,22 @@ void CacheConsumer::readKeysCallback(redisReply *replyPtr, CtxHandle handle)
 {
     auto foundEntries = parseReply(replyPtr).toStringList();
     reDebug() << metaInfo() << "Key entries found:" << foundEntries.size();
-    if (foundEntries.isEmpty()) {
-        getCtx(handle).fail("Empty Keys Read");
-    } else {
-        auto toReply = ReadKeys::WantedReply(foundEntries);
-        getCtx(handle).reply(toReply);
+    getCtx(handle).reply(ReadKeys::WantedReply(foundEntries));
+}
+
+void CacheConsumer::requestKey(const QString &key, CtxHandle handle)
+{
+    auto command = QStringLiteral("GET ") + key;
+    if (runAsyncCommand(&CacheConsumer::readKeyCallback, command, handle) != REDIS_OK) {
+        getCtx(handle).fail("MGET Error");
     }
 }
 
+void CacheConsumer::readKeyCallback(redisReply *replyPtr, CtxHandle handle)
+{
+    auto foundEntries = parseReply(replyPtr).toString();
+    getCtx(handle).reply(ReadKey::WantedReply(foundEntries));
+}
 void CacheConsumer::requestHash(const QString &hash, CtxHandle handle)
 {
     auto command = QStringLiteral("HGETALL ") + hash;
@@ -70,11 +136,8 @@ void CacheConsumer::requestHash(const QString &hash, CtxHandle handle)
 void CacheConsumer::readHashCallback(redisReply *replyPtr, CtxHandle handle)
 {
     auto result = parseHashReply(replyPtr);
-    if (result.isEmpty()) {
-        getCtx(handle).fail("Empty Hash");
-    } else {
-        getCtx(handle).reply(ReplyHash(result));
-    }
+    reDebug() << metaInfo() << "Hash entries found:" << result.size();
+    getCtx(handle).reply(ReplyHash(result));
 }
 
 void CacheConsumer::requestSet(const QString &setKey, CtxHandle handle)
@@ -88,25 +151,19 @@ void CacheConsumer::requestSet(const QString &setKey, CtxHandle handle)
 void CacheConsumer::readSetCallback(redisReply *replyPtr, CtxHandle handle)
 {
     auto parsed = parseReply(replyPtr).toStringList();
-    if (parsed.isEmpty()) {
-        getCtx(handle).fail("Empty set");
-    } else {
-        auto toReply = ReadSet::WantedReply(parsed);
-        getCtx(handle).reply(toReply);
-    }
+    reDebug() << metaInfo() << "Set entries found:" << parsed.size();
+    getCtx(handle).reply(ReadSet::WantedReply(parsed));
 }
 
 void CacheConsumer::handleCommand(const Radapter::Command *command, CtxHandle handle)
 {
-    if (command->is<ReadObject>()) {
-        requestObject(command->as<ReadObject>()->key(), handle);
-    } else if (command->is<ReadKeys>()) {
+    if (command->is<ReadKeys>()) {
         requestKeys(command->as<ReadKeys>()->keys(), handle);
+    } else if (command->is<ReadKey>()) {
+        requestKey(command->as<ReadKey>()->key(), handle);
     } else if (command->is<ReadSet>()) {
         requestSet(command->as<ReadSet>()->set(), handle);
-    } else if (command->is<CommandPack>()) {
-        requestMultiple(command->as<CommandPack>(), handle);
-    } else if (command->is<ReadHash>()) {
+    }else if (command->is<ReadHash>()) {
         requestHash(command->as<ReadHash>()->hash(), handle);
     } else {
         getCtx(handle).fail(QStringLiteral("Command type unsupported: ") + command->metaObject()->className());
@@ -115,106 +172,18 @@ void CacheConsumer::handleCommand(const Radapter::Command *command, CtxHandle ha
 
 void CacheConsumer::requestMultiple(const CommandPack* pack, CtxHandle handle)
 {
-    for (auto &command : pack->commands()) {
-        handleCommand(command.data(), handle);
+    if (any_of(pack->commands(), &Command::is<ReadObject>)) {
+        auto msgCopy = getCtx(handle).msg();
+        auto reply = prepareReply(msgCopy, new ReplyFail("CommandPack Contains ReadObject!"));
+        emit sendMsg(reply);
+        getCtx(handle).setDone();
     }
-}
-
-CacheContext::CacheContext(const Radapter::WorkerMsg &msgToReply, CacheConsumer *parent) :
-    m_parent(parent),
-    m_msg(msgToReply)
-{
-    if (msgToReply.command()->is<ReadObject>()) {
-        m_type = IndexRead;
-    }
-    if (msgToReply.command()->is<CommandPack>()) {
-        auto pack = msgToReply.command()->as<CommandPack>();
-        for (auto &command : pack->commands()) {
-            if (command->is<ReadObject>()) {
-                throw std::invalid_argument("Cannot ReadIndex inside CommandPack");
-            }
-        }
-        m_type = PackRead;
-    } else {
-        m_type = SimpleRead;
-    }
-}
-
-void CacheContext::addNestedObjectResult(Command &nextStep, const QString &key, const QString &value)
-{
-    if (m_type != IndexRead) throw std::runtime_error("Non index read attemt to add commands");
-}
-
-
-void CacheContext::fail(const QString &reason)
-{
-    reDebug() << m_parent->metaInfo() << ": Error! Reason --> "<< (reason.isEmpty() ? QStringLiteral("Not Given") : reason);
-    auto failReply = Radapter::ReplyFail(reason);
-    reply(failReply);
-}
-
-void CacheContext::reply(Radapter::Reply &reply)
-{
-    if (m_type == SimpleRead) {
-        replySimple(reply);
-    } else if (m_type == IndexRead) {
-        replyIndex(reply);
-    } else if (m_type == PackRead) {
-        replyPack(reply);
-    } else {
-        throw std::runtime_error("Cache context type uninitialized!");
-    }
-}
-
-CommandPack *CacheContext::packFromMsg()
-{
-    return m_msg.command()->as<CommandPack>();
-}
-
-void CacheContext::executeNextForIndex()
-{
-    //! \todo exec all, but wait to end async
-    auto commandsLeft = m_pack.commands().count();
-    if (m_executedCount + m_inReply >= commandsLeft) {
+    if (!pack->commands().size()) {
+        getCtx(handle).fail("Empty command Pack");
+        getCtx(handle).setDone();
         return;
     }
-    if (++m_executedCount >= commandsLeft) {
-        auto replyMsg = m_parent->prepareReply(m_msg, new ReplyWithJson(m_replyPack.ok()));
-        emit m_parent->sendMsg(replyMsg);
-    } else {
-        m_parent->handleCommand(m_pack.commands()[m_executedCount].data(), m_parent->getHandle(*this));
-    }
-}
-
-void CacheContext::replyIndex(Radapter::Reply &reply)
-{
-    --m_inReply;
-    if (m_pack.commands()[m_executedCount]->replyOk(&reply)) {
-        executeNextForIndex();
-    } else {
-        auto replyMsg = m_parent->prepareReply(m_msg, reply.newCopy());
-        emit m_parent->sendMsg(replyMsg);
-        m_isDone = true;
-    }
-}
-
-void CacheContext::replySimple(Radapter::Reply &reply)
-{
-    auto replyMsg = m_parent->prepareReply(m_msg, reply.newCopy());
-    emit m_parent->sendMsg(replyMsg);
-    m_isDone = true;
-}
-
-void CacheContext::replyPack(Radapter::Reply &reply)
-{
-    m_replyPack.append(reply.newCopy());
-    if (++m_executedCount >= packFromMsg()->commands().count()) {
-        auto replyMsg = m_parent->prepareReply(m_msg, m_replyPack.newCopy());
-        emit m_parent->sendMsg(replyMsg);
-        m_isDone = true;
-    } else {
-        m_parent->handleCommand(packFromMsg()->commands()[m_executedCount].data(), m_parent->getHandle(*this));
-    }
+    handleCommand(pack->commands().first().data(), handle);
 }
 
 CacheContext &CacheConsumer::getCtx(CtxHandle handle)
@@ -224,11 +193,13 @@ CacheContext &CacheConsumer::getCtx(CtxHandle handle)
 
 void CacheConsumer::onCommand(const WorkerMsg &msg)
 {
-    handleCommand(msg.command(), m_manager.manage(CacheContext(msg, this)));
+    if (msg.command()->is<ReadObject>()) {
+        requestObject(msg.command()->as<ReadObject>()->key(), m_manager.create<ObjectContext>(msg, this));
+    } else if (msg.command()->is<CommandPack>()) {
+        requestMultiple(msg.command()->as<CommandPack>(), m_manager.create<PackContext>(msg, this));
+    } else {
+        handleCommand(msg.command(), m_manager.create<SimpleContext>(msg, this));
+    }
     m_manager.clearBasedOn(&CacheContext::isDone);
 }
 
-CacheConsumer::CtxHandle CacheConsumer::getHandle(const CacheContext &ctx)
-{
-    return m_manager.getHandle(ctx);
-}

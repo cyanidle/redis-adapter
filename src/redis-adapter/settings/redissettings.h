@@ -79,13 +79,13 @@ namespace Settings {
     struct RADAPTER_SHARED_SRC RedisCacheConsumer : RedisConnector {
         Q_GADGET
         IS_SERIALIZABLE
-        SERIAL_FIELD(QString, index_key)
+        SERIAL_FIELD(QString, object_hash_key)
     };
 
     struct RADAPTER_SHARED_SRC RedisCacheProducer : RedisConnector {
         Q_GADGET
         IS_SERIALIZABLE
-        SERIAL_FIELD(QString, index_key)
+        SERIAL_FIELD(QString, object_hash_key)
     };
 }
 

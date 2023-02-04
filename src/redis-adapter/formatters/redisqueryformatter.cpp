@@ -1,9 +1,8 @@
 #include "redisqueryformatter.h"
 #include "redis-adapter/include/redismessagekeys.h"
 
-RedisQueryFormatter::RedisQueryFormatter(const JsonDict &jsonDict, QObject *parent)
-    : QObject(parent),
-      m_json(jsonDict)
+RedisQueryFormatter::RedisQueryFormatter(const JsonDict &jsonDict)
+    : m_json(jsonDict)
 {
 }
 
@@ -17,7 +16,7 @@ QString RedisQueryFormatter::toAddStreamCommand(const QString &streamKey, quint3
     return command;
 }
 
-QString RedisQueryFormatter::toTrimCommand(const QString &streamKey, quint32 maxLen) const
+QString RedisQueryFormatter::toTrimCommand(const QString &streamKey, quint32 maxLen)
 {
     if (streamKey.isEmpty()) {
         return QString{};

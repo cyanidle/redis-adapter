@@ -3,7 +3,7 @@
 #include <QtSerialBus/QModbusTcpClient>
 #include <QRandomGenerator>
 #include <QSerialPortInfo>
-#include "redis-adapter/radapterlogging.h"
+#include "logging.h"
 
 using namespace Modbus;
 using namespace Settings;
@@ -27,12 +27,14 @@ ModbusClient::ModbusClient(const ModbusConnectionSource &settings,
       m_queryDataMap(queryMap),
       m_readQueries{},
       m_writeQueries{},
+      m_scheduler(nullptr),
       m_deviceBuffersMap{},
       m_connectionSettings(settings),
       m_deviceNames(deviceNames),
       m_deviceInfoList{},
       m_remappedPort{},
       m_reconnectCounter(0u),
+      m_reconnectTimer(nullptr),
       m_clientConnected(false),
       m_areAllSlavesDisconnected(false)
 {
@@ -46,19 +48,17 @@ ModbusClient::ModbusClient(const ModbusConnectionSource &settings,
             this, &ModbusClient::onSlaveStateChanged);
     const auto addressesList = queryMap.uniqueKeys();
     for (auto slaveAddress : addressesList) {
-        m_deviceBuffersMap[slaveAddress] = {            
+        m_deviceBuffersMap[slaveAddress] = {
             { QModbusDataUnit::DiscreteInputs, RegistersTableBuffer(PREALLOC_REG_SIZE, 0u) },
             { QModbusDataUnit::Coils, RegistersTableBuffer(PREALLOC_REG_SIZE, 0u) },
             { QModbusDataUnit::InputRegisters, RegistersTableBuffer(PREALLOC_REG_SIZE, 0u) },
             { QModbusDataUnit::HoldingRegisters, RegistersTableBuffer(PREALLOC_REG_SIZE, 0u) }
-
         };
     }
 }
 
 ModbusClient::~ModbusClient()
 {
-    m_scheduler->deleteLater();
     deviceDisconnect();
 }
 
@@ -91,16 +91,20 @@ void ModbusClient::deviceConnect()
         setConnectionParameters();
         m_client->disconnect();
         connect(m_client, &QModbusClient::stateChanged,
-                this, &ModbusClient::deviceStateChanged);
+                this, &ModbusClient::onDeviceStateChanged);
+        connect(m_client, &QModbusClient::errorOccurred,
+                this, &ModbusClient::onDeviceErrorOccured);
     }
-    if (m_client) {
-        tryConnect();
-    }
+
+    tryConnect();
+    m_reconnectTimer->start();
 }
 
 void ModbusClient::deviceDisconnect()
 {
     mbDebug() << "start device disconnect";
+    m_scheduler->clear();
+    mbDebug() << "scheduler cleared";
     if (!m_readQueries.isEmpty()) {
         for (auto query : qAsConst(m_readQueries)) {
             destroyQuery(query);
@@ -117,8 +121,8 @@ void ModbusClient::deviceDisconnect()
     mbDebug() << "write queries deleted";
 
     if (m_client) {
-        disconnect(m_client, &QModbusClient::stateChanged,
-                   this, &ModbusClient::deviceStateChanged);
+        disconnect(m_client);
+        m_client->disconnect();
         connect(m_client, &QModbusClient::stateChanged, this, [=]() {
             mbDebug() << "requesting client deleteLater...";
             m_client->deleteLater();
@@ -145,9 +149,16 @@ void ModbusClient::setConnected(bool state)
 
 void ModbusClient::run()
 {
-    m_scheduler = new ModbusScheduler{};
-    connect(this, &ModbusClient::connectionChanged,
-            this, &ModbusClient::startPoll);
+    m_reconnectTimer = new QTimer(this);
+    m_reconnectTimer->setSingleShot(true);
+    m_reconnectTimer->setInterval(RECONNECT_TIME_MS);
+    m_reconnectTimer->callOnTimeout(this, &ModbusClient::restartDevice);
+    connect(this, &ModbusClient::firstReadDone,
+            m_reconnectTimer, &QTimer::stop);
+
+    m_scheduler = new ModbusScheduler(this);
+    connect(this, &ModbusClient::connectionChanged, &ModbusClient::startPoll);
+    connect(this, &ModbusClient::connectionChanged, &ModbusClient::onConnectionChanged);
     deviceConnect();
 }
 
@@ -183,6 +194,22 @@ QString ModbusClient::sourceName() const
     return m_connectionSettings.name;
 }
 
+bool ModbusClient::isFirstReadDone() const
+{
+    return m_firstReadDone;
+}
+
+void ModbusClient::setFirstReadDone(bool state)
+{
+    if (m_firstReadDone != state) {
+        m_firstReadDone = state;
+
+        if (m_firstReadDone) {
+            emit firstReadDone();
+        }
+    }
+}
+
 ModbusDeviceInfoList ModbusClient::devicesInfo() const
 {
     return m_deviceInfoList;
@@ -199,13 +226,22 @@ QVector<quint8> ModbusClient::devicesIdList() const
     return devicesIdList;
 }
 
-void ModbusClient::writeReg(const quint8 slaveAddress, const QModbusDataUnit::RegisterType tableType,
-                            const quint16 address, const quint16 value)
+void ModbusClient::writeReg(const quint8 slaveAddress, const QModbusDataUnit::RegisterType tableType, const quint16 address, const quint16 value)
 {
+    if ((tableType != QModbusDataUnit::HoldingRegisters)
+            && (tableType != QModbusDataUnit::Coils))
+    {
+        emit writeResultReady(m_deviceNames, slaveAddress, tableType, address, false);
+        return;
+    }
 
-    if (m_deviceBuffersMap.value(slaveAddress).value(tableType).at(address) == value) {
+    if (m_deviceBuffersMap.value(slaveAddress)
+            .value(tableType).at(address) == value)
+    {
         emit writeResultReady(m_deviceNames, slaveAddress, tableType, address, true);
-    } else {
+    }
+    else
+    {
         auto request = createRequest(tableType, address, value);
         mbDebug() << QString("single request for %1 sended:").arg(slaveAddress).toStdString().c_str()
                   << registerTypeToString(request.registerType()).c_str()
@@ -214,8 +250,7 @@ void ModbusClient::writeReg(const quint8 slaveAddress, const QModbusDataUnit::Re
     }
 }
 
-void ModbusClient::writeRegs(const quint8 slaveAddress, const QModbusDataUnit::RegisterType tableType,
-     const quint16 startAddress, const QVector<quint16> &values)
+void ModbusClient::writeRegs(const quint8 slaveAddress, const QModbusDataUnit::RegisterType tableType, const quint16 startAddress, const QVector<quint16> &values)
 {
     auto writeRequests = QVector<QModbusDataUnit>{};
 
@@ -240,9 +275,7 @@ void ModbusClient::writeRegs(const quint8 slaveAddress, const QModbusDataUnit::R
     }
 }
 
-void ModbusClient::changeData(const quint8 slaveAddress,
-                              const QModbusDataUnit::RegisterType tableType,
-                              const ModbusRegistersTable &registersTable)
+void ModbusClient::changeData(const quint8 slaveAddress, const QModbusDataUnit::RegisterType tableType, const ModbusRegistersTable &registersTable)
 {
     for (auto regData = registersTable.begin();
          regData != registersTable.end();
@@ -275,7 +308,7 @@ void ModbusClient::startPoll()
         auto query = createReadQuery(queryData.key(), queryData.value().dataUnit, queryData.value().pollRate);
         m_scheduler->append(query);
     }
-    m_firstReadDone = false;
+    setFirstReadDone(false);
     m_areAllSlavesDisconnected = false;
     resetAllConnections();
     m_scheduler->start();
@@ -291,27 +324,38 @@ void ModbusClient::stopSlavePoll(const quint8 slaveAddress)
     }
 }
 
-void ModbusClient::deviceStateChanged(const QModbusDevice::State state)
+void ModbusClient::onDeviceStateChanged(const QModbusDevice::State state)
 {
-    bool connected = m_client && state == QModbusDevice::ConnectedState;
-    if (m_client && (state == QModbusDevice::UnconnectedState
-                     || state == QModbusDevice::ClosingState ))
-    {
+    bool isDisconnected = m_client && ( (state == QModbusDevice::UnconnectedState)
+                                        || (state == QModbusDevice::ClosingState) );
+    if (isDisconnected) {
         m_reconnectCounter++;
         mbDebug() << QString("Cannot connect to Modbus device %1 at %2 time!")
-                     .arg(description()).arg(m_reconnectCounter);
-
+                     .arg(description()).arg(m_reconnectCounter).toStdString().c_str();
         if (m_connectionType == Serial) {
             updateToNewPort();
         }
-
-        QTimer::singleShot(RECONNECT_TIME_MS, this, &ModbusClient::deviceConnect);
+        m_reconnectTimer->start();
     }
 
-    setConnected(connected);
+    bool isConnected = m_client && state == QModbusDevice::ConnectedState;
+    setConnected(isConnected);
 }
 
-void ModbusClient::readReady(const quint8 slaveAddress, const QModbusDataUnit reply)
+void ModbusClient::onDeviceErrorOccured(const QModbusDevice::Error error)
+{
+    bool isConnectionError = (error == QModbusDevice::ConnectionError)
+            || (error == QModbusDevice::ReplyAbortedError)
+            || (error == QModbusDevice::UnknownError);
+    if (isConnectionError) {
+        mbDebug() << QString("Modbus device %1 error occured:").arg(description()).toStdString().c_str()
+                  << error;
+        setConnected(false);
+        m_reconnectTimer->start();
+    }
+}
+
+void ModbusClient::onReadReady(const quint8 slaveAddress, const QModbusDataUnit reply)
 {
     if (!reply.isValid()) {
         return;
@@ -324,7 +368,7 @@ void ModbusClient::readReady(const quint8 slaveAddress, const QModbusDataUnit re
     outputDataUnit(slaveAddress, reply);
 }
 
-void ModbusClient::queryFailed(const quint8 slaveAddress, const QString error)
+void ModbusClient::onQueryFailed(const quint8 slaveAddress, const QString &error)
 {
     mbDebug() << Q_FUNC_INFO << "slave" << slaveAddress << error;
     // error handling
@@ -399,7 +443,7 @@ void ModbusClient::onSlaveStateChanged(const quint8 slaveAddress, bool connected
     if (connected) {
         // добавляем в цикл опроса Master'а все запросы для Slave-устройства
         mbDebug() << "slave" << slaveAddress << "came back. Poll is starting...";
-        for (auto &request : requestsList) {
+        for (const auto &request : qAsConst(requestsList)) {
             auto query = createReadQuery(slaveAddress, request.dataUnit, request.pollRate);
             m_scheduler->append(query);
         }
@@ -413,6 +457,14 @@ void ModbusClient::onSlaveStateChanged(const quint8 slaveAddress, bool connected
     }
 }
 
+void ModbusClient::onConnectionChanged()
+{
+    if (!isConnected()) {
+        setFirstReadDone(false);
+        m_reconnectTimer->start();
+    }
+}
+
 void ModbusClient::sendWriteRequest(const quint8 slaveAddress, const QModbusDataUnit &request)
 {
     if (!isConnected()) {
@@ -423,7 +475,7 @@ void ModbusClient::sendWriteRequest(const quint8 slaveAddress, const QModbusData
     auto query = new ModbusWriteQuery(m_client, request, slaveAddress, noDelay, this);
     m_writeQueries.append(query);
     connect(query, &ModbusWriteQuery::receivedError,
-            this, &ModbusClient::queryFailed);
+            this, &ModbusClient::onQueryFailed);
     connect(query, &ModbusWriteQuery::receivedError,
             this, &ModbusClient::countErrors);
     connect(query, &ModbusWriteQuery::receivedReply,
@@ -500,9 +552,9 @@ void ModbusClient::outputDataUnit(const quint8 slaveAddress, const QModbusDataUn
     mbDebug() << replyText;
 }
 
-void ModbusClient::emitFirstReadDone()
+void ModbusClient::updateFirstReadDone()
 {
-    if (m_firstReadDone) {
+    if (isFirstReadDone()) {
         return;
     }
 
@@ -515,8 +567,7 @@ void ModbusClient::emitFirstReadDone()
     }
 
     if (allQueriesDone) {
-        m_firstReadDone = true;
-        emit firstReadDone();
+        setFirstReadDone(true);
     }
 }
 
@@ -556,9 +607,8 @@ void ModbusClient::setConnectionParameters()
                                          tcpSettings.port);
         mbDebug() << channelId() << m_queryDataMap.first().dataUnit.startAddress();
         break;
-    case ModbusConnectionType::Unknown:
-        throw std::runtime_error("Modbus Source connection type is unknown!");
-        break;
+    case Unknown:
+        throw std::invalid_argument("Modbus Settings Error");
     }
     m_client->setTimeout(m_connectionSettings.response_time);
     m_client->setNumberOfRetries(m_connectionSettings.number_of_retries);
@@ -579,15 +629,15 @@ ModbusReadQuery* ModbusClient::createReadQuery(const quint8 slaveAddress, const 
     auto query = new ModbusReadQuery(m_client, request, slaveAddress, pollRate, this);
     m_readQueries.append(query);
     connect(query, &ModbusReadQuery::receivedReply,
-            this, &ModbusClient::readReady);
+            this, &ModbusClient::onReadReady);
     connect(query, &ModbusReadQuery::receivedReply,
             this, &ModbusClient::resetConnectionState);
     connect(query, &ModbusReadQuery::receivedError,
-            this, &ModbusClient::queryFailed);
+            this, &ModbusClient::onQueryFailed);
     connect(query, &ModbusReadQuery::receivedError,
             this, &ModbusClient::countErrors);
     connect(query, &ModbusReadQuery::finished,
-            this, &ModbusClient::emitFirstReadDone);
+            this, &ModbusClient::updateFirstReadDone);
     return query;
 }
 
@@ -595,11 +645,15 @@ ModbusDeviceInfo ModbusClient::createDeviceInfo(const quint8 deviceAddress)
 {
     auto deviceInfo = ModbusDeviceInfo{};
     if (type() == ModbusConnectionType::Serial) {
-        deviceInfo = ModbusDeviceInfo(deviceAddress, m_connectionSettings.serial.port_name, m_deviceNames);
+        deviceInfo = ModbusDeviceInfo(deviceAddress,
+                                      m_connectionSettings.serial.port_name,
+                                      m_connectionSettings.name,
+                                      m_deviceNames);
     } else if (type() == ModbusConnectionType::Tcp) {
         deviceInfo = ModbusDeviceInfo(deviceAddress,
                                       m_connectionSettings.tcp.host,
                                       m_connectionSettings.tcp.port,
+                                      m_connectionSettings.name,
                                       m_deviceNames);
     }
     return deviceInfo;
@@ -703,7 +757,6 @@ std::string ModbusClient::registerTypeToString(const QModbusDataUnit::RegisterTy
     default: return "";
     }
 }
-
 
 #ifdef TEST_MODE
 void ModbusClient::sendData()

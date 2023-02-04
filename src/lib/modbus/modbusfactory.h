@@ -4,7 +4,7 @@
 #include <QObject>
 #include <QHash>
 #include "modbusclient.h"
-#include "redis-adapter/settings/modbussettings.h"
+#include "redis-adapter/settings/settings.h"
 
 namespace Modbus {
     class RADAPTER_SHARED_SRC ModbusFactory;
@@ -33,15 +33,15 @@ signals:
                           const QModbusDataUnit::RegisterType tableType,
                           const quint16 startAddress,
                           bool hasSucceeded);
-    void connectionChanged(const QStringList &deviceNames, const bool connected);
+    void connectionChanged(const Modbus::ModbusDeviceInfo &deviceInfo, const bool connected);
     void initRequested(const quint8 deviceId);
 
 public slots:
     void notifyDataChange(quint8 deviceId, const Modbus::ModbusRegistersTableMap &registersMap);
     void changeDeviceData(const QString &deviceName,
-                        const quint8 deviceId,
-                        const QModbusDataUnit::RegisterType tableType,
-                        const Modbus::ModbusRegistersTable &registersTable);
+                          const quint8 deviceId,
+                          const QModbusDataUnit::RegisterType tableType,
+                          const Modbus::ModbusRegistersTable &registersTable);
 
 private slots:
     void onConnectionChanged(bool connected);
@@ -56,7 +56,7 @@ private:
     QList<Settings::ModbusSlaveInfo> filterDevicesByType(const QList<Settings::ModbusSlaveInfo> &slaveInfoList,
                                                          const Settings::ModbusConnectionType type);
     QList<QList<Settings::ModbusSlaveInfo>> groupDevicesBySource(const QList<Settings::ModbusSlaveInfo> &devicesList);
-   QStringList getRegistersPackNames(const QList<Settings::ModbusSlaveInfo> &slaves);
+    QStringList getRegistersPackNames(const QList<Settings::ModbusSlaveInfo> &slaves);
     QList<Settings::ModbusSlaveInfo> extractDevices(const QList<Settings::ModbusChannelSettings> &channelsList);
 
     ModbusDeviceInfoMap deviceInfoListToAddressMap(const ModbusDeviceInfoList &deviceInfoList);

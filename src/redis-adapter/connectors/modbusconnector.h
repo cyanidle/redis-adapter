@@ -28,7 +28,7 @@ public slots:
 private slots:
     void writeJson(const JsonDict &jsonDict, bool *isAbleToWrite);
     void onWriteResultReady(const QVariant &modbusUnitJson, bool successful);
-    void onConnectionChanged(const QStringList &deviceNames, const bool connected);
+    void onConnectionChanged(const Modbus::ModbusDeviceInfo &deviceInfo, const bool connected);
     void emitWriteDone(const JsonDict &writeRequest);
 private:
     //Send Commands
@@ -59,6 +59,7 @@ private:
     QThread* m_modbusThread;
     QString m_lastWriteId;
     JsonDict m_lastWriteRequest;
+    QString channelNameBySource(const QString &sourceName);
 };
 
 #endif // MODBUSCONNECTOR_H

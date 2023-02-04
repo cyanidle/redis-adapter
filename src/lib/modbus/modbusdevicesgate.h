@@ -3,7 +3,7 @@
 
 #include <QObject>
 #include <QVariant>
-#include "redis-adapter/settings/modbussettings.h"
+#include "redis-adapter/settings/settings.h"
 #include "modbusclient.h"
 
 typedef QMultiMap<QString, QVariant> QVariantMultiMap;
@@ -28,8 +28,6 @@ public:
     QVariantMap unpackJsonDevicesData(const QVariantMap &jsonData) const;
     bool isPackedJsonUnit(const QVariantMap &jsonUnit) const;
 
-    static QList<quint16> splitRegValue(const QVariant &regValue, const QMetaType::Type type);
-    static QVariant extractRegValueByType(const QMetaType::Type &type, const QByteArray &dataBytes, const QDataStream::ByteOrder byteOrder);
     FullRegisterName splitFullRegisterName(const QString &fullRegisterName) const;
 
     void writeJsonToModbusDevice(const QVariant &jsonData, bool *isAbleToWrite = nullptr);
@@ -111,7 +109,7 @@ private:
     QVariantMultiMap joinDeviceInfoUnits(const QVariantList &deviceInfoUnits) const;
     QVariantMap groupJsonByDeviceName(const QVariantMultiMap &jsonUnitData) const;
     bool areValuesValid(const QList<Settings::RegisterInfo> &regInfoList) const;
-   QStringList deviceNamesListById(const quint8 deviceId) const;
+    QStringList deviceNamesListById(const quint8 deviceId) const;
     quint8 getDeviceInfoUnitDepthLevel(const QString &deviceGroup) const;
     Modbus::ModbusDeviceInfo findConnectionInfo(const QString deviceName) const;
     bool hasDeviceMatch(const QStringList &sourceDevicesList, const QString &targetDeviceName) const;
@@ -127,20 +125,22 @@ private:
     QVariant buildRegValue(const QString &deviceName, const Settings::RegisterInfo &regInfo) const;
     QVariantList buildRegValuesList(const QString &deviceName, const QList<Settings::RegisterInfo> &regInfoList) const;
     RegisterBytes wordToBytes(const quint16 regValue, const QDataStream::ByteOrder byteOrder) const;
-    quint16 bytesToWord(const RegisterBytes &regValue) const;
+    quint16 bytesToWord(const RegisterBytes &regBytes) const;
     QByteArray packRegisterData(const QString &deviceName, const QModbusDataUnit::RegisterType tableType, const RegisterData &regData) const;
+    QVariant extractRegValueByType(const QMetaType::Type &type, const QByteArray &dataBytes, const QDataStream::ByteOrder byteOrder) const;
     QMetaType::Type getTypeByRegisterData(const QString &deviceName, const QModbusDataUnit::RegisterType tableType, const RegisterData &regData) const;
     quint16 calculateHighWordAddress(const quint16 lowWordAddress, const QDataStream::ByteOrder wordOrder) const;
     quint16 calculateLowWordAddress(const quint16 highWordAddress, const QDataStream::ByteOrder wordOrder) const;
     bool hasHighAddress(const RegisterData &regData) const;
     quint16 getSecondWordAddress(const RegisterData &regInfo) const;
+    QList<quint16> splitRegValue(const QVariant &regValue, const QMetaType::Type type) const;
     Modbus::ModbusRegistersTableMap createRegistersMap(const QString &deviceName,
                                                        const QModbusDataUnit::RegisterType tableType,
                                                        const quint16 regAddress,
                                                        const QVariant &regValue,
                                                        const RegisterData &regInfo) const;
     QString getFirstDeviceName(const quint8 deviceId, const QModbusDataUnit::RegisterType tableType, const quint16 regAddress) const;
-   QStringList getDevicesNameList(const quint8 deviceId, const QModbusDataUnit::RegisterType tableType, const QList<quint16> &regAddresses) const;
+    QStringList getDevicesNameList(const quint8 deviceId, const QModbusDataUnit::RegisterType tableType, const QList<quint16> &regAddresses) const;
     Modbus::ModbusRegistersTableMap buildRegisterDataByAddress(const QString &deviceName, const QModbusDataUnit::RegisterType tableType, const quint16 regAddress, const QVariant &regValue) const;
     Modbus::ModbusRegistersTableMap buildRegisterDataByInfoList(const QString &deviceName,
                                                            const QList<Settings::RegisterInfo> &registersInfo,
@@ -159,7 +159,6 @@ private:
                                          const quint8 deviceId,
                                          const QModbusDataUnit::RegisterType tableType,
                                          const quint16 startAddress);
-
 
     QList<WriteRequestInfo> m_writeRequests;
     Settings::DeviceRegistersInfoMap m_devicesConfigInfo;
