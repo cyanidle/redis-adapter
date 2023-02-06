@@ -1,7 +1,7 @@
 #include <QCoreApplication>
 #include <QThread>
 #include "settings-parsing/filereader.h"
-#include "redis-adapter/launcher.h"
+#include "launcher.h"
 
 int main (int argc, char **argv) {
     QCoreApplication app(argc, argv);

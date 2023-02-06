@@ -12,14 +12,7 @@ HEADERS += \
     $$PWD/hiredis/sds.h \
     $$PWD/hiredis/sdsalloc.h \
     $$PWD/hiredis/sockcompat.h \
-    $$PWD/hiredis/win32.h \
-    $$PWD/modbus/modbusclient.h \
-    $$PWD/modbus/modbusdevicesgate.h \
-    $$PWD/modbus/modbusfactory.h \
-    $$PWD/modbus/modbusquery.h \
-    $$PWD/modbus/modbusscheduler.h \
-    $$PWD/modbus/modbusdeviceinfo.h \
-    $$PWD/mysql/mysqlclient.h \
+    $$PWD/hiredis/win32.h
 
 
 SOURCES += \
@@ -30,17 +23,9 @@ SOURCES += \
     $$PWD/hiredis/net.c \
     $$PWD/hiredis/read.c \
     $$PWD/hiredis/sds.c \
-    $$PWD/hiredis/sockcompat.c \
-    $$PWD/modbus/modbusclient.cpp \
-    $$PWD/modbus/modbusdevicesgate.cpp \
-    $$PWD/modbus/modbusfactory.cpp \
-    $$PWD/modbus/modbusquery.cpp \
-    $$PWD/modbus/modbusscheduler.cpp \
-    $$PWD/modbus/modbusdeviceinfo.cpp \
-    $$PWD/mysql/mysqlclient.cpp 
+    $$PWD/hiredis/sockcompat.c 
 
 INCLUDEPATH += \
     $$PWD \
     $$PWD/googletest
 
-include($$PWD/radapter-broker/radapter-broker.pri)

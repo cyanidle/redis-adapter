@@ -1,0 +1,4 @@
+
+INCLUDEPATH += \
+    $$PWD \
+    $$PWD/googletest

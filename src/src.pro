@@ -1,5 +1,11 @@
 TEMPLATE = lib
-include(../qtmodules.pri)
+QT -= gui
+QT += core \
+    serialbus \
+    serialport \
+    sql \
+    websockets \
+    network
 
 CONFIG(debug, debug|release){
     TARGET = radapter-sdkd
@@ -24,7 +30,7 @@ gcc {
     QMAKE_CXXFLAGS += -fpic
 }
 
-include($$PWD/redis-adapter.pri)
+include($$PWD/../radapter_src.pri)
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
