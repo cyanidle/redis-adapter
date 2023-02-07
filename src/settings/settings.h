@@ -24,24 +24,47 @@ namespace Settings {
 
     struct RADAPTER_SHARED_SRC TcpDevice : public ServerInfo {
         typedef QMap<QString, TcpDevice> Map;
-        static Map &cacheMap() {
+        Q_GADGET
+        IS_SERIALIZABLE
+        SERIAL_FIELD(QString, name, DEFAULT)
+        SERIAL_POST_INIT([this](){if (!name.isEmpty()) table().insert(name, *this);})
+        static bool has(const QString &name) {return table().contains(name);}
+        static const TcpDevice &get(const QString &name) {
+            if (!table().contains(name)) throw std::invalid_argument("Missing TCP Device: " + name.toStdString());
+            return table()[name];
+        }
+    protected:
+        static Map &table() {
             static Map map{};
             return map;
         }
+    };
+
+    struct RADAPTER_SHARED_SRC SerialDevice : public Serializer::SerializableGadget {
+        typedef QMap<QString, SerialDevice> Map;
         Q_GADGET
         IS_SERIALIZABLE
-        SERIAL_FIELD(QString, name)
-        QString repr() const {
-            return QStringLiteral("Tcp dev %1; Host: %2; Port: %3")
-                .arg(name, host)
-                .arg(port);
+        SERIAL_FIELD(QString, port_name);
+
+        SERIAL_FIELD(QString, name, DEFAULT);
+        SERIAL_FIELD(int, parity, QSerialPort::NoParity)
+        SERIAL_FIELD(int, baud, QSerialPort::Baud115200)
+        SERIAL_FIELD(int, data_bits, QSerialPort::Data8)
+        SERIAL_FIELD(int, stop_bits, QSerialPort::OneStop)
+        SERIAL_POST_INIT([this](){if (!name.isEmpty()) table().insert(name, *this);})
+        static bool has(const QString &name) {return table().contains(name);}
+        static const SerialDevice &get(const QString &name) {
+            if (!table().contains(name)) throw std::invalid_argument("Missing SERIAL Device: " + name.toStdString());
+            return table()[name];
         }
-        SERIAL_POST_INIT(cache)
-        void cache() {
-            cacheMap().insert(name, *this);
+    protected:
+        static Map &table() {
+            static Map map{};
+            return map;
         }
     };
-    
+
+
     struct RADAPTER_SHARED_SRC SqlClientInfo : ServerInfo {
         typedef QMap<QString, SqlClientInfo> Map;
         Q_GADGET
@@ -51,9 +74,7 @@ namespace Settings {
         SERIAL_FIELD(QString, username)
         SERIAL_POST_INIT([this](){table().insert(name, *this);})
         static const SqlClientInfo &get(const QString& name) {
-            if (!table().contains(name)) {
-                throw std::invalid_argument("Missing Sql Client with name: " + name.toStdString());
-            }
+            if (!table().contains(name)) throw std::invalid_argument("Missing Sql Client with name: " + name.toStdString());
             return table()[name];
         }
     protected:

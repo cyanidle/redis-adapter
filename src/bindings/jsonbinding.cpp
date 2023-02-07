@@ -141,7 +141,7 @@ const QRegExp &JsonBinding::matcher()
 
 void JsonBinding::checkValues(const JsonDict &values, const QString &funcName) const
 {
-    auto keys = values.keysDeep();
+    auto keys = values.keys();
     if (!unorderedEqual(keys, availableValueNames())) {
         bindingsError() << "Binding (" << m_name << "):" << funcName << ": Error:";
         bindingsError() << "Filter did not provide enough value names or provided excess ones!";

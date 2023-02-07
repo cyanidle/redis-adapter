@@ -5,6 +5,8 @@
 #include <cstring>
 #include <QDataStream>
 
+namespace Utils {
+
 template<typename T>
 inline QVector<quint16> toWords(const T& src) {
     static_assert(!(sizeof(T)%2), "Cannot cast to words type with odd length");
@@ -17,45 +19,8 @@ inline QVector<quint16> toWords(const T& src) {
     return out;
 }
 
-inline QVector<quint16> toWords(const void* src, int sizeWords) {
-    QVector<quint16> result(sizeWords);
-    std::memcpy(result.data(), src, sizeWords*2);
-    return result;
-}
-
 constexpr QDataStream::ByteOrder getEndianess() {
     return Q_BYTE_ORDER == Q_LITTLE_ENDIAN ? QDataStream::LittleEndian : QDataStream::BigEndian;
-}
-
-inline void applyToWords(quint16 *words, int sizeWords, QDataStream::ByteOrder wordOrder) {
-    if (wordOrder != getEndianess()) {
-        for (int i = 0; i < sizeWords/2; ++i) {
-            std::swap(words[i], words[sizeWords - i - 1]);
-        }
-    }
-}
-
-inline void applyToBytes(quint16 *words, int sizeWords, QDataStream::ByteOrder byteOrder) {
-    if (byteOrder != getEndianess()) {
-        auto sizeBytes = sizeWords*2;
-        QVector<quint8> bytes(sizeBytes);
-        std::memcpy(bytes.data(), words, sizeBytes);
-        for (int i = 0; i < sizeBytes/2; ++i) {
-            std::swap(bytes[i], bytes[sizeBytes - 1 - i]);
-        }
-        std::memcpy(words, bytes.data(), sizeBytes);
-    }
-}
-
-inline void applyEndianness(quint16 *words, const Settings::PackingMode endianess,
-                            int sizeWords, bool receive) {
-    if (!receive) {
-        applyToBytes(words, sizeWords, endianess.byte_order);
-    }
-    applyToWords(words, sizeWords, endianess.word_order);
-    if (receive) {
-        applyToBytes(words, sizeWords, endianess.byte_order);
-    }
 }
 
 template <typename To, typename From>
@@ -79,6 +44,17 @@ bit_cast(const From& src) {
     To result;
     std::memcpy(&result, &src, sizeof(To));
     return result;
+}
+
+QVariant parseModbusType(quint16* words, const Settings::RegisterInfo &regInfo, int sizeWords, const Settings::PackingMode &endianess);
+QModbusDataUnit parseValueToDataUnit(const QVariant &src, const Settings::RegisterInfo &regInfo, const Settings::PackingMode &endianess);
+QList<QModbusDataUnit> mergeDataUnits(const QList<QModbusDataUnit> &src);
+void applyEndianness(quint16 *words, const Settings::PackingMode endianess, int sizeWords, bool receive);
+QVector<quint16> toWords(const void* src, int sizeWords);
+void applyToWords(quint16 *words, int sizeWords, QDataStream::ByteOrder wordOrder);
+void applyToBytes(quint16 *words, int sizeWords, QDataStream::ByteOrder byteOrder);
+
+
 }
 
 #endif // WORDOPERATIONS_H

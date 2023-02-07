@@ -63,10 +63,11 @@ void Launcher::preInit()
     reDebug() << "config: Sql clients count: " << sqlClientsInfo.size();
 
     setTomlPath("modbus.toml");
-    auto tcpDevices = parseTomlArray<Settings::TcpDevice>("modbus.tcp.devices");
-    reDebug() << "config: Tcp devices count: " << tcpDevices.size();
-    auto rtuDevices = parseTomlArray<Settings::SerialDevice>("modbus.rtu.devices");
-    reDebug() << "config: Rtu devices count: " << rtuDevices.size();
+    auto mbDevices = parseTomlArray<Settings::ModbusDevice>("modbus.devices");
+    reDebug() << "config: Modbus devices count: " << mbDevices.size();
+
+    setTomlPath("registers.toml");
+    Settings::parseRegisters(readToml());
 }
 
 
@@ -138,13 +139,11 @@ void Launcher::initRedis()
 void Launcher::initModbus()
 {
     setTomlPath("modbus.toml");
-    for (const auto& slaveInfo : parseTomlArray<Settings::ModbusSlaveWorker>("modbus_slave")) {
+    for (const auto& slaveInfo : parseTomlArray<Settings::ModbusSlave>("modbus.slave")) {
         addWorker(new Modbus::Slave(slaveInfo, new QThread(this)));
     }
-    auto modbusConnSettings = parseTomlObj<Settings::ModbusConnectionSettings>("modbus");
-    if (modbusConnSettings.isValid()) {
-        setTomlPath("registers.toml");
-        auto mbRegisters = Settings::DeviceRegistersInfoMapParser::parse(readToml("registers").toMap());
+    for (const auto& masterInfo : parseTomlArray<Settings::ModbusMaster>("modbus.master")) {
+        addWorker(new Modbus::Master(masterInfo, new QThread(this)));
     }
 }
 

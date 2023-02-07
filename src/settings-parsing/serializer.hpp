@@ -308,8 +308,8 @@ struct Implementations {
 /// Must implement set_val, get_val, get_map, can be overloaded based on additional args (set_args, get_args, map_args)
 template<typename T, typename Decay, typename... Extra>
 struct FieldConcept {
-    static_assert(QMetaTypeId2<Decay>::Defined || is_nested<Decay>(),
-                  "Underlying type must be registered with Q_DECLARE_METATYPE or inherit Serializable!");
+    static_assert(QMetaTypeId2<Decay>::Defined,
+            "Underlying type must be registered with Q_DECLARE_METATYPE!");
     template<typename Holder>
     static QVariantMap get_map(const Holder * obj, const T& val, QString &&name, int) {
         Radapter::Unused(obj, val);
@@ -355,8 +355,8 @@ struct FieldConcept {
 
 template<typename T, typename Decay, typename... Extra>
 struct ContainerConcept {
-    static_assert(QMetaTypeId2<Decay>::Defined || is_nested<Decay>(),
-                  "Underlying type must be registered with Q_DECLARE_METATYPE or inherit Serializable!");
+    static_assert(QMetaTypeId2<Decay>::Defined,
+            "Underlying type must be registered with Q_DECLARE_METATYPE!");
     template<typename Holder>
     static QVariantMap get_map(const Holder * obj, const T& val, QString &&name, int) {
         Radapter::Unused(obj, val);
@@ -416,8 +416,8 @@ struct ContainerConcept {
 
 template<typename T, typename Decay, typename... Extra>
 struct MapConcept  {
-    static_assert(QMetaTypeId2<Decay>::Defined || is_nested<Decay>(),
-                  "Underlying type must be registered with Q_DECLARE_METATYPE/Q_ENUM/inherit Serializable!");
+    static_assert(QMetaTypeId2<Decay>::Defined,
+            "Underlying type must be registered with Q_DECLARE_METATYPE!");
     template<typename Holder>
     static QVariantMap get_map(const Holder * obj, const T& val, QString &&name, int) {
         Radapter::Unused(obj, val);

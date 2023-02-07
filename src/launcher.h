@@ -36,7 +36,7 @@ private:
     QList<T> parseTomlArray(const QString &tomlPath);
     template <typename T>
     T parseTomlObj(const QString &tomlPath, bool mustHave = false);
-    QVariant readToml(const QString &tomlPath);
+    QVariant readToml(const QString &tomlPath = "");
     bool setTomlPath(const QString &tomlPath);
     QHash<Worker*, QSet<InterceptorBase*>> m_workers;
     Settings::FileReader* m_filereader;

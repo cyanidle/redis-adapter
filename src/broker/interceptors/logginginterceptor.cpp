@@ -90,11 +90,15 @@ void LoggingInterceptor::enqueueMsg(const WorkerMsg &msg)
 void LoggingInterceptor::onMsgFromWorker(const Radapter::WorkerMsg &msg)
 {
     emit msgToBroker(msg);
-    if (isFull() && m_settings.rotating && testMsgForLog(msg)) {
-        m_array.removeFirst();
-        enqueueMsg(msg);
-    } else if (!isFull() && testMsgForLog(msg)) {
-        enqueueMsg(msg);
+    if (isFull() && m_settings.rotating) {
+        if (testMsgForLog(msg)) {
+            m_array.removeFirst();
+            enqueueMsg(msg);
+        }
+    } else if (!isFull()) {
+        if (testMsgForLog(msg)) {
+            enqueueMsg(msg);
+        }
     } else {
         brokerWarn() << this << "File is Full";
     }

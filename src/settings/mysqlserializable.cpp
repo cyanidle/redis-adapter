@@ -13,7 +13,6 @@ MySql::QueryRecord SqlSerializable::saveRecord()
     return {};
 }
 
-
 SqlQObject::SqlQObject(QObject *parent) :
     QObjectMixin(parent)
 {}

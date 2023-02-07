@@ -12,7 +12,7 @@ class RADAPTER_SHARED_SRC Slave : public Radapter::Worker
 {
     Q_OBJECT
 public:
-    Slave(const Settings::ModbusSlaveWorker &settings, QThread *thread);
+    Slave(const Settings::ModbusSlave &settings, QThread *thread);
     ~Slave();
 public slots:
     virtual void onMsg(const Radapter::WorkerMsg &msg) override;
@@ -21,13 +21,12 @@ private slots:
     void onErrorOccurred(QModbusDevice::Error error);
     void onStateChanged(QModbusDevice::State state);
 private:
-    Settings::DeviceRegistersInfo &deviceRegisters() {return m_settings.registers;}
-    static QVariant parseType(quint16 *words, const Settings::RegisterInfo &regInfo, int sizeWords);
+    Settings::Registers &deviceRegisters() {return m_settings.registers;}
     void connectDevice();
     void disconnectDevice();
-    QModbusDataUnit parseValueToDataUnit(const QVariant &src, const Settings::RegisterInfo &regInfo);
+    const Settings::ModbusSlave &config() const {return m_settings;}
 
-    Settings::ModbusSlaveWorker m_settings;
+    Settings::ModbusSlave m_settings;
     QTimer *m_reconnectTimer = nullptr;
     QHash<QModbusDataUnit::RegisterType, QHash<int /*index*/, QString>> m_reverseRegisters;
     QModbusServer *modbusDevice = nullptr;

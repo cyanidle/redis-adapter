@@ -35,6 +35,18 @@ struct ContextManager {
         m_ctxs[handle]->setHandle(handle);
         return handle;
     }
+    template <typename Derived = Context, typename...Args>
+    Handle create(Handle handle, Args&&...args) {
+        if (m_ctxs.contains(handle)) {
+            throw std::invalid_argument("Shadowing handle!");
+        }
+        if (!handle) {
+            throw std::invalid_argument("Zero value handle!");
+        }
+        m_ctxs[handle] = new Derived(std::forward<Args>(args)...);
+        m_ctxs[handle]->setHandle(handle);
+        return handle;
+    }
     Context &get(Handle handle);
     const Context &get(Handle handle) const;
     void remove(Handle handle);

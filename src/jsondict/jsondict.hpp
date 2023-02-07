@@ -99,14 +99,10 @@ public:
     inline bool contains(const QString &key) const;
     inline bool contains(const QStringList &key) const;
     inline bool contains(const JsonDict &src) const;
-    inline const QString &firstKey() const;
-    inline const QString &lastKey() const;
-    inline QStringList firstKeyDeep() const;
+    inline QStringList firstKey() const;
     inline QVariant &first();
     inline const QVariant &first() const;
-    inline QVariant &firstDeep();
-    inline const QVariant &firstDeep() const;
-    inline QStringList keysDeep(const QString &separator = ":") const;
+    inline QStringList keys(const QString &separator = ":") const;
     inline QStringList topKeys() const;
     inline int remove(const QStringList &akey);
     inline QVariant take(const QStringList &akey);
@@ -162,6 +158,7 @@ struct JsonDict::iterator_base {
     iterator_base &operator++();
     iterator_base operator++(int);
     iterator_base &operator*();
+    qual_val_t *operator->();
     iterator_base(Iter start, Iter end);
 protected:
     constexpr bool isEnd () const noexcept {return m_flags.testFlag(IsEnd);}
@@ -188,6 +185,7 @@ struct JsonDict::const_iterator : public iterator_base<QVariantMap::const_iterat
     using iterator_base::operator!=;
     using iterator_base::operator==;
     using iterator_base::operator*;
+    using iterator_base::operator->;
     using iterator_base::value;
     using iterator_base::key;
     using iterator_base::depth;
@@ -202,6 +200,7 @@ struct JsonDict::iterator : public iterator_base<QVariantMap::iterator, QVariant
     using iterator_base::operator!=;
     using iterator_base::operator==;
     using iterator_base::operator*;
+    using iterator_base::operator->;
     using iterator_base::value;
     using iterator_base::key;
     using iterator_base::depth;
@@ -303,6 +302,13 @@ JsonDict::iterator_base<Iter, MapT> &JsonDict::iterator_base<Iter, MapT>::operat
 }
 
 template<typename Iter, typename MapT>
+typename
+JsonDict::iterator_base<Iter, MapT>::qual_val_t *JsonDict::iterator_base<Iter, MapT>::operator->()
+{
+    return &value();
+}
+
+template<typename Iter, typename MapT>
 JsonDict::iterator_base<Iter, MapT>::iterator_base(Iter start, Iter end) :
     m_current(start),
     m_end(end),
@@ -348,7 +354,7 @@ int JsonDict::deepCount() const
     return count;
 }
 
-QStringList JsonDict::keysDeep(const QString &separator) const
+QStringList JsonDict::keys(const QString &separator) const
 {
    QStringList result{};
     for (const auto &iter: *this) {
@@ -711,50 +717,33 @@ bool JsonDict::isEmpty() const
 {
     return m_dict.isEmpty();
 }
-const QString &JsonDict::firstKey() const
-{
-    return m_dict.firstKey();
-}
-const QString &JsonDict::lastKey() const
-{
-    return m_dict.lastKey();
-}
-
-inline QStringList JsonDict::firstKeyDeep() const
-{
-    for (auto &iter : *this) {
-        return iter.key();
-    }
-    throw std::invalid_argument("firstKeyDeep() on Empty JsonDict!");
-}
-
-QVariant &JsonDict::first()
-{
-    return m_dict.first();
-}
 int JsonDict::count() const
 {
     return m_dict.count();
 }
-const QVariant &JsonDict::first() const
+
+QStringList JsonDict::firstKey() const
 {
-    return m_dict.first();
+    for (auto &iter : *this) {
+        return iter.key();
+    }
+    throw std::invalid_argument("firstKey() on Empty JsonDict!");
 }
 
-inline QVariant &JsonDict::firstDeep()
+inline QVariant &JsonDict::first()
 {
     for (auto &iter : *this) {
         return iter.value();
     }
-    throw std::invalid_argument("firstDeep() on Empty JsonDict!");
+    throw std::invalid_argument("first() on Empty JsonDict!");
 }
 
-inline const QVariant &JsonDict::firstDeep() const
+inline const QVariant &JsonDict::first() const
 {
     for (auto &iter : *this) {
         return iter.value();
     }
-    throw std::invalid_argument("firstDeep() on Empty JsonDict!");
+    throw std::invalid_argument("first() on Empty JsonDict!");
 }
 QVariant& JsonDict::operator[](const QString& akey)
 {

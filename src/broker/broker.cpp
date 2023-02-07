@@ -172,7 +172,8 @@ void Broker::connectTwoProxies(WorkerProxy* producer, WorkerProxy* consumer)
     if (m_connected.contains(pair)) {
         return;
     }
-    brokerInfo() << "\nConnecting:\n == Producer(" << producer->parent() << ") -->\n == Consumer(" << consumer->parent() << ")";
+    brokerInfo() << "\nConnecting:\n == Producer(" << producer->worker()->printSelf()
+                 << ") -->\n == Consumer(" << consumer->worker()->printSelf() << ")";
     connect(producer, &WorkerProxy::msgToBroker,
             consumer, &WorkerProxy::onMsgFromBroker,
             consumer->thread() == producer->thread()
