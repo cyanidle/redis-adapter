@@ -89,10 +89,10 @@ void Slave::onDataWritten(QModbusDataUnit::RegisterType table, int address, int 
             ok = modbusDevice->data(QModbusDataUnit::InputRegisters, quint16(address + i), &(words[i]));
             break;
         default:
-            reWarn() << "Invalid data written: Adress: " << address + i << "; Table: " << table;
+            reWarn() << printSelf() << "Invalid data written: Adress: " << address + i << "; Table: " << table;
         }
         if (!ok) {
-            reWarn() << "Error reading data! Adress:" << address << "; Table:" << table;
+            reWarn() << printSelf() << "Error reading data! Adress:" << address << "; Table:" << table;
             continue;
         }
     }

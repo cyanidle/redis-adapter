@@ -71,7 +71,7 @@ QList<QModbusDataUnit> Utils::mergeDataUnits(const QList<QModbusDataUnit> &src)
 QModbusDataUnit Utils::parseValueToDataUnit(const QVariant &src, const Settings::RegisterInfo &regInfo, const Settings::PackingMode &endianess)
 {
     if (!src.canConvert(regInfo.type)) {
-        reError() << "Error writing data to modbus slave: "
+        reError() << "Error writing data to modbus: "
                   << src << "; Index: " << regInfo.index;
         return {};
     }

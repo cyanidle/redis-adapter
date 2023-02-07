@@ -64,7 +64,7 @@ bool Master::isConnected() const
 void Master::onMsg(const Radapter::WorkerMsg &msg)
 {
     if (!m_connected) {
-        reDebug() << "Write while not connected!";
+        reDebug() << printSelf() << "Write while not connected!";
         return;
     }
     QList<QModbusDataUnit> results;
@@ -76,7 +76,7 @@ void Master::onMsg(const Radapter::WorkerMsg &msg)
             if (Q_LIKELY(value.canConvert(regInfo.type))) {
                 results.append(parseValueToDataUnit(value, regInfo, config().endianess));
             } else {
-                reWarn() << "Incorrect value type for slave: " << workerName() << "; Received: " << value << "; Key:" << fullKeyJoined;
+                reWarn() << printSelf() << ": Received: " << value << "; Key:" << fullKeyJoined;
             }
         }
     }
@@ -102,6 +102,13 @@ void Master::disconnectDevice()
 
 void Master::executeNext()
 {
+    setBusy(false);
+    tryExecuteNext();
+}
+
+void Master::tryExecuteNext()
+{
+    if (isBusy()) return;
     if (!m_writeQueue.isEmpty()) {
         executeWrite(m_writeQueue.dequeue());
     } else if (!m_readQueue.isEmpty()) {
@@ -134,11 +141,10 @@ void Master::onReadReady()
         reError() << printSelf() << ": Error Reading: " << reply->errorString();
         return;
     }
-    auto wordsVec = reply->result().values();
-    auto words = wordsVec.data();
+    auto words = reply->result().values();
     auto table = reply->result().registerType();
     JsonDict resultJson;
-    for (int i = 0; i < wordsVec.size();) {
+    for (int i = 0; i < words.size();) {
         if (!m_reverseRegisters[table].contains(reply->result().startAddress() + i)) {
             ++i;
             continue;
@@ -147,12 +153,14 @@ void Master::onReadReady()
         const auto &registersName = m_reverseRegisters[table][index];
         const auto &regData = config().registers[registersName];
         auto sizeWords = QMetaType::sizeOf(regData.type)/2;
-        auto result = parseModbusType(words + i, regData, sizeWords, config().endianess);
+        if (i + sizeWords > words.size()) {
+            break;
+        }
+        auto result = parseModbusType(words.data() + i, regData, sizeWords, config().endianess);
         i += sizeWords;
         resultJson.insert(registersName.split(':'), result);
     }
-    emit sendMsg(prepareMsg(resultJson));
-    emit requestDone();
+    formatAndSendJson(resultJson);
 }
 
 void Master::onWriteReady()
@@ -166,7 +174,6 @@ void Master::onWriteReady()
     } else {
         reError() << printSelf() << ": Error Writing: " << reply->errorString();
     }
-    emit requestDone();
 }
 
 void Master::doRead()
@@ -180,35 +187,72 @@ void Master::doRead()
     }
 }
 
+void Master::formatAndSendJson(const JsonDict &json)
+{
+    JsonDict result;
+    for (auto &newJson : json) {
+        auto key = newJson.key();
+        auto lastVal = m_lastJson.value(key);
+        if (lastVal != newJson.value()) {
+            result.insert(key, newJson.value());
+            m_lastJson[key] = newJson.value();
+        }
+    }
+    if (!result.isEmpty()) {
+        emit sendMsg(prepareMsg(result));
+    }
+}
+
 void Master::enqeueRead(const QModbusDataUnit &unit)
 {
     m_readQueue.enqueue(unit);
-    executeNext();
+    tryExecuteNext();
 }
 
 void Master::enqeueWrite(const QModbusDataUnit &unit)
 {
     m_writeQueue.enqueue(unit);
-    executeNext();
+    tryExecuteNext();
 }
 
 void Master::executeRead(const QModbusDataUnit &unit)
 {
+    setBusy();
     if (auto reply = m_device->sendReadRequest(unit, m_settings.slave_id)) {
         if (!reply->isFinished()) {
             QObject::connect(reply, &QModbusReply::finished, this, &Master::onReadReady);
         } else {
+            executeNext();
             delete reply;
         }
     } else {
+        executeNext();
         reError() << printSelf() << "Read Error: " << m_device->errorString();
     }
 }
 
 void Master::executeWrite(const QModbusDataUnit &unit)
 {
-    auto reply = m_device->sendWriteRequest(unit, m_settings.slave_id);
-    if (reply) {
-        QObject::connect(reply, &QModbusReply::finished, this, &Master::onWriteReady);
+    setBusy();
+    if (auto reply = m_device->sendWriteRequest(unit, m_settings.slave_id)) {
+        if (!reply->isFinished()) {
+            QObject::connect(reply, &QModbusReply::finished, this, &Master::onWriteReady);
+        } else {
+            executeNext();
+            delete reply;
+        }
+    } else {
+        executeNext();
+        reError() << printSelf() << "Write Error: " << m_device->errorString();
     }
+}
+
+bool Master::isBusy() const
+{
+    return m_isBusy;
+}
+
+void Master::setBusy(bool isBusy)
+{
+    m_isBusy = isBusy;
 }

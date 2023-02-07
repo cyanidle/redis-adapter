@@ -133,6 +133,7 @@ namespace Settings {
         SERIAL_CONTAINER(QList, ModbusQuery, queries)
         SERIAL_CONTAINER(QList, QString, register_names)
 
+        SERIAL_FIELD(quint32, channel, 0)
         SERIAL_FIELD(quint32, poll_rate, 500)
         SERIAL_FIELD(quint32, reconnect_timeout_ms, 5000)
         SERIAL_FIELD(quint32, responce_time, 150)

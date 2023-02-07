@@ -12,13 +12,14 @@ namespace Modbus {
 class Master : public Radapter::Worker
 {
     Q_OBJECT
+    Q_PROPERTY(bool busy READ isBusy WRITE setBusy NOTIFY busyChanged)
 public:
     Master(const Settings::ModbusMaster &settings, QThread *thread);
     void onRun() override;
     ~Master() override;
     bool isConnected() const;
 signals:
-    void requestDone();
+    void busyChanged(bool isBusy);
     void connected();
     void disconnected();
 public slots:
@@ -27,12 +28,16 @@ public slots:
     void disconnectDevice();
 private slots:
     void executeNext();
+    void tryExecuteNext();
     void onErrorOccurred(QModbusDevice::Error error);
     void onStateChanged(QModbusDevice::State state);
     void onReadReady();
     void onWriteReady();
     void doRead();
 private:
+    void formatAndSendJson(const JsonDict &json);
+    bool isBusy() const;
+    void setBusy(bool isBusy = true);
     void enqeueRead(const QModbusDataUnit &unit);
     void enqeueWrite(const QModbusDataUnit &unit);
     void executeRead(const QModbusDataUnit &unit);
@@ -47,6 +52,8 @@ private:
     bool m_connected{false};
     QQueue<QModbusDataUnit> m_readQueue{};
     QQueue<QModbusDataUnit> m_writeQueue{};
+    bool m_isBusy{false};
+    JsonDict m_lastJson{};
 };
 
 } // namespace Modbus
