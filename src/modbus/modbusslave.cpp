@@ -16,7 +16,7 @@ Slave::Slave(const Settings::ModbusSlave &settings, QThread *thread) :
     m_reconnectTimer->setInterval(settings.reconnect_timeout_ms);
     m_reconnectTimer->setSingleShot(true);
     m_reconnectTimer->callOnTimeout(this, &Slave::connectDevice);
-    connect(this->thread(), &QThread::started, this, &Slave::connectDevice);
+    connect(this->workerThread(), &QThread::started, this, &Slave::connectDevice);
     if (settings.device.tcp) {
         modbusDevice = new QModbusTcpServer(this);
         modbusDevice->setConnectionParameter(QModbusDevice::NetworkPortParameter, settings.device.tcp->port);
@@ -118,7 +118,7 @@ void Slave::onDataWritten(QModbusDataUnit::RegisterType table, int address, int 
                 msg[regString.split(":")] = result;
             }
         } else {
-            reWarn() << "Modbus Slave error: Current adress: " << address;
+            reWarn() << "Modbus Slave error: Current adress: " << address + i;
         }
     }
     emit sendMsg(msg);

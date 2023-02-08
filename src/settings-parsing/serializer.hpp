@@ -8,7 +8,7 @@
 #include <stdexcept>
 #include "templates/metaprogramming.hpp"
 #include "private/global.h"
-#include "private/brokerlogging.h"
+#include "radapterlogging.h"
 namespace Serializer {
 struct Serializable
 {

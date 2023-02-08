@@ -10,6 +10,7 @@
 #include "broker/interceptors/interceptor.h"
 #include "workersettings.h"
 #include "broker/events/brokerevent.h"
+#include "workerdebug.h"
 
 namespace Radapter {
 class Broker;
@@ -19,7 +20,8 @@ class RADAPTER_SHARED_SRC Worker : public QObject {
     Q_OBJECT
 public:
     using Set = QSet<Worker*>;
-    bool isDebugMode() const;
+    bool isPrintMsgsEnabled() const;
+    bool printEnabled() const;
     explicit Worker(const WorkerSettings &settings, QThread *thread);
     //! Фабричный метод, соединяющий объекты в цепь вплоть до прокси, которая является интерфейсом объекта
     /// Interceptor - объект, который находится между прокси и объектом, выполняя некоторую работу над проходящими данными
@@ -29,7 +31,7 @@ public:
     const Set &producers() const;
     QStringList consumersNames() const;
     QStringList producersNames() const;
-    QThread *thread() const;
+    QThread *workerThread() const;
     Broker *broker() const;
     virtual ~Worker() = default;
     bool wasStarted() const;
@@ -80,22 +82,22 @@ private:
     QStringList m_namespaces;
     QString m_name;
     QThread *m_thread;
-    bool m_wasRun{false};
     QObject *m_closestConnected{nullptr};
     QList<QMetaObject::Connection> m_closestConnections{};
     QSet<InterceptorBase *> m_InterceptorsToAdd{};
+    bool m_wasRun{false};
+    bool m_printMsgs{false};
 
     static QMutex m_mutex;
     static QStringList m_wereCreated;
     static QList<InterceptorBase*> m_usedInterceptors;
 };
 
-
 template<typename Target>
 bool Worker::is() const
 {
     static_assert(std::is_base_of<Worker, Target>(), "Must subclass WorkerBase!");
-    return metaObject()->inherits(Target::staticMetaObject);
+    return metaObject()->inherits(&Target::staticMetaObject);
 }
 
 template<typename Target>

@@ -2,7 +2,7 @@
 #define CONTEXTMANAGER_H
 
 #include <QHash>
-#include "private/brokerlogging.h"
+#include "radapterlogging.h"
 #include "private/global.h"
 
 namespace Radapter {

@@ -8,13 +8,15 @@
 struct timeval; /* forward declaration */
 typedef long long ssize_t;
 #endif
+#include <QDateTime>
 
-class TimeUtils
-{
-public:
-    TimeUtils();
-
-    static timeval msecsToTimeval(qint32 milliseconds);
-};
+namespace Utils {
+namespace Time {
+timeval msecsToTimeval(qint32 milliseconds);
+QDateTime fromString(const QString &string);
+QDateTime fromTimestamp(quint64 timestamp);
+QString toMsecString(const QDateTime &datetime);
+}
+}
 
 #endif // TIMEUTILS_H

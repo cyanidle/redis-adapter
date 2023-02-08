@@ -55,14 +55,14 @@ void Server::doRun()
     }
 
     if (m_websocketServer->listen(QHostAddress::Any, m_port)) {
-        wseDebug() << "Lotos websocket server listening on port" << m_port;
+        wsockServDebug() << "Lotos websocket server listening on port" << m_port;
         connect(m_websocketServer, &QWebSocketServer::newConnection,
                 this, &Server::connectClient);
         connect(m_websocketServer, &QWebSocketServer::closed,
                 this, &Server::reconnect);
     } else {
-        wseDebug() << "Error! Lotos websocket server cannot be inited on port" << m_port;
-        wseDebug() << m_websocketServer->error() << m_websocketServer->errorString();
+        wsockServDebug() << "Error! Lotos websocket server cannot be inited on port" << m_port;
+        wsockServDebug() << m_websocketServer->error() << m_websocketServer->errorString();
     }
 }
 
@@ -106,7 +106,7 @@ void Server::connectClient()
         // load persistent data on first client
         if (!m_persistentDataInited) {
             emit persistentDataRequested();
-            wseDebug() << Q_FUNC_INFO << "persistent data requested";
+            wsockServDebug() << Q_FUNC_INFO << "persistent data requested";
             m_persistentDataInited = true;
         }
 
@@ -131,7 +131,7 @@ void Server::initClient(QWebSocket *client)
     auto jsonFullDoc = getFullData(ok);
     if (ok) {
         sendTextMessage(client, toJson(jsonFullDoc));
-        wseJsonDebug() << Q_FUNC_INFO << jsonFullDoc.toJson(QJsonDocument::JsonFormat::Indented);
+        wsockServDebug() << Q_FUNC_INFO << jsonFullDoc.toJson(QJsonDocument::JsonFormat::Indented);
     }
 }
 
@@ -192,7 +192,7 @@ void Server::publishJson(const QJsonDocument &document)
 {
     auto message = toJson(document);
     publishText(message);
-    wseJsonDebug() << Q_FUNC_INFO << "new data:" << document.toJson(QJsonDocument::Indented);
+    wsockServDebug() << Q_FUNC_INFO << "new data:" << document.toJson(QJsonDocument::Indented);
 }
 
 void Server::publishText(const QString &text)
@@ -205,9 +205,9 @@ void Server::publishText(const QString &text)
 void Server::sendTextMessage(QWebSocket *client, const QString &text)
 {
     auto bytesSent = client->sendTextMessage(text);
-    wseDebug() << "Websocket client" << client << "sent:" << bytesSent;
+    wsockServDebug() << "Websocket client" << client << "sent:" << bytesSent;
     auto hasFlushed = client->flush();
-    wseDebug() << "Websocket client" << client << "flushed:" << hasFlushed;
+    wsockServDebug() << "Websocket client" << client << "flushed:" << hasFlushed;
 }
 
 QString Server::toJson(const QJsonDocument &document) const

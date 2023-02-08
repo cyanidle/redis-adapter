@@ -1,8 +1,6 @@
-SOURCES+= \ 
-$$PWD/sqlresults.cpp \ 
+SOURCES+= \
+	$$PWD/sqlresults.cpp 
 
-
-HEADERS+= \ 
-$$PWD/sqlresults.h \ 
-
+HEADERS+= \
+	$$PWD/sqlresults.h 
 

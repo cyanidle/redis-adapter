@@ -1,5 +1,4 @@
-HEADERS+= \ 
-$$PWD/redisconstants.h \ 
-$$PWD/sqlkeyvaultfields.h \ 
-
+HEADERS+= \
+	$$PWD/redisconstants.h \
+	$$PWD/sqlkeyvaultfields.h 
 

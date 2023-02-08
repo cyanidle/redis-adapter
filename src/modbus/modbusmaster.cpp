@@ -1,4 +1,6 @@
 #include "modbusmaster.h"
+#include "broker/broker.h"
+#include "templates/algorithms.hpp"
 #include "utils/wordoperations.h"
 #include <QModbusRtuSerialMaster>
 #include <QModbusReply>
@@ -17,6 +19,7 @@ Master::Master(const Settings::ModbusMaster &settings, QThread *thread) :
     if (settings.log_jsons) {
         addInterceptor(new LoggingInterceptor(*settings.log_jsons));
     }
+
     m_reconnectTimer->setInterval(settings.reconnect_timeout_ms);
     m_reconnectTimer->callOnTimeout(this, &Master::connectDevice);
     m_reconnectTimer->setSingleShot(true);
@@ -47,8 +50,12 @@ Master::Master(const Settings::ModbusMaster &settings, QThread *thread) :
 
 void Master::onRun()
 {
+    attachToChannel();
     connectDevice();
-    m_readTimer->start();
+    if (config().poll_rate) {
+        m_readTimer->start();
+    }
+    Worker::onRun();
 }
 
 Master::~Master()
@@ -59,6 +66,46 @@ Master::~Master()
 bool Master::isConnected() const
 {
     return m_connected;
+}
+
+bool Master::isChannelBusy() const
+{
+    return m_channel->isBusy();
+}
+
+void Master::attachToChannel()
+{
+    //! Creating channels only once per channel of all masters, then sharing them (QSharedPointer)
+    static QMutex attachMut{};
+    QMutexLocker lock(&attachMut);
+    auto isSameChannel = [this](Master *master) {
+        return master->config().channel == config().channel && master != this;
+    };
+    auto masters = broker()->getAll<Master>();
+    auto sameChannel = filter(&masters, isSameChannel);
+    if (sameChannel.nonePass()) {
+        m_channel.reset(new Sync::Channel(workerThread()));
+    } else {
+        auto first = *sameChannel.begin();
+        if (first->m_channel) {
+            m_channel = first->m_channel;
+        } else {
+            m_channel.reset(new Sync::Channel(workerThread()));
+        }
+    }
+    auto channel = m_channel.data();
+    //! The main code
+    channel->registerUser(this);
+    connect(channel, &Sync::Channel::trigger, this, &Master::triggerExecute);
+    connect(this, &Master::queryStarted, channel, &Sync::Channel::onJobStart);
+    connect(this, &Master::queryDone, channel, &Sync::Channel::onJobDone);
+    connect(this, &Master::queryDone, channel, &Sync::Channel::askTrigger);
+    connect(this, &Master::askTrigger, channel, &Sync::Channel::askTrigger);
+}
+
+const Settings::ModbusMaster &Master::config() const
+{
+    return m_settings;
 }
 
 void Master::onMsg(const Radapter::WorkerMsg &msg)
@@ -73,7 +120,7 @@ void Master::onMsg(const Radapter::WorkerMsg &msg)
         if (m_settings.registers.contains(fullKeyJoined)) {
             auto regInfo = m_settings.registers.value(fullKeyJoined);
             auto value = iter.value();
-            if (Q_LIKELY(value.canConvert(regInfo.type))) {
+            if (value.canConvert(regInfo.type)) {
                 results.append(parseValueToDataUnit(value, regInfo, config().endianess));
             } else {
                 reWarn() << printSelf() << ": Received: " << value << "; Key:" << fullKeyJoined;
@@ -90,8 +137,6 @@ void Master::connectDevice()
     if (!m_device->connectDevice()) {
         reDebug() << printSelf() << ": Error Connecting: " << m_device->errorString();
         m_reconnectTimer->start();
-    } else {
-        emit connected();
     }
 }
 
@@ -100,20 +145,30 @@ void Master::disconnectDevice()
     m_device->disconnectDevice();
 }
 
-void Master::executeNext()
+void Master::triggerExecute(QObject *target)
 {
-    setBusy(false);
-    tryExecuteNext();
+    if (target != this) return;
+    executeNext();
 }
 
-void Master::tryExecuteNext()
+void Master::executeNext()
 {
-    if (isBusy()) return;
     if (!m_writeQueue.isEmpty()) {
         executeWrite(m_writeQueue.dequeue());
     } else if (!m_readQueue.isEmpty()) {
         executeRead(m_readQueue.dequeue());
+    } else {
+        emit allQueriesDone();
     }
+}
+
+void Master::tryExecuteNext()
+{
+    if (isChannelBusy()) {
+        emit askTrigger();
+        return;
+    }
+    executeNext();
 }
 
 void Master::onErrorOccurred(QModbusDevice::Error error)
@@ -126,6 +181,8 @@ void Master::onStateChanged(QModbusDevice::State state)
     if (state == QModbusDevice::UnconnectedState) {
         m_reconnectTimer->start();
         emit disconnected();
+    } else if (state == QModbusDevice::ConnectedState) {
+        emit connected();
     }
     reDebug() << "New state for: " << printSelf() << " --> " <<
         QMetaEnum::fromType<QModbusDevice::State>().valueToKey(state);
@@ -133,7 +190,6 @@ void Master::onStateChanged(QModbusDevice::State state)
 
 void Master::onReadReady()
 {
-    executeNext();
     auto rawReply = qobject_cast<QModbusReply *>(sender());
     if (!rawReply) return;
     QScopedPointer<QModbusReply, QScopedPointerDeleteLater> reply{rawReply};
@@ -165,7 +221,6 @@ void Master::onReadReady()
 
 void Master::onWriteReady()
 {
-    executeNext();
     auto rawReply = qobject_cast<QModbusReply *>(sender());
     if (!rawReply) return;
     QScopedPointer<QModbusReply, QScopedPointerDeleteLater> reply{rawReply};
@@ -217,42 +272,35 @@ void Master::enqeueWrite(const QModbusDataUnit &unit)
 
 void Master::executeRead(const QModbusDataUnit &unit)
 {
-    setBusy();
+    emit queryStarted();
     if (auto reply = m_device->sendReadRequest(unit, m_settings.slave_id)) {
+        connect(reply, &QModbusReply::destroyed, this, &Master::queryDone);
         if (!reply->isFinished()) {
             QObject::connect(reply, &QModbusReply::finished, this, &Master::onReadReady);
         } else {
-            executeNext();
             delete reply;
         }
     } else {
-        executeNext();
         reError() << printSelf() << "Read Error: " << m_device->errorString();
+        emit queryDone();
     }
 }
 
 void Master::executeWrite(const QModbusDataUnit &unit)
 {
-    setBusy();
+    emit queryStarted();
     if (auto reply = m_device->sendWriteRequest(unit, m_settings.slave_id)) {
+        connect(reply, &QModbusReply::destroyed, this, &Master::queryDone);
         if (!reply->isFinished()) {
             QObject::connect(reply, &QModbusReply::finished, this, &Master::onWriteReady);
         } else {
-            executeNext();
             delete reply;
         }
     } else {
-        executeNext();
-        reError() << printSelf() << "Write Error: " << m_device->errorString();
+        workerInfo() << "Write Error: " << m_device->errorString();
+        emit queryDone();
     }
 }
 
-bool Master::isBusy() const
-{
-    return m_isBusy;
-}
 
-void Master::setBusy(bool isBusy)
-{
-    m_isBusy = isBusy;
-}
+

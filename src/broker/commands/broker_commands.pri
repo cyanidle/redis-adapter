@@ -1,10 +1,8 @@
-SOURCES+= \ 
-$$PWD/basiccommands.cpp \ 
-$$PWD/command.cpp \ 
+SOURCES+= \
+	$$PWD/basiccommands.cpp \
+	$$PWD/command.cpp 
 
-
-HEADERS+= \ 
-$$PWD/basiccommands.h \ 
-$$PWD/command.h \ 
-
+HEADERS+= \
+	$$PWD/basiccommands.h \
+	$$PWD/command.h 
 

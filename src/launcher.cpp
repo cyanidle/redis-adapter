@@ -47,8 +47,7 @@ void Launcher::addWorker(Worker* worker, QSet<InterceptorBase*> interceptors)
 void Launcher::preInit()
 {
     parseCommandlineArgs();
-    qSetMessagePattern(CUSTOM_MESSAGE_PATTERN);
-    setLoggingFilters(Settings::LoggingInfoParser::parse(m_filereader->deserialise("log_debug").toMap()));
+    qSetMessagePattern(RADAPTER_CUSTOM_MESSAGE_PATTERN);
 
     setTomlPath("bindings.toml");
     auto jsonBindings = JsonBinding::parseMap(m_filereader->deserialise().toMap());
@@ -71,18 +70,32 @@ void Launcher::preInit()
 }
 
 
-void Launcher::setLoggingFilters(const Settings::LoggingInfo &loggers)
+void Launcher::setLoggingFilters(const QMap<QString, bool> &loggers)
 {
     auto filterRules = QStringList{
         "*.debug=false",
-        "default.debug=true"
+        "all-workers=true",
+        "redis-adapter=true",
+        "modbus=true",
+        "mysql=true",
+        "ws-server=true",
+        "ws-client=true",
+        "res-monitor=true",
+        "settings-parsing=true",
+        "broker=true",
+        "json-bindings=true",
+        "workers=true",
     };
     for (auto logInfo = loggers.begin(); logInfo != loggers.end(); logInfo++) {
         auto rule = QString("%1=%2").arg(logInfo.key(), logInfo.value() ? "true" : "false");
-        filterRules.append(rule);
+        if (filterRules.contains(rule)) {
+            filterRules[filterRules.indexOf(rule)] = rule;
+        } else {
+            filterRules.append(rule);
+        }
     }
     if (!filterRules.isEmpty()) {
-        Broker::instance()->addDebugMode(loggers);
+        Broker::instance()->applyLoggingFilters(loggers);
         auto filterString = filterRules.join("\n");
         QLoggingCategory::setFilterRules(filterString);
     }
@@ -95,6 +108,14 @@ void Launcher::preInitFilters()
     for (auto iter = rawFilters.constBegin(); iter != rawFilters.constEnd(); ++iter) {
         Settings::Filters::table().insert(iter.key(), Serializer::convertQMap<double>(iter.value().toMap()));
     }
+}
+
+void Launcher::initLogging()
+{
+    setTomlPath("config.toml");
+    auto rawMap = m_filereader->deserialise("log_debug").toMap();
+    auto flattened = JsonDict{rawMap}.flatten(".");
+    setLoggingFilters(Serializer::convertQMap<bool>(flattened));
 }
 
 

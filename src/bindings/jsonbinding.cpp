@@ -1,6 +1,6 @@
 #include "jsonbinding.h"
 #include "bindingsprovider.h"
-#include "private/brokerlogging.h"
+#include "radapterlogging.h"
 
 JsonBinding::JsonBinding(const QString &name, const JsonDict &json) :
     m_name(name),

@@ -94,13 +94,6 @@ namespace Settings {
         SERIAL_FIELD(QString, table_name);
     };
 
-    typedef QMap<QString /*module*/, bool /*mode*/> LoggingInfo;
-    struct RADAPTER_SHARED_SRC LoggingInfoParser{
-        static LoggingInfo parse(const QVariantMap &src) {
-            return Serializer::convertQMap<bool>(src);
-        }
-    };
-
     struct RADAPTER_SHARED_SRC Filters {
         typedef QMap<QString /*filterName*/, double> Table;
         typedef QMap<QString /*filterName*/, Table> TableMap;

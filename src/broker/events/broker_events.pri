@@ -1,8 +1,6 @@
-SOURCES+= \ 
-$$PWD/brokerevent.cpp \ 
+SOURCES+= \
+	$$PWD/brokerevent.cpp 
 
-
-HEADERS+= \ 
-$$PWD/brokerevent.h \ 
-
+HEADERS+= \
+	$$PWD/brokerevent.h 
 

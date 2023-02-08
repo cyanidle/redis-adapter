@@ -1,5 +1,5 @@
 #include "bindingsprovider.h"
-#include "private/brokerlogging.h"
+#include "radapterlogging.h"
 
 BindingsProvider::BindingsProvider(const JsonBinding::Map &bindings, QObject* parent) :
     QObject(parent),

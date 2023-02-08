@@ -8,6 +8,7 @@
 template <typename Container1, typename Container2>
 //! Iterates like Pythons zip() over two containers
 struct ZipIterator {
+    using iterator_category = std::forward_iterator_tag;
     using first_iter = typename Container1::iterator;
     using second_iter = typename Container2::iterator;
     using first_value_type = typename first_iter::value_type;
@@ -52,6 +53,7 @@ private:
 
 template <typename Container1, typename Container2>
 struct ZipConstIterator {
+    using iterator_category = std::forward_iterator_tag;
     using first_iter = typename Container1::const_iterator;
     using second_iter = typename Container2::const_iterator;
     using first_value_type = typename first_iter::value_type;
@@ -98,9 +100,9 @@ template <typename Container1, typename Container2>
 struct ZipHolder {
     using const_iterator = ZipConstIterator<Container1, Container2>;
     using iterator = ZipIterator<Container1, Container2>;
-    ZipHolder(Container1 &first, Container2 &second) :
-        m_firstCont(&first),
-        m_secondCont(&second)
+    ZipHolder(Container1 *first, Container2 *second) :
+        m_firstCont(first),
+        m_secondCont(second)
     {}
     iterator begin() {
         return iterator(m_firstCont->begin(), m_secondCont->begin());
@@ -138,9 +140,9 @@ template <typename Container1, typename Container2>
 struct ZipConstHolder {
     using const_iterator = ZipConstIterator<Container1, Container2>;
     using iterator = ZipConstIterator<Container1, Container2>;
-    ZipConstHolder(const Container1 &first, const Container2 &second) :
-        m_firstCont(&first),
-        m_secondCont(&second)
+    ZipConstHolder(const Container1 *first, const Container2 *second) :
+        m_firstCont(first),
+        m_secondCont(second)
     {}
     iterator begin() const {
         return iterator(m_firstCont->cbegin(), m_secondCont->cbegin());

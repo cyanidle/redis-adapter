@@ -1,7 +1,9 @@
 #ifndef METAPROGRAMMING_HPP
 #define METAPROGRAMMING_HPP
 
-#include <QObject>
+#include <type_traits>
+#include <tuple>
+
 namespace Radapter {
 template <typename Container>
 using decayed_val_t = typename std::decay<typename std::remove_pointer<typename Container::iterator::value_type>::type>::type;
@@ -43,6 +45,15 @@ struct FuncInfo<R(A...)> {
     using ReturnType = R;
     using ArgsTuple = std::tuple<A...>;
 };
+
+template<class T, typename = void>
+struct is_iterator : std::false_type {};
+
+template<class T>
+struct is_iterator<T, std::void_t<
+        typename T::value_type,
+        typename T::iterator_category
+        >> : std::true_type {};
 
 template<typename T, class=void> struct is_container : std::false_type {};
 template<typename T>

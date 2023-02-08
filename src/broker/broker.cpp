@@ -1,5 +1,5 @@
 #include "broker.h"
-#include "private/brokerlogging.h"
+#include "radapterlogging.h"
 #include <QCoreApplication>
 #include "worker/worker.h"
 
@@ -16,12 +16,12 @@ Broker::Broker() :
 {
 }
 
-bool Broker::isDebugMode(const QString &workerName)
+bool Broker::isDebugEnabled(const QString &workerName)
 {
-    return m_debugTable.value(workerName);
+    return m_debugTable.value(workerName, true);
 }
 
-void Broker::addDebugMode(const QMap<QString, bool> &table)
+void Broker::applyLoggingFilters(const QMap<QString, bool> &table)
 {
     for (auto iter = table.constBegin(); iter != table.constEnd(); ++iter) {
         m_debugTable.insert(iter.key(), iter.value());
@@ -65,18 +65,18 @@ void Broker::registerProxy(WorkerProxy* proxy)
     }
     connect(this, &Broker::broadcastToAll,
             proxy, &WorkerProxy::onMsgFromBroker,
-            thread() == proxy->thread() ? Qt::DirectConnection : Qt::QueuedConnection);
+            thread() == proxy->workerThread() ? Qt::DirectConnection : Qt::QueuedConnection);
     connect(proxy, &WorkerProxy::msgToBroker,
             this, &Broker::onMsgFromWorker,
-            thread() == proxy->thread() ? Qt::DirectConnection : Qt::QueuedConnection);
+            thread() == proxy->workerThread() ? Qt::DirectConnection : Qt::QueuedConnection);
     connect(proxy->worker(), &Worker::fireEvent,
             this, &Broker::onEvent,
-            thread() == proxy->thread() ? Qt::DirectConnection : Qt::QueuedConnection);
+            thread() == proxy->workerThread() ? Qt::DirectConnection : Qt::QueuedConnection);
     connect(this, &Broker::fireEvent,
             proxy->worker(), &Worker::onEvent,
-            thread() == proxy->thread() ? Qt::DirectConnection : Qt::QueuedConnection);
+            thread() == proxy->workerThread() ? Qt::DirectConnection : Qt::QueuedConnection);
     connect(proxy, &WorkerProxy::destroyed, this, &Broker::proxyDestroyed,
-            thread() == proxy->thread() ? Qt::DirectConnection : Qt::QueuedConnection);
+            thread() == proxy->workerThread() ? Qt::DirectConnection : Qt::QueuedConnection);
     if (m_proxies.contains(proxy->proxyName())) {
         brokerError() << "Broker: Proxy with duplicate name: " << proxy->proxyName();
         throw std::runtime_error(std::string("Broker: Proxy with duplicate name: ") +
@@ -176,7 +176,7 @@ void Broker::connectTwoProxies(WorkerProxy* producer, WorkerProxy* consumer)
                  << ") -->\n == Consumer(" << consumer->worker()->printSelf() << ")";
     connect(producer, &WorkerProxy::msgToBroker,
             consumer, &WorkerProxy::onMsgFromBroker,
-            consumer->thread() == producer->thread()
+            consumer->workerThread() == producer->workerThread()
                 ? Qt::DirectConnection
                 : Qt::QueuedConnection);
     m_connected.append(pair);

@@ -1,5 +1,5 @@
 #include "workermsg.h"
-#include "private/brokerlogging.h"
+#include "radapterlogging.h"
 #include "worker.h"
 #include "broker/broker.h"
 

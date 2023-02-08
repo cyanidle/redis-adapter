@@ -1,5 +1,5 @@
 #include "basiccommands.h"
-#include "private/brokerlogging.h"
+#include "radapterlogging.h"
 
 namespace Radapter {
 

@@ -16,7 +16,7 @@ public:
     const QSet<Worker *> &producers() const;
     QStringList consumersNames() const;
     QStringList producersNames() const;
-    QThread *thread() const;
+    QThread *workerThread() const;
     Worker *worker() const;
 signals:
     void msgToWorker(const Radapter::WorkerMsg &msg);

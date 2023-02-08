@@ -40,7 +40,7 @@ void ResourceMonitor::readProcessUsage()
     rusage processStats{};
     auto status = getrusage(RUSAGE_SELF, &processStats);
     if (status != RUSAGE_STATUS_OK) {
-        rmonDebug() << "rusage error: failed to get process stats";
+        resmonDebug() << "rusage error: failed to get process stats";
         return;
     }
     auto processUserTime = static_cast<double>(processStats.ru_utime.tv_sec)
@@ -56,7 +56,7 @@ void ResourceMonitor::readProcessUsage()
     auto processMemory = static_cast<double>(processStats.ru_maxrss) / 1024;
     auto printMessage = QString("Process - CPU: %1% MEM: %2MiB").arg(processLoad, 0, 'f', 2)
             .arg(processMemory, 0, 'f', 2);
-    rmonDebug() << printMessage.toStdString().c_str();
+    resmonDebug() << printMessage.toStdString().c_str();
 }
 
 void ResourceMonitor::readOverallCpuLoad()
@@ -79,5 +79,5 @@ void ResourceMonitor::readOverallCpuLoad()
 
     auto load = (1.0 - idleDiff / totalDiff) * 100.0;
     auto printMessage = QString("Overall - CPU: %1%").arg(load, 0, 'f', 2);
-    rmonDebug() << printMessage.toStdString().c_str();
+    resmonDebug() << printMessage.toStdString().c_str();
 }

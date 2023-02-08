@@ -19,12 +19,12 @@ void sortAndMergeDataUnits(QList<QModbusDataUnit> &target) {
     std::sort(target.begin(), target.end(), sorter);
     auto copy = target;
     QList<int> toRemove{};
-    for (auto unit : Radapter::enumerate(copy)) {
+    for (auto unit : Radapter::enumerate(&copy)) {
         if (mergeDataUnit(target, unit.value)) {
             toRemove.append(unit.count);
         }
     }
-    for (auto index : Radapter::enumerate(toRemove)) {
+    for (auto index : Radapter::enumerate(&toRemove)) {
         target.removeAt(index.value - index.count);
     }
 };

@@ -7,16 +7,24 @@ generate_for_dir () {
         echo "Please specify target .pri file name!"
         exit -1
     fi
-    SOURCES=$(ls $1 | grep -E .*.cpp)
-    HEADERS=$(ls $1 | grep -E .*.h)
+    SLASH='\\x5C'
+    NEW_LINE='\\r\\n'
+    TAB='\\t'
+    PWD='$$PWD'
+    SPACE='\x20'
+    FORMAT=${SLASH}${NEW_LINE}${TAB}${PWD}/%s${SPACE}
+
+    SOURCES=$(ls $1 | grep -E \.cpp$)
+    HEADERS=$(ls $1 | grep -E \.hp*$)
     TEXT=""
+    
     if [[ ! -z $SOURCES ]]; then
-        SOURCES=$(echo $SOURCES | xargs printf "\$\$PWD/%s \\ \\\n")
-        TEXT="${TEXT}SOURCES+= \ \n$SOURCES\n\n"
+        SOURCES=$(echo $SOURCES | xargs printf $FORMAT)
+        TEXT="${TEXT}SOURCES+= $SOURCES\n\n"
     fi
     if [[ ! -z $HEADERS ]]; then
-        HEADERS=$(echo $HEADERS | xargs printf "\$\$PWD/%s \\ \\\n")
-        TEXT="${TEXT}HEADERS+= \ \n$HEADERS\n"
+        HEADERS=$(echo $HEADERS | xargs printf $FORMAT)
+        TEXT="${TEXT}HEADERS+= $HEADERS\n"
     fi
     if [[ ! -z $TEXT ]]; then
         echo "Generating and adding $1/$2.pri..."

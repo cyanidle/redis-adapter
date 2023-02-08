@@ -1,5 +1,5 @@
 #include "logginginterceptor.h"
-#include "private/brokerlogging.h"
+#include "radapterlogging.h"
 #include <QDir>
 #include "broker/worker/worker.h"
 #include <QDateTime>

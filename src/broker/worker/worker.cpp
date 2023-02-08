@@ -1,5 +1,5 @@
 #include "worker.h"
-#include "private/brokerlogging.h"
+#include "radapterlogging.h"
 #include "broker/broker.h"
 #include <QThread>
 #include "broker/interceptors/namespacefilter.h"
@@ -21,10 +21,11 @@ Worker::Worker(const WorkerSettings &settings, QThread *thread) :
     m_proxy(nullptr),
     m_namespaces(settings.namespaces),
     m_name(settings.name),
-    m_thread(thread)
+    m_thread(thread),
+    m_printMsgs(settings.print_msgs)
 {
     setObjectName(settings.name);
-    if (isDebugMode()) {
+    if (isPrintMsgsEnabled()) {
         brokerWarn()<< "=== Worker (" << workerName() << "): Running in Debug Mode! ===";
     }
     connect(this, &Worker::sendMsg, &Worker::onSendMsgPriv);
@@ -74,9 +75,14 @@ void Worker::addInterceptor(InterceptorBase *interceptor)
     }
 }
 
-bool Worker::isDebugMode() const
+bool Worker::isPrintMsgsEnabled() const
 {
-    return broker()->isDebugMode(workerName());
+    return m_printMsgs;
+}
+
+bool Worker::printEnabled() const
+{
+    return broker()->isDebugEnabled(workerName());
 }
 
 Broker *Worker::broker() const
@@ -91,15 +97,13 @@ bool Worker::wasStarted() const
 
 QString Worker::printSelf() const
 {
-    return QStringLiteral("(") + QString(metaObject()->className()).append(") ").append(workerName());
+    return QStringLiteral("(%1) %2").arg(metaObject()->className(), workerName());
 }
 
 void Worker::run()
 {
-    if (m_wasRun) throw std::runtime_error("WorkerBase::onRun() called multiple times for: " +
-                                           workerName().toStdString() +
-                                           " (" + metaObject()->className() + ")");
-    moveToThread(thread());
+    if (m_wasRun) throw std::runtime_error("WorkerBase::onRun() called multiple times for: " + printSelf().toStdString());
+    moveToThread(workerThread());
     for (auto &producerName : m_producerNames) {
         auto worker = broker()->getWorker(producerName);
         if (!worker) throw std::runtime_error("Nonexistent required worker: " + producerName.toStdString());
@@ -117,13 +121,13 @@ void Worker::run()
             m_baseMsg.m_receivers.insert(worker);
         }
     }
-    thread()->start();
+    workerThread()->start();
     m_wasRun = true;
 }
 
 void Worker::onRun()
 {
-    brokerInfo() << this << ": started!";
+    workerInfo() << ": started!";
 }
 
 void Worker::addConsumers(const QStringList &consumers)
@@ -217,26 +221,20 @@ WorkerMsg Worker::prepareCommand(Command *command) const
 
 void Worker::onReply(const Radapter::WorkerMsg &msg)
 {
-    brokerWarn() << metaObject()->className() << "(" <<
-        workerName() << "): received Reply from: " <<
-        msg.m_sender->metaObject()->className() <<
-        "(" << msg.m_sender->objectName() << "), but not handled!";
+    brokerWarn().noquote() << printSelf() << ": received Reply from: " <<
+        msg.m_sender->printSelf() << "but not handled!";
 }
 
 void Worker::onCommand(const Radapter::WorkerMsg &msg)
 {
-    brokerWarn() << metaObject()->className() << "(" <<
-        workerName() << "): received Command from: " <<
-        msg.m_sender->metaObject()->className() <<
-        "(" << msg.m_sender->objectName() << "), but not handled!";
+    brokerWarn().noquote() << printSelf() << ": received Command from: " <<
+        msg.m_sender->printSelf() << "but not handled!";
 }
 
 void Worker::onMsg(const Radapter::WorkerMsg &msg)
 {
-    brokerWarn().noquote() << metaObject()->className() << "(" <<
-        workerName() << "): received Generic msg from: " <<
-        msg.m_sender->metaObject()->className() <<
-        "(" << msg.m_sender->objectName() << "), but not handled!";
+    brokerWarn().noquote() << printSelf() << ": received Generic Msg from: " <<
+        msg.m_sender->printSelf() << "but not handled!";
 }
 
 void Worker::onWorkerDestroyed(QObject *worker)
@@ -247,7 +245,7 @@ void Worker::onWorkerDestroyed(QObject *worker)
 
 void Worker::onMsgFromBroker(const Radapter::WorkerMsg &msg)
 {
-    if (isDebugMode()) {
+    if (isPrintMsgsEnabled()) {
         brokerInfo().noquote() << "\n ||| To Worker: " << workerName() <<  "||| " << msg.printFullDebug();
     }
     if (msg.isReply()) {
@@ -293,8 +291,8 @@ void Worker::onSendMsgPriv(const Radapter::WorkerMsg &msg)
     if (!m_wasRun) {
         throw std::runtime_error("Worker sent msg before being run!");
     }
-    if (isDebugMode()) {
-        brokerInfo().noquote() << "\n ||| From Worker: " << workerName() <<  "||| " << msg.printFullDebug();
+    if (isPrintMsgsEnabled()) {
+        workerInfo() <<  " <--- FROM ###" << msg.printFullDebug();
     }
 }
 
@@ -396,7 +394,7 @@ QStringList Worker::producersNames() const
     return m_producerNames;
 }
 
-QThread *Worker::thread() const
+QThread *Worker::workerThread() const
 {
     return m_thread;
 }

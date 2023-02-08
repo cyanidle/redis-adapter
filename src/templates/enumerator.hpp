@@ -5,6 +5,7 @@
 namespace Radapter {
 template <typename Container, typename CounterType = quint32>
 struct Enumerator {
+    using iterator_category = std::forward_iterator_tag;
     using counter_t = CounterType;
     using iter_t = typename Container::iterator;
     using value_type = typename iter_t::value_type;
@@ -45,6 +46,7 @@ private:
 
 template <typename Container, typename CounterType = quint32>
 struct ConstEnumerator {
+    using iterator_category = std::forward_iterator_tag;
     using counter_t = CounterType;
     using iter_t = typename Container::const_iterator;
     using value_type = typename iter_t::value_type;
@@ -88,29 +90,29 @@ template <typename Container, typename CounterType = quint32>
 struct EnumeratorHolder {
     using const_iterator = ConstEnumerator<Container, CounterType>;
     using iterator = Enumerator<Container, CounterType>;
-    EnumeratorHolder(Container &first) :
+    EnumeratorHolder(Container *first) :
         m_firstCont(first)
     {}
     iterator begin() {
-        return iterator(m_firstCont.begin());
+        return iterator(m_firstCont->begin());
     }
     iterator end() {
-        return iterator(m_firstCont.end());
+        return iterator(m_firstCont->end());
     }
     const_iterator end() const {
-        return iterator(m_firstCont.end());
+        return iterator(m_firstCont->end());
     }
     const_iterator begin() const {
-        return iterator(m_firstCont.begin());
+        return iterator(m_firstCont->begin());
     }
     const_iterator cend() const {
-        return iterator(m_firstCont.end());
+        return iterator(m_firstCont->end());
     }
     const_iterator cbegin() const {
-        return iterator(m_firstCont.begin());
+        return iterator(m_firstCont->begin());
     }
 private:
-    Container &m_firstCont;
+    Container *m_firstCont;
 };
 
 

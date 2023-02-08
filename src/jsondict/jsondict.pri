@@ -1,4 +1,3 @@
-HEADERS+= \ 
-$$PWD/jsondict.hpp \ 
-
+HEADERS+= \
+	$$PWD/jsondict.hpp 
 

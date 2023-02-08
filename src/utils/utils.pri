@@ -1,16 +1,12 @@
-SOURCES+= \ 
-$$PWD/doubleutils.cpp \ 
-$$PWD/resourcemonitor.cpp \ 
-$$PWD/timeformatter.cpp \ 
-$$PWD/timeutils.cpp \ 
-$$PWD/wordoperations.cpp \ 
+SOURCES+= \
+	$$PWD/mathutils.cpp \
+	$$PWD/resourcemonitor.cpp \
+	$$PWD/timeutils.cpp \
+	$$PWD/wordoperations.cpp 
 
-
-HEADERS+= \ 
-$$PWD/doubleutils.h \ 
-$$PWD/resourcemonitor.h \ 
-$$PWD/timeformatter.h \ 
-$$PWD/timeutils.h \ 
-$$PWD/wordoperations.h \ 
-
+HEADERS+= \
+	$$PWD/mathutils.h \
+	$$PWD/resourcemonitor.h \
+	$$PWD/timeutils.h \
+	$$PWD/wordoperations.h 
 

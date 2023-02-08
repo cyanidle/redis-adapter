@@ -1,10 +1,4 @@
-SOURCES+= \ 
-$$PWD/brokerlogging.cpp \ 
-
-
-HEADERS+= \ 
-$$PWD/brokerlogging.h \ 
-$$PWD/commandreplymacros.h \ 
-$$PWD/global.h \ 
-
+HEADERS+= \
+	$$PWD/commandreplymacros.h \
+	$$PWD/global.h 
 

@@ -21,9 +21,10 @@ public slots:
     void init();
     void run();
 private:
-    void setLoggingFilters(const Settings::LoggingInfo &loggers);
+    void setLoggingFilters(const QMap<QString, bool> &loggers);
     void preInitFilters();
 
+    void initLogging();
     void preInit();
     void prvInit();
     void initRedis();

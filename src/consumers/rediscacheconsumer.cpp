@@ -34,7 +34,7 @@ JsonDict CacheConsumer::parseNestedArrays(const JsonDict &target) {
     for (auto &iter : target) {
         auto branchHadInt = false;
         auto key = iter.key();
-        for (auto subkey : enumerate(key)) {
+        for (auto subkey : enumerate(&key)) {
             bool isInt = false;
             subkey.value.toInt(&isInt);
             if (!isInt) {

@@ -19,13 +19,15 @@ public:
     bool wasStarted();
     void registerProxy(WorkerProxy* proxy);
     void connectProducersAndConsumers();
+    template <typename Target>
+    QList<Target*> getAll();
     void runAll();
     void publishEvent(const Radapter::BrokerEvent &event);
     void connectTwoProxies(const QString &producer,
                            const QString &consumer);
-    bool isDebugMode(const QString &workerName);
+    bool isDebugEnabled(const QString &workerName);
     //! \warning Not Thread-Safe
-    void addDebugMode(const QMap<QString, bool> &table);
+    void applyLoggingFilters(const QMap<QString, bool> &table);
 signals:
     void fireEvent(const Radapter::BrokerEvent &event);
     void broadcastToAll(const Radapter::WorkerMsg &msg);
@@ -44,12 +46,23 @@ private:
     static QRecursiveMutex m_mutex;
 };
 
-
+template<typename Target>
+QList<Target*> Broker::getAll()
+{
+    QList<Target*> result;
+    for (auto &proxy : m_proxies) {
+        if (proxy->worker()->is<Target>()) {
+            result.append(proxy->worker()->as<Target>());
+        }
+    }
+    return result;
 }
 
-inline Radapter::Broker *Radapter::Broker::instance() {
+inline Broker *Broker::instance() {
     static Broker* broker {new Broker()};
     return broker;
+}
+
 }
 
 #endif //BROKER_H

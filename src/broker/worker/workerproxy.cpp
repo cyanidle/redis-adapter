@@ -1,5 +1,5 @@
 #include "workerproxy.h"
-#include "private/brokerlogging.h"
+#include "radapterlogging.h"
 #include "worker.h"
 
 using namespace Radapter;
@@ -28,9 +28,9 @@ QStringList WorkerProxy::producersNames() const
     return worker()->producersNames();
 }
 
-QThread *WorkerProxy::thread() const
+QThread *WorkerProxy::workerThread() const
 {
-    return worker()->thread();
+    return worker()->workerThread();
 }
 
 Worker *WorkerProxy::worker() const
