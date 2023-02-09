@@ -95,7 +95,30 @@ void Launcher::setLoggingFilters(const QMap<QString, bool> &loggers)
         }
     }
     if (!filterRules.isEmpty()) {
-        Broker::instance()->applyLoggingFilters(loggers);
+        QMap<QString, QMap<QtMsgType, bool>> workerLoggers{};
+        for (auto iter{loggers.begin()}; iter != loggers.end(); ++iter) {
+            auto key = iter.key();
+            QtMsgType currentType = QtDebugMsg;
+            if (key.endsWith(".debug")) {
+                currentType = QtDebugMsg;
+                key.remove(".debug");
+            } else if (key.endsWith(".info")) {
+                currentType = QtInfoMsg;
+                key.remove(".info");
+            } else if (key.endsWith(".warn")) {
+                key.remove(".warn");
+                currentType = QtWarningMsg;
+            } else if (key.endsWith(".error")) {
+                key.remove(".error");
+                currentType = QtCriticalMsg;
+            }
+            if (workerLoggers.contains(key)) {
+                workerLoggers[key][currentType] = iter.value();
+            } else {
+                workerLoggers.insert(key, {{currentType, iter.value()}});
+            }
+        }
+        Broker::instance()->applyWorkerLoggingFilters(workerLoggers);
         auto filterString = filterRules.join("\n");
         QLoggingCategory::setFilterRules(filterString);
     }
@@ -191,6 +214,12 @@ void Launcher::initSql()
 
 void Launcher::parseCommandlineArgs()
 {
+    if (QCoreApplication::applicationName().isEmpty()) {
+        QCoreApplication::setApplicationName("redis-adapter");
+    }
+    if (QCoreApplication::applicationVersion().isEmpty()) {
+        QCoreApplication::setApplicationVersion(RADAPTER_VERSION);
+    }
     m_parser.addHelpOption();
     m_parser.addVersionOption();
     m_parser.addOptions({
@@ -211,12 +240,6 @@ bool Launcher::setTomlPath(const QString &tomlPath) {
 
 void Launcher::init()
 {
-    if (QCoreApplication::applicationName().isEmpty()) {
-        QCoreApplication::setApplicationName("redis-adapter");
-    }
-    if (QCoreApplication::applicationVersion().isEmpty()) {
-        QCoreApplication::setApplicationVersion(RADAPTER_VERSION);
-    }
     for (auto workerIter = m_workers.begin(); workerIter != m_workers.end(); ++workerIter) {
         Broker::instance()->registerProxy(workerIter.key()->createProxy(workerIter.value()));
     }

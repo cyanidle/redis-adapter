@@ -150,23 +150,23 @@ struct ContainerInfo : public ContainerInfoImpl<Container, is_container<Containe
 };
 
 template<class Holder, typename = void>
-struct is_holder : std::false_type {};
+struct is_smart_ptr : std::false_type {};
 
 template <typename T, typename Ret = void>
 using enable_if_ptr_typedef = typename std::enable_if<std::is_pointer<typename T::pointer>::value, Ret>::type;
 
 template<class Holder>
-struct is_holder<Holder, std::void_t<
+struct is_smart_ptr<Holder, std::void_t<
         typename Holder::value_type,
         typename Holder::Type,
         enable_if_ptr_typedef<Holder>
      >> : std::true_type {};
 
 template <class Holder, class Ret = void>
-using enable_if_ptr_holder = typename std::enable_if<is_holder<Holder>::value, Ret>::type;
+using enable_if_smart_ptr = typename std::enable_if<is_smart_ptr<Holder>::value, Ret>::type;
 template <class T, class Ret = void>
 using enable_if_ptr = typename std::enable_if<std::is_pointer<T>::value, Ret>::type;
 template <class T, class Ret = void>
-using enable_if_not_ptr = typename std::enable_if<!std::is_pointer<T>::value && !is_holder<T>::value, Ret>::type;
+using enable_if_not_ptr = typename std::enable_if<!std::is_pointer<T>::value && !is_smart_ptr<T>::value, Ret>::type;
 }
 #endif // METAPROGRAMMING_HPP

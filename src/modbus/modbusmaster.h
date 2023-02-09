@@ -18,11 +18,9 @@ public:
     void onRun() override;
     ~Master() override;
     bool isConnected() const;
-    bool isChannelBusy() const;
     const Settings::ModbusMaster &config() const;
 signals:
     void askTrigger();
-    void queryStarted();
     void queryDone();
     void allQueriesDone();
     void connected();
@@ -36,13 +34,13 @@ private slots:
     void onReadReady();
     void onWriteReady();
     void doRead();
+    void onChannelDied(QObject *who);
     void onErrorOccurred(QModbusDevice::Error error);
     void onStateChanged(QModbusDevice::State state);
 private:
     void formatAndSendJson(const JsonDict &json);
     void enqeueRead(const QModbusDataUnit &unit);
     void enqeueWrite(const QModbusDataUnit &unit);
-    void tryExecuteNext();
     void executeNext();
     void executeRead(const QModbusDataUnit &unit);
     void executeWrite(const QModbusDataUnit &unit);

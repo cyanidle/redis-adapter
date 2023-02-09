@@ -2,10 +2,10 @@
 #include <QModbusRtuSerialSlave>
 #include <QModbusTcpServer>
 #include "radapterlogging.h"
-#include "utils/wordoperations.h"
+#include "modbusparsing.h"
+
 using namespace Modbus;
 using namespace Radapter;
-using namespace Utils;
 
 Slave::Slave(const Settings::ModbusSlave &settings, QThread *thread) :
     Worker(settings.worker, thread),
@@ -44,9 +44,13 @@ Slave::Slave(const Settings::ModbusSlave &settings, QThread *thread) :
             m_reverseRegisters[iter.value().table] = {{iter.value().index, iter.key()}};
         }
     }
+    workerDebug(this) << "Inserting Coils: Start: 0; Count: " << settings.counts.coils;
     regMap.insert(QModbusDataUnit::Coils, {QModbusDataUnit::Coils, 0, settings.counts.coils});
+    workerDebug(this) << "Inserting Holding: Start: 0; Count: " << settings.counts.holding_registers;
     regMap.insert(QModbusDataUnit::HoldingRegisters, {QModbusDataUnit::HoldingRegisters, 0, settings.counts.holding_registers});
+    workerDebug(this) << "Inserting Input: Start: 0; Count: " << settings.counts.input_registers;
     regMap.insert(QModbusDataUnit::InputRegisters, {QModbusDataUnit::InputRegisters, 0, settings.counts.input_registers});
+    workerDebug(this) << "Inserting DI: Start: 0; Count: " << settings.counts.di;
     regMap.insert(QModbusDataUnit::DiscreteInputs, {QModbusDataUnit::DiscreteInputs, 0, settings.counts.di});
     modbusDevice->setMap(regMap);
 }
@@ -59,7 +63,7 @@ Slave::~Slave()
 void Slave::connectDevice()
 {
     if (!modbusDevice->connectDevice()) {
-        reWarn() << printSelf() << ": Failed to connect: Attempt to reconnect to: " << m_settings.device.repr();
+        workerWarn(this) << ": Failed to connect: Attempt to reconnect to: " << m_settings.device.repr();
         m_reconnectTimer->start();
     }
 }
@@ -89,10 +93,10 @@ void Slave::onDataWritten(QModbusDataUnit::RegisterType table, int address, int 
             ok = modbusDevice->data(QModbusDataUnit::InputRegisters, quint16(address + i), &(words[i]));
             break;
         default:
-            reWarn() << printSelf() << "Invalid data written: Adress: " << address + i << "; Table: " << table;
+            workerWarn(this) << "Invalid data written: Adress: " << address + i << "; Table: " << table;
         }
         if (!ok) {
-            reWarn() << printSelf() << "Error reading data! Adress:" << address << "; Table:" << table;
+            workerWarn(this) << "Error reading data! Adress:" << address << "; Table:" << table;
             continue;
         }
     }
@@ -118,7 +122,7 @@ void Slave::onDataWritten(QModbusDataUnit::RegisterType table, int address, int 
                 msg[regString.split(":")] = result;
             }
         } else {
-            reWarn() << "Modbus Slave error: Current adress: " << address + i;
+            workerWarn(this) << "Modbus Slave error: Current adress: " << address + i;
         }
     }
     emit sendMsg(msg);
@@ -127,7 +131,7 @@ void Slave::onDataWritten(QModbusDataUnit::RegisterType table, int address, int 
 
 void Slave::onErrorOccurred(QModbusDevice::Error error)
 {
-    reWarn() << printSelf() << "Error: " << m_settings.device.repr() << "; Reason: " <<
+    workerWarn(this) << "Error: " << m_settings.device.repr() << "; Reason: " <<
         QMetaEnum::fromType<QModbusDevice::Error>().valueToKey(error);
     disconnectDevice();
     m_reconnectTimer->start();
@@ -135,7 +139,7 @@ void Slave::onErrorOccurred(QModbusDevice::Error error)
 
 void Slave::onStateChanged(QModbusDevice::State state)
 {
-    reDebug() << "New state for: " << printSelf() <<" --> " <<
+    workerWarn(this) << "New state for: " << printSelf() <<" --> " <<
         QMetaEnum::fromType<QModbusDevice::State>().valueToKey(state);
 }
 

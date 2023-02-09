@@ -95,10 +95,10 @@ QString WorkerMsg::printFlatData() const
     QString result;
     auto flat = flatten(":");
     for (auto keyVal = flat.constBegin(); keyVal != flat.constEnd(); ++keyVal) {
-        result.append("# '");
+        result.append("\n# '");
         result.append(keyVal.key());
         result.append("': '");
-        result.append(keyVal.value().value<QString>() + "';\n");
+        result.append(keyVal.value().value<QString>() + ';');
     }
     return result;
 }
@@ -116,7 +116,7 @@ QString WorkerMsg::printFullDebug() const
            QStringLiteral("# Sender: ") + senderWorker->printSelf()  + "\n" +
            QStringLiteral("# Targets: [") + printReceivers().join(", ") + "]\n" +
            QStringLiteral("# Flags: ") + printFlags() + "\n" +
-           QStringLiteral("# Flat Msg: ") + printFlatData() + "\n" +
+           QStringLiteral("# Flat Msg: \n") + printFlatData() + "\n" +
            QStringLiteral("# Command: ") + (command() ? command()->metaObject()->className() : "None") + "\n" +
            QStringLiteral("# Reply: ") + (reply() ? reply()->metaObject()->className() : "None") + "\n" +
            QStringLiteral("### Msg Id: ") + QString::number(id()) + QStringLiteral(" Debug End  ###");

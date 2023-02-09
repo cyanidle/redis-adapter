@@ -1,14 +1,13 @@
 #include "modbusmaster.h"
 #include "broker/broker.h"
 #include "templates/algorithms.hpp"
-#include "utils/wordoperations.h"
 #include <QModbusRtuSerialMaster>
+#include "modbusparsing.h"
 #include <QModbusReply>
 #include <QModbusTcpClient>
 
 using namespace Modbus;
 using namespace Radapter;
-using namespace Utils;
 
 Master::Master(const Settings::ModbusMaster &settings, QThread *thread) :
     Radapter::Worker(settings.worker, thread),
@@ -68,11 +67,6 @@ bool Master::isConnected() const
     return m_connected;
 }
 
-bool Master::isChannelBusy() const
-{
-    return m_channel->isBusy();
-}
-
 void Master::attachToChannel()
 {
     //! Creating channels only once per channel of all masters, then sharing them (QSharedPointer)
@@ -96,11 +90,12 @@ void Master::attachToChannel()
     auto channel = m_channel.data();
     //! The main code
     channel->registerUser(this);
-    connect(channel, &Sync::Channel::trigger, this, &Master::triggerExecute);
-    connect(this, &Master::queryStarted, channel, &Sync::Channel::onJobStart);
-    connect(this, &Master::queryDone, channel, &Sync::Channel::onJobDone);
-    connect(this, &Master::queryDone, channel, &Sync::Channel::askTrigger);
-    connect(this, &Master::askTrigger, channel, &Sync::Channel::askTrigger);
+    channel->callOnTrigger(this, &Master::triggerExecute);
+    channel->signalJobDone(this, &Master::queryDone);
+    channel->signalJobDone(this, &Master::allQueriesDone);
+    channel->askTriggerOn(this, &Master::queryDone);
+    channel->askTriggerOn(this, &Master::askTrigger);
+    connect(channel, &Sync::Channel::destroyed, this, &Master::onChannelDied);
 }
 
 const Settings::ModbusMaster &Master::config() const
@@ -162,18 +157,11 @@ void Master::executeNext()
     }
 }
 
-void Master::tryExecuteNext()
-{
-    if (isChannelBusy()) {
-        emit askTrigger();
-        return;
-    }
-    executeNext();
-}
-
 void Master::onErrorOccurred(QModbusDevice::Error error)
 {
-    reDebug() << printSelf() << ": Error: " << QMetaEnum::fromType<QModbusDevice::Error>().valueToKey(error) << "; Source: " << sender();
+    workerError(this) << QMetaEnum::fromType<QModbusDevice::Error>().valueToKey(error) << "; Source: " << sender();
+    disconnectDevice();
+    m_reconnectTimer->start();
 }
 
 void Master::onStateChanged(QModbusDevice::State state)
@@ -184,8 +172,7 @@ void Master::onStateChanged(QModbusDevice::State state)
     } else if (state == QModbusDevice::ConnectedState) {
         emit connected();
     }
-    reDebug() << "New state for: " << printSelf() << " --> " <<
-        QMetaEnum::fromType<QModbusDevice::State>().valueToKey(state);
+    workerInfo(this) << "New State --> " << QMetaEnum::fromType<QModbusDevice::State>().valueToKey(state);
 }
 
 void Master::onReadReady()
@@ -194,7 +181,7 @@ void Master::onReadReady()
     if (!rawReply) return;
     QScopedPointer<QModbusReply, QScopedPointerDeleteLater> reply{rawReply};
     if (reply->error() != QModbusDevice::NoError) {
-        reError() << printSelf() << ": Error Reading: " << reply->errorString();
+        workerError(this) << ": Error Reading: " << reply->errorString();
         return;
     }
     auto words = reply->result().values();
@@ -225,9 +212,9 @@ void Master::onWriteReady()
     if (!rawReply) return;
     QScopedPointer<QModbusReply, QScopedPointerDeleteLater> reply{rawReply};
     if (reply->error() == QModbusDevice::NoError) {
-        reInfo() << printSelf() << "; Written: " << reply->result().values();
+        workerError(this) << "; Written: " << reply->result().values();
     } else {
-        reError() << printSelf() << ": Error Writing: " << reply->errorString();
+        workerError(this) << ": Error Writing: " << reply->errorString();
     }
 }
 
@@ -240,6 +227,12 @@ void Master::doRead()
         auto unit = QModbusDataUnit(query.type, query.reg_index, query.reg_count);
         enqeueRead(unit);
     }
+}
+
+void Master::onChannelDied(QObject *who)
+{
+    workerError(this, .nospace()) << "Channel (" << who << ") died, deleting...";
+    deleteLater();
 }
 
 void Master::formatAndSendJson(const JsonDict &json)
@@ -261,18 +254,17 @@ void Master::formatAndSendJson(const JsonDict &json)
 void Master::enqeueRead(const QModbusDataUnit &unit)
 {
     m_readQueue.enqueue(unit);
-    tryExecuteNext();
+    emit askTrigger();
 }
 
 void Master::enqeueWrite(const QModbusDataUnit &unit)
 {
     m_writeQueue.enqueue(unit);
-    tryExecuteNext();
+    emit askTrigger();
 }
 
 void Master::executeRead(const QModbusDataUnit &unit)
 {
-    emit queryStarted();
     if (auto reply = m_device->sendReadRequest(unit, m_settings.slave_id)) {
         connect(reply, &QModbusReply::destroyed, this, &Master::queryDone);
         if (!reply->isFinished()) {
@@ -281,14 +273,13 @@ void Master::executeRead(const QModbusDataUnit &unit)
             delete reply;
         }
     } else {
-        reError() << printSelf() << "Read Error: " << m_device->errorString();
+        workerError(this) << "Read Error: " << m_device->errorString();
         emit queryDone();
     }
 }
 
 void Master::executeWrite(const QModbusDataUnit &unit)
 {
-    emit queryStarted();
     if (auto reply = m_device->sendWriteRequest(unit, m_settings.slave_id)) {
         connect(reply, &QModbusReply::destroyed, this, &Master::queryDone);
         if (!reply->isFinished()) {
@@ -297,7 +288,7 @@ void Master::executeWrite(const QModbusDataUnit &unit)
             delete reply;
         }
     } else {
-        workerInfo() << "Write Error: " << m_device->errorString();
+        workerInfo(this) << "Write Error: " << m_device->errorString();
         emit queryDone();
     }
 }

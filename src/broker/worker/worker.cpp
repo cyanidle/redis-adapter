@@ -71,7 +71,7 @@ void Worker::addInterceptor(InterceptorBase *interceptor)
         connect(interceptor, &InterceptorBase::msgToBroker, closestInterceptor, &InterceptorBase::onMsgFromWorker);
         connect(closestInterceptor, &InterceptorBase::msgToWorker, interceptor, &InterceptorBase::onMsgFromBroker);
     } else {
-        throw std::runtime_error("Unkown Error while adding interceptor!");
+        throw std::runtime_error("Unknown Error while adding interceptor!");
     }
 }
 
@@ -97,7 +97,7 @@ bool Worker::wasStarted() const
 
 QString Worker::printSelf() const
 {
-    return QStringLiteral("(%1) %2").arg(metaObject()->className(), workerName());
+    return QStringLiteral("%2 (%1):").arg(metaObject()->className(), workerName());
 }
 
 void Worker::run()
@@ -127,7 +127,7 @@ void Worker::run()
 
 void Worker::onRun()
 {
-    workerInfo() << ": started!";
+    workerInfo(this) << ": started!";
 }
 
 void Worker::addConsumers(const QStringList &consumers)
@@ -246,18 +246,18 @@ void Worker::onWorkerDestroyed(QObject *worker)
 void Worker::onMsgFromBroker(const Radapter::WorkerMsg &msg)
 {
     if (isPrintMsgsEnabled()) {
-        brokerInfo().noquote() << "\n ||| To Worker: " << workerName() <<  "||| " << msg.printFullDebug();
+        workerInfo(this, .noquote()) << "<--- TO ###" << msg.printFullDebug();
     }
     if (msg.isReply()) {
         if (!msg.reply()) {
-            brokerError() << "Null Reply, while flagged as reply! Sender: " << msg.sender();
+            workerError(this) << "Null Reply, while flagged as reply! Sender: " << msg.sender();
             return;
         }
         onReply(msg);
     }
     else if (msg.isCommand()) {
         if (!msg.command()) {
-            brokerError() << "Null Command, while flagged as command! Sender: " << msg.sender();
+            workerError(this) << "Null Command, while flagged as command! Sender: " << msg.sender();
             return;
         }
         onCommand(msg);
@@ -267,7 +267,7 @@ void Worker::onMsgFromBroker(const Radapter::WorkerMsg &msg)
 
 void Worker::childDeleted(QObject *who)
 {
-    brokerWarn() << "Deleting: " << this << "; Reason --> Child died: " << who;
+    workerWarn(this) << "Deleting...; Reason --> Important Child died: " << who;
     deleteLater();
 }
 
@@ -292,7 +292,7 @@ void Worker::onSendMsgPriv(const Radapter::WorkerMsg &msg)
         throw std::runtime_error("Worker sent msg before being run!");
     }
     if (isPrintMsgsEnabled()) {
-        workerInfo() <<  " <--- FROM ###" << msg.printFullDebug();
+        workerInfo(this, .noquote()) <<  " <--- FROM ###" << msg.printFullDebug();
     }
 }
 

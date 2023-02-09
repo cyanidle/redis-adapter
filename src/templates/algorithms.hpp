@@ -19,15 +19,25 @@ enable_if_ptr<Object, typename MethodInfo<Method>::ReturnType> test(const Object
     return (val->*pred)(std::forward<Args>(args)...);
 }
 
-template <typename Holder, typename Method, typename...Args>
-enable_if_ptr_holder<Holder, typename MethodInfo<Method>::ReturnType> test(const Holder &val, Method pred, Args&&...args) {
-    return (val.data()->*pred)(std::forward<Args>(args)...);
-}
-
 template <typename Function, typename...Args>
 typename FuncInfo<Function>::ReturnType test(Function pred, Args&&...args) {
     return pred(std::forward<Args>(args)...);
 }
+
+template <typename Object, typename Method, typename...Args>
+typename std::enable_if<
+is_iterator<Object>::value &&
+!is_smart_ptr<Object>::value &&
+!std::is_pointer<Object>::value,
+typename MethodInfo<Method>::ReturnType>::type test(const Object &val, Method pred, Args&&...args) {
+    return test(val.value(), pred, std::forward<Args>(args)...);
+}
+
+template <typename Object, typename Method, typename...Args>
+enable_if_smart_ptr<Object, typename MethodInfo<Method>::ReturnType> test(const Object &val, Method pred, Args&&...args) {
+    return test(val.data(), pred, std::forward<Args>(args)...);
+}
+
 
 template<typename Predicate>
 struct ContainerTester {

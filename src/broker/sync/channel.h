@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QHash>
+#include <QTimer>
 namespace Radapter {
 namespace Sync {
 class Channel : public QObject {
@@ -17,26 +18,40 @@ public:
     //! \warning not threadsafe
     void registerUser(QObject *user, Priority priority = NormalPriority);
     //! \note Everything else is (with connections)
-    bool isBusy() const;
+    QObject *whoIsBusy() const;
+    template<typename User>
+    QMetaObject::Connection callOnTrigger(User *user, void (User::*slot)(QObject *)) {
+        return connect(this, &Channel::trigger, user, slot);
+    }
+    template<typename User>
+    QMetaObject::Connection signalJobDone(User *user, void (User::*signal)()) {
+        return connect(user, signal, this, &Channel::onJobDone);
+    }
+    template<typename User>
+    QMetaObject::Connection askTriggerOn(User *user, void (User::*signal)()) {
+        return connect(user, signal, this, &Channel::askTrigger);
+    }
 signals:
-    void trigger(QObject *user);
-public slots:
+    void trigger(QObject *user, QPrivateSignal);
+private slots:
     void onJobDone();
-    void onJobStart();
     void askTrigger();
 private:
-    QObject *checkSender();
-    void checkWaiting();
+    bool isBusy() const;
+    void checkWaiting(QObject *ignore = nullptr);
+    void activate(QObject *who);
+
+    struct FilterIgnored;
     struct UserState {
         QObject *user;
         Priority priority;
-        bool busy;
         bool waitingForTrigger;
-        bool isBusy() const {return busy;}
         bool isWaiting() const {return waitingForTrigger;}
         Priority whatPrio() const {return priority;}
     };
-    QHash<QObject*, UserState> m_users;
+    QHash<QObject*, UserState> m_userStates{};
+    QObject *m_busy;
+    QTimer *m_debug;
 };
 }
 }

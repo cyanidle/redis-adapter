@@ -40,11 +40,11 @@ struct FilterIter {
     value_type &value() {
         return *m_iter;
     }
-    const value_type &operator*() {
+    value_type &operator*() {
         return *m_iter;
     }
     value_type *operator->() {
-        return &*m_iter;
+        return &(*m_iter);
     }
     bool operator==(const FilterIter &other) const {
         return m_iter == other.m_iter;
@@ -110,7 +110,7 @@ struct FilterConstIter {
         return *m_iter;
     }
     const value_type *operator->() {
-        return &*m_iter;
+        return &(*m_iter);
     }
     const value_type &value() {
         return *m_iter;
@@ -159,6 +159,11 @@ struct FilterHolder {
     bool anyPass() const {
         return !nonePass();
     }
+    size_t size() const {
+        size_t result{0};
+        for (auto iter{begin()}; iter != end(); ++iter, ++result) {}
+        return result;
+    }
     iterator begin() {
         return iterator(m_cont->begin(), m_cont->end(), m_filter);
     }
@@ -166,10 +171,10 @@ struct FilterHolder {
         return iterator(m_cont->end(), m_cont->end(), m_filter);
     }
     const_iterator begin() const {
-        return const_iterator(m_cont->begin(), m_cont->end(), m_filter);
+        return const_iterator(m_cont->cbegin(), m_cont->cend(), m_filter);
     }
     const_iterator end() const {
-        return const_iterator(m_cont->end(), m_cont->end(), m_filter);
+        return const_iterator(m_cont->cend(), m_cont->cend(), m_filter);
     }
     const_iterator cbegin() const {
         return const_iterator(m_cont->begin(), m_cont->end(), m_filter);
@@ -197,6 +202,11 @@ struct FilterConstHolder {
     bool anyPass() const {
         return !nonePass();
     }
+    size_t size() const {
+        size_t result;
+        for (auto iter{begin()}; iter != end(); ++iter, ++result) {}
+        return result;
+    }
     iterator begin() {
         return iterator(m_cont->begin(), m_cont->end(), m_filter);
     }
@@ -204,10 +214,10 @@ struct FilterConstHolder {
         return iterator(m_cont->end(), m_cont->end(), m_filter);
     }
     const_iterator begin() const {
-        return const_iterator(m_cont->begin(), m_cont->end(), m_filter);
+        return const_iterator(m_cont->cbegin(), m_cont->cend(), m_filter);
     }
     const_iterator end() const {
-        return const_iterator(m_cont->end(), m_cont->end(), m_filter);
+        return const_iterator(m_cont->cend(), m_cont->cend(), m_filter);
     }
     const_iterator cbegin() const {
         return const_iterator(m_cont->begin(), m_cont->end(), m_filter);

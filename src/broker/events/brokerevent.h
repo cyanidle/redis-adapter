@@ -22,7 +22,7 @@ public:
     const QVariant &data() const {return m_data;}
     template <class T>
     bool isFrom() const {
-        return qobject_cast<T*>(m_sender) != nullptr;
+        return m_sender->inherits(&T::staticMetaObject);
     }
 private:
     QObject *m_sender{};

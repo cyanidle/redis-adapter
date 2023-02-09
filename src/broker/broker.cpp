@@ -16,16 +16,14 @@ Broker::Broker() :
 {
 }
 
-bool Broker::isDebugEnabled(const QString &workerName)
+bool Broker::isDebugEnabled(const QString &workerName, QtMsgType type)
 {
-    return m_debugTable.value(workerName, true);
+    return m_debugTable.value(workerName).value(type, true);
 }
 
-void Broker::applyLoggingFilters(const QMap<QString, bool> &table)
+void Broker::applyWorkerLoggingFilters(const QMap<QString, QMap<QtMsgType, bool>> &table)
 {
-    for (auto iter = table.constBegin(); iter != table.constEnd(); ++iter) {
-        m_debugTable.insert(iter.key(), iter.value());
-    }
+    m_debugTable = {table.cbegin(), table.cend()};
 }
 
 // Doesnt need mutex, bc is always connected via Qt::QueuedConnection

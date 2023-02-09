@@ -1,11 +1,21 @@
 #include "channel.h"
+#include "radapterlogging.h"
 #include "templates/algorithms.hpp"
 #include <QSet>
 using namespace Radapter::Sync;
 
-Channel::Channel(QThread *thread)
+
+Channel::Channel(QThread *thread) :
+    m_debug(new QTimer(this))
 {
+    m_debug->setInterval(1000);
+    m_debug->callOnTimeout([this](){reDebug() << this << "Busy on:" << m_busy;});
     moveToThread(thread);
+}
+
+QObject *Channel::whoIsBusy() const
+{
+    return const_cast<QObject*>(m_busy);
 }
 
 void Channel::registerUser(QObject *user, Priority priority)
@@ -15,54 +25,59 @@ void Channel::registerUser(QObject *user, Priority priority)
             priority != HighPriority) {
         throw std::invalid_argument("Invalid priority for channel user!");
     }
-    m_users[user]= {.user = user,
-                    .priority = priority,
-                    .busy = false,
-                    .waitingForTrigger = false,
-                    };
+    m_userStates[user]= {.user = user,
+                         .priority = priority,
+                         .waitingForTrigger = false,
+                         };
 }
 
 bool Channel::isBusy() const
 {
-    return any_of(m_users, &UserState::isBusy);
+    return m_busy;
 }
 
 void Channel::onJobDone()
 {
-    auto checked = checkSender();
-    m_users[checked].busy = false;
-    checkWaiting();
-}
-
-void Channel::onJobStart()
-{
-    auto checked = checkSender();
-    m_users[checked].busy = true;
+    m_debug->stop();
+    auto was = m_busy;
+    m_busy = nullptr;
+    checkWaiting(was);
 }
 
 void Channel::askTrigger()
 {
-    auto checked = checkSender();
-    m_users[checked].waitingForTrigger = true;
+    auto checked = sender();
+    m_userStates[checked].waitingForTrigger = true;
     checkWaiting();
 }
 
-void Channel::checkWaiting()
+struct Channel::FilterIgnored {
+    FilterIgnored(QObject *ignore) : m_ingored(ignore) {}
+    bool operator()(const UserState &state) const {
+        return state.user != m_ingored;
+    }
+private:
+    QObject *m_ingored;
+};
+
+void Channel::checkWaiting(QObject *ignore)
 {
     if (isBusy()) return;
-    auto allWaiting = filter(&m_users, &UserState::isWaiting);
-    if (allWaiting.nonePass()) return;
-    auto highest = max_element(&allWaiting, &UserState::whatPrio);
-    if (!highest.wasFound()) return;
-    highest.result->waitingForTrigger = false;
-    emit trigger(highest.result->user);
-}
-
-QObject *Channel::checkSender()
-{
-    if (!m_users.contains(sender())) {
-        throw std::runtime_error("Channel slots must NOT be called manualy! (Or channel user not registered)");
+    auto allWaiting = filter(&m_userStates, &UserState::isWaiting);
+    auto size = allWaiting.size();
+    if (size > 1) {
+        auto highestExcept = filter(&allWaiting, FilterIgnored(ignore));
+        auto max = max_element(&highestExcept, &UserState::whatPrio);
+        activate(max.result->user);
+    } else if (size) {
+        activate(allWaiting.begin()->user);
     }
-    return sender();
 }
 
+void Channel::activate(QObject *who)
+{
+    m_debug->start();
+    m_userStates[who].waitingForTrigger = false;
+    m_busy = who;
+    emit trigger(who, {});
+}

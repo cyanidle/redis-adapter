@@ -33,15 +33,12 @@ public:
     QStringList producersNames() const;
     QThread *workerThread() const;
     Broker *broker() const;
-    virtual ~Worker() = default;
     bool wasStarted() const;
-    template <typename Target>
-    bool is() const;
-    template <typename Target>
-    const Target *as() const;
-    template <typename Target>
-    Target *as();
+    template <typename Target> bool is() const;
+    template <typename Target> const Target *as() const;
+    template <typename Target> Target *as();
     QString printSelf() const;
+    virtual ~Worker() = default;
 signals:
     void fireEvent(const Radapter::BrokerEvent &event);
     void sendMsg(const Radapter::WorkerMsg &msg);
@@ -51,13 +48,13 @@ public slots:
     void addProducers(const QStringList &producers);
     void addConsumers(const QSet<Radapter::Worker*> &consumers);
     void addProducers(const QSet<Radapter::Worker*> &producers);
-    virtual void onEvent(const Radapter::BrokerEvent &event);
 protected slots:
+    virtual void onEvent(const Radapter::BrokerEvent &event);
     virtual void onRun();
-private slots:
     virtual void onReply(const Radapter::WorkerMsg &msg);
     virtual void onCommand(const Radapter::WorkerMsg &msg);
     virtual void onMsg(const Radapter::WorkerMsg &msg);
+private slots:
     void onWorkerDestroyed(QObject *worker);
     void onSendMsgPriv(const Radapter::WorkerMsg &msg);
     void onMsgFromBroker(const Radapter::WorkerMsg &msg);
@@ -91,6 +88,7 @@ private:
     static QMutex m_mutex;
     static QStringList m_wereCreated;
     static QList<InterceptorBase*> m_usedInterceptors;
+    friend Broker;
 };
 
 template<typename Target>
