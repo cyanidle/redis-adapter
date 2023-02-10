@@ -4,6 +4,3 @@
 [submodule "src/lib/googletest"]
 	path = src/lib/googletest
 	url = https://github.com/google/googletest
-[submodule "src/lib/settings-parsing"]
-	path = src/lib/settings-parsing
-	url = ssh://git@gitlab.rsk-auto.ru:8922/libraries/settings-parsing.git
