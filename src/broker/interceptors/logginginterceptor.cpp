@@ -73,7 +73,7 @@ bool LoggingInterceptor::testMsgForLog(const Radapter::WorkerMsg &msg) {
 void LoggingInterceptor::enqueueMsg(const WorkerMsg &msg)
 {
     auto copy = msg;
-    JsonDict metaInfo{
+    JsonDict metaInfo{QVariantMap{
         {"sender", msg.sender()->printSelf()},
         {"receivers", msg.printReceivers()},
         {"flags", msg.printFlags()},
@@ -81,7 +81,7 @@ void LoggingInterceptor::enqueueMsg(const WorkerMsg &msg)
         {"reply", msg.reply() ? msg.reply()->metaObject()->className() : "None"},
         {"serviceInfo", msg.printServiceData().toVariant()},
         {"id", msg.id()}
-    };
+    }};
     copy["__meta__"] = metaInfo.toVariant();
     m_array.append(copy.toJsonObj());
     m_shouldUpdate = true;

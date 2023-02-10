@@ -88,7 +88,7 @@ void Connector::startCommandTimer()
 
 void Connector::tryConnect()
 {
-    static timeval timeout{.tv_sec = 0, .tv_usec = TCP_CONNECT_TIMEOUT_MS};
+    static timeval timeout{0, TCP_CONNECT_TIMEOUT_MS};
     if (isConnected()) {
         return;
     }

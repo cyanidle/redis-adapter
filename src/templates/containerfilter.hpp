@@ -4,6 +4,7 @@
 #include <iterator>
 #include <type_traits>
 #include "metaprogramming.hpp"
+#include <QtGlobal>
 
 namespace Radapter {
 template <typename Container, typename Filter>
@@ -11,6 +12,9 @@ struct FilterIter {
     using iterator_category = std::forward_iterator_tag;
     using iter_t = typename Container::iterator;
     using value_type = typename iter_t::value_type;
+    using reference = value_type&;
+    using pointer = value_type*;
+    using difference_type = qptrdiff;
     FilterIter(iter_t iter, iter_t end, Filter filter) :
         m_iter(iter),
         m_end(end),
@@ -80,6 +84,9 @@ struct FilterConstIter {
     using iterator_category = std::forward_iterator_tag;
     using iter_t = typename Container::const_iterator;
     using value_type = typename iter_t::value_type;
+    using reference = value_type&;
+    using pointer = value_type*;
+    using difference_type = qptrdiff;
     FilterConstIter(iter_t iter, iter_t end, Filter filter) :
         m_iter(iter),
         m_end(end),

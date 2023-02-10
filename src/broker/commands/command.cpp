@@ -1,5 +1,5 @@
 #include "command.h"
-
+#include <stdexcept>
 namespace Radapter {
 
 Command::Command(quint32 type) :

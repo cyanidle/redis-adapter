@@ -7,6 +7,7 @@
 class RADAPTER_SHARED_SRC ResourceMonitor : public QObject
 {
     Q_OBJECT
+#ifndef _MSC_VER
 public:
     explicit ResourceMonitor(QObject *parent);
 
@@ -26,6 +27,6 @@ private:
     qint64 m_lastOverallTotalTime;
     double m_lastUserTime;
     double m_lastSystemTime;
+#endif
 };
-
 #endif // RESOURCEMONITOR_H

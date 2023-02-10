@@ -1,15 +1,14 @@
 #include "resourcemonitor.h"
 #include <QFile>
-#include <sys/time.h>
-#include <sys/resource.h>
 #include "radapterlogging.h"
 
+#ifndef _MSC_VER
 #define GET_USAGE_TIMEOUT_MS    10000
-
 #define CPU_IDLE_INDEX          3
-
 #define RUSAGE_STATUS_OK        0
 #define SYSCONF_STATUS_ERROR    -1
+#include <sys/resource.h>
+#include <sys/time.h>
 
 ResourceMonitor::ResourceMonitor(QObject *parent)
     : QObject(parent),
@@ -81,3 +80,4 @@ void ResourceMonitor::readOverallCpuLoad()
     auto printMessage = QString("Overall - CPU: %1%").arg(load, 0, 'f', 2);
     resmonDebug() << printMessage.toStdString().c_str();
 }
+#endif

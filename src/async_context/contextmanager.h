@@ -4,6 +4,7 @@
 #include <QHash>
 #include "radapterlogging.h"
 #include "private/global.h"
+#include <stdexcept>
 
 namespace Radapter {
 struct ContextBase {

@@ -41,10 +41,8 @@ public:
     inline explicit JsonDict(const QVariant& src, const QString &separator = ":", bool nest = true);
     inline JsonDict(const QVariantMap& src = QVariantMap{}, const QString &separator = ":", bool nest = true);
     inline JsonDict(std::initializer_list<std::pair<QString, QVariant>> initializer);
-    inline JsonDict(std::initializer_list<std::pair<QString, JsonDict>> initializer);
-    inline JsonDict(std::initializer_list<std::pair<QString, QVariant>> initializer, const QString &separator);
-    inline JsonDict(std::initializer_list<std::pair<QString, JsonDict>> initializer, const QString &separator);
-    inline JsonDict(QVariantMap&& src, const QString &separator = ":", bool nest = true);
+    explicit inline JsonDict(std::initializer_list<std::pair<QString, JsonDict>> initializer);
+    explicit inline JsonDict(QVariantMap&& src, const QString &separator = ":", bool nest = true);
     //! \warning Implicitly covertible to QVariant and QVariantMap
     operator const QVariantMap&() const&;
     operator QVariantMap&() &;
@@ -268,7 +266,7 @@ JsonDict::iterator_base<Iter, MapT> &JsonDict::iterator_base<Iter, MapT>::operat
     }
     auto *val = &m_current.value();
     if (val->type() == QVariant::Map) {
-        m_traverseHistory.push({.current = m_current, .end = m_end});
+        m_traverseHistory.push(TraverseState{m_current, m_end});
         auto *asDict = reinterpret_cast<MapT*>(val->data());
         m_current = asDict->begin();
         m_end = asDict->end();
@@ -332,7 +330,7 @@ void JsonDict::iterator_base<Iter, MapT>::findFirst()
         if (asDict->isEmpty()) {
             currval = &(++m_current).value();
         } else {
-            m_traverseHistory.push({.current = m_current, .end = m_end});
+            m_traverseHistory.push({m_current, m_end});
             m_current = asDict->begin();
             m_end = asDict->end();
             currval = &m_current.value();
@@ -853,20 +851,6 @@ inline JsonDict::JsonDict(std::initializer_list<std::pair<QString, JsonDict> > i
     }
     this->nest(':');
 }
-JsonDict::JsonDict(std::initializer_list<std::pair<QString, QVariant>> initializer, const QString &separator) :
-    m_dict(initializer)
-{
-    if (!isEmpty()) nest(separator);
-}
-
-JsonDict::JsonDict(std::initializer_list<std::pair<QString, JsonDict>> initializer, const QString &separator) :
-    m_dict()
-{
-    for (const auto &pair : initializer) {
-        m_dict.insert(pair.first, static_cast<const QVariantMap&>(pair.second));
-    }
-    if (!isEmpty()) this->nest(separator);
-}
 
 JsonDict::JsonDict(QVariantMap&& src, const QString &separator, bool nest) :
     m_dict(std::move(src))
@@ -928,12 +912,22 @@ namespace Radapter {
 inline QDebug operator<<(QDebug dbg, const JsonDict &json)
 {
     QDebugStateSaver saver(dbg);
-    QString result{"Json{\n"};
+    dbg.noquote() << "Json{";
     const auto flat = json.flatten();
     for (auto iter{flat.begin()}; iter != flat.end(); ++iter) {
-        result.append(QStringLiteral("\n%1: %2").arg(iter.key(), iter.value().toString()));
+        dbg << QStringLiteral("\n%1:").arg(iter.key());
+        auto &val = iter.value();
+        if (val.type() == QVariant::List) {
+            dbg.nospace() << " [";
+            for (auto &subval : *reinterpret_cast<const QVariantList*>(val.data())) {
+                dbg << subval.toString() << ", ";
+            }
+            dbg.maybeSpace() << "]";
+        } else {
+            dbg << val.toString();
+        }
     }
-    dbg.noquote() << result.append("\n}");
+    dbg << "\n}";
     return dbg;
 }
 

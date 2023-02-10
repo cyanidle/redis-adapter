@@ -9,6 +9,9 @@ struct Enumerator {
     using counter_t = CounterType;
     using iter_t = typename Container::iterator;
     using value_type = typename iter_t::value_type;
+    using reference = value_type&;
+    using pointer = value_type*;
+    using difference_type = qptrdiff;
     struct Result {
         counter_t count;
         value_type& value;
@@ -25,7 +28,7 @@ struct Enumerator {
         return temp;
     }
     Result operator *() {
-        return Result{.count = count(), .value = value()};
+        return Result{count(), value()};
     }
     counter_t count() const {
         return m_count;
@@ -50,6 +53,9 @@ struct ConstEnumerator {
     using counter_t = CounterType;
     using iter_t = typename Container::const_iterator;
     using value_type = typename iter_t::value_type;
+    using reference = value_type&;
+    using pointer = value_type*;
+    using difference_type = qptrdiff;
     struct Result {
         counter_t count;
         const value_type& value;
@@ -66,7 +72,7 @@ struct ConstEnumerator {
         return temp;
     }
     Result operator *() const {
-        return Result{.count = count(), .value = value()};
+        return Result{count(), value()};
     }
     counter_t count() const {
         return m_count;

@@ -118,14 +118,14 @@ private:
         decltype(std::declval<T>().contains({}), std::true_type());
 public:
     enum Methods {
-        has_push_back = decltype(has_push_back_impl<Container>(0))(),
-        has_append = decltype(has_append_impl<Container>(0))(),
-        has_insert_one_arg = decltype(has_insert_impl<Container>(0))(),
-        has_key = decltype(has_key_impl<Container>(0))(),
-        has_value = decltype(has_value_impl<Container>(0))(),
-        has_subscript = decltype(has_subscript_impl<Container>(0))(),
-        has_contains = decltype(has_contains_impl<Container>(0))(),
-        has_contains_key = has_key && decltype(has_contains_impl<Container>(0))(),
+        has_push_back = decltype(has_push_back_impl<Container>(0))::value,
+        has_append = decltype(has_append_impl<Container>(0))::value,
+        has_insert_one_arg = decltype(has_insert_impl<Container>(0))::value,
+        has_key = decltype(has_key_impl<Container>(0))::value,
+        has_value = decltype(has_value_impl<Container>(0))::value,
+        has_subscript = decltype(has_subscript_impl<Container>(0))::value,
+        has_contains = decltype(has_contains_impl<Container>(0))::value,
+        has_contains_key = has_key && decltype(has_contains_impl<Container>(0))::value,
     };
 };
 

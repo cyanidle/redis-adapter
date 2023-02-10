@@ -1,6 +1,7 @@
 #include "channel.h"
 #include "radapterlogging.h"
 #include "templates/algorithms.hpp"
+#include <stdexcept>
 #include <QSet>
 using namespace Radapter::Sync;
 
@@ -25,10 +26,7 @@ void Channel::registerUser(QObject *user, Priority priority)
             priority != HighPriority) {
         throw std::invalid_argument("Invalid priority for channel user!");
     }
-    m_userStates[user]= {.user = user,
-                         .priority = priority,
-                         .waitingForTrigger = false,
-                         };
+    m_userStates[user]= {user, priority, false,};
 }
 
 bool Channel::isBusy() const

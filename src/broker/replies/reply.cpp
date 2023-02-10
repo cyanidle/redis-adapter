@@ -1,5 +1,5 @@
 #include "reply.h"
-
+#include <stdexcept>
 namespace Radapter {
 
 Reply::Reply(quint32 type, bool ok) :
