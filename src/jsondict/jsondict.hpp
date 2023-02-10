@@ -38,7 +38,6 @@
 class JsonDict
 {
 public:
-    static constexpr const char defaultSeparator{':'};
     inline explicit JsonDict(const QVariant& src, const QString &separator = ":", bool nest = true);
     inline JsonDict(const QVariantMap& src = QVariantMap{}, const QString &separator = ":", bool nest = true);
     inline JsonDict(std::initializer_list<std::pair<QString, QVariant>> initializer);
@@ -108,9 +107,10 @@ public:
     inline QVariant take(const QStringList &akey);
     inline QVariant take(const QString &akey);
     inline bool isEmpty() const;
-    inline JsonDict &nest(const QString &separator = ":");
+    inline JsonDict &nest(QChar separator = ':');
+    inline JsonDict &nest(const QString &separator);
     inline JsonDict &merge(const JsonDict &src, bool overwrite = true);
-    inline JsonDict nest(const QString &separator = ":") const;
+    inline JsonDict nest(const QString &separator) const;
     inline JsonDict merge(const JsonDict &src, bool overwrite = true) const;
     inline QVariantMap flatten(const QString &separator = ":") const;
     struct iterator;
@@ -123,6 +123,7 @@ public:
     inline JsonDict::const_iterator end() const;
     inline JsonDict::const_iterator cbegin() const;
     inline JsonDict::const_iterator cend() const;
+    friend QDebug operator<<(QDebug dbg, const JsonDict &json);
 protected:
     friend struct iterator;
     friend struct const_iterator;
@@ -717,6 +718,17 @@ bool JsonDict::isEmpty() const
 {
     return m_dict.isEmpty();
 }
+
+inline JsonDict &JsonDict::nest(QChar separator)
+{
+    JsonDict newState;
+    for (auto iter = m_dict.constBegin(); iter != m_dict.constEnd(); ++iter) {
+        newState.insert(iter.key().split(separator), iter.value());
+    }
+    swap(newState);
+    return *this;
+}
+
 int JsonDict::count() const
 {
     return m_dict.count();
@@ -830,7 +842,7 @@ JsonDict::JsonDict(const QVariantMap& src, const QString &separator, bool nest) 
 inline JsonDict::JsonDict(std::initializer_list<std::pair<QString, QVariant> > initializer) :
     m_dict(initializer)
 {
-    this->nest(":");
+    this->nest(':');
 }
 
 inline JsonDict::JsonDict(std::initializer_list<std::pair<QString, JsonDict> > initializer) :
@@ -839,7 +851,7 @@ inline JsonDict::JsonDict(std::initializer_list<std::pair<QString, JsonDict> > i
     for (const auto &pair : initializer) {
         m_dict.insert(pair.first, static_cast<const QVariantMap&>(pair.second));
     }
-    this->nest(":");
+    this->nest(':');
 }
 JsonDict::JsonDict(std::initializer_list<std::pair<QString, QVariant>> initializer, const QString &separator) :
     m_dict(initializer)
@@ -911,6 +923,18 @@ namespace Radapter {
             return JsonDict::fromJsonObj(doc.object());
         }
     }
+}
+
+inline QDebug operator<<(QDebug dbg, const JsonDict &json)
+{
+    QDebugStateSaver saver(dbg);
+    QString result{"Json{\n"};
+    const auto flat = json.flatten();
+    for (auto iter{flat.begin()}; iter != flat.end(); ++iter) {
+        result.append(QStringLiteral("\n%1: %2").arg(iter.key(), iter.value().toString()));
+    }
+    dbg.noquote() << result.append("\n}");
+    return dbg;
 }
 
 /*! @} */ //JsonDict doxy
