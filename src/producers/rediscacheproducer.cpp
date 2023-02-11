@@ -28,6 +28,11 @@ void CacheProducer::onCommand(const Radapter::WorkerMsg &msg)
     }
 }
 
+CacheContext &CacheProducer::getCtx(Handle handle)
+{
+    return m_manager.get(handle);
+}
+
 void CacheProducer::handleCommand(Radapter::Command *command, Handle handle)
 {
     if (command->is<WriteHash>()) {
@@ -43,25 +48,19 @@ void CacheProducer::handleCommand(Radapter::Command *command, Handle handle)
     }
 }
 
-int CacheProducer::writeKeys(const JsonDict &json)
+void CacheProducer::writeKeys(const JsonDict &json, Handle handle)
 {
-    if (json.isEmpty()) {
-        return REDIS_ERR;
-    }
     auto msetCommand = multipleSet(json);
-    return runAsyncCommand(&CacheProducer::msetCallback, msetCommand);
+    runAsyncCommand(&CacheProducer::msetCallback, msetCommand, handle);
 }
 
-int CacheProducer::writeObject(const JsonDict &json, const QString &objectKey)
+void CacheProducer::writeObject(const JsonDict &json, const QString &objectKey)
 {
-    if (json.isEmpty() || objectKey.isEmpty()) {
-        return REDIS_ERR;
-    }
     //! \todo Finish
     //return runAsyncCommand(&CacheProducer::indexCallback, indexCommand);
 }
 
-void CacheProducer::msetCallback(redisReply *reply)
+void CacheProducer::msetCallback(redisReply *reply, Handle handle)
 {
     if (!isValidReply(reply))
     {
@@ -71,7 +70,7 @@ void CacheProducer::msetCallback(redisReply *reply)
     reDebug() << metaInfo() << "mset status:" << reply->str;
 }
 
-void CacheProducer::indexCallback(redisReply *reply)
+void CacheProducer::indexCallback(redisReply *reply, Handle handle)
 {
     if (!isValidReply(reply)) {
         return;

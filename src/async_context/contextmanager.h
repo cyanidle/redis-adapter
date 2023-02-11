@@ -11,6 +11,7 @@ struct ContextBase {
     ContextBase() = default;
     using Handle = void*;
     void setHandle(Handle handle);
+    static typename QIntegerForSizeof<Handle>::Unsigned handleToNumber(Handle handle);
     Handle handle();
     bool isDone() const;
     void setDone();
@@ -48,6 +49,7 @@ struct ContextManager {
         m_ctxs[handle]->setHandle(handle);
         return handle;
     }
+    static typename QIntegerForSizeof<Handle>::Unsigned handleToNumber(Handle handle);
     Context &get(Handle handle);
     const Context &get(Handle handle) const;
     void remove(Handle handle);
@@ -83,9 +85,17 @@ private:
 };
 
 template<typename Context>
+typename QIntegerForSizeof<typename ContextManager<Context>::Handle>::Unsigned
+ContextManager<Context>::handleToNumber(Handle handle)
+{
+    return ContextBase::handleToNumber(handle);
+}
+
+template<typename Context>
 Context &ContextManager<Context>::get(Handle handle)
 {
-    if (!m_ctxs.contains(handle)) brokerWarn() << "Context not found for handle: " << handle;
+    if (!m_ctxs.contains(handle)) throw std::runtime_error("Context not found for handle: " +
+                    QString::number(handleToNumber(handle)).toStdString());
     return *m_ctxs[handle];
 }
 
@@ -134,6 +144,11 @@ inline void ContextBase::setHandle(Handle handle)
 {
     if (m_handle) throw std::runtime_error("Attempt to set already set handle");
     m_handle = handle;
+}
+
+inline QIntegerForSizeof<ContextBase::Handle>::Unsigned ContextBase::handleToNumber(Handle handle)
+{
+    return reinterpret_cast<typename QIntegerForSizeof<Handle>::Unsigned>(handle);
 }
 
 inline ContextBase::Handle ContextBase::handle()

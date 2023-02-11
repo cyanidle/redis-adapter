@@ -21,13 +21,15 @@ signals:
 public slots:
     void onMsg(const Radapter::WorkerMsg &msg) override;
     void onCommand(const Radapter::WorkerMsg &msg) override;
+protected:
+    CacheContext &getCtx(Handle handle);
 private:
     void handleCommand(Radapter::Command *command, Handle handle);
 
-    int writeKeys(const JsonDict &json);
-    int writeObject(const JsonDict &json, const QString &indexKey);
-    void msetCallback(redisReply *replyPtr);
-    void indexCallback(redisReply *replyPtr);
+    void writeKeys(const JsonDict &json, Handle handle);
+    void writeObject(const JsonDict &json, const QString &indexKey);
+    void msetCallback(redisReply *replyPtr, Handle handle);
+    void indexCallback(redisReply *replyPtr, Handle handle);
 
     QString m_objectKey;
     friend CacheContext;
