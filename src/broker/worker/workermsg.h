@@ -81,6 +81,20 @@ public:
     QStringList printReceivers() const;
     QVariant &privateData();
     QVariant privateData() const;
+    template <class User, class CommandT>
+    void setCallback(User *user, void (User::*cb)(const CommandT*, const typename CommandT::WantedReply*)) {
+        if (!command()) {
+            throw std::runtime_error("Attempt to set callback for non-command Msg!");
+        }
+        command()->setCallback(user, cb);
+    }
+    template <class User>
+    void setCallback(User *user, void (User::*cb)(const WorkerMsg&)) {
+        if (!command()) {
+            throw std::runtime_error("Attempt to set callback for non-command Msg!");
+        }
+        command()->setCallback(user, cb);
+    }
 private:
     friend class Radapter::Worker;
     friend class Radapter::Broker;

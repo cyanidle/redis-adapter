@@ -70,7 +70,7 @@ template <typename WantedReply>
 WantedReply reply_cast(const Reply *reply) {
     using decayed = typename std::remove_cv<typename std::remove_pointer<WantedReply>::type>::type;
     static_assert(ReplyInfo<decayed>::Defined, "Use RADAPTER_DECLARE_REPLY(YourReply)");
-    if (ReplyType<decayed>() == reply->type()) {
+    if (reply && ReplyType<decayed>() == reply->type()) {
         return static_cast<WantedReply>(reply);
     }
     return static_cast<WantedReply>(reply->voidCast(&decayed::staticMetaObject));
@@ -79,7 +79,7 @@ template <typename WantedReply>
 WantedReply reply_cast(Reply *reply) {
     using decayed = typename std::remove_cv<typename std::remove_pointer<WantedReply>::type>::type;
     static_assert(ReplyInfo<decayed>::Defined, "Use RADAPTER_DECLARE_REPLY(YourReply)");
-    if (ReplyType<decayed>() == reply->type()) {
+    if (reply && ReplyType<decayed>() == reply->type()) {
         return static_cast<WantedReply>(reply);
     }
     return static_cast<WantedReply>(reply->voidCast(&decayed::staticMetaObject));

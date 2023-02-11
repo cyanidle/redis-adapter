@@ -49,7 +49,9 @@ struct ContextManager {
         m_ctxs[handle]->setHandle(handle);
         return handle;
     }
-    static typename QIntegerForSizeof<Handle>::Unsigned handleToNumber(Handle handle);
+    static typename QIntegerForSizeof<Handle>::Unsigned handleToNumber(Handle handle) {
+        return ContextBase::handleToNumber(handle);
+    }
     Context &get(Handle handle);
     const Context &get(Handle handle) const;
     void remove(Handle handle);
@@ -83,13 +85,6 @@ private:
     Handle currentNext() const;
     QHash<Handle, Context*> m_ctxs{};
 };
-
-template<typename Context>
-typename QIntegerForSizeof<typename ContextManager<Context>::Handle>::Unsigned
-ContextManager<Context>::handleToNumber(Handle handle)
-{
-    return ContextBase::handleToNumber(handle);
-}
 
 template<typename Context>
 Context &ContextManager<Context>::get(Handle handle)

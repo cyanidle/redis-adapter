@@ -5,6 +5,7 @@
 #include <QMutex>
 #include <QHash>
 #include <QThread>
+#include "broker/commands/commandcallback.h"
 #include "workermsg.h"
 #include "workerproxy.h"
 #include "broker/interceptors/interceptor.h"

@@ -253,7 +253,11 @@ void Worker::onMsgFromBroker(const Radapter::WorkerMsg &msg)
             workerError(this) << "Null Reply, while flagged as reply! Sender: " << msg.sender();
             return;
         }
-        onReply(msg);
+        if (msg.command() && msg.command()->callback() && msg.command()->callback()->user() == this) {
+            msg.command()->callback()->execute(msg);
+        } else {
+            onReply(msg);
+        }
     }
     else if (msg.isCommand()) {
         if (!msg.command()) {

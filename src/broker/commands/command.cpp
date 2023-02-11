@@ -29,6 +29,11 @@ quint32 Command::generateUserType()
     return next;
 }
 
+CallbackConcept *Command::callback() const
+{
+    return m_cb.data();
+}
+
 void *Command::voidCast(const QMetaObject *meta)
 {
     return meta && metaObject()->inherits(meta) ? this : nullptr;

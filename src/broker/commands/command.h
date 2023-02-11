@@ -7,7 +7,7 @@
 #include "private/global.h"
 #include "private/commandreplymacros.h"
 #include "broker/replies/reply.h"
-#include "templates/metaprogramming.hpp"
+#include "commandcallback.h"
 
 namespace Radapter {
 
@@ -44,11 +44,26 @@ public:
     virtual ~Command() = default;
     void *voidCast(const QMetaObject* meta);
     const void *voidCast(const QMetaObject* meta) const;
+
+    template <class User, class CommandT>
+    using Callback = void (User::*)(const CommandT*, const typename CommandT::WantedReply *);
+    template <class User>
+    using MsgCallback = void (User::*)(const WorkerMsg&);
+    template <class User, class CommandT>
+    void setCallback(User *user, Callback<User, CommandT> cb) {
+        m_cb.reset(new MethodCallback<User, CommandT>(user, cb));
+    }
+    template <class User>
+    void setCallback(User *user, MsgCallback<User> cb) {
+        m_cb.reset(new MethodMsgCallback<User>(user, cb));
+    }
+    CallbackConcept *callback() const;
 protected:
     Command(quint32 type);
     template <typename Target> static Type typeInConstructor(const Target* thisPtr);
 private:
     quint32 m_type;
+    QSharedPointer<CallbackConcept> m_cb{};
 };
 
 template <typename Target>
@@ -84,7 +99,7 @@ template <typename WantedCommand>
 WantedCommand command_cast(const Command *command) {
     using decayed = typename std::remove_cv<typename std::remove_pointer<WantedCommand>::type>::type;
     static_assert(CommandInfo<decayed>::Defined, "Use RADAPTER_DECLARE_COMMAND(<YourCommand>)");
-    if (CommandType<decayed>() == command->type()) {
+    if (command && CommandType<decayed>() == command->type()) {
         return static_cast<WantedCommand>(command);
     }
     return static_cast<WantedCommand>(command->voidCast(&decayed::staticMetaObject));
@@ -93,7 +108,7 @@ template <typename WantedCommand>
 WantedCommand command_cast(Command *command) {
     using decayed = typename std::remove_cv<typename std::remove_pointer<WantedCommand>::type>::type;
     static_assert(CommandInfo<decayed>::Defined, "Use RADAPTER_DECLARE_COMMAND(<YourCommand>)");
-    if (CommandType<decayed>() == command->type()) {
+    if (command && CommandType<decayed>() == command->type()) {
         return static_cast<WantedCommand>(command);
     }
     return static_cast<WantedCommand>(command->voidCast(&decayed::staticMetaObject));
@@ -156,7 +171,9 @@ Command::Type Command::typeInConstructor(const Target* thisPtr)
     Q_UNUSED(thisPtr);
     return CommandType<Target>();
 }
+
 } // namespace Radapter
+
 
 Q_DECLARE_METATYPE(QSharedPointer<Radapter::Command>)
 IMPL_RADAPTER_DECLARE_COMMAND_BUILTIN(Radapter::Command, Command::None)
