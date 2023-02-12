@@ -168,5 +168,6 @@ template <class T, class Ret = void>
 using enable_if_ptr = typename std::enable_if<std::is_pointer<T>::value, Ret>::type;
 template <class T, class Ret = void>
 using enable_if_not_ptr = typename std::enable_if<!std::is_pointer<T>::value && !is_smart_ptr<T>::value, Ret>::type;
+
 }
 #endif // METAPROGRAMMING_HPP

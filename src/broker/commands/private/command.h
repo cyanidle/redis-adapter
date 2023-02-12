@@ -6,7 +6,7 @@
 #include <limits>
 #include "private/global.h"
 #include "private/commandreplymacros.h"
-#include "broker/replies/reply.h"
+#include "broker/replies/private/reply.h"
 #include "commandcallback.h"
 
 namespace Radapter {
@@ -36,6 +36,8 @@ public:
     template <typename Target> const Target *as() const;
     template <typename Target> bool inherits() const;
     bool isWantedReply(const Reply *reply) const;
+    void expectReply(bool expect);
+    bool isReplyExpected() const;
     virtual bool replyOk(const Radapter::Reply* reply) const;
     static quint32 generateUserType();
     virtual Command* newCopy() const = 0;
@@ -44,25 +46,27 @@ public:
     virtual ~Command() = default;
     void *voidCast(const QMetaObject* meta);
     const void *voidCast(const QMetaObject* meta) const;
-
+    void setCallback(CallbackConcept *cb);
     template <class User, class CommandT>
-    using Callback = void (User::*)(const CommandT*, const typename CommandT::WantedReply *);
-    template <class User>
-    using MsgCallback = void (User::*)(const WorkerMsg&);
-    template <class User, class CommandT>
-    void setCallback(User *user, Callback<User, CommandT> cb) {
-        m_cb.reset(new MethodCallback<User, CommandT>(user, cb));
+    void setCallback(User *user, void (User::*cb)(const CommandT*, const typename CommandT::WantedReply *)) {
+        setCallback(new CallbackCmdReply<User, CommandT>(user, cb));
     }
     template <class User>
-    void setCallback(User *user, MsgCallback<User> cb) {
-        m_cb.reset(new MethodMsgCallback<User>(user, cb));
+    void setCallback(User *user, void (User::*cb)(const WorkerMsg&)) {
+        setCallback(new CallbackMsg<User>(user, cb));
     }
-    CallbackConcept *callback() const;
+    template <class User, class ReplyT>
+    void setCallback(User *user, void (User::*cb)(const ReplyT*)) {
+        setCallback(new CallbackReply<User, ReplyT>(user, cb));
+    }
+    const CallbackConcept *callback() const;
+    CallbackConcept *callback();
 protected:
     Command(quint32 type);
     template <typename Target> static Type typeInConstructor(const Target* thisPtr);
 private:
     quint32 m_type;
+    bool m_replyNeeded{true};
     QSharedPointer<CallbackConcept> m_cb{};
 };
 

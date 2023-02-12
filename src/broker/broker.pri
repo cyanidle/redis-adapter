@@ -1,8 +1,6 @@
 SOURCES+= \
-	$$PWD/broker.cpp \
-	$$PWD/metatypes.cpp 
+	$$PWD/broker.cpp 
 
 HEADERS+= \
-	$$PWD/broker.h \
-	$$PWD/metatypes.h 
+	$$PWD/broker.h 
 

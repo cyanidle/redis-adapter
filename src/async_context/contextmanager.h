@@ -7,6 +7,7 @@
 #include <stdexcept>
 
 namespace Radapter {
+
 struct ContextBase {
     ContextBase() = default;
     using Handle = void*;
@@ -132,7 +133,14 @@ template<typename Context>
 ContextBase::Handle ContextManager<Context>::currentNext() const
 {
     using HandleInt = typename QIntegerForSizeof<Handle>::Unsigned;
-    return reinterpret_cast<Handle>(static_cast<HandleInt>(m_ctxs.size() + 1));
+    auto handleOne = reinterpret_cast<Handle>(static_cast<HandleInt>(1));
+    if (m_ctxs.isEmpty()) {
+        return handleOne;
+    } else if (!m_ctxs.contains(handleOne)) {
+        return handleOne;
+    }
+    auto nextMax = reinterpret_cast<HandleInt>(std::max_element(m_ctxs.cbegin(), m_ctxs.cend()).key()) + 1;
+    return reinterpret_cast<Handle>(nextMax);
 }
 
 inline void ContextBase::setHandle(Handle handle)

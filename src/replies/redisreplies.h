@@ -1,7 +1,6 @@
 #ifndef REDIS_REPLIES_H
 #define REDIS_REPLIES_H
 
-#include "broker/replies/reply.h"
 #include "broker/replies/basicreplies.h"
 
 namespace Redis {

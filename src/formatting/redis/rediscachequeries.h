@@ -7,8 +7,8 @@ class JsonDict;
 namespace Redis {
 
 QString subscribeTo(const QStringList &events);
-QString multipleSet(const JsonDict &data);
-QString updateSet(const QString &set, const QStringList &keys);
+QString toMultipleSet(const JsonDict &data);
+QString toUpdateSet(const QString &set, const QStringList &keys);
 
 }
 

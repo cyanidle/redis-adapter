@@ -4,7 +4,7 @@
 #include "jsondict/jsondict.hpp"
 #include <QObject>
 #include "broker/commands/basiccommands.h"
-#include "broker/replies/reply.h"
+#include "broker/replies/private/reply.h"
 #include <QDateTime>
 
 namespace Radapter {
@@ -81,15 +81,8 @@ public:
     QStringList printReceivers() const;
     QVariant &privateData();
     QVariant privateData() const;
-    template <class User, class CommandT>
-    void setCallback(User *user, void (User::*cb)(const CommandT*, const typename CommandT::WantedReply*)) {
-        if (!command()) {
-            throw std::runtime_error("Attempt to set callback for non-command Msg!");
-        }
-        command()->setCallback(user, cb);
-    }
-    template <class User>
-    void setCallback(User *user, void (User::*cb)(const WorkerMsg&)) {
+    template <class User, class...Args>
+    void setCallback(User *user, void (User::*cb)(Args...)) {
         if (!command()) {
             throw std::runtime_error("Attempt to set callback for non-command Msg!");
         }

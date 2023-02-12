@@ -23,7 +23,9 @@ bool Broker::isDebugEnabled(const QString &workerName, QtMsgType type)
 
 void Broker::applyWorkerLoggingFilters(const QMap<QString, QMap<QtMsgType, bool>> &table)
 {
-    m_debugTable = {table.cbegin(), table.cend()};
+    for (auto iter{table.begin()}; iter != table.end(); ++iter) {
+        m_debugTable[iter.key()] = {iter.value().cbegin(), iter.value().cend()};
+    }
 }
 
 // Doesnt need mutex, bc is always connected via Qt::QueuedConnection

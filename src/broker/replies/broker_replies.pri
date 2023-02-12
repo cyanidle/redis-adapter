@@ -1,8 +1,6 @@
 SOURCES+= \
-	$$PWD/basicreplies.cpp \
-	$$PWD/reply.cpp 
+	$$PWD/basicreplies.cpp 
 
 HEADERS+= \
-	$$PWD/basicreplies.h \
-	$$PWD/reply.h 
+	$$PWD/basicreplies.h 
 

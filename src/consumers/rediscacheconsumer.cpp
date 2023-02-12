@@ -1,6 +1,5 @@
 #include "rediscacheconsumer.h"
 #include "radapterlogging.h"
-#include "broker/replies/reply.h"
 #include "commands/rediscommands.h"
 #include "include/redisconstants.h"
 #include "templates/algorithms.hpp"
@@ -28,55 +27,6 @@ void CacheConsumer::requestObject(const QString &objectKey, CtxHandle handle)
     }
 }
 
-JsonDict CacheConsumer::parseNestedArrays(const JsonDict &target) {
-    JsonDict result;
-    bool hadInt = false;
-    for (auto &iter : target) {
-        auto branchHadInt = false;
-        auto key = iter.key();
-        for (auto subkey : enumerate(&key)) {
-            bool isInt = false;
-            subkey.value.toInt(&isInt);
-            if (!isInt) {
-                continue;
-            }
-            hadInt = branchHadInt = true;
-            auto currentKeyToArray = QStringList(key.begin(), key.begin() + subkey.count);
-            auto &currentValue = result[currentKeyToArray];
-            auto currentArray = QVariantList{};
-            const auto &mapInside = target[currentKeyToArray].toMap();
-            for (auto iter = mapInside.constBegin(); iter != mapInside.constEnd(); ++iter) {
-                bool isSubInt = false;
-                auto arrayInd = iter.key().toInt(&isSubInt);
-                if (isSubInt && arrayInd > -1) {
-                    while (currentArray.size() <= arrayInd) {
-                        currentArray.append(QVariant{});
-                    }
-                    currentArray[arrayInd] = iter.value();
-                } else {
-                    reWarn() << "Object nested array collision! (Or index < 0)";
-                }
-            }
-            for (auto &val : currentArray) {
-                if (val.type() == QVariant::Map) {
-                    auto temp = parseNestedArrays(*reinterpret_cast<const JsonDict*>(val.data())).toVariant();
-                    val = std::move(temp);
-                }
-            }
-            currentValue.setValue(currentArray);
-        }
-        if (!branchHadInt) {
-            auto keyToInsert = iter.key();
-            auto valToInsert = iter.value();
-            result.insert(keyToInsert, valToInsert);
-        }
-    }
-    if (hadInt) {
-        result = parseNestedArrays(result);
-    }
-    return result;
-}
-
 void CacheConsumer::readObjectCallback(redisReply *reply, CtxHandle handle)
 {
     auto result = parseHashReply(reply);
@@ -95,7 +45,6 @@ void CacheConsumer::readObjectCallback(redisReply *reply, CtxHandle handle)
         toMerge.insert(iter.key().split(':'), iter.value());
         foundJson.merge(toMerge);
     }
-    foundJson = parseNestedArrays(foundJson);
     getCtx(handle).reply(ReplyJson(foundJson));
 }
 
@@ -107,9 +56,9 @@ void CacheConsumer::requestKeys(const QStringList &keys, CtxHandle handle)
     }
 }
 
-void CacheConsumer::readKeysCallback(redisReply *replyPtr, CtxHandle handle)
+void CacheConsumer::readKeysCallback(redisReply *reply, CtxHandle handle)
 {
-    auto foundEntries = parseReply(replyPtr).toStringList();
+    auto foundEntries = parseReply(reply).toStringList();
     reDebug() << metaInfo() << "Key entries found:" << foundEntries.size();
     getCtx(handle).reply(ReadKeys::WantedReply(foundEntries));
 }
@@ -213,7 +162,7 @@ void CacheConsumer::onCommand(const WorkerMsg &msg)
     } else {
         handleCommand(msg.command(), m_manager.create<SimpleContext>(msg, this));
     }
-    m_manager.clearBasedOn(&CacheContext::isDone);
+    m_manager.clearDone();
 }
 
 void CacheConsumer::onRun()

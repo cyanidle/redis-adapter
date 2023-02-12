@@ -62,7 +62,6 @@ class RADAPTER_SHARED_SRC WriteHash : public Radapter::Command
     Q_GADGET
 public:
     WriteHash(const QString &hash, const QVariantMap &flatMap);
-    QString toRedisCommand() const;
     const QVariantMap &flatMap() const {return m_flatMap;}
     const QString &hash() const {return m_hash;};
     RADAPTER_COMMAND_WANTS(Radapter::Reply)
@@ -76,8 +75,8 @@ class RADAPTER_SHARED_SRC WriteSet : public Radapter::Command
     Q_GADGET
 public:
     WriteSet(const QString &set, const QStringList& keys);
-    QString toRedisCommand() const;
     const QString &set() const {return m_set;};
+    const QStringList &keys() const {return m_keys;}
     RADAPTER_COMMAND_WANTS(Radapter::Reply)
 private:
     QString m_set;
@@ -89,7 +88,6 @@ class RADAPTER_SHARED_SRC Delete : public Radapter::Command
     Q_GADGET
 public:
     Delete(const QString &target);
-    QString toRedisCommand() const;
     const QString &target() const {return m_target;};
     RADAPTER_COMMAND_WANTS(Radapter::Reply)
 private:
@@ -100,7 +98,6 @@ class RADAPTER_SHARED_SRC WriteKeys : public Radapter::Command
     Q_GADGET
 public:
     WriteKeys(const QVariantMap &keys);
-    QString toRedisCommand() const;
     const QVariantMap &keys() const {return m_keys;}
     RADAPTER_COMMAND_WANTS(Radapter::Reply)
 private:

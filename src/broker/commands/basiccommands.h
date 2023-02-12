@@ -1,7 +1,7 @@
 #ifndef RADAPTER_BASICCOMMANDS_H
 #define RADAPTER_BASICCOMMANDS_H
 
-#include "command.h"
+#include "private/command.h"
 #include "broker/replies/basicreplies.h"
 #include "jsondict/jsondict.hpp"
 

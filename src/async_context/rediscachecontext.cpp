@@ -27,6 +27,7 @@ void CacheContext::fail(const QString &reason)
     const auto &checkedReason = reason.isEmpty() ? QStringLiteral("Not Given") : reason;
     reDebug() << m_parent->metaInfo() << ": Error! Reason --> "<< checkedReason;
     auto failReply = Radapter::ReplyFail(checkedReason);
+    setDone();
     reply(failReply);
 }
 

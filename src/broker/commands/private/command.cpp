@@ -5,7 +5,6 @@ namespace Radapter {
 Command::Command(quint32 type) :
     m_type(type)
 {
-
 }
 
 bool Command::isWantedReply(const Reply *reply) const
@@ -13,6 +12,16 @@ bool Command::isWantedReply(const Reply *reply) const
     return reply &&
            (wantedReplyType() == reply->type() ||
             reply->metaObject()->inherits(wantedReplyMetaObject()));
+}
+
+void Command::expectReply(bool expect)
+{
+    m_replyNeeded = expect;
+}
+
+bool Command::isReplyExpected() const
+{
+    return m_replyNeeded;
 }
 
 bool Command::replyOk(const Reply *reply) const {
@@ -29,11 +38,6 @@ quint32 Command::generateUserType()
     return next;
 }
 
-CallbackConcept *Command::callback() const
-{
-    return m_cb.data();
-}
-
 void *Command::voidCast(const QMetaObject *meta)
 {
     return meta && metaObject()->inherits(meta) ? this : nullptr;
@@ -42,6 +46,21 @@ void *Command::voidCast(const QMetaObject *meta)
 const void *Command::voidCast(const QMetaObject *meta) const
 {
     return const_cast<Command*>(this)->voidCast(meta);
+}
+
+void Command::setCallback(CallbackConcept *cb)
+{
+    m_cb.reset(cb);
+}
+
+CallbackConcept *Command::callback()
+{
+    return m_cb.data();
+}
+
+const CallbackConcept *Command::callback() const
+{
+    return m_cb.data();
 }
 
 

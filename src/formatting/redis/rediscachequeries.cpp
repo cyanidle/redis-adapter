@@ -7,7 +7,7 @@ QString Redis::subscribeTo(const QStringList &events)
     return QStringLiteral("PSUBSCRIBE ") + events.join(' ');
 }
 
-QString Redis::multipleSet(const JsonDict &data)
+QString Redis::toMultipleSet(const JsonDict &data)
 {
     QStringList keys;
     for (auto &iter : data) {
@@ -16,7 +16,7 @@ QString Redis::multipleSet(const JsonDict &data)
     return QStringLiteral("MSET ") + keys.join(' ');
 }
 
-QString Redis::updateSet(const QString &set, const QStringList &keys)
+QString Redis::toUpdateSet(const QString &set, const QStringList &keys)
 {
     return QStringLiteral("SADD %1 %2").arg(set, keys.join(' '));
 }

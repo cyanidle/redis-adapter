@@ -34,7 +34,6 @@ Worker::Worker(const WorkerSettings &settings, QThread *thread) :
     connect(thread, &QThread::finished, thread, &QThread::deleteLater);
 }
 
-///
 /// \brief Insert interceptor
 /// 1) (If only proxy exists, no interceptors) (Proxy) <--> (Worker)
 ///     ----->     (Proxy) <--> (NewInterceptor) <--> (Worker)
@@ -80,9 +79,9 @@ bool Worker::isPrintMsgsEnabled() const
     return m_printMsgs;
 }
 
-bool Worker::printEnabled() const
+bool Worker::printEnabled(QtMsgType type) const
 {
-    return broker()->isDebugEnabled(workerName());
+    return broker()->isDebugEnabled(workerName(), type);
 }
 
 Broker *Worker::broker() const
@@ -221,20 +220,25 @@ WorkerMsg Worker::prepareCommand(Command *command) const
 
 void Worker::onReply(const Radapter::WorkerMsg &msg)
 {
-    brokerWarn().noquote() << printSelf() << ": received Reply from: " <<
-        msg.m_sender->printSelf() << "but not handled!";
+    if (msg.command()->isReplyExpected()) {
+        workerError(this) << ": received Reply from: " <<
+            msg.sender()->printSelf() << "but not handled!";
+        throw std::runtime_error("Unhandled reply!");
+    }
 }
 
 void Worker::onCommand(const Radapter::WorkerMsg &msg)
 {
-    brokerWarn().noquote() << printSelf() << ": received Command from: " <<
-        msg.m_sender->printSelf() << "but not handled!";
+    workerError(this) << ": received Command from: " <<
+        msg.sender()->printSelf() << "but not handled!";
+    throw std::runtime_error("Unhandled command!");
 }
 
 void Worker::onMsg(const Radapter::WorkerMsg &msg)
 {
-    brokerWarn().noquote() << printSelf() << ": received Generic Msg from: " <<
-        msg.m_sender->printSelf() << "but not handled!";
+    workerError(this) << ": received Generic Msg from: " <<
+        msg.sender()->printSelf() << "but not handled!";
+    throw std::runtime_error("Unhandled msg!");
 }
 
 void Worker::onWorkerDestroyed(QObject *worker)
@@ -253,7 +257,7 @@ void Worker::onMsgFromBroker(const Radapter::WorkerMsg &msg)
             workerError(this) << "Null Reply, while flagged as reply! Sender: " << msg.sender();
             return;
         }
-        if (msg.command() && msg.command()->callback() && msg.command()->callback()->user() == this) {
+        if (msg.command() && msg.command()->callback() && msg.command()->callback()->worker() == this) {
             msg.command()->callback()->execute(msg);
         } else {
             onReply(msg);
@@ -382,7 +386,7 @@ WorkerProxy* Worker::createProxy(const QSet<InterceptorBase*> &interceptors)
                     Qt::DirectConnection);
         }
     }
-    for (auto &inter : m_InterceptorsToAdd) {
+    for (auto &inter : qAsConst(m_InterceptorsToAdd)) {
         addInterceptor(inter);
     }
     return m_proxy;

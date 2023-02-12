@@ -3,7 +3,7 @@
 
 #include <QSet>
 #include "jsondict/jsondict.hpp"
-#include "reply.h"
+#include "private/reply.h"
 
 namespace Radapter {
 

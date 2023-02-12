@@ -25,11 +25,20 @@ protected:
     CacheContext &getCtx(Handle handle);
 private:
     void handleCommand(Radapter::Command *command, Handle handle);
+    void requestMultiple(const Radapter::CommandPack *pack, Handle handle);
 
-    void writeKeys(const JsonDict &json, Handle handle);
-    void writeObject(const JsonDict &json, const QString &indexKey);
+    void writeKeys(const QVariantMap &keys, Handle handle);
     void msetCallback(redisReply *replyPtr, Handle handle);
-    void indexCallback(redisReply *replyPtr, Handle handle);
+
+    void writeObject(const QString &indexKey, const JsonDict &json, Handle handle);
+    void objectWriteCallback(redisReply *reply, Handle handle);
+
+    void writeSet(const QString& set, const QStringList &keys, Handle handle);
+    void writeSetCallback(redisReply *reply, Handle handle);
+
+    void del(const QString& target, Handle handle);
+    void delCallback(redisReply *reply, Handle handle);
+
 
     QString m_objectKey;
     friend CacheContext;

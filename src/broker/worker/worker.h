@@ -5,7 +5,6 @@
 #include <QMutex>
 #include <QHash>
 #include <QThread>
-#include "broker/commands/commandcallback.h"
 #include "workermsg.h"
 #include "workerproxy.h"
 #include "broker/interceptors/interceptor.h"
@@ -22,7 +21,7 @@ class RADAPTER_SHARED_SRC Worker : public QObject {
 public:
     using Set = QSet<Worker*>;
     bool isPrintMsgsEnabled() const;
-    bool printEnabled() const;
+    bool printEnabled(QtMsgType type) const;
     explicit Worker(const WorkerSettings &settings, QThread *thread);
     //! Фабричный метод, соединяющий объекты в цепь вплоть до прокси, которая является интерфейсом объекта
     /// Interceptor - объект, который находится между прокси и объектом, выполняя некоторую работу над проходящими данными
@@ -69,6 +68,8 @@ protected:
     WorkerMsg prepareMsgBad(const QString &reason);
     WorkerMsg prepareReply(const WorkerMsg &msg, Reply *reply) const;
     WorkerMsg prepareCommand(Command *command) const;
+    template <typename User, typename...Args>
+    WorkerMsg prepareCommand(Command *command, void (User::*cb)(Args...));
     void addInterceptor(InterceptorBase *interceptor);
 private:
     Set m_consumers;
@@ -93,28 +94,42 @@ private:
 };
 
 template<typename Target>
-bool Worker::is() const
-{
+bool Worker::is() const {
     static_assert(std::is_base_of<Worker, Target>(), "Must subclass WorkerBase!");
     return metaObject()->inherits(&Target::staticMetaObject);
 }
 
 template<typename Target>
-Target *Worker::as()
-{
+Target *Worker::as() {
     return qobject_cast<Target*>(this);
 }
 
+template <typename User, typename...Args>
+WorkerMsg Worker::prepareCommand(Command *command, void (User::*cb)(Args...)) {
+    auto cmd = prepareCommand(command);
+    if(!is<User>()) {
+        throw std::invalid_argument("Must use own method as callback!");
+    }
+    cmd.setCallback(as<User>(), cb);
+    return cmd;
+}
+
 template<typename Target>
-const Target *Worker::as() const
-{
+const Target *Worker::as() const {
     return qobject_cast<const Target*>(this);
 }
-inline const QString &Worker::workerName() const {return m_name;}
 
-inline const Worker::Set &Worker::consumers() const {return m_consumers;}
+inline const QString &Worker::workerName() const {
+    return m_name;
+}
 
-inline const Worker::Set &Worker::producers() const {return m_producers;}
+inline const Worker::Set &Worker::consumers() const {
+    return m_consumers;
+}
+
+inline const Worker::Set &Worker::producers() const {
+    return m_producers;
+}
 }
 
 #endif //WORKERBASE_H

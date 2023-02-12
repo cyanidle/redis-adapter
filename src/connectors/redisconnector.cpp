@@ -278,9 +278,11 @@ QVariant Connector::parseReply(redisReply *reply)
     case ReplyNil:
         return {};
     case ReplyStatus:
-        return reply->str;
+        workerWarn(this) << "Received Status Reply:" << reply->str;
+        return {};
     case ReplyError:
-        return reply->str;
+        workerError(this) << "Received Error Reply:" << reply->str;
+        return {};
     case ReplyDouble:
         return reply->dval;
     case ReplyBool:

@@ -57,8 +57,8 @@ main () {
 }
 OUTFILE=$1
 if [[ -z $1 ]]; then
-    echo "Using default output file (radapter_src.pri)"
-    OUTFILE=radapter_src.pri
+    echo "Using default output file (radapter_src)"
+    OUTFILE=radapter_src
 fi
 
 main $OUTFILE

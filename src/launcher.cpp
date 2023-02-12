@@ -18,7 +18,6 @@
 #include "modbus/modbusmaster.h"
 #include "modbus/modbusslave.h"
 #include "websocket/websocketclient.h"
-#include "broker/metatypes.h"
 #ifdef Q_OS_UNIX
 #include "utils/resourcemonitor.h"
 #endif
@@ -33,7 +32,6 @@ Launcher::Launcher(QObject *parent) :
     prvInit();
     m_parser.setApplicationDescription("Redis Adapter");
     m_filereader->initParsingMap();
-    Metatypes::registerAll();
 }
 
 
@@ -46,6 +44,7 @@ void Launcher::addWorker(Worker* worker, QSet<InterceptorBase*> interceptors)
 //! чтобы компилятор не удалил "неиспользуемые переменные"
 void Launcher::preInit()
 {
+    initLogging();
     parseCommandlineArgs();
     qSetMessagePattern(RADAPTER_CUSTOM_MESSAGE_PATTERN);
 
@@ -74,7 +73,7 @@ void Launcher::setLoggingFilters(const QMap<QString, bool> &loggers)
 {
     auto filterRules = QStringList{
         "*.debug=false",
-        "all-workers=true",
+        "workers=true",
         "redis-adapter=true",
         "modbus=true",
         "mysql=true",
@@ -94,34 +93,47 @@ void Launcher::setLoggingFilters(const QMap<QString, bool> &loggers)
             filterRules.append(rule);
         }
     }
-    if (!filterRules.isEmpty()) {
-        QMap<QString, QMap<QtMsgType, bool>> workerLoggers{};
-        for (auto iter{loggers.begin()}; iter != loggers.end(); ++iter) {
-            auto key = iter.key();
-            QtMsgType currentType = QtDebugMsg;
-            if (key.endsWith(".debug")) {
-                currentType = QtDebugMsg;
-                key.remove(".debug");
-            } else if (key.endsWith(".info")) {
-                currentType = QtInfoMsg;
-                key.remove(".info");
-            } else if (key.endsWith(".warn")) {
-                key.remove(".warn");
-                currentType = QtWarningMsg;
-            } else if (key.endsWith(".error")) {
-                key.remove(".error");
-                currentType = QtCriticalMsg;
+    QMap<QString, QMap<QtMsgType, bool>> workerLoggers{};
+    for (auto iter{loggers.begin()}; iter != loggers.end(); ++iter) {
+        auto key = iter.key();
+        auto val = iter.value();
+        QtMsgType currentType = QtDebugMsg;
+        if (key.endsWith(".debug")) {
+            currentType = QtDebugMsg;
+            key.remove(".debug");
+        } else if (key.endsWith(".info")) {
+            currentType = QtInfoMsg;
+            key.remove(".info");
+        } else if (key.endsWith(".warn")) {
+            key.remove(".warn");
+            currentType = QtWarningMsg;
+        } else if (key.endsWith(".error")) {
+            key.remove(".error");
+            currentType = QtCriticalMsg;
+        } else {
+            auto &dbgEnabled = workerLoggers[key][QtDebugMsg];
+            if (!dbgEnabled) {
+                dbgEnabled = val;
             }
-            if (workerLoggers.contains(key)) {
-                workerLoggers[key][currentType] = iter.value();
-            } else {
-                workerLoggers.insert(key, {{currentType, iter.value()}});
+            auto &infoEnabled = workerLoggers[key][QtInfoMsg];
+            if (!infoEnabled) {
+                infoEnabled = val;
             }
+            auto &warnEnabled = workerLoggers[key][QtWarningMsg];
+            if (!warnEnabled) {
+                warnEnabled = val;
+            }
+            auto &critEnabled = workerLoggers[key][QtCriticalMsg];
+            if (!critEnabled) {
+                critEnabled = val;
+            }
+            continue;
         }
-        Broker::instance()->applyWorkerLoggingFilters(workerLoggers);
-        auto filterString = filterRules.join("\n");
-        QLoggingCategory::setFilterRules(filterString);
+        workerLoggers[key][currentType] = val;
     }
+    Broker::instance()->applyWorkerLoggingFilters(workerLoggers);
+    auto filterString = filterRules.join("\n");
+    QLoggingCategory::setFilterRules(filterString);
 }
 
 void Launcher::preInitFilters()

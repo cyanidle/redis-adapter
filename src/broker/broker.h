@@ -25,9 +25,9 @@ public:
     void publishEvent(const Radapter::BrokerEvent &event);
     void connectTwoProxies(const QString &producer,
                            const QString &consumer);
-    bool isDebugEnabled(const QString &workerName, QtMsgType type = QtMsgType::QtDebugMsg);
+    bool isDebugEnabled(const QString &workerName, QtMsgType type);
     //! \warning Not Thread-Safe
-    void applyWorkerLoggingFilters(const QMap<QString, QMap<QtMsgType, bool> > &table);
+    void applyWorkerLoggingFilters(const QMap<QString, QMap<QtMsgType, bool>> &table);
 signals:
     void fireEvent(const Radapter::BrokerEvent &event);
     void broadcastToAll(const Radapter::WorkerMsg &msg);
@@ -42,7 +42,7 @@ private:
     QMap<QString, WorkerProxy*> m_proxies;
     QList<QPair<WorkerProxy*, WorkerProxy*>> m_connected;
     bool m_wasMassConnectCalled;
-    QHash<QString, QMap<QtMsgType, bool>> m_debugTable;
+    QHash<QString, QHash<QtMsgType, bool>> m_debugTable;
     static QRecursiveMutex m_mutex;
 };
 

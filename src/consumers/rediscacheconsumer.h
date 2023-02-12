@@ -30,7 +30,7 @@ private:
     void readObjectCallback(redisReply *replyPtr, CtxHandle handle);
 
     void requestKeys(const QStringList &keys, CtxHandle handle);
-    void readKeysCallback(redisReply *replyPtr, CtxHandle handle);
+    void readKeysCallback(redisReply *reply, CtxHandle handle);
 
     void requestHash(const QString &hash, CtxHandle handle);
     void readHashCallback(redisReply *replyPtr, CtxHandle handle);

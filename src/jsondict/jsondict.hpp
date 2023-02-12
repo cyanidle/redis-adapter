@@ -912,10 +912,10 @@ namespace Radapter {
 inline QDebug operator<<(QDebug dbg, const JsonDict &json)
 {
     QDebugStateSaver saver(dbg);
-    dbg.noquote() << "Json{";
+    dbg.noquote() << "Json {";
     const auto flat = json.flatten();
     for (auto iter{flat.begin()}; iter != flat.end(); ++iter) {
-        dbg << QStringLiteral("\n%1:").arg(iter.key());
+        dbg << QStringLiteral("\n\t%1:").arg(iter.key());
         auto &val = iter.value();
         if (val.type() == QVariant::List) {
             dbg.nospace() << " [";

@@ -10,9 +10,9 @@ class Channel : public QObject {
     Q_OBJECT
 public:
     enum Priority : quint16 {
-        NormalPriority = 10,
-        LowPriority = 0,
-        HighPriority = 20,
+        NormalPriority = 100,
+        LowPriority = 50,
+        HighPriority = 200,
     };
     Channel(QThread *thread);
     //! \warning not threadsafe
