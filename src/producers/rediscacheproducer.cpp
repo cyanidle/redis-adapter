@@ -13,23 +13,29 @@ CacheProducer::CacheProducer(const Settings::RedisCacheProducer &config, QThread
     Connector(config, thread),
     m_objectKey(config.object_hash_key)
 {
+    connect(this, &CacheProducer::disconnected, this, &CacheProducer::onDisconnect);
 }
 
 void CacheProducer::onMsg(const Radapter::WorkerMsg &msg)
 {
-    writeObject(m_objectKey, msg, m_manager.create<ObjectContext>(msg, this, true));
+    writeObject(m_objectKey, msg, m_manager.create<NoReplyContext>());
     m_manager.clearDone();
 }
 
 void CacheProducer::onCommand(const Radapter::WorkerMsg &msg)
 {
     if (msg.command()->is<CommandPack>()) {
-        auto packHandle = m_manager.create<PackContext>(msg, this);
-
+        handleCommand(msg.command()->as<CommandPack>()->first(), m_manager.create<PackContext>(msg, this));
     } else {
-
+        handleCommand(msg.command(), m_manager.create<SimpleContext>(msg, this));
     }
     m_manager.clearDone();
+}
+
+void CacheProducer::onDisconnect()
+{
+    m_manager.forEach(&CacheContext::fail, "Disconnected");
+    m_manager.clearAll();
 }
 
 CacheContext &CacheProducer::getCtx(Handle handle)
@@ -37,35 +43,23 @@ CacheContext &CacheProducer::getCtx(Handle handle)
     return m_manager.get(handle);
 }
 
-
-void CacheProducer::requestMultiple(const CommandPack* pack, Handle handle)
+void CacheProducer::handleCommand(const Radapter::Command *command, Handle handle)
 {
-    if (any_of(pack->commands(), &Command::is<WriteObject>)) {
-        auto msgCopy = getCtx(handle).msg();
-        auto reply = prepareReply(msgCopy, new ReplyFail("CommandPack Contains WriteObject!"));
-        emit sendMsg(reply);
-        getCtx(handle).setDone();
-    }
-    if (!pack->commands().size()) {
-        getCtx(handle).fail("Empty command Pack");
-        getCtx(handle).setDone();
-        return;
-    }
-    handleCommand(pack->commands().first().data(), handle);
-}
-
-void CacheProducer::handleCommand(Radapter::Command *command, Handle handle)
-{
-    if (command->is<WriteHash>()) {
-        writeObject(command->as<WriteHash>()->hash(), command->as<WriteHash>()->flatMap(), handle);
-    } else if (command->is<WriteObject>()) {
-        writeObject(command->as<WriteObject>()->hashKey(), command->as<WriteObject>()->object(), handle);
-    } else if (command->is<WriteKeys>()) {
-        writeKeys(command->as<WriteKeys>()->keys(), handle);
-    } else if (command->is<WriteSet>()) {
-        writeSet(command->as<WriteSet>()->set(), command->as<WriteSet>()->keys(), handle);
-    }  else if (command->is<Delete>()) {
-        writeSet(command->as<Delete>()->target(), command->as<WriteSet>()->keys(), handle);
+    auto hashCmd = command->as<WriteHash>();
+    auto objectCmd = command->as<WriteObject>();
+    auto keysCmd = command->as<WriteKeys>();
+    auto setCmd = command->as<WriteSet>();
+    auto delCmd = command->as<Delete>();
+    if (hashCmd) {
+        writeObject(hashCmd->hash(), hashCmd->flatMap(), handle);
+    } else if (objectCmd) {
+        writeObject(objectCmd->hashKey(), objectCmd->object(), handle);
+    } else if (keysCmd) {
+        writeKeys(keysCmd->keys(), handle);
+    } else if (setCmd) {
+        writeSet(setCmd->set(), setCmd->keys(), handle);
+    }  else if (delCmd) {
+        del(delCmd->target(), handle);
     } else {
         getCtx(handle).fail(QStringLiteral("Unsupported Command: ") + command->metaObject()->className());
     }
@@ -76,6 +70,16 @@ void CacheProducer::writeKeys(const QVariantMap &keys, Handle handle)
     auto msetCommand = toMultipleSet(keys);
     if (runAsyncCommand(&CacheProducer::msetCallback, msetCommand, handle) != REDIS_OK) {
         getCtx(handle).fail("Write Keys error");
+    }
+}
+
+void CacheProducer::msetCallback(redisReply *reply, Handle handle)
+{
+    auto status = parseReply(reply);
+    if (status == "OK") {
+        getCtx(handle).reply(ReplyOk());
+    } else {
+        getCtx(handle).fail("Write set fail; Status: " + status.toString());
     }
 }
 
@@ -92,17 +96,16 @@ void CacheProducer::writeObject(const QString &objectKey, const JsonDict &json, 
     }
 }
 
-void CacheProducer::msetCallback(redisReply *reply, Handle handle)
-{
-
-    reDebug() << metaInfo() << "mset status:" << reply->str;
-}
-
 void CacheProducer::objectWriteCallback(redisReply *reply, Handle handle)
 {
-
-    reDebug() << metaInfo() << "index members updated:" << reply->integer;
+    auto status = parseReply(reply);
+    if (status == "OK") {
+        getCtx(handle).reply(ReplyOk());
+    } else {
+        getCtx(handle).fail("Write set fail; Status: " + status.toString());
+    }
 }
+
 
 void CacheProducer::writeSet(const QString &set, const QStringList &keys, Handle handle)
 {
@@ -114,7 +117,12 @@ void CacheProducer::writeSet(const QString &set, const QStringList &keys, Handle
 
 void CacheProducer::writeSetCallback(redisReply *reply, Handle handle)
 {
-
+    auto status = parseReply(reply);
+    if (status == "OK") {
+        getCtx(handle).reply(ReplyOk());
+    } else {
+        getCtx(handle).fail("Write set fail; Status: " + status.toString());
+    }
 }
 
 void CacheProducer::del(const QString &target, Handle handle)
@@ -127,5 +135,10 @@ void CacheProducer::del(const QString &target, Handle handle)
 
 void CacheProducer::delCallback(redisReply *reply, Handle handle)
 {
-
+    auto status = parseReply(reply);
+    if (status == "OK") {
+        getCtx(handle).reply(ReplyOk());
+    } else {
+        getCtx(handle).fail("Write set fail; Status: " + status.toString());
+    }
 }

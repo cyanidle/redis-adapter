@@ -70,18 +70,11 @@ void StreamProducer::tryTrim()
 
 void StreamProducer::writeCallback(redisReply *reply)
 {
-    if (!isValidReply(reply))
-    {
-        return;
-    }
-    reDebug() << metaInfo() << "Entry added:" << reply->str;
+
 }
 
 void StreamProducer::trimCallback(redisReply *reply)
 {
-    if (!isValidReply(reply)) {
-        return;
-    }
-    reDebug() << metaInfo() << "Entries trimmed:" << reply->integer;
+
 }
 

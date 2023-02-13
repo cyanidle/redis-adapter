@@ -15,7 +15,7 @@ void Settings::parseRegisters(const QVariant &registersFile) {
         auto deviceName = fileIter.domain().join(':').replace('.', ':');
         auto currentFlatJson = fileJson.value(fileIter.domain()).toMap();
         auto table = currentFlatJson.take("__table__");
-        Registers subresult;
+        Registers currentDeviceResult;
         for (auto iter{currentFlatJson.cbegin()}; iter != currentFlatJson.cend(); ++iter) {
             if (iter.value().canConvert<QVariantList>()) {
                 auto currentRegs = iter.value().toList();
@@ -26,27 +26,40 @@ void Settings::parseRegisters(const QVariant &registersFile) {
                         throw std::invalid_argument("Incorrect registers formatting");
                     }
                     currentReg.insert("table", table);
-                    subresult.insert(deviceName + ':' + iter.key() + ":" + QString::number(reg.count + 1), fromQMap<RegisterInfo>(currentReg));
+                    currentDeviceResult.insert(deviceName + ':' + iter.key() + ":" + QString::number(reg.count + 1), fromQMap<RegisterInfo>(currentReg));
                 }
             } else if (iter.value().canConvert<QVariantMap>()) {
-                auto currentReg = iter.value().toMap();
-                if (currentReg.contains("__table__")) continue;
-                if (!currentReg.first().toMap().isEmpty()) {
-                    throw std::invalid_argument("Incorrect registers formatting");
+                auto currentRegs = JsonDict{iter.value().toMap()};
+                if (currentRegs.contains("__table__")) continue;
+                if (currentRegs.depth()) {
+                    for (auto &subiter : currentRegs) {
+                        auto currentReg = currentRegs[subiter.domain()].toMap();
+                        currentReg.insert("table", table);
+                        currentDeviceResult.insert(deviceName + ':' + iter.key() + ":" + subiter.domain().join(":"), fromQMap<RegisterInfo>(currentReg));
+                    }
+                } else {
+                    currentRegs.insert("table", table);
+                    currentDeviceResult.insert(deviceName + ':' + iter.key(), fromQMap<RegisterInfo>(currentRegs));
                 }
-                currentReg.insert("table", table);
-                subresult.insert(deviceName + ':' + iter.key(), fromQMap<RegisterInfo>(currentReg));
             } else {
                 throw std::invalid_argument("Incorrect registers formatting");
             }
         }
-        allRegisters->insert(deviceName, subresult);
+        allRegisters->insert(deviceName, currentDeviceResult);
     }
 }
 
 void ModbusSlave::postInit() {
     for (auto &name: register_names) {
-        registers = (*allRegisters)[name.replace('.', ':')];
+        auto &toMerge = (*allRegisters)[name.replace('.', ':')];
+        for (auto newRegisters = toMerge.begin(); newRegisters != toMerge.end(); ++newRegisters) {
+            auto name = newRegisters.key();
+            auto &reg = newRegisters.value();
+            if (registers.contains(name)) {
+                throw std::invalid_argument("Register name collision: " + name.toStdString());
+            }
+            registers[name] = reg;
+        }
     }
     for (auto &reg : registers) {
         switch (reg.table) {
@@ -69,12 +82,21 @@ void ModbusSlave::postInit() {
     if (registers.isEmpty()) {
         throw std::runtime_error("Empty registers for Mb Slave! Available: " + allRegisters->keys().join(", ").toStdString());
     }
+    device = Settings::ModbusDevice::get(device_name);
 }
 
 void ModbusMaster::postInit()
 {
     for (auto &name: register_names) {
-        registers = (*allRegisters)[name.replace('.', ':')];
+        auto &toMerge = (*allRegisters)[name.replace('.', ':')];
+        for (auto newRegisters = toMerge.begin(); newRegisters != toMerge.end(); ++newRegisters) {
+            auto name = newRegisters.key();
+            auto &reg = newRegisters.value();
+            if (registers.contains(name)) {
+                throw std::invalid_argument("Register name collision: " + name.toStdString());
+            }
+            registers[name] = reg;
+        }
     }
     if (registers.isEmpty()) {
         throw std::runtime_error("Empty registers for Mb Master!");

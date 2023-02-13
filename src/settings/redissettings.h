@@ -25,6 +25,11 @@ namespace Settings {
         SERIAL_FIELD(Radapter::WorkerSettings, worker)
         SERIAL_FIELD(QString, server_name)
         SERIAL_FIELD(quint16, db_index, 0)
+        SERIAL_FIELD(quint16, ping_delay, 10000)
+        SERIAL_FIELD(quint16, reconnect_delay, 1500)
+        SERIAL_FIELD(quint16, max_command_errors, 3)
+        SERIAL_FIELD(quint16, tcp_timeout, 1000)
+        SERIAL_FIELD(quint16, command_timeout, 150)
         SERIAL_FIELD_PTR(Radapter::LoggingInterceptorSettings, log_jsons, DEFAULT)
         RedisServer server;
         SERIAL_POST_INIT(postInit)

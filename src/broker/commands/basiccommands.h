@@ -56,6 +56,7 @@ public:
     void append(Command *newCommand);
     bool isEmpty() const;
     RADAPTER_COMMAND_WANTS(Radapter::ReplyPack)
+    const Command *first() const;
     const QList<QSharedPointer<Command>> &commands() const;
     QList<QSharedPointer<Command>> &commands();
 private:

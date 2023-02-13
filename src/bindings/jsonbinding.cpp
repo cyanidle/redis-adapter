@@ -83,16 +83,7 @@ JsonBinding::Result JsonBinding::receive(const JsonDict &msg, const KeysFilter &
     if (!m_isOptimised) checkKeys(keysFilter, Q_FUNC_INFO);
     else if (!keysFilter.isEmpty()) throw std::runtime_error("Keys Passed to optimised binding!");
     auto result = JsonDict();
-    quint16 mappingsWithoutValueName = 0;
     for (auto &mapping : m_mappings) {
-        if (mapping.valueName.isEmpty()) {
-            if (++mappingsWithoutValueName >= m_mappings.size()) {
-                bindingsError() << "Binding (" << m_name <<
-                    "): receive(): Could not receive msg, not a single named value!";
-                throw std::runtime_error("Binding receive() error!");
-            }
-            continue;
-        }
         if (m_isOptimised) {
             if (msg.contains(mapping.optimisedKey)) {
                 result[mapping.valueName] = msg[mapping.optimisedKey];

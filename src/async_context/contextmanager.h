@@ -9,17 +9,16 @@
 namespace Radapter {
 
 struct ContextBase {
-    ContextBase() = default;
     using Handle = void*;
+    using HandleInt = typename QIntegerForSizeof<Handle>::Unsigned;
+
+    ContextBase() = default;
     void setHandle(Handle handle);
-    static typename QIntegerForSizeof<Handle>::Unsigned handleToNumber(Handle handle);
+    static HandleInt handleToNumber(Handle handle);
+    static Handle numberToHandle(HandleInt number);
     Handle handle();
     bool isDone() const;
     void setDone();
-    template<class Derived>
-    Derived *as();
-    template<class Derived>
-    const Derived *as() const;
     virtual ~ContextBase() = default;
 private:
     bool m_isDone{false};
@@ -29,11 +28,20 @@ private:
 template <typename Context>
 struct ContextManager {
     using Handle = ContextBase::Handle;
+    using HandleInt = ContextBase::HandleInt;
+    static HandleInt handleToNumber(Handle handle)
+    {
+        return ContextBase::handleToNumber(handle);
+    }
+    static Handle numberToHandle(HandleInt number)
+    {
+        return ContextBase::numberToHandle(number);
+    }
     static_assert(std::is_base_of<ContextBase, Context>(), "Must inherit ContextBase!");
     ContextManager() = default;
     template <typename Derived = Context, typename...Args>
     Handle create(Args&&...args) {
-        auto handle = currentNext();
+        auto handle = incrCurrent();
         m_ctxs[handle] = new Derived(std::forward<Args>(args)...);
         m_ctxs[handle]->setHandle(handle);
         return handle;
@@ -49,9 +57,6 @@ struct ContextManager {
         m_ctxs[handle] = new Derived(std::forward<Args>(args)...);
         m_ctxs[handle]->setHandle(handle);
         return handle;
-    }
-    static typename QIntegerForSizeof<Handle>::Unsigned handleToNumber(Handle handle) {
-        return ContextBase::handleToNumber(handle);
     }
     Context &get(Handle handle);
     const Context &get(Handle handle) const;
@@ -69,6 +74,7 @@ struct ContextManager {
         return nullptr;
     }
     void clearDone();
+    void clearAll();
     template <typename Predicate, typename...Args>
     void clearBasedOn(Predicate pred, Args&&...args) {
         auto iter = m_ctxs.begin();
@@ -81,10 +87,18 @@ struct ContextManager {
             }
         }
     }
+    template <typename Predicate, typename...Args>
+    void forEach(Predicate pred, Args&&...args) {
+        auto iter = m_ctxs.begin();
+        while (iter++ != m_ctxs.end()) {
+            (iter.value()->*pred)(std::forward<Args>(args)...);
+        }
+    }
     ~ContextManager();
 private:
-    Handle currentNext() const;
+    Handle incrCurrent();
     QHash<Handle, Context*> m_ctxs{};
+    HandleInt m_current{1};
 };
 
 template<typename Context>
@@ -124,23 +138,22 @@ void ContextManager<Context>::clearDone()
 }
 
 template<typename Context>
+void ContextManager<Context>::clearAll()
+{
+    qDeleteAll(m_ctxs);
+    m_ctxs.clear();
+}
+
+template<typename Context>
 ContextManager<Context>::~ContextManager()
 {
     qDeleteAll(m_ctxs);
 }
 
 template<typename Context>
-ContextBase::Handle ContextManager<Context>::currentNext() const
+ContextBase::Handle ContextManager<Context>::incrCurrent()
 {
-    using HandleInt = typename QIntegerForSizeof<Handle>::Unsigned;
-    auto handleOne = reinterpret_cast<Handle>(static_cast<HandleInt>(1));
-    if (m_ctxs.isEmpty()) {
-        return handleOne;
-    } else if (!m_ctxs.contains(handleOne)) {
-        return handleOne;
-    }
-    auto nextMax = reinterpret_cast<HandleInt>(std::max_element(m_ctxs.cbegin(), m_ctxs.cend()).key()) + 1;
-    return reinterpret_cast<Handle>(nextMax);
+    return numberToHandle(m_current++);
 }
 
 inline void ContextBase::setHandle(Handle handle)
@@ -151,7 +164,12 @@ inline void ContextBase::setHandle(Handle handle)
 
 inline QIntegerForSizeof<ContextBase::Handle>::Unsigned ContextBase::handleToNumber(Handle handle)
 {
-    return reinterpret_cast<typename QIntegerForSizeof<Handle>::Unsigned>(handle);
+    return reinterpret_cast<HandleInt>(handle);
+}
+
+inline ContextBase::Handle ContextBase::numberToHandle(HandleInt number)
+{
+    return reinterpret_cast<Handle>(number);
 }
 
 inline ContextBase::Handle ContextBase::handle()
@@ -167,18 +185,6 @@ inline bool ContextBase::isDone() const
 inline void ContextBase::setDone()
 {
     m_isDone = true;
-}
-
-template<class Derived>
-Derived *ContextBase::as()
-{
-    return static_cast<Derived *>(static_cast<void*>(this));
-}
-
-template<class Derived>
-const Derived *ContextBase::as() const
-{
-    return static_cast<const Derived *>(static_cast<const void*>(this));
 }
 
 }

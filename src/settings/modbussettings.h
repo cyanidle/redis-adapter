@@ -111,12 +111,13 @@ namespace Settings {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_FIELD(Radapter::WorkerSettings, worker)
-        SERIAL_FIELD(ModbusDevice, device)
+        SERIAL_FIELD(QString, device_name)
         SERIAL_FIELD(quint32, reconnect_timeout_ms, 5000)
         SERIAL_FIELD(quint16, slave_id)
         SERIAL_FIELD(PackingMode, endianess, DEFAULT)
         SERIAL_CONTAINER(QList, QString, register_names)
 
+        ModbusDevice device{};
         RegisterCounts counts{};
         Registers registers{};
 

@@ -50,8 +50,8 @@ private:
         Priority whatPrio() const {return priority;}
     };
     QHash<QObject*, UserState> m_userStates{};
-    QObject *m_busy;
-    QTimer *m_debug;
+    QObject *m_busy{nullptr};
+    QTimer *m_debug{nullptr};
 };
 }
 }

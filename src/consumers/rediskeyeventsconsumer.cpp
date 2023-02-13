@@ -9,7 +9,6 @@ KeyEventsConsumer::KeyEventsConsumer(const Settings::RedisKeyEventSubscriber &co
 {
     connect(this, &KeyEventsConsumer::connected, this, &KeyEventsConsumer::subscribe);
     connect(this, &KeyEventsConsumer::disconnected, this, &KeyEventsConsumer::unsubscribe);
-    blockSelectDb();
 }
 
 void KeyEventsConsumer::readMessageCallback(redisReply *reply)

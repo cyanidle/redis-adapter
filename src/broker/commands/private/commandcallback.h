@@ -24,7 +24,6 @@ struct CallbackConcept {
 
     static const Reply* replyFromMsg(const WorkerMsg &msg);
     static const Command* cmdFromMsg(const WorkerMsg &msg);
-private:
 };
 
 template<typename User, typename CommandT>

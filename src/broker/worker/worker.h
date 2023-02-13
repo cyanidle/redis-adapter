@@ -72,6 +72,8 @@ protected:
     WorkerMsg prepareCommand(Command *command, void (User::*cb)(Args...));
     void addInterceptor(InterceptorBase *interceptor);
 private:
+    template <typename User, typename...Args>
+    using MsgCallback = void (User::*)(Args...);
     Set m_consumers;
     Set m_producers;
     QStringList m_consumerNames;
@@ -105,12 +107,12 @@ Target *Worker::as() {
 }
 
 template <typename User, typename...Args>
-WorkerMsg Worker::prepareCommand(Command *command, void (User::*cb)(Args...)) {
+WorkerMsg Worker::prepareCommand(Command *command, MsgCallback<User, Args...> callback) {
     auto cmd = prepareCommand(command);
     if(!is<User>()) {
         throw std::invalid_argument("Must use own method as callback!");
     }
-    cmd.setCallback(as<User>(), cb);
+    cmd.setCallback(as<User>(), callback);
     return cmd;
 }
 

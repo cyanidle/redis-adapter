@@ -10,6 +10,8 @@ public:
     Bindable(const JsonBinding &binding, const JsonBinding::KeysFilter &keysFilter);
     void update(const JsonDict &data);
     const QStringList mappedFields(const QString& separator = ":") const;
+    const QStringList mappedFieldsExclude(const QStringList &exclude, const QString& separator = ":") const;
+    const QString mappedField(const QString &field, const QString& separator = ":") const;
     JsonDict send(const QString &fieldName = {}) const;
     bool isIgnored(const QString &fieldName) const;
     void checkIfOk() const;

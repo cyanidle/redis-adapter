@@ -79,10 +79,6 @@ QModbusDataUnit Modbus::parseValueToDataUnit(const QVariant &src, const Settings
     }
     const auto sizeWords = QMetaType::sizeOf(regInfo.type)/2;
     auto copy = src;
-    if (!copy.convert(regInfo.type)) {
-        reWarn() << "MbSlave: Conversion error!";
-        return {};
-    }
     auto words = toWords(copy.data(), sizeWords);
     applyEndianness(words.data(), endianess, sizeWords, false);
     return QModbusDataUnit{regInfo.table, regInfo.index, words};
@@ -100,5 +96,17 @@ QVariant Modbus::parseModbusType(quint16 *words, const Settings::RegisterInfo &r
         return bit_cast<float>(words);
     default:
         return{};
+    }
+}
+
+QString Modbus::tableToString(QModbusDataUnit::RegisterType type)
+{
+    switch (type) {
+    case QModbusDataUnit::RegisterType::Invalid: return "Invalid";
+    case QModbusDataUnit::RegisterType::Coils: return "Coils";
+    case QModbusDataUnit::RegisterType::HoldingRegisters: return "HoldingRegisters";
+    case QModbusDataUnit::RegisterType::InputRegisters: return "InputRegisters";
+    case QModbusDataUnit::RegisterType::DiscreteInputs: return "DiscreteInputs";
+    default: return "Unknown";
     }
 }

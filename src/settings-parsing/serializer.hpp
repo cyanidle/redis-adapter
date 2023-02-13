@@ -34,7 +34,7 @@ protected:
     const QList<quint32> &updatedFieldsHash() const;
     void updateWasInit(const QString &name, bool remove = false);
     const QString &prefix() const;
-    bool wasFullyDeserialized() const;
+    bool deserializeOk() const;
     bool isPedantic() const;
     bool fieldHasDefault(const QString &name) const;
     QVariant readMock() const;
@@ -643,7 +643,7 @@ namespace Serializer {
             }
         }
         _settings_impl_PostInit();
-        if (wasFullyDeserialized()) {
+        if (deserializeOk()) {
             _settings_impl_OnSuccess();
             return true;
         } else {
@@ -729,8 +729,7 @@ namespace Serializer {
     inline bool Serializable::wasUpdated() const {return !updatedFieldsHash().isEmpty();}
     inline const QList<quint32> &Serializable::updatedFieldsHash() const {return m_wasInit;}
     inline const QString &Serializable::prefix() const {return m_prefix;}
-    inline bool Serializable::wasFullyDeserialized() const {
-        bool ok = true;
+    inline bool Serializable::deserializeOk() const {
         for (auto &currentName : fields()) {
             if (!m_wasInit.contains(qHash(currentName))) {
                 if (fieldHasDefault(currentName)) {
@@ -741,10 +740,10 @@ namespace Serializer {
                                               " --> Deserialization Error of Field: (" +
                                               (prefix() + "/" + currentName).toStdString() + ")"));
                 }
-                ok = false;
+                return false;
             }
         }
-        return ok;
+        return true;
     }
     inline bool Serializable::isPedantic() const {return m_pedantic;}
     inline bool Serializable::fieldHasDefault(const QString &name) const {

@@ -54,6 +54,8 @@ main () {
     echo "include(\$\$PWD/headers.pri)" >> $OUTFILE.pri
     echo "Adding lib.pri"
     echo "include(\$\$PWD/src/lib/lib.pri)" >> $OUTFILE.pri
+    echo "Adding gui.pri"
+    echo "include(\$\$PWD/gui.pri)" >> $OUTFILE.pri
 }
 OUTFILE=$1
 if [[ -z $1 ]]; then

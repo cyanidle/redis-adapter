@@ -78,6 +78,11 @@ bool CommandPack::isEmpty() const
     return m_commands.isEmpty();
 }
 
+const Command *CommandPack::first() const
+{
+    return m_commands.first().data();
+}
+
 const QList<QSharedPointer<Command>> &CommandPack::commands() const
 {
     return m_commands;

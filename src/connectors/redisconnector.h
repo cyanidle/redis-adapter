@@ -3,15 +3,9 @@
 
 #include <QObject>
 #include <QTimer>
-#include <QStack>
-#include "async_context/contextmanager.h"
-#include "lib/hiredis/adapters/qt.h"
-#include <QFuture>
 #include "broker/worker/worker.h"
-#include "commands/rediscommands.h"
-#include "radapterlogging.h"
-#include "replies/redisreplies.h"
 #include "settings/redissettings.h"
+#include "lib/hiredis/adapters/qt.h"
 
 namespace Redis {
 
@@ -19,6 +13,10 @@ class RADAPTER_SHARED_SRC Connector : public Radapter::Worker
 {
     Q_OBJECT
 public:
+    template <class User, class Data>
+                          using MethodCbWithData = void(User::*)(redisReply* reply, Data* optData);
+    template <class User> using MethodCb = void(User::*)(redisReply* reply);
+
     enum ReplyTypes {
         Unknown = 0,
         ReplyString = REDIS_REPLY_STRING,
@@ -37,109 +35,59 @@ public:
         ReplyVerb = REDIS_REPLY_VERB
     };
     Q_ENUM(ReplyTypes)
-    template <class User, class Data>
-                          using MethodCbWithData = void(User::*)(redisReply* reply, Data* optData);
-    template <class User> using MethodCb = void(User::*)(redisReply* reply);
-                          using StaticCb = void(*)(redisAsyncContext* ctx, void* reply, void* sender);
-
-
     explicit Connector(const Settings::RedisConnector &settings, QThread *thread);
     ~Connector() override;
-    QString host() const;
-    quint16 port() const;
-    quint16 dbIndex() const;
-    void setDbIndex(const quint16 dbIndex);
     bool isConnected() const;
-
-                          int runAsyncCommand(const QString &command);
-    template <class User, class Data>
-                          int runAsyncCommand(MethodCbWithData<User, Data> callback, const QString &command, Data* data, bool needBypassTracking = false);
-    template <class User> int runAsyncCommand(MethodCb<User> callback, const QString &command, bool needBypassTracking = false);
-                          int runAsyncCommand(StaticCb callback, const QString &command, void* optData = nullptr, bool needBypassTracking = false);
-
-
-    bool isValidContext();
-    static bool isValidReply(redisReply *reply);
-    static bool isValidContext(const redisAsyncContext *context);
-    QString metaInfo() const;
-    QString id() const;
-    static QString toString(const redisReply *reply);
-    void setCommandTimeout(int milliseconds);
+    int commandsLeft() const;
 signals:
     void connected();
     void disconnected();
     void commandsFinished();
-    void alive();
-public slots:
-    void confirmAlive();
 protected slots:
     void onRun() override;
-    void resetCommandTimeout();
     void tryConnect();
     void reconnect();
     void doPing();
     void clearContext();
-    void resetReconnectTimeout();
-    void increaseReconnectTimeout();
-    void startReconnectTimer();
-    void stopReconnectTimer();
-    void registerCommandTimeout();
-    void resetErrorCounter();
-    void startCommandTimer();
-    void stopCommandTimer();
+    void onCommandTimeout();
     void selectDb();
 protected:
+    template <class User, class Data>
+    int runAsyncCommand(MethodCbWithData<User, Data> callback, const QString &command, Data* data, bool needBypassTracking = false);
+    template <class User>
+    int runAsyncCommand(MethodCb<User> callback, const QString &command, bool needBypassTracking = false);
+    int runAsyncCommand(const QString &command);
+    void setDbIndex(const quint16 dbIndex);
+    QVariant parseReply(redisReply *reply) const;
+    QVariantMap parseHashReply(redisReply *reply) const;
+    bool isValidContext();
     void setConnected(bool state, const QString &reason = {});
     void enablePingKeepalive();
     void disablePingKeepalive();
-    void allowSelectDb();
-    void blockSelectDb();
 
-    static QString replyTypeToString(const int replyType);
-    static QString toHex(const void *pointer);
-    static QString toHex(const quintptr &pointer);
-    static quintptr toUintPointer(const void *pointer);
-
-    template <class User> inline static User* getSender(redisAsyncContext* ctx);
     const redisAsyncContext* context() const {return m_redisContext;}
-    void finishAsyncCommand();
-    void nullifyContext();
-    QVariant parseReply(redisReply *reply);
-    QVariantMap parseHashReply(redisReply *reply);
 private:
     template <class User, class Data>
     static void privateCallbackWithData(redisAsyncContext* ctx, void* reply, void* data);
     template <class User>
     static void privateCallback(redisAsyncContext* ctx, void* reply, void* data);
-    static void privateCallbackStatic(redisAsyncContext *context, void *replyPtr, void *data);
-    static void pingCallback(redisAsyncContext *context, void *replyPtr, void *sender);
     static void connectCallback(const redisAsyncContext *context, int status);
     static void disconnectCallback(const redisAsyncContext *context, int status);
-    static quint16 port(const redisAsyncContext *context);
-    static QString metaInfo(const redisAsyncContext *context, const int connectionPort = -1, const QString &id = QString{});
-
-    template <typename CallbackArgs_t, typename Callback>
-    int runAsyncCommandImplementation(Callback callback, const QString &command, CallbackArgs_t* optData, bool needTrackingBypass = false);
     void selectCallback(redisReply *replyPtr);
+    void pingCallback(redisReply *replyPtr);
+    void startAsyncCommand(bool bypassTrack);
+    void finishAsyncCommand();
+    template <typename CallbackArgs_t, typename Callback>
+    int runAsyncCommandImplementation(Callback callback, const QString &command, CallbackArgs_t* optData, bool needTrackingBypass);
 
-
-    QTimer* m_pingTimer;
-    quint32 m_pendingCommandsCounter{0u};
-    redisAsyncContext* m_redisContext;
-    QTimer* m_reconnectTimer;
-    QTimer* m_commandTimer;
-    bool m_isConnected;
-    quint8 m_commandTimeoutsCounter;
-    RedisQtAdapter* m_client;
-    QString m_host;
-    quint16 m_port;
-    quint16 m_dbIndex;
-    bool m_canSelect;
-
-    struct CallbackArgsPlain {
-        StaticCb callback;
-        void *data;
-    };
+    Settings::RedisConnector m_config;
+    redisAsyncContext* m_redisContext{};
+    QTimer* m_reconnectTimer{};
+    QTimer* m_commandTimeout{};
+    RedisQtAdapter* m_client{};
+    QTimer* m_pingTimer{nullptr};
+    bool m_isConnected{false};
+    quint8 m_commandTimeoutsCounter{0};
     template <class User, class Data>                      
     struct CallbackArgsWithData {
         MethodCbWithData<User, Data> callback;
@@ -155,9 +103,9 @@ private:
 };
 
 template<typename User>
-inline User* Connector::getSender(redisAsyncContext* ctx) {
+inline User* getSender(redisAsyncContext* ctx) {
     static_assert(std::is_base_of<Connector, User>::value, "Cannot cast context owner to non Redis::Connector subclass!");
-    return qobject_cast<User*>(static_cast<Connector*>(ctx->data));
+    return static_cast<User*>(ctx->data);
 }
 template<typename User, typename Data>
 int Connector::runAsyncCommand(MethodCbWithData<User, Data> callback, const QString &command, Data* data, bool needBypassTracking) {
@@ -178,18 +126,15 @@ int Connector::runAsyncCommand(MethodCb<User> callback, const QString &command, 
 
 template <typename CallbackArgs_t, typename Callback>
 int Connector::runAsyncCommandImplementation(Callback callback, const QString &command, CallbackArgs_t* cbData, bool needTrackingBypass) {
-    if (!isConnected() || !isValidContext(m_redisContext)) {
+    if (!isConnected() || !isValidContext()) {
         connDealloc(cbData);
         return REDIS_ERR;
     }
-    m_pingTimer->stop();
     auto status = redisAsyncCommand(m_redisContext, callback, cbData, command.toStdString().c_str());
     if (status != REDIS_OK) {
         connDealloc(cbData);
-    }
-    if (!needTrackingBypass) {
-        startCommandTimer();
-        ++m_pendingCommandsCounter;
+    } else {
+        startAsyncCommand(needTrackingBypass);
     }
     return status;
 }
@@ -220,7 +165,5 @@ template <typename CallbackArgs_t> inline void Connector::connDealloc(CallbackAr
 }
 
 }
-
-Q_DECLARE_METATYPE(Redis::Connector::ReplyTypes)
 
 #endif // REDISCONNECTOR_H

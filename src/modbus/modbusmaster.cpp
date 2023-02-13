@@ -39,6 +39,14 @@ Master::Master(const Settings::ModbusMaster &settings, QThread *thread) :
     m_device->setTimeout(settings.responce_time);
     m_device->setNumberOfRetries(settings.retries);
     for (auto regIter = settings.registers.cbegin(); regIter != settings.registers.cend(); ++regIter) {
+        if (m_reverseRegisters[regIter->table].contains(regIter->index)) {
+            throw std::invalid_argument("Register index collission on: " +
+                                        regIter.key().toStdString() +
+                                        "; With --> " +
+                                        m_reverseRegisters[regIter->table][regIter->index].toStdString() +
+                                        " (Table: "+ tableToString(regIter->table).toStdString() +
+                                        "; Register: " + QString::number(regIter->index).toStdString() + ")");
+        }
         m_reverseRegisters[regIter->table][regIter->index] = regIter.key();
     }
     connect(m_device, &QModbusDevice::stateChanged, this, &Master::onStateChanged);
@@ -160,6 +168,9 @@ void Master::executeNext()
 void Master::onErrorOccurred(QModbusDevice::Error error)
 {
     workerError(this) << QMetaEnum::fromType<QModbusDevice::Error>().valueToKey(error) << "; Source: " << sender();
+}
+
+void Master::reconnect() {
     disconnectDevice();
     m_reconnectTimer->start();
 }
@@ -212,7 +223,11 @@ void Master::onWriteReady()
     if (!rawReply) return;
     QScopedPointer<QModbusReply, QScopedPointerDeleteLater> reply{rawReply};
     if (reply->error() == QModbusDevice::NoError) {
-        workerError(this) << "; Written: " << reply->result().values();
+        auto unit = reply->result();
+        workerError(this, .nospace()) << ": Written: " << tableToString(unit.registerType()) <<
+                             " : " << unit.values() <<
+                             " --> Start: " << unit.startAddress() <<
+                             "; Count: " << unit.valueCount();
     } else {
         workerError(this) << ": Error Writing: " << reply->errorString();
     }
@@ -273,8 +288,9 @@ void Master::executeRead(const QModbusDataUnit &unit)
             delete reply;
         }
     } else {
-        workerError(this) << "Read Error: " << m_device->errorString();
+        workerError(this) << "Read Error: " << m_device->errorString() << "; Reconnecting...";
         emit queryDone();
+        reconnect();
     }
 }
 
@@ -288,8 +304,9 @@ void Master::executeWrite(const QModbusDataUnit &unit)
             delete reply;
         }
     } else {
-        workerInfo(this) << "Write Error: " << m_device->errorString();
+        workerInfo(this) << "Write Error: " << m_device->errorString() << "; Reconnecting...";
         emit queryDone();
+        reconnect();
     }
 }
 

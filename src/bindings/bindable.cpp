@@ -51,6 +51,26 @@ const QStringList Bindable::mappedFields(const QString &separator) const
     return send().flatten(separator).keys();
 }
 
+const QStringList Bindable::mappedFieldsExclude(const QStringList &exclude, const QString &separator) const
+{
+    if (exclude.isEmpty()) {
+        return send().flatten(separator).keys();
+    } else {
+        QStringList result;
+        for (auto &field : fields()) {
+            if (!exclude.contains(field)) {
+                result.append(send(field).keys(separator).first());
+            }
+        }
+        return result;
+    }
+}
+
+const QString Bindable::mappedField(const QString &field, const QString &separator) const
+{
+    return send(field).keys(separator).first();
+}
+
 JsonDict Bindable::send(const QString &fieldName) const
 {
     checkIfOk();

@@ -37,6 +37,7 @@ private slots:
     void onChannelDied(QObject *who);
     void onErrorOccurred(QModbusDevice::Error error);
     void onStateChanged(QModbusDevice::State state);
+    void reconnect();
 private:
     void formatAndSendJson(const JsonDict &json);
     void enqeueRead(const QModbusDataUnit &unit);

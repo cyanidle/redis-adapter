@@ -3,32 +3,38 @@
 #include "producers/rediscacheproducer.h"
 #include "radapterlogging.h"
 #include "consumers/rediscacheconsumer.h"
+#include <QTimer>
 using namespace Radapter;
 using namespace Redis::Cache;
 namespace Redis {
-CacheContext::CacheContext(const Radapter::WorkerMsg &msgToReply, Connector *parent) :
-    m_parent(parent),
+CacheContextWithReply::CacheContextWithReply(const Radapter::WorkerMsg &msgToReply, Connector *parent) :
+    CacheContext(parent),
     m_msg(msgToReply)
 {
 }
 
-WorkerMsg &CacheContext::msg()
+WorkerMsg &CacheContextWithReply::msg()
 {
     return m_msg;
 }
 
-const WorkerMsg &CacheContext::msg() const
+const WorkerMsg &CacheContextWithReply::msg() const
 {
     return m_msg;
+}
+
+CacheContext::CacheContext(Connector *parent) :
+    m_parent(parent)
+{
 }
 
 void CacheContext::fail(const QString &reason)
 {
     const auto &checkedReason = reason.isEmpty() ? QStringLiteral("Not Given") : reason;
-    reDebug() << m_parent->metaInfo() << ": Error! Reason --> "<< checkedReason;
+    workerError(m_parent) << ": Error! Reason --> "<< checkedReason;
     auto failReply = Radapter::ReplyFail(checkedReason);
-    setDone();
     reply(failReply);
+    setDone();
 }
 
 void CacheContext::reply(Radapter::Reply &&reply)
@@ -36,7 +42,7 @@ void CacheContext::reply(Radapter::Reply &&reply)
     this->reply(reply);
 }
 
-WorkerMsg CacheContext::prepareReply(const Radapter::WorkerMsg &msg, Radapter::Reply *reply)
+WorkerMsg CacheContextWithReply::prepareReply(const Radapter::WorkerMsg &msg, Radapter::Reply *reply)
 {
     auto prod = m_parent->as<CacheProducer>();
     auto cons = m_parent->as<CacheConsumer>();
@@ -49,7 +55,7 @@ WorkerMsg CacheContext::prepareReply(const Radapter::WorkerMsg &msg, Radapter::R
     }
 }
 
-WorkerMsg CacheContext::prepareMsg(const JsonDict &json)
+WorkerMsg CacheContextWithReply::prepareMsg(const JsonDict &json)
 {
     auto prod = m_parent->as<CacheProducer>();
     auto cons = m_parent->as<CacheConsumer>();
@@ -62,7 +68,7 @@ WorkerMsg CacheContext::prepareMsg(const JsonDict &json)
     }
 }
 
-void CacheContext::handleCommand(Radapter::Command *command, CtxHandle handle)
+void CacheContextWithReply::handleCommand(Radapter::Command *command, CtxHandle handle)
 {
     auto prod = m_parent->as<CacheProducer>();
     auto cons = m_parent->as<CacheConsumer>();
@@ -75,21 +81,21 @@ void CacheContext::handleCommand(Radapter::Command *command, CtxHandle handle)
     }
 }
 
-void CacheContext::sendMsg(const Radapter::WorkerMsg &msg)
+void CacheContextWithReply::sendMsg(const Radapter::WorkerMsg &msg)
 {
     auto prod = m_parent->as<CacheProducer>();
     auto cons = m_parent->as<CacheConsumer>();
     if (prod) {
-        return prod->sendMsg(msg);
+        emit prod->sendMsg(msg);
     } else if (cons) {
-        return cons->sendMsg(msg);
+        emit cons->sendMsg(msg);
     } else {
         throw std::runtime_error("Context Critical Error!");
     }
 }
 
 PackContext::PackContext(const Radapter::WorkerMsg &msgToReply, Connector *parent) :
-    CacheContext(msgToReply, parent)
+    CacheContextWithReply(msgToReply, parent)
 {
     auto pack = msgToReply.command()->as<CommandPack>();
     for (auto &command : pack->commands()) {
@@ -123,34 +129,9 @@ void SimpleContext::reply(Radapter::Reply &reply)
     setDone();
 }
 
-
-ObjectContext::ObjectContext(const Radapter::WorkerMsg &msgToReply, Connector *parent, bool doNotReply) :
-    CacheContext(msgToReply, parent),
-    m_doNotReply(doNotReply)
+void NoReplyContext::reply(Radapter::Reply &reply)
 {
-}
-
-void ObjectContext::reply(Radapter::Reply &reply)
-{
-    if (!reply.ok()) {
-        if (m_doNotReply) {
-            reDebug() << "Object read error";
-            return;
-        }
-        auto replyMsg = prepareReply(msg(), reply.newCopy());
-        sendMsg(replyMsg);
-        setDone();
-        return;
-    }
-    WorkerMsg toSend;
-    if (m_doNotReply) {
-        toSend = prepareMsg(reply.as<ReplyJson>()->json());
-    } else {
-        auto copy = msg();
-        copy.setJson(reply.as<ReplyJson>()->json());
-        toSend = prepareReply(copy, new ReadObject::WantedReply(true));
-    }
-    sendMsg(toSend);
+    Q_UNUSED(reply);
     setDone();
 }
 

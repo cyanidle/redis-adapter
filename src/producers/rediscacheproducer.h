@@ -16,16 +16,15 @@ class Redis::CacheProducer : public Connector
 public:
     using Handle = Radapter::ContextBase::Handle;
     explicit CacheProducer(const Settings::RedisCacheProducer &config, QThread *thread);
-signals:
-
 public slots:
     void onMsg(const Radapter::WorkerMsg &msg) override;
     void onCommand(const Radapter::WorkerMsg &msg) override;
+private slots:
+    void onDisconnect();
 protected:
     CacheContext &getCtx(Handle handle);
 private:
-    void handleCommand(Radapter::Command *command, Handle handle);
-    void requestMultiple(const Radapter::CommandPack *pack, Handle handle);
+    void handleCommand(const Radapter::Command *command, Handle handle);
 
     void writeKeys(const QVariantMap &keys, Handle handle);
     void msetCallback(redisReply *replyPtr, Handle handle);
@@ -41,7 +40,7 @@ private:
 
 
     QString m_objectKey;
-    friend CacheContext;
+    friend CacheContextWithReply;
     Radapter::ContextManager<CacheContext> m_manager;
 };
 

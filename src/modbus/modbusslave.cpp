@@ -37,12 +37,16 @@ Slave::Slave(const Settings::ModbusSlave &settings, QThread *thread) :
     connect(modbusDevice, &QModbusServer::errorOccurred,
             this, &Slave::onErrorOccurred);
     QModbusDataUnitMap regMap;
-    for (auto iter = deviceRegisters().constBegin(); iter != deviceRegisters().constEnd(); ++iter) {
-        if (m_reverseRegisters.contains(iter.value().table)) {
-            m_reverseRegisters[iter.value().table].insert(iter.value().index, iter.key());
-        } else {
-            m_reverseRegisters[iter.value().table] = {{iter.value().index, iter.key()}};
+    for (auto regIter = deviceRegisters().constBegin(); regIter != deviceRegisters().constEnd(); ++regIter) {
+        if (m_reverseRegisters[regIter->table].contains(regIter->index)) {
+            throw std::invalid_argument("Register index collission on: " +
+                                        regIter.key().toStdString() +
+                                        "; With --> " +
+                                        m_reverseRegisters[regIter->table][regIter->index].toStdString() +
+                                        " (Table: "+ tableToString(regIter->table).toStdString() +
+                                        "; Register: " + QString::number(regIter->index).toStdString() + ")");
         }
+        m_reverseRegisters[regIter->table][regIter->index] = regIter.key();
     }
     workerDebug(this) << "Inserting Coils: Start: 0; Count: " << settings.counts.coils;
     regMap.insert(QModbusDataUnit::Coils, {QModbusDataUnit::Coils, 0, settings.counts.coils});
@@ -93,10 +97,10 @@ void Slave::onDataWritten(QModbusDataUnit::RegisterType table, int address, int 
             ok = modbusDevice->data(QModbusDataUnit::InputRegisters, quint16(address + i), &(words[i]));
             break;
         default:
-            workerWarn(this) << "Invalid data written: Adress: " << address + i << "; Table: " << table;
+            workerWarn(this) << "Invalid data written: Adress: " << address + i << "; Table: " << tableToString(table);
         }
         if (!ok) {
-            workerWarn(this) << "Error reading data! Adress:" << address << "; Table:" << table;
+            workerWarn(this) << "Error reading data! Adress:" << address << "; Table:" << tableToString(table);
             continue;
         }
     }
@@ -117,7 +121,7 @@ void Slave::onDataWritten(QModbusDataUnit::RegisterType table, int address, int 
         if (result.isValid()) {
             if (regInfo.table == QModbusDataUnit::Coils
                 || regInfo.table == QModbusDataUnit::DiscreteInputs) {
-                msg[regString.split(":")] = result.toUInt() ? 1 : 0;
+                msg[regString.split(":")] = result.toUInt() ? true : false;
             } else {
                 msg[regString.split(":")] = result;
             }
@@ -131,16 +135,14 @@ void Slave::onDataWritten(QModbusDataUnit::RegisterType table, int address, int 
 
 void Slave::onErrorOccurred(QModbusDevice::Error error)
 {
-    workerWarn(this) << "Error: " << m_settings.device.repr() << "; Reason: " <<
-        QMetaEnum::fromType<QModbusDevice::Error>().valueToKey(error);
+    workerWarn(this) << "Error: " << m_settings.device.repr() << "; Reason: " << error;
     disconnectDevice();
     m_reconnectTimer->start();
 }
 
 void Slave::onStateChanged(QModbusDevice::State state)
 {
-    workerWarn(this) << "New state for: " << printSelf() <<" --> " <<
-        QMetaEnum::fromType<QModbusDevice::State>().valueToKey(state);
+    workerWarn(this) << "New state for: " << printSelf() <<" --> " << state;
 }
 
 void Slave::onMsg(const Radapter::WorkerMsg &msg)

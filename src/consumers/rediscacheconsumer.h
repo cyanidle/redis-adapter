@@ -15,12 +15,12 @@ public:
     explicit CacheConsumer(const Settings::RedisCacheConsumer &config, QThread *thread);
 public slots:
     void onCommand(const Radapter::WorkerMsg &msg) override;
+private slots:
+    void onDisconnect();
 private:
     void onRun() override;
     CacheContext &getCtx(CtxHandle handle);
     void handleCommand(const Radapter::Command* command, CtxHandle handle);
-
-    void requestMultiple(const Radapter::CommandPack *pack, CtxHandle handle);
 
     void requestSet(const QString &setKey, CtxHandle handle);
     void readSetCallback(redisReply *replyPtr, CtxHandle handle);
@@ -39,9 +39,9 @@ private:
 
     JsonDict parseNestedArrays(const JsonDict &target);
 
-    friend CacheContext;
+    friend CacheContextWithReply;
     friend SimpleContext;
-    friend ObjectContext;
+    friend NoReplyContext;
     friend PackContext;
 
     QString m_objectKey;

@@ -46,12 +46,10 @@ const QString &StreamConsumer::streamKey() const
 
 void StreamConsumer::doRead()
 {
-    resetCommandTimeout();
     auto startId = lastReadId();
     auto readCommand = readStream(m_streamKey, ENTRIES_PER_READ, BLOCK_TIMEOUT_MS, startId);
     runAsyncCommand(&StreamConsumer::readCallback, readCommand);
 }
-
 
 void StreamConsumer::readCallback(redisReply *reply)
 {

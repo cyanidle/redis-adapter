@@ -17,13 +17,20 @@ CacheConsumer::CacheConsumer(const Settings::RedisCacheConsumer &config, QThread
         m_objectRead->callOnTimeout(this, &CacheConsumer::requestObjectNoReply);
         m_objectRead->setInterval(config.update_rate);
     }
+    connect(this, &Connector::disconnected, this, &CacheConsumer::onDisconnect);
+}
+
+void CacheConsumer::onDisconnect()
+{
+    m_manager.forEach(&CacheContext::fail, "Disconnected");
+    m_manager.clearAll();
 }
 
 void CacheConsumer::requestObject(const QString &objectKey, CtxHandle handle)
 {
     auto command = QStringLiteral("HGETALL ") + objectKey;
     if (runAsyncCommand(&CacheConsumer::readObjectCallback, command, handle) != REDIS_OK) {
-        getCtx(handle).fail(metaInfo());
+        getCtx(handle).fail("Object request fail");
     }
 }
 
@@ -59,7 +66,7 @@ void CacheConsumer::requestKeys(const QStringList &keys, CtxHandle handle)
 void CacheConsumer::readKeysCallback(redisReply *reply, CtxHandle handle)
 {
     auto foundEntries = parseReply(reply).toStringList();
-    reDebug() << metaInfo() << "Key entries found:" << foundEntries.size();
+    workerInfo(this) << "Key entries found:" << foundEntries.size();
     getCtx(handle).reply(ReadKeys::WantedReply(foundEntries));
 }
 
@@ -73,9 +80,11 @@ void CacheConsumer::requestKey(const QString &key, CtxHandle handle)
 
 void CacheConsumer::readKeyCallback(redisReply *replyPtr, CtxHandle handle)
 {
-    auto foundEntries = parseReply(replyPtr).toString();
-    getCtx(handle).reply(ReadKey::WantedReply(foundEntries));
+    auto foundKey = parseReply(replyPtr).toString();
+    workerInfo(this) << "Key found:" << foundKey;
+    getCtx(handle).reply(ReadKey::WantedReply(foundKey));
 }
+
 void CacheConsumer::requestHash(const QString &hash, CtxHandle handle)
 {
     auto command = QStringLiteral("HGETALL ") + hash;
@@ -87,7 +96,7 @@ void CacheConsumer::requestHash(const QString &hash, CtxHandle handle)
 void CacheConsumer::readHashCallback(redisReply *replyPtr, CtxHandle handle)
 {
     auto result = parseHashReply(replyPtr);
-    reDebug() << metaInfo() << "Hash entries found:" << result.size();
+    workerInfo(this) << "Hash entries found:" << result.size();
     getCtx(handle).reply(ReplyHash(result));
 }
 
@@ -102,16 +111,16 @@ void CacheConsumer::requestSet(const QString &setKey, CtxHandle handle)
 void CacheConsumer::readSetCallback(redisReply *replyPtr, CtxHandle handle)
 {
     auto parsed = parseReply(replyPtr).toStringList();
-    reDebug() << metaInfo() << "Set entries found:" << parsed.size();
+    workerInfo(this) << "Set entries found:" << parsed.size();
     getCtx(handle).reply(ReadSet::WantedReply(parsed));
 }
 
 void CacheConsumer::requestObjectNoReply()
 {
     auto command = QStringLiteral("HGETALL ") + m_objectKey;
-    auto handle = m_manager.create<ObjectContext>(WorkerMsg{}, this, true);
+    auto handle = m_manager.create<NoReplyContext>();
     if (runAsyncCommand(&CacheConsumer::readObjectCallback, command, handle) != REDIS_OK) {
-        getCtx(handle).fail(metaInfo());
+        getCtx(handle).fail("Object request fail");
     }
 }
 
@@ -130,22 +139,6 @@ void CacheConsumer::handleCommand(const Radapter::Command *command, CtxHandle ha
     }
 }
 
-void CacheConsumer::requestMultiple(const CommandPack* pack, CtxHandle handle)
-{
-    if (any_of(pack->commands(), &Command::is<ReadObject>)) {
-        auto msgCopy = getCtx(handle).msg();
-        auto reply = prepareReply(msgCopy, new ReplyFail("CommandPack Contains ReadObject!"));
-        emit sendMsg(reply);
-        getCtx(handle).setDone();
-    }
-    if (!pack->commands().size()) {
-        getCtx(handle).fail("Empty command Pack");
-        getCtx(handle).setDone();
-        return;
-    }
-    handleCommand(pack->commands().first().data(), handle);
-}
-
 CacheContext &CacheConsumer::getCtx(CtxHandle handle)
 {
     return m_manager.get(handle);
@@ -153,12 +146,10 @@ CacheContext &CacheConsumer::getCtx(CtxHandle handle)
 
 void CacheConsumer::onCommand(const WorkerMsg &msg)
 {
-    if (msg.command()->is<ReadObject>()) {
-        requestObject(msg.command()->as<ReadObject>()->key(), m_manager.create<ObjectContext>(msg, this));
-    } else if (msg.command()->is<CommandPack>()) {
-        requestMultiple(msg.command()->as<CommandPack>(), m_manager.create<PackContext>(msg, this));
-    }  else if (msg.command()->is<CommandRequestJson>()) {
-        requestObject(msg.command()->as<ReadObject>()->key(), m_manager.create<ObjectContext>(msg, this));
+    if (msg.command()->is<CommandPack>()) {
+        handleCommand(msg.command()->as<CommandPack>()->first(), m_manager.create<PackContext>(msg, this));
+    } else if (msg.command()->is<CommandRequestJson>()) {
+        requestObject(m_objectKey, m_manager.create<NoReplyContext>());
     } else {
         handleCommand(msg.command(), m_manager.create<SimpleContext>(msg, this));
     }
