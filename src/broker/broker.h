@@ -16,6 +16,8 @@ public:
     static Broker* instance();
     bool exists(const QString &workerName) const;
     Worker* getWorker(const QString &workerName);
+    template <class Target>
+    Target* getWorker(const QString &workerName);
     bool wasStarted();
     void registerProxy(WorkerProxy* proxy);
     void connectProducersAndConsumers();
@@ -61,6 +63,12 @@ QList<Target*> Broker::getAll()
 inline Broker *Broker::instance() {
     static Broker* broker {new Broker()};
     return broker;
+}
+
+template <class Target>
+Target* Broker::getWorker(const QString &workerName)
+{
+    return qobject_cast<Target*>(getWorker(workerName));
 }
 
 }

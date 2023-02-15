@@ -14,6 +14,7 @@ class RADAPTER_SHARED_SRC Slave : public Radapter::Worker
 public:
     Slave(const Settings::ModbusSlave &settings, QThread *thread);
     ~Slave();
+    bool isConnected() const;
 public slots:
     virtual void onMsg(const Radapter::WorkerMsg &msg) override;
 private slots:
@@ -30,6 +31,7 @@ private:
     QTimer *m_reconnectTimer = nullptr;
     QHash<QModbusDataUnit::RegisterType, QHash<int /*index*/, QString>> m_reverseRegisters;
     QModbusServer *modbusDevice = nullptr;
+    std::atomic<bool> m_connected{false};
 };
 
 } // namespace Modbus

@@ -9,10 +9,9 @@ BindingsProvider::BindingsProvider(const JsonBinding::Map &bindings, QObject* pa
 
 const JsonBinding &BindingsProvider::getBinding(const QString &name)
 {
-    if (!m_bindings.contains(name)) {
-        bindingsError() << "(WARNING) Bindings provider: No binding found, returning default for name: " << name;
-        throw std::runtime_error(std::string("Missing binding: ") + name.toStdString());
-    } else {
+    if (m_bindings.contains(name)) {
         return m_bindings[name];
+    } else {
+        throw std::runtime_error(std::string("Missing binding: ") + name.toStdString());
     }
 }

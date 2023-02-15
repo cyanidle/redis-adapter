@@ -40,7 +40,7 @@ class RADAPTER_SHARED_SRC CommandDummy : public Command
     Q_GADGET
 public:
     CommandDummy();
-    RADAPTER_COMMAND_WANTS(Radapter::ReplyOk)
+    RADAPTER_COMMAND_WANTS(Radapter::Reply)
 };
 
 class RADAPTER_SHARED_SRC CommandPack : public Command

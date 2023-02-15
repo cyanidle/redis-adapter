@@ -110,3 +110,12 @@ QString Modbus::tableToString(QModbusDataUnit::RegisterType type)
     default: return "Unknown";
     }
 }
+
+QString Modbus::printUnit(const QModbusDataUnit &unit)
+{
+    auto result = "Table: " + tableToString(unit.registerType()) + "; Vals: [";
+    for (auto &val : unit.values()) {
+        result.append(QString::number(val, 16)).append(", ");
+    }
+    return  result + "]; --> Start: " + QString::number(unit.startAddress()) + "; Count: " + QString::number(unit.valueCount());
+}

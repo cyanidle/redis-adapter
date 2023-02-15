@@ -8,6 +8,7 @@ QVariant parseModbusType(quint16* words, const Settings::RegisterInfo &regInfo, 
 QModbusDataUnit parseValueToDataUnit(const QVariant &src, const Settings::RegisterInfo &regInfo, const Settings::PackingMode &endianess);
 QList<QModbusDataUnit> mergeDataUnits(const QList<QModbusDataUnit> &src);
 QString tableToString(QModbusDataUnit::RegisterType type);
+QString printUnit(const QModbusDataUnit &unit);
 }
 
 #endif

@@ -24,17 +24,25 @@ const WorkerMsg &CacheContextWithReply::msg() const
 }
 
 CacheContext::CacheContext(Connector *parent) :
-    m_parent(parent)
+    m_prod(qobject_cast<CacheProducer*>(parent)),
+    m_cons(qobject_cast<CacheConsumer*>(parent))
 {
+    if (!m_prod && !m_cons) {
+        throw std::invalid_argument("Context must be used in cache consumer or producer only!");
+    }
 }
 
 void CacheContext::fail(const QString &reason)
 {
     const auto &checkedReason = reason.isEmpty() ? QStringLiteral("Not Given") : reason;
-    workerError(m_parent) << ": Error! Reason --> "<< checkedReason;
-    auto failReply = Radapter::ReplyFail(checkedReason);
-    reply(failReply);
-    setDone();
+    Worker *worker;
+    if (m_cons){
+        worker = m_cons;
+    } else {
+        worker = m_prod;
+    }
+    workerError(worker) << ": Error! Reason --> "<< checkedReason;
+    reply(Radapter::ReplyFail(checkedReason));
 }
 
 void CacheContext::reply(Radapter::Reply &&reply)
@@ -42,55 +50,39 @@ void CacheContext::reply(Radapter::Reply &&reply)
     this->reply(reply);
 }
 
-WorkerMsg CacheContextWithReply::prepareReply(const Radapter::WorkerMsg &msg, Radapter::Reply *reply)
+WorkerMsg CacheContext::prepareReply(const Radapter::WorkerMsg &msg, Radapter::Reply *reply)
 {
-    auto prod = m_parent->as<CacheProducer>();
-    auto cons = m_parent->as<CacheConsumer>();
-    if (prod) {
-        return prod->prepareReply(msg, reply);
-    } else if (cons) {
-        return cons->prepareReply(msg, reply);
+    if (m_prod) {
+        return m_prod->prepareReply(msg, reply);
     } else {
-        throw std::runtime_error("Context Critical Error!");
+        return m_cons->prepareReply(msg, reply);
     }
 }
 
-WorkerMsg CacheContextWithReply::prepareMsg(const JsonDict &json)
+WorkerMsg CacheContext::prepareMsg(const JsonDict &json)
 {
-    auto prod = m_parent->as<CacheProducer>();
-    auto cons = m_parent->as<CacheConsumer>();
-    if (prod) {
-        return prod->prepareMsg(json);
-    } else if (cons) {
-        return cons->prepareMsg(json);
+    if (m_prod) {
+        return m_prod->prepareMsg(json);
     } else {
-        throw std::runtime_error("Context Critical Error!");
+        return m_cons->prepareMsg(json);
     }
 }
 
-void CacheContextWithReply::handleCommand(Radapter::Command *command, CtxHandle handle)
+void CacheContext::handleCommand(Radapter::Command *command, Handle handle)
 {
-    auto prod = m_parent->as<CacheProducer>();
-    auto cons = m_parent->as<CacheConsumer>();
-    if (prod) {
-        return prod->handleCommand(command, handle);
-    } else if (cons) {
-        return cons->handleCommand(command, handle);
+    if (m_prod) {
+        return m_prod->handleCommand(command, handle);
     } else {
-        throw std::runtime_error("Context Critical Error!");
+        return m_cons->handleCommand(command, handle);
     }
 }
 
-void CacheContextWithReply::sendMsg(const Radapter::WorkerMsg &msg)
+void CacheContext::sendMsg(const Radapter::WorkerMsg &msg)
 {
-    auto prod = m_parent->as<CacheProducer>();
-    auto cons = m_parent->as<CacheConsumer>();
-    if (prod) {
-        emit prod->sendMsg(msg);
-    } else if (cons) {
-        emit cons->sendMsg(msg);
+    if (m_prod) {
+        emit m_prod->sendMsg(msg);
     } else {
-        throw std::runtime_error("Context Critical Error!");
+        emit m_cons->sendMsg(msg);
     }
 }
 
@@ -108,7 +100,10 @@ PackContext::PackContext(const Radapter::WorkerMsg &msgToReply, Connector *paren
 void PackContext::reply(Radapter::Reply &reply)
 {
     m_replyPack.append(reply.newCopy());
-    if (m_replyPack.replies().size() >= packInMsg()->commands().size()) {
+    if (m_replyPack.size() >= packInMsg()->size() || !reply.ok()) {
+        while (m_replyPack.size() < packInMsg()->size()) {
+            m_replyPack.append(new ReplyFail);
+        }
         auto replyMsg = prepareReply(msg(), m_replyPack.newCopy());
         sendMsg(replyMsg);
         setDone();
@@ -126,6 +121,14 @@ void SimpleContext::reply(Radapter::Reply &reply)
 {
     auto replyMsg = prepareReply(msg(), reply.newCopy());
     sendMsg(replyMsg);
+    setDone();
+}
+
+void SimpleMsgContext::reply(Radapter::Reply &reply)
+{
+    auto asJson = reply.as<ReplyJson>();
+    if (!asJson || !asJson->ok()) return;
+    sendMsg(prepareMsg(asJson->json()));
     setDone();
 }
 

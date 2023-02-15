@@ -86,7 +86,7 @@ private:
     QTimer* m_commandTimeout{};
     RedisQtAdapter* m_client{};
     QTimer* m_pingTimer{nullptr};
-    bool m_isConnected{false};
+    std::atomic<bool> m_isConnected{false};
     quint8 m_commandTimeoutsCounter{0};
     template <class User, class Data>                      
     struct CallbackArgsWithData {

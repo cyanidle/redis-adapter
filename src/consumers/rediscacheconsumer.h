@@ -25,7 +25,7 @@ private:
     void requestSet(const QString &setKey, CtxHandle handle);
     void readSetCallback(redisReply *replyPtr, CtxHandle handle);
 
-    void requestObjectNoReply();
+    void requestObjectSimple();
     void requestObject(const QString &objectKey, CtxHandle handle);
     void readObjectCallback(redisReply *replyPtr, CtxHandle handle);
 
@@ -39,10 +39,7 @@ private:
 
     JsonDict parseNestedArrays(const JsonDict &target);
 
-    friend CacheContextWithReply;
-    friend SimpleContext;
-    friend NoReplyContext;
-    friend PackContext;
+    friend CacheContext;
 
     QString m_objectKey;
     Radapter::ContextManager<CacheContext> m_manager{};

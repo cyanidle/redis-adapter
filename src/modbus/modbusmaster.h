@@ -53,7 +53,7 @@ private:
     QTimer *m_readTimer;
     QHash<QModbusDataUnit::RegisterType, QHash<int, QString>> m_reverseRegisters{};
     QModbusClient *m_device = nullptr;
-    bool m_connected{false};
+    std::atomic<bool> m_connected{false};
     QQueue<QModbusDataUnit> m_readQueue{};
     QQueue<QModbusDataUnit> m_writeQueue{};
     JsonDict m_lastJson{};

@@ -40,7 +40,7 @@ private:
 
 
     QString m_objectKey;
-    friend CacheContextWithReply;
+    friend CacheContext;
     Radapter::ContextManager<CacheContext> m_manager;
 };
 

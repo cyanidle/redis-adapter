@@ -192,7 +192,7 @@ void Master::onReadReady()
     if (!rawReply) return;
     QScopedPointer<QModbusReply, QScopedPointerDeleteLater> reply{rawReply};
     if (reply->error() != QModbusDevice::NoError) {
-        workerError(this) << ": Error Reading: " << reply->errorString();
+        workerError(this, .noquote()) << ": Error Reading:\n" << reply->errorString();
         return;
     }
     auto words = reply->result().values();
@@ -222,14 +222,11 @@ void Master::onWriteReady()
     auto rawReply = qobject_cast<QModbusReply *>(sender());
     if (!rawReply) return;
     QScopedPointer<QModbusReply, QScopedPointerDeleteLater> reply{rawReply};
+    auto unit = reply->result();
     if (reply->error() == QModbusDevice::NoError) {
-        auto unit = reply->result();
-        workerError(this, .nospace()) << ": Written: " << tableToString(unit.registerType()) <<
-                             " : " << unit.values() <<
-                             " --> Start: " << unit.startAddress() <<
-                             "; Count: " << unit.valueCount();
+        workerInfo(this, .nospace().noquote()) << ": Written:\n" << printUnit(unit);
     } else {
-        workerError(this) << ": Error Writing: " << reply->errorString();
+        workerError(this, .nospace().noquote()) << ": Error Writing:\n" << printUnit(unit) << ";\nReason: " << reply->errorString();
     }
 }
 
@@ -297,6 +294,7 @@ void Master::executeRead(const QModbusDataUnit &unit)
 void Master::executeWrite(const QModbusDataUnit &unit)
 {
     if (auto reply = m_device->sendWriteRequest(unit, m_settings.slave_id)) {
+        workerInfo(this, .noquote()) << "Writing...:\n" << printUnit(unit);
         connect(reply, &QModbusReply::destroyed, this, &Master::queryDone);
         if (!reply->isFinished()) {
             QObject::connect(reply, &QModbusReply::finished, this, &Master::onWriteReady);

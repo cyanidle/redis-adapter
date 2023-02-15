@@ -78,6 +78,22 @@ JsonDict Bindable::send(const QString &fieldName) const
     else return m_binding.send(serializeField(fieldName));
 }
 
+JsonDict Bindable::sendGlob(const QString &glob) const
+{
+    auto globre = QRegExp(glob);
+    globre.setPatternSyntax(QRegExp::WildcardUnix);
+    if (!globre.isValid()) {
+        throw std::invalid_argument("SendGlob syntax error!");
+    }
+    JsonDict result;
+    for (auto &field : fields()) {
+        if (globre.exactMatch(field)) {
+            result.merge(send(field));
+        }
+    }
+    return result;
+}
+
 bool Bindable::isIgnored(const QString &fieldName) const
 {
     return m_binding.ignoredFields().contains(fieldName);

@@ -14,7 +14,7 @@ CacheConsumer::CacheConsumer(const Settings::RedisCacheConsumer &config, QThread
 {
     if (config.update_rate) {
         m_objectRead = new QTimer(this);
-        m_objectRead->callOnTimeout(this, &CacheConsumer::requestObjectNoReply);
+        m_objectRead->callOnTimeout(this, &CacheConsumer::requestObjectSimple);
         m_objectRead->setInterval(config.update_rate);
     }
     connect(this, &Connector::disconnected, this, &CacheConsumer::onDisconnect);
@@ -115,10 +115,10 @@ void CacheConsumer::readSetCallback(redisReply *replyPtr, CtxHandle handle)
     getCtx(handle).reply(ReadSet::WantedReply(parsed));
 }
 
-void CacheConsumer::requestObjectNoReply()
+void CacheConsumer::requestObjectSimple()
 {
     auto command = QStringLiteral("HGETALL ") + m_objectKey;
-    auto handle = m_manager.create<NoReplyContext>();
+    auto handle = m_manager.create<SimpleMsgContext>(this);
     if (runAsyncCommand(&CacheConsumer::readObjectCallback, command, handle) != REDIS_OK) {
         getCtx(handle).fail("Object request fail");
     }
@@ -149,7 +149,7 @@ void CacheConsumer::onCommand(const WorkerMsg &msg)
     if (msg.command()->is<CommandPack>()) {
         handleCommand(msg.command()->as<CommandPack>()->first(), m_manager.create<PackContext>(msg, this));
     } else if (msg.command()->is<CommandRequestJson>()) {
-        requestObject(m_objectKey, m_manager.create<NoReplyContext>());
+        requestObject(m_objectKey, m_manager.create<SimpleContext>(msg, this));
     } else {
         handleCommand(msg.command(), m_manager.create<SimpleContext>(msg, this));
     }

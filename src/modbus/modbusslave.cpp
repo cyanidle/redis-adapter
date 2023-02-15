@@ -64,6 +64,11 @@ Slave::~Slave()
     disconnectDevice();
 }
 
+bool Slave::isConnected() const
+{
+    return m_connected;
+}
+
 void Slave::connectDevice()
 {
     if (!modbusDevice->connectDevice()) {
@@ -142,6 +147,11 @@ void Slave::onErrorOccurred(QModbusDevice::Error error)
 
 void Slave::onStateChanged(QModbusDevice::State state)
 {
+    if (state == QModbusDevice::ConnectedState) {
+        m_connected = true;
+    } else {
+        m_connected = false;
+    }
     workerWarn(this) << "New state for: " << printSelf() <<" --> " << state;
 }
 

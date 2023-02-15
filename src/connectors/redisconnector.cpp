@@ -132,6 +132,7 @@ void Connector::connectCallback(const redisAsyncContext *context, int status)
     if (status != REDIS_OK) {
         // hiredis already freed the context
         adapter->m_redisContext = nullptr;
+        adapter->m_reconnectTimer->start();
     } else {
         adapter->setConnected(true);
     }

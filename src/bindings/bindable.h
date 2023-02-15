@@ -13,6 +13,7 @@ public:
     const QStringList mappedFieldsExclude(const QStringList &exclude, const QString& separator = ":") const;
     const QString mappedField(const QString &field, const QString& separator = ":") const;
     JsonDict send(const QString &fieldName = {}) const;
+    JsonDict sendGlob(const QString &glob) const;
     bool isIgnored(const QString &fieldName) const;
     void checkIfOk() const;
 private:

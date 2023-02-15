@@ -6,17 +6,23 @@
 #include "broker/worker/workermsg.h"
 
 namespace Redis {
-
+class CacheProducer;
+class CacheConsumer;
 class Connector;
 
-struct CacheContext  : Radapter::ContextBase{
+struct CacheContext  : Radapter::ContextBase {
     CacheContext(Connector *parent);
     void fail(const QString &reason = {});
     virtual void reply(Radapter::Reply &reply) = 0;
     void reply(Radapter::Reply &&reply);
+    Radapter::WorkerMsg prepareReply(const Radapter::WorkerMsg &msg, Radapter::Reply *reply);
+    Radapter::WorkerMsg prepareMsg(const JsonDict &json);
+    void handleCommand(Radapter::Command *command, Handle handle);
+    void sendMsg(const Radapter::WorkerMsg &msg);
     virtual ~CacheContext() = default;
 protected:
-    Connector *m_parent{};
+    CacheProducer *m_prod;
+    CacheConsumer *m_cons;
 };
 
 struct CacheContextWithReply : CacheContext
@@ -26,10 +32,6 @@ public:
     CacheContextWithReply(const Radapter::WorkerMsg &msgToReply, Connector *parent);
     Radapter::WorkerMsg &msg();
     const Radapter::WorkerMsg &msg() const;
-    Radapter::WorkerMsg prepareReply(const Radapter::WorkerMsg &msg, Radapter::Reply *reply);
-    Radapter::WorkerMsg prepareMsg(const JsonDict &json);
-    void handleCommand(Radapter::Command *command, CtxHandle handle);
-    void sendMsg(const Radapter::WorkerMsg &msg);
     bool operator==(const CacheContextWithReply &other) const {
         return msg().id() == other.msg().id();
     }
@@ -54,8 +56,14 @@ private:
     Radapter::ReplyPack m_replyPack{};
 };
 
+struct SimpleMsgContext : CacheContext {
+    SimpleMsgContext(Connector *parent) : CacheContext(parent) {}
+    void reply(Radapter::Reply &reply) override;
+};
+
+
 struct NoReplyContext : CacheContext {
-    NoReplyContext() : CacheContext(nullptr) {}
+    NoReplyContext(Connector *parent) : CacheContext(parent) {}
     void reply(Radapter::Reply &reply) override;
 };
 

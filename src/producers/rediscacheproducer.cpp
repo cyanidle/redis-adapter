@@ -1,9 +1,7 @@
 #include "rediscacheproducer.h"
 #include "formatting/redis/rediscachequeries.h"
-#include "radapterlogging.h"
 #include "async_context/rediscachecontext.h"
 #include "commands/rediscommands.h"
-#include "templates/algorithms.hpp"
 
 using namespace Redis;
 using namespace Cache;
@@ -18,7 +16,7 @@ CacheProducer::CacheProducer(const Settings::RedisCacheProducer &config, QThread
 
 void CacheProducer::onMsg(const Radapter::WorkerMsg &msg)
 {
-    writeObject(m_objectKey, msg, m_manager.create<NoReplyContext>());
+    writeObject(m_objectKey, msg, m_manager.create<NoReplyContext>(this));
     m_manager.clearDone();
 }
 
