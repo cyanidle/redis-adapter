@@ -55,8 +55,8 @@ QList<T> Launcher::parseTomlArray(const QString &tomlPath) {
         return Serializer::fromQList<T>(result.toList());
     } catch (const std::exception &e) {
         throw std::runtime_error(QString(e.what()).replace(ROOT_PREFIX, tomlPath).toStdString() +
-                                 std::string("; While Parsing List --> ") +
-                                 tomlPath.toStdString() + "; In --> " +
+                                 std::string("; While Parsing List --> [[") +
+                                 tomlPath.toStdString() + "]]; In --> " +
                                  m_filereader->filePath().toStdString());
     }
 }
@@ -72,8 +72,8 @@ T Launcher::parseTomlObj(const QString &tomlPath, bool mustHave) {
         return Serializer::fromQMap<T>(result.toMap());
     } catch (const std::exception &e) {
         throw std::runtime_error(QString(e.what()).replace(ROOT_PREFIX, tomlPath).toStdString() +
-                                 std::string("; While Parsing Object --> ") +
-                                 tomlPath.toStdString() + "; In --> " +
+                                 std::string("; While Parsing Object --> [") +
+                                 tomlPath.toStdString() + "]; In --> " +
                                  m_filereader->filePath().toStdString());
     }
 }

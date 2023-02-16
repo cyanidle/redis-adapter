@@ -2,9 +2,7 @@
 #define MODBUSSETTINGS_H
 
 #include "qstringbuilder.h"
-#include "radapterlogging.h"
 #include "settings.h"
-#include "jsondict/jsondict.hpp"
 #include "broker/interceptors/logginginterceptor.h"
 
 Q_DECLARE_METATYPE(QMetaType::Type)
@@ -12,7 +10,7 @@ Q_DECLARE_METATYPE(QDataStream::ByteOrder)
 
 namespace Settings {
 
-    struct RADAPTER_SHARED_SRC ModbusQuery : Serializer::SerializableGadget {
+    struct RADAPTER_SHARED_SRC ModbusQuery : SerializableSettings {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_FIELD_MAPPED(QModbusDataUnit::RegisterType, type, table())
@@ -30,7 +28,7 @@ namespace Settings {
             return map;
         }
     };
-    struct RADAPTER_SHARED_SRC PackingMode : Serializer::SerializableGadget {
+    struct RADAPTER_SHARED_SRC PackingMode : SerializableSettings {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_FIELD_MAPPED(QDataStream::ByteOrder, byte_order, table(), QDataStream::LittleEndian)
@@ -45,7 +43,7 @@ namespace Settings {
             return map;
         }
     };
-    struct RADAPTER_SHARED_SRC ModbusDevice : Serializer::SerializableGadget {
+    struct RADAPTER_SHARED_SRC ModbusDevice : SerializableSettings {
         typedef QMap<QString, ModbusDevice> Map;
         Q_GADGET
         IS_SERIALIZABLE
@@ -76,7 +74,7 @@ namespace Settings {
             table().insert(tcp ? tcp->name : rtu->name, *this);
         }
     };
-    struct RADAPTER_SHARED_SRC RegisterInfo : Serializer::SerializableGadget {
+    struct RADAPTER_SHARED_SRC RegisterInfo : SerializableSettings {
         typedef QMap<QString, QModbusDataUnit::RegisterType> tableMap;
         typedef QMap<QString, QMetaType::Type> typeMap;
         Q_GADGET
@@ -107,7 +105,7 @@ namespace Settings {
         quint16 input_registers{};
     };
 
-    struct RADAPTER_SHARED_SRC ModbusSlave : Serializer::SerializableGadget {
+    struct RADAPTER_SHARED_SRC ModbusSlave : SerializableSettings {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_FIELD(Radapter::WorkerSettings, worker)
@@ -125,7 +123,7 @@ namespace Settings {
         void postInit();
     };
 
-    struct RADAPTER_SHARED_SRC ModbusMaster : Serializer::SerializableGadget {
+    struct RADAPTER_SHARED_SRC ModbusMaster : SerializableSettings {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_FIELD(Radapter::WorkerSettings, worker)

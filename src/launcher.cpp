@@ -163,7 +163,7 @@ void Launcher::prvInit()
     initSql();
     setTomlPath("mocks.toml");
     for (const auto &mockSettings : parseTomlArray<Radapter::MockWorkerSettings>("mock")) {
-        addWorker(new Radapter::MockWorker(mockSettings, new QThread()));
+        addWorker(new Radapter::MockWorker(mockSettings, new QThread(this)));
     }
     setTomlPath("config.toml");
     auto localizationInfo = parseTomlObj<Settings::LocalizationInfo>("localization");

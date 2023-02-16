@@ -1,6 +1,6 @@
 SOURCES+= \
 	$$PWD/modbussettings.cpp \
-	$$PWD/mysqlserializable.cpp 
+	$$PWD/mysqlserializable.cpp
 
 HEADERS+= \
 	$$PWD/modbussettings.h \

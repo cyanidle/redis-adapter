@@ -19,7 +19,7 @@ namespace Settings {
         }
     };
 
-    struct RADAPTER_SHARED_SRC RedisConnector : Serializer::SerializableGadget {
+    struct RADAPTER_SHARED_SRC RedisConnector : Settings::SerializableSettings {
         Q_GADGET
         IS_SERIALIZABLE
         SERIAL_FIELD(Radapter::WorkerSettings, worker)

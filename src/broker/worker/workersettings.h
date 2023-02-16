@@ -1,11 +1,11 @@
 #ifndef WORKERBASESETTINGS_H
 #define WORKERBASESETTINGS_H
 
-#include "settings-parsing/serializer.hpp"
+#include "settings-parsing/serializablesettings.h"
 
 namespace Radapter {
 
-struct RADAPTER_SHARED_SRC WorkerSettings : public Serializer::SerializableGadget  {
+struct RADAPTER_SHARED_SRC WorkerSettings : public Settings::SerializableSettings  {
     Q_GADGET
     IS_SERIALIZABLE
     SERIAL_FIELD(QString, name);

@@ -2,13 +2,13 @@
 #define LOGGINGINTERCEPTORSETTINGS_H
 
 #include <QJsonDocument>
-#include "settings-parsing/serializer.hpp"
+#include "settings-parsing/serializablesettings.h"
 #include "private/global.h"
 
 Q_DECLARE_METATYPE(QJsonDocument::JsonFormat)
 namespace Radapter {
 
-struct RADAPTER_SHARED_SRC LoggingInterceptorSettings : public Serializer::SerializableGadget  {
+struct RADAPTER_SHARED_SRC LoggingInterceptorSettings : public Settings::SerializableSettings  {
     Q_GADGET
     IS_SERIALIZABLE
     enum LogMsgTypes {
