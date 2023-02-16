@@ -94,6 +94,21 @@ JsonDict Bindable::sendGlob(const QString &glob) const
     return result;
 }
 
+bool Bindable::wasUpdatedGlob(const QString &glob) const
+{
+    auto globre = QRegExp(glob);
+    globre.setPatternSyntax(QRegExp::WildcardUnix);
+    if (!globre.isValid()) {
+        throw std::invalid_argument("SendGlob syntax error!");
+    }
+    for (auto &field : fields()) {
+        if (globre.exactMatch(field) && wasUpdated(field)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool Bindable::isIgnored(const QString &fieldName) const
 {
     return m_binding.ignoredFields().contains(fieldName);

@@ -15,6 +15,7 @@ public:
     const QString mappedField(const QString &field, const QString& separator = ":") const;
     JsonDict send(const QString &fieldName = {}) const;
     JsonDict sendGlob(const QString &glob) const;
+    bool wasUpdatedGlob(const QString &glob) const;
     bool isIgnored(const QString &fieldName) const;
     void checkIfOk() const;
 private:
