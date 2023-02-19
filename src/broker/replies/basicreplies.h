@@ -50,36 +50,6 @@ private:
     JsonDict m_json;
 };
 
-//! Means msg contains? Json Reply in body
-class RADAPTER_SHARED_SRC ReplyWithJson : public Reply
-{
-    Q_GADGET
-public:
-    ReplyWithJson(bool ok);
-    RADAPTER_REPLY
-protected:
-    ReplyWithJson(quint32 type, bool ok);
-};
-
-
-//! Means msg contains Json Reply in body
-class RADAPTER_SHARED_SRC ReplyWithJsonOk : public ReplyWithJson
-{
-    Q_GADGET
-public:
-    ReplyWithJsonOk();
-    RADAPTER_REPLY
-};
-
-//! Means msg does not contain Json Reply in body (failed)
-class RADAPTER_SHARED_SRC ReplyWithJsonFail : public ReplyWithJson
-{
-    Q_GADGET
-public:
-    ReplyWithJsonFail();
-    RADAPTER_REPLY
-};
-
 class RADAPTER_SHARED_SRC ReplyPack : public Reply
 {
     Q_GADGET
@@ -103,9 +73,6 @@ private:
 IMPL_RADAPTER_DECLARE_REPLY_BUILTIN(Radapter::ReplyWithReason, Reply::WithReason)
 IMPL_RADAPTER_DECLARE_REPLY_BUILTIN(Radapter::ReplyOk, Reply::Ok)
 IMPL_RADAPTER_DECLARE_REPLY_BUILTIN(Radapter::ReplyFail, Reply::Fail)
-IMPL_RADAPTER_DECLARE_REPLY_BUILTIN(Radapter::ReplyWithJson, Reply::WithJson)
 IMPL_RADAPTER_DECLARE_REPLY_BUILTIN(Radapter::ReplyJson, Reply::Json)
-IMPL_RADAPTER_DECLARE_REPLY_BUILTIN(Radapter::ReplyWithJsonOk, Reply::WithJsonOk)
-IMPL_RADAPTER_DECLARE_REPLY_BUILTIN(Radapter::ReplyWithJsonFail, Reply::WithJsonFail)
 IMPL_RADAPTER_DECLARE_REPLY_BUILTIN(Radapter::ReplyPack, Reply::Pack)
 #endif // RADAPTER_BASICREPLIES_H

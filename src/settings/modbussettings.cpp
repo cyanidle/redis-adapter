@@ -12,8 +12,8 @@ void Settings::parseRegisters(const QVariant &registersFile) {
     auto fileJson = JsonDict{registersFile.toMap()};
     for (auto &fileIter : fileJson) {
         if (fileIter.field() != "__table__") continue;
-        auto deviceName = fileIter.domain().join(':').replace('.', ':');
-        auto currentFlatJson = fileJson.value(fileIter.domain()).toMap();
+        auto deviceName = fileIter.domainKey().join(':').replace('.', ':');
+        auto currentFlatJson = fileJson.value(fileIter.domainKey()).toMap();
         auto table = currentFlatJson.take("__table__");
         Registers currentDeviceResult;
         for (auto iter{currentFlatJson.cbegin()}; iter != currentFlatJson.cend(); ++iter) {
@@ -33,9 +33,9 @@ void Settings::parseRegisters(const QVariant &registersFile) {
                 if (currentRegs.contains("__table__")) continue;
                 if (currentRegs.depth()) {
                     for (auto &subiter : currentRegs) {
-                        auto currentReg = currentRegs[subiter.domain()].toMap();
+                        auto currentReg = currentRegs[subiter.domainKey()].toMap();
                         currentReg.insert("table", table);
-                        currentDeviceResult.insert(deviceName + ':' + iter.key() + ":" + subiter.domain().join(":"), fromQMap<RegisterInfo>(currentReg));
+                        currentDeviceResult.insert(deviceName + ':' + iter.key() + ":" + subiter.domainKey().join(":"), fromQMap<RegisterInfo>(currentReg));
                     }
                 } else {
                     currentRegs.insert("table", table);

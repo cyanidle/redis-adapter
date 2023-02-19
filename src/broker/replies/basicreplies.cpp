@@ -29,30 +29,6 @@ ReplyFail::ReplyFail(const QString &reason) :
 
 }
 
-ReplyWithJson::ReplyWithJson(bool ok) :
-    Reply(ReplyType<ReplyWithJson>(), ok)
-{
-
-}
-
-ReplyWithJson::ReplyWithJson(quint32 type, bool ok) :
-    Reply(type, ok)
-{
-
-}
-
-ReplyWithJsonFail::ReplyWithJsonFail() :
-    ReplyWithJson(ReplyType<ReplyWithJsonFail>(), false)
-{
-
-}
-
-ReplyWithJsonOk::ReplyWithJsonOk() :
-    ReplyWithJson(ReplyType<ReplyWithJsonOk>(), true)
-{
-
-}
-
 ReplyPack::ReplyPack() :
     Reply(typeInConstructor(this), false)
 {

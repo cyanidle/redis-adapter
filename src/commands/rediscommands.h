@@ -11,7 +11,7 @@ class RADAPTER_SHARED_SRC ReadObject : public Radapter::Command
 public:
     ReadObject(const QString &index);
     QString key() const {return m_key;}
-    RADAPTER_COMMAND_WANTS(Radapter::ReplyWithJson)
+    RADAPTER_COMMAND_WANTS(Radapter::ReplyJson)
 private:
     QString m_key;
 };

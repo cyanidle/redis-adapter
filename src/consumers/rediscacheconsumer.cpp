@@ -37,22 +37,11 @@ void CacheConsumer::requestObject(const QString &objectKey, CtxHandle handle)
 void CacheConsumer::readObjectCallback(redisReply *reply, CtxHandle handle)
 {
     auto result = parseHashReply(reply);
+    workerInfo(this) << ": Found object fields: " << result.count();
     if (result.isEmpty()) {
         getCtx(handle).fail("Empty object hash!");
     }
-    JsonDict foundJson;
-    for (auto iter = result.begin(); iter != result.end(); ++iter) {
-        bool isFirstInt;
-        iter.key().toInt(&isFirstInt);
-        if (isFirstInt) {
-            reWarn() << "Number is first in index hash";
-            continue;
-        }
-        auto toMerge = JsonDict();
-        toMerge.insert(iter.key().split(':'), iter.value());
-        foundJson.merge(toMerge);
-    }
-    getCtx(handle).reply(ReplyJson(foundJson));
+    getCtx(handle).reply(ReplyJson(JsonDict{result}));
 }
 
 void CacheConsumer::requestKeys(const QStringList &keys, CtxHandle handle)
@@ -134,6 +123,8 @@ void CacheConsumer::handleCommand(const Radapter::Command *command, CtxHandle ha
         requestSet(command->as<ReadSet>()->set(), handle);
     } else if (command->is<ReadHash>()) {
         requestHash(command->as<ReadHash>()->hash(), handle);
+    } else if (command->is<ReadObject>()) {
+        requestObject(command->as<ReadObject>()->key(), handle);
     } else {
         getCtx(handle).fail(QStringLiteral("Command type unsupported: ") + command->metaObject()->className());
     }
@@ -148,8 +139,8 @@ void CacheConsumer::onCommand(const WorkerMsg &msg)
 {
     if (msg.command()->is<CommandPack>()) {
         handleCommand(msg.command()->as<CommandPack>()->first(), m_manager.create<PackContext>(msg, this));
-    } else if (msg.command()->is<CommandRequestJson>()) {
-        requestObject(m_objectKey, m_manager.create<SimpleContext>(msg, this));
+    } else if (msg.command()->is<CommandTriggerRead>()) {
+        requestObject(m_objectKey, m_manager.create<SimpleMsgContext>(this));
     } else {
         handleCommand(msg.command(), m_manager.create<SimpleContext>(msg, this));
     }

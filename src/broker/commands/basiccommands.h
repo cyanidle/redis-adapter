@@ -14,17 +14,17 @@ public:
     CommandAck(const JsonDict &json);
     CommandAck(JsonDict &&json);
     const JsonDict &json() const {return m_json;}
-    RADAPTER_COMMAND_WANTS(Radapter::ReplyOk)
+    RADAPTER_COMMAND_WANTS(Radapter::Reply)
 private:
     JsonDict m_json;
 };
 
-class RADAPTER_SHARED_SRC CommandRequestJson : public Command
+class RADAPTER_SHARED_SRC CommandTriggerRead : public Command
 {
     Q_GADGET
 public:
-    CommandRequestJson();
-    RADAPTER_COMMAND_WANTS(Radapter::ReplyWithJson)
+    CommandTriggerRead();
+    RADAPTER_COMMAND_WANTS(Radapter::Reply)
 };
 
 class RADAPTER_SHARED_SRC CommandTrigger : public Command
@@ -65,7 +65,7 @@ private:
 };
 } // namespace Radapter
 IMPL_RADAPTER_DECLARE_COMMAND_BUILTIN(Radapter::CommandAck, Command::Acknowledge)
-IMPL_RADAPTER_DECLARE_COMMAND_BUILTIN(Radapter::CommandRequestJson, Command::RequestJson)
+IMPL_RADAPTER_DECLARE_COMMAND_BUILTIN(Radapter::CommandTriggerRead, Command::RequestJson)
 IMPL_RADAPTER_DECLARE_COMMAND_BUILTIN(Radapter::CommandDummy, Command::Dummy)
 IMPL_RADAPTER_DECLARE_COMMAND_BUILTIN(Radapter::CommandPack, Command::Pack)
 IMPL_RADAPTER_DECLARE_COMMAND_BUILTIN(Radapter::CommandTrigger, Command::Trigger)

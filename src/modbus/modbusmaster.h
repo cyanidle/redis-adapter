@@ -28,7 +28,6 @@ signals:
 public slots:
     void onMsg(const Radapter::WorkerMsg &msg) override;
     void connectDevice();
-    void disconnectDevice();
 private slots:
     void triggerExecute(QObject *target);
     void onReadReady();

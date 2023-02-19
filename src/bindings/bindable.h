@@ -7,6 +7,7 @@
 class Bindable : protected Serializer::Serializable {
 public:
     using Serializer::Serializable::wasUpdated;
+    using Serializer::Serializable::deserialize;
     Bindable(const QString &bindingName, const JsonBinding::KeysFilter &keysFilter);
     Bindable(const JsonBinding &binding, const JsonBinding::KeysFilter &keysFilter);
     void update(const JsonDict &data);

@@ -43,7 +43,7 @@ void Bindable::update(const JsonDict &data)
 {
     checkIfOk();
     auto result = m_binding.receive(data);
-    if (!result.isEmpty()) this->deserialize(result.data());
+    if (!result.isEmpty()) deserialize(result.data());
 }
 
 const QStringList Bindable::mappedFields(const QString &separator) const

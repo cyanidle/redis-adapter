@@ -17,7 +17,7 @@ CommandAck::CommandAck(JsonDict &&json) :
 
 }
 
-CommandRequestJson::CommandRequestJson() :
+CommandTriggerRead::CommandTriggerRead() :
     Command(typeInConstructor(this))
 {
 

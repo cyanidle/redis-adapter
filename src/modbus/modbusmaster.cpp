@@ -143,11 +143,6 @@ void Master::connectDevice()
     }
 }
 
-void Master::disconnectDevice()
-{
-    m_device->disconnectDevice();
-}
-
 void Master::triggerExecute(QObject *target)
 {
     if (target != this) return;
@@ -171,15 +166,16 @@ void Master::onErrorOccurred(QModbusDevice::Error error)
 }
 
 void Master::reconnect() {
-    disconnectDevice();
+    workerWarn(this) << ": Reconnecting...";
+    m_device->disconnectDevice();
     m_reconnectTimer->start();
 }
 
 void Master::onStateChanged(QModbusDevice::State state)
 {
     if (state == QModbusDevice::UnconnectedState) {
-        m_reconnectTimer->start();
         emit disconnected();
+        m_reconnectTimer->start();
     } else if (state == QModbusDevice::ConnectedState) {
         emit connected();
     }
@@ -193,6 +189,7 @@ void Master::onReadReady()
     QScopedPointer<QModbusReply, QScopedPointerDeleteLater> reply{rawReply};
     if (reply->error() != QModbusDevice::NoError) {
         workerError(this, .noquote()) << ": Error Reading:\n" << reply->errorString();
+        reconnect();
         return;
     }
     auto words = reply->result().values();
@@ -227,6 +224,7 @@ void Master::onWriteReady()
         workerInfo(this, .nospace().noquote()) << ": Written:\n" << printUnit(unit);
     } else {
         workerError(this, .nospace().noquote()) << ": Error Writing:\n" << printUnit(unit) << ";\nReason: " << reply->errorString();
+        reconnect();
     }
 }
 
