@@ -29,7 +29,6 @@ public:
     virtual const QStringList& fields() const = 0;
     virtual const QVariantMap& structure() const = 0;
     virtual QVariant fieldValue(const QString &fieldName) const;
-    bool hasField(const QString &fieldName) const;
     const Serializable *getNested(const QString &fieldName) const;
     Serializable *getNested(const QString &fieldName);
     QList<const Serializable*> getNestedInContainer(const QString &fieldName) const;
@@ -52,7 +51,8 @@ protected:
     const QSet<quint32> &deserialisedFieldsHash() const;
     void markUpdated(const QString &fieldName);
     bool deserializeOk(const QString &fieldName) const;
-    bool fieldHasDefault(const QString &name) const;
+    bool fieldHasDefault(const QString &fieldName) const;
+    QVariant fieldDefault(const QString &fieldName) const;
     QVariantMap structureUncached() const;
     virtual ~Serializable() = default;
 private:
@@ -123,19 +123,25 @@ Q_DECLARE_METATYPE(Serializer::Serializable*)
 public:\
     type name = {__VA_ARGS__}; \
     funcs \
-    protected: \
+protected: \
     static type \
-    name##_Default() \
-{return type{__VA_ARGS__};} \
+    name##_Default() { \
+        return type{__VA_ARGS__};\
+    } \
+    static QVariant \
+    name##_DefaultVariant() { \
+        return concept<type, decay, concept_args>::get_val(name##_Default(), read_args);\
+    } \
     constexpr static bool \
     name##_hasDefault()\
-{return !QLatin1String(vargs_str).isEmpty();} \
+        {return !QLatin1String(vargs_str).isEmpty();} \
 private: \
     friend concept<type, decay, concept_args>; \
     friend Serializer::Priv::Implementations; \
     props \
     Q_PROPERTY(QVariant name READ read_##name WRITE write_##name) \
     Q_PROPERTY(bool name##_hasDefault READ name##_hasDefault) \
+    Q_PROPERTY(QVariant name##_Default READ name##_DefaultVariant) \
     Q_PROPERTY(QVariantMap name##_getMap READ name##_getMap) \
     Q_PROPERTY(QVariant name##_nestedPtr READ name##_nestedPtr) \
     QVariantMap name##_getMap() const {_check_if_has_is_serializable(); \
@@ -337,13 +343,15 @@ struct Implementations {
         return status;
     }
 };
-
+template<typename T, typename Decay, typename... Extra>
+struct ConceptsBase {
+    static_assert(QMetaTypeId2<Decay>::Defined || is_nested<Decay>(),
+            "Underlying type must be registered with Q_DECLARE_METATYPE!");
+};
 //! Concepts implement basic logic of iterating/parsing/calling of Implementations overloads (which handle different underlying types)
 /// Must implement set_val, get_val, get_map, can be overloaded based on additional args (set_args, get_args, map_args)
 template<typename T, typename Decay, typename... Extra>
-struct FieldConcept {
-    static_assert(QMetaTypeId2<Decay>::Defined || is_nested<Decay>(),
-            "Underlying type must be registered with Q_DECLARE_METATYPE!");
+struct FieldConcept : public ConceptsBase<T, Decay, Extra...> {
     static QVariantMap get_map(const T& val, QString &&name, int) {
         return {{name, Implementations::map<T, Decay>(val)}};
     };
@@ -382,9 +390,7 @@ struct FieldConcept {
 };
 
 template<typename T, typename Decay, typename... Extra>
-struct ContainerConcept {
-    static_assert(QMetaTypeId2<Decay>::Defined,
-            "Underlying type must be registered with Q_DECLARE_METATYPE!");
+struct ContainerConcept : public ConceptsBase<T, Decay, Extra...> {
     static_assert(!std::is_same<
                   decltype(*(std::declval<T>().begin())),
                   const typename T::iterator::value_type&
@@ -444,9 +450,7 @@ struct ContainerConcept {
 };
 
 template<typename T, typename Decay, typename... Extra>
-struct MapConcept  {
-    static_assert(QMetaTypeId2<Decay>::Defined,
-            "Underlying type must be registered with Q_DECLARE_METATYPE!");
+struct MapConcept : public ConceptsBase<T, Decay, Extra...> {
     static_assert(!std::is_same<
                   decltype(*(std::declval<T>().begin())),
                   const typename T::iterator::value_type&
@@ -673,11 +677,6 @@ inline QVariantMap Serializable::structureUncached() const {
     return result;
 }
 
-inline bool Serializable::hasField(const QString &fieldName) const
-{
-    return fields().contains(fieldName);
-}
-
 inline void Serializable::throwIfNotExists(const QString &fieldName) const
 {
     if (!fields().contains(fieldName)) {
@@ -812,11 +811,21 @@ inline QMetaProperty Serializable::getProperty(const QString &propName) const
 }
 
 inline bool Serializable::deserializeOk(const QString &fieldName) const {
+    throwIfNotExists(fieldName);
     return m_deserialized.contains(qHash(fieldName)) || fieldHasDefault(fieldName);
 }
-inline bool Serializable::fieldHasDefault(const QString &name) const {
-    auto propIndex = metaObject()->indexOfProperty((name + QStringLiteral("_hasDefault")).toStdString().c_str());
+
+inline bool Serializable::fieldHasDefault(const QString &fieldName) const {
+    throwIfNotExists(fieldName);
+    auto propIndex = metaObject()->indexOfProperty((fieldName + QStringLiteral("_hasDefault")).toStdString().c_str());
     return (propIndex > -1) ? this->readProp(metaObject()->property(propIndex)).toBool() : false;
+}
+
+inline QVariant Serializable::fieldDefault(const QString &fieldName) const
+{
+    throwIfNotExists(fieldName);
+    auto prop = getProperty(fieldName + QStringLiteral("_Default"));
+    return this->readProp(prop);
 }
 inline void Serializable::markUpdated(const QString& fieldName){
     m_deserialized.insert(qHash(fieldName));
