@@ -1,6 +1,7 @@
 #ifndef METAPROGRAMMING_HPP
 #define METAPROGRAMMING_HPP
 
+#include <functional>
 #include <type_traits>
 #include <tuple>
 
@@ -11,18 +12,21 @@ using decayed_val_t = typename std::decay<typename std::remove_pointer<typename 
 template<class T>
 struct MethodInfo {
     enum {
-        IsMethod = false
+        IsMethod = false,
+        ArgumentCount = -1,
     };
 };
 template<class C, class R, class... A>
 struct MethodInfo<R(C::*)(A...)> //method pointer
 {
     enum {
-        IsMethod = true
+        IsMethod = true,
+        ArgumentCount = sizeof...(A),
     };
-    typedef C ClassType;
-    typedef R ReturnType;
-    typedef std::tuple<A...> ArgsTuple;
+    using ClassType = C;
+    using ReturnType = R;
+    using ArgsTuple = std::tuple<A...>;
+    using Signature = R(C::*)(A...);
 };
 template<class C, class R, class... A>
 struct MethodInfo<R(C::*)(A...) const> : MethodInfo<R(C::*)(A...)> {}; //const method pointer
@@ -33,17 +37,20 @@ struct MethodInfo<R(C::*)(A...) volatile> : MethodInfo<R(C::*)(A...)> {}; //vola
 template<class T>
 struct FuncInfo {
     enum {
-        IsFunction = false
+        IsFunction = false,
+        ArgumentCount = -1
     };
 };
 
 template<typename R, class... A>
 struct FuncInfo<R(A...)> {
     enum {
-        IsFunction = true
+        IsFunction = true,
+        ArgumentCount = sizeof...(A),
     };
     using ReturnType = R;
     using ArgsTuple = std::tuple<A...>;
+    using Signature = R(A...);
 };
 
 template<class T, typename = void>
@@ -147,6 +154,36 @@ struct ContainerInfo : public ContainerInfoImpl<Container, is_container<Containe
         has_contains = MethodsImpl::has_contains,
         has_contains_key = MethodsImpl::has_contains_key,
     };
+};
+
+
+template <typename T>
+struct LambdaInfo
+    : public LambdaInfo<decltype(&T::operator())>
+{};
+
+// for pointers to member function
+template <typename ClassType, typename ReturnType, typename... Args>
+struct LambdaInfo<ReturnType(ClassType::*)(Args...) const> {
+    enum { ArgumentCount = sizeof...(Args) };
+    using Signature = ReturnType(ClassType::*)(Args...) const;
+    typedef std::function<ReturnType (Args...)> AsFunction;
+};
+
+// for pointers to member function
+template <typename ClassType, typename ReturnType, typename... Args>
+struct LambdaInfo<ReturnType(ClassType::*)(Args...) > {
+    enum { ArgumentCount = sizeof...(Args) };
+    using Signature = ReturnType(ClassType::*)(Args...);
+    typedef std::function<ReturnType (Args...)> AsFunction;
+};
+
+// for function pointers
+template <typename ReturnType, typename... Args>
+struct LambdaInfo<ReturnType (*)(Args...)>  {
+    enum { ArgumentCount = sizeof...(Args) };
+    using Signature = ReturnType (*)(Args...);
+    typedef std::function<ReturnType (Args...)> AsFunction;
 };
 
 template<class Holder, typename = void>

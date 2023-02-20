@@ -4,5 +4,6 @@ HEADERS+= \
 	$$PWD/enumerator.hpp \
 	$$PWD/metaprogramming.hpp \
 	$$PWD/metatypes.h \
+	$$PWD/reverser.hpp \
 	$$PWD/zipiterator.hpp 
 

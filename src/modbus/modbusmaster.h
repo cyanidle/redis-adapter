@@ -29,7 +29,6 @@ public slots:
     void onMsg(const Radapter::WorkerMsg &msg) override;
     void connectDevice();
 private slots:
-    void triggerExecute(QObject *target);
     void onReadReady();
     void onWriteReady();
     void doRead();
@@ -56,7 +55,6 @@ private:
     QQueue<QModbusDataUnit> m_readQueue{};
     QQueue<QModbusDataUnit> m_writeQueue{};
     JsonDict m_lastJson{};
-    QSharedPointer<Radapter::Sync::Channel> m_channel{};
 };
 
 } // namespace Modbus

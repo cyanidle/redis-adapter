@@ -19,7 +19,7 @@ void Settings::parseRegisters(const QVariant &registersFile) {
         for (auto iter{currentFlatJson.cbegin()}; iter != currentFlatJson.cend(); ++iter) {
             if (iter.value().canConvert<QVariantList>()) {
                 auto currentRegs = iter.value().toList();
-                for (auto reg : Radapter::enumerate(&currentRegs)) {
+                for (auto reg : Radapter::enumerate(currentRegs)) {
                     auto currentReg = reg.value.toMap();
                     if (currentReg.contains("__table__")) continue;
                     if (!currentReg.first().toMap().isEmpty()) {

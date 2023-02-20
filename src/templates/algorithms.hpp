@@ -5,6 +5,7 @@
 #include "metaprogramming.hpp"
 #include "templates/containerfilter.hpp"
 #include "templates/enumerator.hpp"
+#include "templates/reverser.hpp"
 #include "zipiterator.hpp"
 
 namespace Radapter{
@@ -63,27 +64,27 @@ private:
 
 template <typename Container, typename Predicate>
 bool all_of(const Container &container, Predicate predicate) {
-    return std::all_of(container.cbegin(),
-                       container.cend(),
+    return std::all_of(container.begin(),
+                       container.end(),
                        ContainerTester<Predicate>(predicate));
 }
 template <typename Container, typename Predicate>
 bool none_of(const Container &container, Predicate predicate) {
-    return std::none_of(container.cbegin(),
-                        container.cend(),
+    return std::none_of(container.begin(),
+                        container.end(),
                         ContainerTester<Predicate>(predicate));
 }
 template <typename Container, typename Predicate>
 bool any_of(const Container &container, Predicate predicate) {
-    return std::any_of(container.cbegin(),
-                       container.cend(),
+    return std::any_of(container.begin(),
+                       container.end(),
                        ContainerTester<Predicate>(predicate));
 }
 
 template <typename Container, typename Predicate>
 auto find_if(const Container &container, Predicate predicate) -> typename Container::const_iterator {
-    return std::find_if(container.cbegin(),
-                        container.cend(),
+    return std::find_if(container.begin(),
+                        container.end(),
                         ContainerTester<Predicate>(predicate));
 }
 
@@ -103,8 +104,8 @@ auto for_each(Container &container, Predicate predicate) -> typename Container::
 
 template <typename Container, typename Predicate>
 auto for_each(const Container &container, Predicate predicate) -> typename Container::iterator {
-    return std::for_each(container.cbegin(),
-                        container.cend(),
+    return std::for_each(container.begin(),
+                        container.end(),
                         ContainerTester<Predicate>(predicate));
 }
 
@@ -120,19 +121,31 @@ private:
 };
 
 template <typename Container, typename Predicate>
-auto max_element(const Container *container, Predicate predicate) -> SearchResult<typename Container::const_iterator> {
-    auto found = std::max_element(container->cbegin(),
-                    container->cend(),
+auto max_element(const Container &container, Predicate predicate) -> SearchResult<typename Container::const_iterator> {
+    auto found = std::max_element(container.begin(),
+                    container.end(),
                     ContainerCompTester<Predicate>(predicate));
-    return SearchResult<decltype(found)>(found, container->cend());
+    return SearchResult<decltype(found)>(found, container.end());
 }
 
 template <typename Container, typename Predicate>
-auto max_element(Container *container, Predicate predicate) -> SearchResult<typename Container::iterator> {
-    auto found = std::max_element(container->begin(),
-                   container->end(),
+auto max_element(Container &container, Predicate predicate) -> SearchResult<typename Container::iterator> {
+    auto found = std::max_element(container.begin(),
+                   container.end(),
                    ContainerCompTester<Predicate>(predicate));
-    return SearchResult<decltype(found)>(found, container->end());
+    return SearchResult<decltype(found)>(found, container.end());
+}
+
+template <typename Container>
+auto reverse(const Container &cont) -> ConstReverser<Container>
+{
+    return ConstReverser<Container>(cont);
+}
+
+template <typename Container>
+auto reverse(Container &cont) -> Reverser<Container>
+{
+    return Reverser<Container>(cont);
 }
 
 template <typename Target, typename Container, typename Predicate>
@@ -150,43 +163,55 @@ private:
 template <typename Target, typename Container, typename Predicate>
 void accumulate(Target &target, const Container &container, Predicate predicate) {
     auto accumulator = Accumulator<Target, Container, Predicate>(target, predicate);
-    std::accumulate(container.cbegin(), container.cend(), accumulator);
+    std::accumulate(container.begin(), container.end(), accumulator);
 }
 
 template <typename Container1, typename Container2>
-auto zip(Container1 *first, Container2 *second) -> ZipHolder<Container1, Container2>
+auto zip(Container1 &first, Container2 &second) -> ZipHolder<Container1, Container2>
 {
     return ZipHolder<Container1, Container2>(first, second);
 }
 
 template <typename Container1, typename Container2>
-auto zip(const Container1 *first, const Container2 *second) -> ZipConstHolder<Container1, Container2>
+auto zip(const Container1 &first, const Container2 &second) -> ZipConstHolder<Container1, Container2>
 {
     return ZipConstHolder<Container1, Container2>(first, second);
 }
 
 template <typename Container, typename CounterType = quint32>
-auto enumerate(Container *container) -> EnumeratorHolder<Container, CounterType>
+auto enumerate(Container &container) -> EnumeratorHolder<Container, CounterType>
 {
     return EnumeratorHolder<Container, CounterType>(container);
 }
 
 template <typename Container, typename CounterType = quint32>
-auto enumerate(const Container *container) -> ConstEnumeratorHolder<Container, CounterType>
+auto enumerate(const Container &container) -> ConstEnumeratorHolder<Container, CounterType>
 {
     return ConstEnumeratorHolder<Container, CounterType>(container);
 }
 
 template <typename Container, typename Filter>
-auto filter(Container *container, Filter filter) -> FilterHolder<Container, Filter>
+auto filter(Container &container, Filter filter) -> FilterHolder<Container, Filter>
 {
     return FilterHolder<Container, Filter>(container, filter);
 }
 
 template <typename Container, typename Filter>
-auto filter(const Container *container, Filter filter) -> FilterConstHolder<Container, Filter>
+auto filter(const Container &container, Filter filter) -> FilterConstHolder<Container, Filter>
 {
     return FilterConstHolder<Container, Filter>(container, filter);
+}
+
+template<typename Func>
+auto as_function(Func&&func) -> typename std::enable_if<FuncInfo<Func>::IsFunction, std::function<typename FuncInfo<Func>::Signature>>::type
+{
+    return std::function<typename FuncInfo<Func>::Signature>(std::forward<Func>(func));
+}
+
+template<typename Lambda>
+auto as_function(Lambda&& lambda) -> typename std::enable_if<!FuncInfo<Lambda>::IsFunction, typename LambdaInfo<Lambda>::AsFunction>::type
+{
+    return typename LambdaInfo<Lambda>::AsFunction(lambda);
 }
 
 }

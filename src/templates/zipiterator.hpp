@@ -15,7 +15,7 @@ struct ZipIterator {
     using second_value_type = typename second_iter::value_type;
     using val_refs_pair = QPair<first_value_type&, second_value_type&>;
 
-    ZipIterator(first_iter &&first, second_iter &&second) :
+    ZipIterator(first_iter first, second_iter second) :
         m_first(first),
         m_second(second)
     {}
@@ -60,7 +60,7 @@ struct ZipConstIterator {
     using second_value_type = typename second_iter::value_type;
     using val_refs_pair = QPair<const first_value_type&, const second_value_type&>;
 
-    ZipConstIterator(first_iter &&first, second_iter &&second) :
+    ZipConstIterator(first_iter first, second_iter second) :
         m_first(first),
         m_second(second)
     {}
@@ -100,70 +100,66 @@ template <typename Container1, typename Container2>
 struct ZipHolder {
     using const_iterator = ZipConstIterator<Container1, Container2>;
     using iterator = ZipIterator<Container1, Container2>;
-    ZipHolder(Container1 *first, Container2 *second) :
+    ZipHolder(Container1 &first, Container2 &second) :
         m_firstCont(first),
         m_secondCont(second)
     {}
     iterator begin() {
-        return iterator(m_firstCont->begin(), m_secondCont->begin());
+        return iterator(m_firstCont.begin(), m_secondCont.begin());
     }
     iterator end() {
-        auto firstSmaller = m_firstCont->size() <= m_secondCont->size();
-        auto minCount = firstSmaller ? m_firstCont->size() : m_secondCont->size();
-        return iterator(firstSmaller ? m_firstCont->end() : m_firstCont->begin() + minCount,
-                        !firstSmaller ? m_secondCont->end() : m_secondCont->begin() + minCount);
+        auto firstSmaller = m_firstCont.size() <= m_secondCont.size();
+        auto minCount = firstSmaller ? m_firstCont.size() : m_secondCont.size();
+        return iterator(firstSmaller ? m_firstCont.end() : m_firstCont.begin() + minCount,
+                        !firstSmaller ? m_secondCont.end() : m_secondCont.begin() + minCount);
     }
     const_iterator begin() const {
-        return iterator(m_firstCont->cbegin(), m_secondCont->cbegin());
+        return cbegin();
     }
     const_iterator end() const {
-        auto firstSmaller = m_firstCont->size() <= m_secondCont->size();
-        auto minCount = firstSmaller ? m_firstCont->size() : m_secondCont->size();
-        return iterator(firstSmaller ? m_firstCont->cend() : m_firstCont->cbegin() + minCount,
-                        !firstSmaller ? m_secondCont->cend() : m_secondCont->cbegin() + minCount);
+        return cend();
     }
     const_iterator cbegin() const {
-        return iterator(m_firstCont->cbegin(), m_secondCont->cbegin());
+        return iterator(m_firstCont.cbegin(), m_secondCont.cbegin());
     }
     const_iterator cend() const {
-        auto firstSmaller = m_firstCont->size() <= m_secondCont->size();
-        auto minCount = firstSmaller ? m_firstCont->size() : m_secondCont->size();
-        return iterator(firstSmaller ? m_firstCont->cend() : m_firstCont->cbegin() + minCount,
-                        !firstSmaller ? m_secondCont->cend() : m_secondCont->cbegin() + minCount);
+        auto firstSmaller = m_firstCont.size() <= m_secondCont.size();
+        auto minCount = firstSmaller ? m_firstCont.size() : m_secondCont.size();
+        return iterator(firstSmaller ? m_firstCont.cend() : m_firstCont.cbegin() + minCount,
+                        !firstSmaller ? m_secondCont.cend() : m_secondCont.cbegin() + minCount);
     }
 private:
-    Container1 *m_firstCont;
-    Container2 *m_secondCont;
+    Container1 &m_firstCont;
+    Container2 &m_secondCont;
 };
 
 template <typename Container1, typename Container2>
 struct ZipConstHolder {
     using const_iterator = ZipConstIterator<Container1, Container2>;
     using iterator = ZipConstIterator<Container1, Container2>;
-    ZipConstHolder(const Container1 *first, const Container2 *second) :
+    ZipConstHolder(const Container1 &first, const Container2 &second) :
         m_firstCont(first),
         m_secondCont(second)
     {}
-    iterator begin() const {
-        return iterator(m_firstCont->cbegin(), m_secondCont->cbegin());
+    const_iterator begin() const {
+        return cbegin();
     }
-    iterator end() const {
-        auto firstSmaller = m_firstCont->size() <= m_secondCont->size();
-        auto minCount = firstSmaller ? m_firstCont->size() : m_secondCont->size();
-        return iterator(firstSmaller ? m_firstCont->cend() : m_firstCont->cbegin() + minCount,
-                        !firstSmaller ? m_secondCont->cend() : m_secondCont->cbegin() + minCount);
+    const_iterator end() const {
+        return cend();
     }
     const_iterator cbegin() const {
-        return iterator(m_firstCont->cbegin(), m_secondCont->cbegin());
+        return iterator(m_firstCont.cbegin(), m_secondCont.cbegin());
     }
     const_iterator cend() const {
-        auto firstSmaller = m_firstCont->size() <= m_secondCont->size();
-        auto minCount = firstSmaller ? m_firstCont->size() : m_secondCont->size();
-        return iterator(firstSmaller ? m_firstCont->cend() : m_firstCont->cbegin() + minCount,
-                        !firstSmaller ? m_secondCont->cend() : m_secondCont->cbegin() + minCount);
+        auto firstSmaller = m_firstCont.size() <= m_secondCont.size();
+        // cend() must return ends which are the same size (if second is bigger, than seconds.begin() + first.size() is used)
+        // Iteration stops on shortest container
+        auto minCount = firstSmaller ? m_firstCont.size() : m_secondCont.size();
+        return iterator(firstSmaller ? m_firstCont.cend() : m_firstCont.cbegin() + minCount,
+                        !firstSmaller ? m_secondCont.cend() : m_secondCont.cbegin() + minCount);
     }
 private:
-    const Container1 *m_firstCont;
-    const Container2 *m_secondCont;
+    const Container1 &m_firstCont;
+    const Container2 &m_secondCont;
 };
 #endif // ZIPITERATOR_HPP

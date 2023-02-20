@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QHash>
 #include <QTimer>
+#include <QMutex>
 namespace Radapter {
 namespace Sync {
 class Channel : public QObject {
@@ -20,8 +21,15 @@ public:
     //! \note Everything else is (with connections)
     QObject *whoIsBusy() const;
     template<typename User>
-    QMetaObject::Connection callOnTrigger(User *user, void (User::*slot)(QObject *)) {
-        return connect(this, &Channel::trigger, user, slot);
+    QMetaObject::Connection callOnTrigger(User *user, void (User::*slot)()) {
+        return connect(this,
+                       &Channel::trigger,
+                       user,
+                       [user, slot](QObject *target){
+                            if (user == target) {
+                                (user->*slot)();
+                            }
+                       });
     }
     template<typename User>
     QMetaObject::Connection signalJobDone(User *user, void (User::*signal)()) {
@@ -40,8 +48,6 @@ private:
     bool isBusy() const;
     void checkWaiting(QObject *ignore = nullptr);
     void activate(QObject *who);
-
-    struct FilterIgnored;
     struct UserState {
         QObject *user;
         Priority priority;
@@ -50,8 +56,9 @@ private:
         Priority whatPrio() const {return priority;}
     };
     QHash<QObject*, UserState> m_userStates{};
-    QObject *m_busy{nullptr};
+    std::atomic<QObject*> m_busy{nullptr};
     QTimer *m_debug{nullptr};
+    QMutex m_mutex;
 };
 }
 }

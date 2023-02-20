@@ -29,7 +29,7 @@ void SerializableSettings::deserialize(const QVariantMap &src)
             children.append(nested->as<SerializableSettings>());
         } else if (fieldType(field) == ContainerOfNested) {
             auto list = getNestedInContainer(field);
-            for (auto nested : Radapter::enumerate(&list)) {
+            for (auto nested : Radapter::enumerate(list)) {
                 throwOnNonSettings(nested.value);
                 nested.value->as<SerializableSettings>()->updatePrefix(field + ":" + QString::number(nested.count));
                 children.append(nested.value->as<SerializableSettings>());

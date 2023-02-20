@@ -7,11 +7,11 @@
 #include <QtGlobal>
 
 namespace Radapter {
-template <typename Container, typename Filter>
+template <typename Iter_T, typename Filter>
 struct FilterIter {
     using iterator_category = std::forward_iterator_tag;
-    using iter_t = typename Container::iterator;
-    using value_type = typename iter_t::value_type;
+    using iter_t = Iter_T;
+    using value_type = typename Iter_T::value_type;
     using reference = value_type&;
     using pointer = value_type*;
     using difference_type = qptrdiff;
@@ -79,10 +79,10 @@ private:
     Filter m_filter;
 };
 
-template <typename Container, typename Filter>
+template <typename IterT, typename Filter>
 struct FilterConstIter {
     using iterator_category = std::forward_iterator_tag;
-    using iter_t = typename Container::const_iterator;
+    using iter_t = IterT;
     using value_type = typename iter_t::value_type;
     using reference = value_type&;
     using pointer = value_type*;
@@ -154,9 +154,9 @@ private:
 
 template <typename Container, typename Filter>
 struct FilterHolder {
-    using iterator = FilterIter<Container, Filter>;
-    using const_iterator = FilterConstIter<Container, Filter>;
-    FilterHolder(Container *first, Filter filter) :
+    using iterator = FilterIter<typename Container::iterator, Filter>;
+    using const_iterator = FilterConstIter<typename Container::const_iterator, Filter>;
+    FilterHolder(Container &first, Filter filter) :
         m_cont(first),
         m_filter(filter)
     {}
@@ -172,34 +172,34 @@ struct FilterHolder {
         return result;
     }
     iterator begin() {
-        return iterator(m_cont->begin(), m_cont->end(), m_filter);
+        return iterator(m_cont.begin(), m_cont.end(), m_filter);
     }
     iterator end() {
-        return iterator(m_cont->end(), m_cont->end(), m_filter);
+        return iterator(m_cont.end(), m_cont.end(), m_filter);
     }
     const_iterator begin() const {
-        return const_iterator(m_cont->cbegin(), m_cont->cend(), m_filter);
+        return const_iterator(m_cont.cbegin(), m_cont.cend(), m_filter);
     }
     const_iterator end() const {
-        return const_iterator(m_cont->cend(), m_cont->cend(), m_filter);
+        return const_iterator(m_cont.cend(), m_cont.cend(), m_filter);
     }
     const_iterator cbegin() const {
-        return const_iterator(m_cont->begin(), m_cont->end(), m_filter);
+        return const_iterator(m_cont.cbegin(), m_cont.cend(), m_filter);
     }
     const_iterator cend() const {
-        return const_iterator(m_cont->end(), m_cont->end(), m_filter);
+        return const_iterator(m_cont.cend(), m_cont.cend(), m_filter);
     }
 private:
-    Container *m_cont;
+    Container &m_cont;
     Filter m_filter;
 };
 
 
 template <typename Container, typename Filter>
 struct FilterConstHolder {
-    using const_iterator = FilterConstIter<Container, Filter>;
-    using iterator = FilterConstIter<Container, Filter>;
-    FilterConstHolder(const Container *first, Filter filter) :
+    using iterator = FilterConstIter<typename Container::const_iterator, Filter>;
+    using const_iterator = FilterConstIter<typename Container::const_iterator, Filter>;
+    FilterConstHolder(const Container &first, Filter filter) :
         m_cont(first),
         m_filter(filter)
     {}
@@ -215,25 +215,25 @@ struct FilterConstHolder {
         return result;
     }
     iterator begin() {
-        return iterator(m_cont->begin(), m_cont->end(), m_filter);
+        return iterator(m_cont.begin(), m_cont.end(), m_filter);
     }
     iterator end() {
-        return iterator(m_cont->end(), m_cont->end(), m_filter);
+        return iterator(m_cont.end(), m_cont.end(), m_filter);
     }
     const_iterator begin() const {
-        return const_iterator(m_cont->cbegin(), m_cont->cend(), m_filter);
+        return const_iterator(m_cont.cbegin(), m_cont.cend(), m_filter);
     }
     const_iterator end() const {
-        return const_iterator(m_cont->cend(), m_cont->cend(), m_filter);
+        return const_iterator(m_cont.cend(), m_cont.cend(), m_filter);
     }
     const_iterator cbegin() const {
-        return const_iterator(m_cont->begin(), m_cont->end(), m_filter);
+        return const_iterator(m_cont.cbegin(), m_cont.cend(), m_filter);
     }
     const_iterator cend() const {
-        return const_iterator(m_cont->end(), m_cont->end(), m_filter);
+        return const_iterator(m_cont.cend(), m_cont.cend(), m_filter);
     }
 private:
-    const Container *m_cont;
+    const Container &m_cont;
     Filter m_filter;
 };
 

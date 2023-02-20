@@ -1,7 +1,9 @@
 #ifndef MODBUSSETTINGS_H
 #define MODBUSSETTINGS_H
 
+#include "broker/sync/channel.h"
 #include "qstringbuilder.h"
+#include "qthread.h"
 #include "settings.h"
 #include "broker/interceptors/logginginterceptor.h"
 
@@ -49,6 +51,7 @@ namespace Settings {
         IS_SERIALIZABLE
         SERIAL_FIELD_PTR(TcpDevice, tcp, DEFAULT)
         SERIAL_FIELD_PTR(SerialDevice, rtu, DEFAULT)
+        QSharedPointer<Radapter::Sync::Channel> channel;
         SERIAL_POST_INIT(postInit)
         static const ModbusDevice &get(const QString &name) {
             if (!table().contains(name)) throw std::invalid_argument("Missing Modbus Device: " + name.toStdString());
@@ -69,6 +72,7 @@ namespace Settings {
             return map;
         }
         void postInit() {
+            if (!channel) channel.reset(new Radapter::Sync::Channel(new QThread()));
             if (tcp && rtu) throw std::runtime_error("Both tcp and rtu device is prohibited! Use one");
             if (!tcp && !rtu) throw std::runtime_error("Tcp or Rtu device not specified or 'source' not found!");
             table().insert(tcp ? tcp->name : rtu->name, *this);

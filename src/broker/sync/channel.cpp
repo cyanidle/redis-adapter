@@ -16,17 +16,18 @@ Channel::Channel(QThread *thread) :
 
 QObject *Channel::whoIsBusy() const
 {
-    return const_cast<QObject*>(m_busy);
+    return const_cast<QObject*>(m_busy.load());
 }
 
 void Channel::registerUser(QObject *user, Priority priority)
 {
+    QMutexLocker lock(&m_mutex);
     if (priority != NormalPriority &&
             priority != LowPriority &&
             priority != HighPriority) {
         throw std::invalid_argument("Invalid priority for channel user!");
     }
-    m_userStates[user]= {user, priority, false,};
+    m_userStates[user] = {user, priority, false,};
 }
 
 bool Channel::isBusy() const
@@ -37,7 +38,7 @@ bool Channel::isBusy() const
 void Channel::onJobDone()
 {
     m_debug->stop();
-    auto was = m_busy;
+    auto was = m_busy.load();
     m_busy = nullptr;
     checkWaiting(was);
 }
@@ -49,23 +50,16 @@ void Channel::askTrigger()
     checkWaiting();
 }
 
-struct Channel::FilterIgnored {
-    FilterIgnored(QObject *ignore) : m_ingored(ignore) {}
-    bool operator()(const UserState &state) const {
-        return state.user != m_ingored;
-    }
-private:
-    QObject *m_ingored;
-};
-
 void Channel::checkWaiting(QObject *ignore)
 {
     if (isBusy()) return;
-    auto allWaiting = filter(&m_userStates, &UserState::isWaiting);
+    auto allWaiting = filter(m_userStates, &UserState::isWaiting);
     auto size = allWaiting.size();
     if (size > 1) {
-        auto highestExcept = filter(&allWaiting, FilterIgnored(ignore));
-        auto max = max_element(&highestExcept, &UserState::whatPrio);
+        auto filterIgnored = as_function([ignore](const UserState &state){
+                                return state.user != ignore;
+                              });
+        auto max = max_element(filter(allWaiting, filterIgnored), &UserState::whatPrio);
         activate(max.result->user);
     } else if (size) {
         activate(allWaiting.begin()->user);

@@ -77,28 +77,9 @@ bool Master::isConnected() const
 
 void Master::attachToChannel()
 {
-    //! Creating channels only once per channel of all masters, then sharing them (QSharedPointer)
-    static QMutex attachMut{};
-    QMutexLocker lock(&attachMut);
-    auto isSameChannel = [this](Master *master) {
-        return master->config().channel == config().channel && master != this;
-    };
-    auto masters = broker()->getAll<Master>();
-    auto sameChannel = filter(&masters, isSameChannel);
-    if (sameChannel.nonePass()) {
-        m_channel.reset(new Sync::Channel(workerThread()));
-    } else {
-        auto first = *sameChannel.begin();
-        if (first->m_channel) {
-            m_channel = first->m_channel;
-        } else {
-            m_channel.reset(new Sync::Channel(workerThread()));
-        }
-    }
-    auto channel = m_channel.data();
-    //! The main code
+    auto channel = m_settings.device.channel.data();
     channel->registerUser(this);
-    channel->callOnTrigger(this, &Master::triggerExecute);
+    channel->callOnTrigger(this, &Master::executeNext);
     channel->signalJobDone(this, &Master::queryDone);
     channel->signalJobDone(this, &Master::allQueriesDone);
     channel->askTriggerOn(this, &Master::queryDone);
@@ -141,12 +122,6 @@ void Master::connectDevice()
         reDebug() << printSelf() << ": Error Connecting: " << m_device->errorString();
         m_reconnectTimer->start();
     }
-}
-
-void Master::triggerExecute(QObject *target)
-{
-    if (target != this) return;
-    executeNext();
 }
 
 void Master::executeNext()
