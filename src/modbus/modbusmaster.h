@@ -32,7 +32,6 @@ private slots:
     void onReadReady();
     void onWriteReady();
     void doRead();
-    void onChannelDied(QObject *who);
     void onErrorOccurred(QModbusDevice::Error error);
     void onStateChanged(QModbusDevice::State state);
     void reconnect();

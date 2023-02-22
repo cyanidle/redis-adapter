@@ -72,7 +72,9 @@ namespace Settings {
             return map;
         }
         void postInit() {
-            if (!channel) channel.reset(new Radapter::Sync::Channel(new QThread()));
+            static QThread channelsThread;
+            if (!channel) channel.reset(new Radapter::Sync::Channel(&channelsThread));
+            channelsThread.start();
             if (tcp && rtu) throw std::runtime_error("Both tcp and rtu device is prohibited! Use one");
             if (!tcp && !rtu) throw std::runtime_error("Tcp or Rtu device not specified or 'source' not found!");
             table().insert(tcp ? tcp->name : rtu->name, *this);

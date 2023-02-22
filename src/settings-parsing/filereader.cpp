@@ -46,6 +46,7 @@ bool FileReader::setPath(const QString &path)
                 QDir::toNativeSeparators(
                     QCoreApplication::applicationDirPath() + "/" + path));
     if (QFile(wantedPath.absolutePath()).exists()) {
+        settingsParsingWarn() << "Settings path to: " << path;
         m_filepath = path;
         return true;
     } else {

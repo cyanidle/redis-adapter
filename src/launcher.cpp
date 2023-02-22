@@ -246,8 +246,10 @@ QVariant Launcher::readToml(const QString &tomlPath) {
     return m_filereader->deserialise(tomlPath);
 }
 
-bool Launcher::setTomlPath(const QString &tomlPath) {
-    return m_filereader->setPath(m_configsDir + "/" + tomlPath);
+void Launcher::setTomlPath(const QString &tomlPath) {
+    if (!m_filereader->setPath(m_configsDir + "/" + tomlPath)) {
+        throw std::runtime_error("Could not set configs path to: " + (m_configsDir + "/" + tomlPath).toStdString());
+    }
 }
 
 void Launcher::init()

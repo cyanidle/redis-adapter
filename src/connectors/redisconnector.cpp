@@ -281,6 +281,8 @@ void Connector::setDbIndex(const quint16 dbIndex)
 
 void Connector::onRun()
 {
+    workerInfo(this, .noquote().nospace()) << ": Connnecting to: " << m_config.print() <<
+                                    "(Host: " << m_config.server.host << "; Port: " << m_config.server.port << ")";
     m_client = new RedisQtAdapter(this);
     tryConnect();
     Radapter::Worker::onRun();

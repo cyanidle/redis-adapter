@@ -9,8 +9,10 @@ namespace Settings {
 class SerializableSettings : protected Serializer::SerializableGadget
 {
     Q_GADGET
+    IS_SERIALIZABLE
 public:
     SerializableSettings();
+    QString print() const;
     SerializableSettings *parent();
     const SerializableSettings *parent() const;
     virtual void deserialize(const QVariantMap &src) override;

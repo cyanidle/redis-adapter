@@ -1,4 +1,5 @@
 #include "serializablesettings.h"
+#include "jsondict/jsondict.hpp"
 #include "templates/algorithms.hpp"
 
 namespace Settings {
@@ -6,6 +7,11 @@ namespace Settings {
 SerializableSettings::SerializableSettings()
 {
 
+}
+
+QString SerializableSettings::print() const
+{
+    return JsonDict{serialize()}.printDebug().replace("Json", metaObject()->className());
 }
 
 SerializableSettings *SerializableSettings::parent()

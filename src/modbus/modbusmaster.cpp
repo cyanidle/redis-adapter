@@ -84,7 +84,6 @@ void Master::attachToChannel()
     channel->signalJobDone(this, &Master::allQueriesDone);
     channel->askTriggerOn(this, &Master::queryDone);
     channel->askTriggerOn(this, &Master::askTrigger);
-    connect(channel, &Sync::Channel::destroyed, this, &Master::onChannelDied);
 }
 
 const Settings::ModbusMaster &Master::config() const
@@ -212,12 +211,6 @@ void Master::doRead()
         auto unit = QModbusDataUnit(query.type, query.reg_index, query.reg_count);
         enqeueRead(unit);
     }
-}
-
-void Master::onChannelDied(QObject *who)
-{
-    workerError(this, .nospace()) << "Channel (" << who << ") died, deleting...";
-    deleteLater();
 }
 
 void Master::formatAndSendJson(const JsonDict &json)

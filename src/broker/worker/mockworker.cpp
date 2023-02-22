@@ -20,7 +20,7 @@ MockWorker::MockWorker(const MockWorkerSettings &settings, QThread* thread) :
     if (!m_file->isOpen()) {
         if (!m_file->open(QIODevice::ReadOnly)) {
             brokerError() << "Error opening Json file: " << m_file->fileName();
-            return;
+            throw std::runtime_error("Could not open Json File: " + m_file->fileName().toStdString());
         }
     }
     QTextStream in(m_file);
