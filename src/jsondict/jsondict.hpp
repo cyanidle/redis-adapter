@@ -38,7 +38,7 @@ class JsonDict
 {
 public:
     inline explicit JsonDict(const QVariant& src, const QString &separator = ":", bool nest = true);
-    inline JsonDict(const QVariantMap& src = QVariantMap{}, const QString &separator = ":", bool nest = true);
+    inline JsonDict(const QVariantMap& src = {}, const QString &separator = ":", bool nest = true);
     inline JsonDict(std::initializer_list<std::pair<QString, QVariant>> initializer);
     explicit inline JsonDict(std::initializer_list<std::pair<QString, JsonDict>> initializer);
     explicit inline JsonDict(QVariantMap&& src, const QString &separator = ":", bool nest = true);
@@ -92,7 +92,8 @@ public:
     inline QVariant &first();
     inline const QVariant &first() const;
     inline QStringList keys(const QString &separator = ":") const;
-    inline QStringList topKeys() const;
+    inline QVariantMap &top();
+    inline const QVariantMap &top() const;
     inline int remove(const QStringList &akey);
     inline QVariant take(const QStringList &akey);
     inline QVariant take(const QString &akey);
@@ -472,6 +473,16 @@ QStringList JsonDict::keys(const QString &separator) const
     return result;
 }
 
+inline QVariantMap &JsonDict::top()
+{
+    return m_dict;
+}
+
+inline const QVariantMap &JsonDict::top() const
+{
+    return m_dict;
+}
+
 bool JsonDict::contains(const QString &key) const
 {
     return m_dict.contains(key);
@@ -494,18 +505,16 @@ bool JsonDict::contains(const JsonDict &src) const
     if (count() < src.count()) {
         return false;
     }
-    bool doesContains = true;
     for (auto otherItem = src.begin();
          otherItem != src.end();
          otherItem++)
     {
         auto thisItem = value(otherItem.key());
         if (!thisItem.isValid() || (thisItem != otherItem.value())) {
-            doesContains = false;
-            break;
+            return false;
         }
     }
-    return doesContains;
+    return true;
 
 }
 
@@ -987,10 +996,6 @@ inline JsonDict::operator QVariantMap &&() &&
 inline QVariant JsonDict::toVariant() const
 {
     return static_cast<const QVariantMap&>(*this);
-}
-
-QStringList JsonDict::topKeys() const {
-    return m_dict.keys();
 }
 
 size_t JsonDict::depth() const {

@@ -83,7 +83,7 @@ JsonDict Bindable::sendGlob(const QString &glob) const
     auto globre = QRegExp(glob);
     globre.setPatternSyntax(QRegExp::WildcardUnix);
     if (!globre.isValid()) {
-        throw std::invalid_argument("SendGlob syntax error!");
+        throw std::invalid_argument("Glob syntax error!");
     }
     JsonDict result;
     for (auto &field : fields()) {
@@ -99,7 +99,7 @@ bool Bindable::wasUpdatedGlob(const QString &glob) const
     auto globre = QRegExp(glob);
     globre.setPatternSyntax(QRegExp::WildcardUnix);
     if (!globre.isValid()) {
-        throw std::invalid_argument("SendGlob syntax error!");
+        throw std::invalid_argument("Glob syntax error!");
     }
     for (auto &field : fields()) {
         if (globre.exactMatch(field) && wasUpdated(field)) {
@@ -124,7 +124,7 @@ void Bindable::checkIfOk() const
         try {
             m_binding.requireValueName(iter.key().constFirst());
         } catch (std::exception &e){
-            brokerError() << "Required: " << structure.topKeys();
+            brokerError() << "Required: " << structure.top().keys();
             throw std::runtime_error(e.what());
         }
     }
