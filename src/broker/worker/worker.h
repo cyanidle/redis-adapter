@@ -80,7 +80,6 @@ private:
     QStringList m_producerNames;
     WorkerMsg m_baseMsg;
     WorkerProxy* m_proxy;
-    QStringList m_namespaces;
     QString m_name;
     QThread *m_thread;
     QObject *m_closestConnected{nullptr};

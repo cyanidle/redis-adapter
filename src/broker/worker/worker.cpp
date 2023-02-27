@@ -19,7 +19,6 @@ Worker::Worker(const WorkerSettings &settings, QThread *thread) :
     m_producerNames(settings.producers),
     m_baseMsg(this),
     m_proxy(nullptr),
-    m_namespaces(settings.namespaces),
     m_name(settings.name),
     m_thread(thread),
     m_printMsgs(settings.print_msgs)
@@ -326,11 +325,6 @@ WorkerProxy* Worker::createProxy(const QSet<InterceptorBase*> &interceptors)
                 m_proxy = nullptr;
                 throw std::runtime_error("Interceptors list contains copies! Will result in msg loops!");
             }
-        }
-        if (!m_namespaces.isEmpty()) {
-            auto filterInter = new NamespaceFilter(m_namespaces);
-            filterInter->setParent(this);
-            filtered.append(filterInter);
         }
         if (filtered.isEmpty()) {
             // Если удаляется любой из перехватчиков или прокси, воркер следует за ними

@@ -11,6 +11,7 @@
 #include <QRegExp>
 #include <QJsonObject>
 #include <QList>
+#include <stdexcept>
 #include "private/global.h"
 /*!
  * \defgroup JsonDict JsonDict
