@@ -6,6 +6,7 @@ release/
 Makefile*
 *pro.user
 .qtmodules
+!qtmodules.pri
 .Dockerfile*
 *.ini
 # Not in testfiles
@@ -24,7 +25,6 @@ target_wrapper.*
 build/
 redis-adapter
 !src/redis-adapter
-!.qtmodules
 *test-results*
 # Libs
 **.pdb

@@ -30,10 +30,7 @@ moc_**
 **.moc
 **/build
 **/bins
-conf/
-!conf/config.toml
-!conf/filters.toml
-!conf/registers.toml
+!conf/*
 # Tests Binaries
 *test-results*
 tests/tests-bin/gtest/*

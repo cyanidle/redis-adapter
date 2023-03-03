@@ -1,49 +1,51 @@
-[modbus]
-poll_rate = 500 # ms
-response_time = 150 # ms
-retries = 3
-[modbus.worker]
-debug = true
-name = "modbus"
-[[modbus.channels]]
-    name = "post.1.di"
-    [[modbus.channels.slaves]]
-    address = 1
-    source = "gateway.1" # modbus.rtu.devices.name
-    registers = [ "post.1.di" ]
-    queries = [ { reg_index = 0, reg_count = 6, type = "discrete_inputs" } ]
-    [[modbus.channels.slaves]]
-    address = 1
-    source = "gateway.1" 
-    registers = [ "post.1" ]
-    queries = [ { reg_index = 0, reg_count = 25, type = "holding" } ]
-    [[modbus.channels.slaves]]
-    address = 2
-    source = "gateway.1" 
-    registers = [ "post.2" ]
-    queries = [ { reg_index = 0, reg_count = 25, type = "holding" } ]
+[[modbus.devices]]
+    tcp.name = "post.1.china"
+    tcp.host = "192.168.1.75"
+    tcp.port = 502
+[[modbus.devices]]
+    tcp.name = "post.2.china"
+    tcp.host = "192.168.1.76"
+    tcp.port = 502
+[[modbus.devices]]
+    tcp.name = "gateway.1"
+    tcp.host = "192.168.1.253"
+    tcp.port = 502
+[[modbus.devices]]
+    tcp.name = "gateway.2"
+    tcp.host = "192.168.1.254"
+    tcp.port = 502
 
-[modbus.tcp]
-    [[modbus.tcp.devices]]
-    name = "gateway.1"
-    #ip = "192.168.0.52"
-    ip = "192.168.1.10"
-    port = 502
 
-# [[modbus_slave]]
-#     slave_id = 1
-#     [modbus_slave.device.tcp]
-#     ip = "127.0.0.1"
-#     port = 4000
-#     [modbus_slave.holding_registers]
-#     holding.0 = {index = 0, type = "float32"}
-#     holding.3 = {index = 2, type = "float32"}
-#     [modbus_slave.input_registers]
-#     input.0 = {index = 0, type = "float32"}
-#     [modbus_slave.di]   
-#     di.0 = {index = 0}
-#     [modbus_slave.coils]
-#     coils.0 = {index = 0}
-#     [modbus_slave.worker]
-#     name = "mb_slave"
-#     #debug = true
+[[modbus.master]]
+    slave_id = 1
+    channel = 0
+    register_names = ["post.1"]
+    device_name = "gateway.1"
+    worker.name = "modbus.master.post.1"
+    queries = [ { reg_index = 0, reg_count = 12, type = "holding" },
+                { reg_index = 12, reg_count = 12, type = "holding" } ]
+
+[[modbus.master]]
+    slave_id = 1
+    channel = 2
+    register_names = ["post.1.di", "post.1.do"]
+    device_name = "post.1.china"
+    worker.name = "modbus.master.post.1.di_do"
+    queries = [ { reg_index = 0, reg_count = 4, type = "discrete_inputs" }]
+
+[[modbus.master]]
+    slave_id = 2
+    channel = 0
+    register_names = ["post.2"]
+    device_name = "gateway.2"
+    worker.name = "modbus.master.post.2"
+    queries = [ { reg_index = 0, reg_count = 12, type = "holding" },
+                { reg_index = 12, reg_count = 12, type = "holding" } ]
+
+[[modbus.master]]
+    slave_id = 1
+    channel = 1
+    register_names = ["post.2.di", "post.2.do"]
+    device_name = "post.2.china"
+    worker.name = "modbus.master.post.2.di_do"
+    queries = [ { reg_index = 0, reg_count = 4, type = "discrete_inputs" }]

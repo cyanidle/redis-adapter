@@ -1,0 +1,29 @@
+[[redis.server]]
+name = "local.1"
+host = "127.0.0.1"
+port = 6379
+
+[[redis.cache.consumer]]
+worker.name = "posts.cache"
+server_name = "local.1"
+object_hash_key = "carwash:{carwash_id}:index"
+
+# [[redis.stream.producer]]
+# worker.name = "commandwriter"
+# server_name = "local.1"
+# stream_key = "carwash:{carwash_id}:commands"
+
+# [[redis.stream.consumer]]
+# worker.name = "carwashreader"
+# server_name = "local.1"
+# stream_key = "carwash:{carwash_id}"
+
+# [[redis.stream.consumer]]
+# worker.name = "commandreader"
+# server_name = "local.1"
+# stream_key = "carwash:{carwash_id}:commands"
+
+# [[redis.cache.producer]]
+# worker.name = "modbuscache"
+# server_name = "local.1"
+# object_hash_key = "carwash:{carwash_id}:index"

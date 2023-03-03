@@ -1,5 +1,10 @@
 TEMPLATE = app
-include(../qtmodules.pri)
+QT += core \
+    serialbus \
+    serialport \
+    sql \
+    websockets \
+    network
 TARGET = redis-adapter
 
 DEFINES += RADAPTER_SHARED_SRC=
@@ -7,7 +12,7 @@ CONFIG += c++11 console link_prl
 CONFIG -= app_bundle
 
 SOURCES += main.cpp
-include($$PWD/../src/redis-adapter-headers.pri)
+include($$PWD/../headers.pri)
 
 LIBS += -L..
 CONFIG(debug, debug|release){

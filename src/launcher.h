@@ -38,7 +38,7 @@ private:
     template <typename T>
     T parseTomlObj(const QString &tomlPath, bool mustHave = false);
     QVariant readToml(const QString &tomlPath = "");
-    void setTomlPath(const QString &tomlPath);
+    void setTomlPath(const QString &tomlPath, bool pedantic = false);
     QHash<Worker*, QSet<InterceptorBase*>> m_workers;
     Settings::FileReader* m_filereader;
     QString m_configsDir{"conf"};
