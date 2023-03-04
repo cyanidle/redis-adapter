@@ -38,29 +38,26 @@ void FileReader::initTable()
     }
 }
 
-bool FileReader::setPath(const QString &path)
+void FileReader::setPath(const QString &path)
 {
     m_config = nullptr;
-    m_filepath.clear();
     QDir wantedPath(
                 QDir::toNativeSeparators(
                     QCoreApplication::applicationDirPath() + "/" + path));
     if (QFile(wantedPath.absolutePath()).exists()) {
         settingsParsingWarn() << "Settings path to: " << path;
         m_filepath = path;
-        return true;
+        return;
     } else {
         wantedPath.setPath(
                     QDir::toNativeSeparators(
                         QDir::currentPath() + "/" + path));
         if (QFile(wantedPath.absolutePath()).exists()) {
             m_filepath = path;
-            return true;
+            return;
         }
     }
-    settingsParsingWarn() << "Filereader: Could not set path to: " << path;
-    m_filepath.clear();
-    return false;
+    throw std::runtime_error("Filereader: Could not set path to: " + path.toStdString());
 }
 
 ParsingMap FileReader::getParsingMap()

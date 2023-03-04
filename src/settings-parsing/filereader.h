@@ -16,7 +16,7 @@ class RADAPTER_SHARED_SRC FileReader : public QObject
     Q_OBJECT
 public:
     explicit FileReader(const QString &filepath, QObject *parent);
-    bool setPath(const QString &path);
+    void setPath(const QString &path);
     bool initParsingMap();
     QVariant deserialise(const QString &key = {}, bool useParsingMap = true);
     const QString &filePath() const {return m_filepath;}

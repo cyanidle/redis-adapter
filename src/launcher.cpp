@@ -47,25 +47,31 @@ void Launcher::preInit()
     initLogging();
     parseCommandlineArgs();
     qSetMessagePattern(RADAPTER_CUSTOM_MESSAGE_PATTERN);
-
-    setTomlPath("bindings.toml");
-    auto jsonBindings = JsonBinding::parseMap(m_filereader->deserialise().toMap());
-    BindingsProvider::init(jsonBindings);
-    reDebug() << "config: Json Bindings count: " << jsonBindings.size();
-
-    setTomlPath("redis.toml");
-    auto redisServers = parseTomlArray<Settings::RedisServer>("redis.server");
-    reDebug() << "config: RedisServer count: " << redisServers.size();
-    setTomlPath("sql.toml");
-    auto sqlClientsInfo = parseTomlArray<Settings::SqlClientInfo>("mysql.client");
-    reDebug() << "config: Sql clients count: " << sqlClientsInfo.size();
-
-    setTomlPath("modbus.toml");
-    auto mbDevices = parseTomlArray<Settings::ModbusDevice>("modbus.devices");
-    reDebug() << "config: Modbus devices count: " << mbDevices.size();
-
-    setTomlPath("registers.toml");
-    Settings::parseRegisters(readToml());
+    try {
+        setTomlPath("bindings.toml");
+        auto jsonBindings = JsonBinding::parseMap(m_filereader->deserialise().toMap());
+        BindingsProvider::init(jsonBindings);
+        reDebug() << "config: Json Bindings count: " << jsonBindings.size();
+    } catch (std::exception &e) {}
+    try {
+        setTomlPath("redis.toml");
+        auto redisServers = parseTomlArray<Settings::RedisServer>("redis.server");
+        reDebug() << "config: RedisServer count: " << redisServers.size();
+    } catch (std::exception &e) {}
+    try {
+        setTomlPath("sql.toml");
+        auto sqlClientsInfo = parseTomlArray<Settings::SqlClientInfo>("mysql.client");
+        reDebug() << "config: Sql clients count: " << sqlClientsInfo.size();
+    } catch (std::exception &e) {}
+    try {
+        setTomlPath("modbus.toml");
+        auto mbDevices = parseTomlArray<Settings::ModbusDevice>("modbus.devices");
+        reDebug() << "config: Modbus devices count: " << mbDevices.size();
+    } catch (std::exception &e) {}
+    try {
+        setTomlPath("registers.toml");
+        Settings::parseRegisters(readToml());
+    } catch (std::exception &e) {}
 }
 
 
@@ -138,7 +144,12 @@ void Launcher::setLoggingFilters(const QMap<QString, bool> &loggers)
 
 void Launcher::preInitFilters()
 {
-    setTomlPath("filters.toml");
+    try {
+        setTomlPath("filters.toml");
+    }   catch (std::exception &e) {
+        reWarn() << "No Filters Found!";
+        return;
+    }
     auto rawFilters = readToml("filters").toMap();
     for (auto iter = rawFilters.constBegin(); iter != rawFilters.constEnd(); ++iter) {
         Settings::Filters::table().insert(iter.key(), Serializer::convertQMap<double>(iter.value().toMap()));
@@ -161,9 +172,14 @@ void Launcher::prvInit()
     initModbus();
     initWebsockets();
     initSql();
-    setTomlPath("mocks.toml");
-    for (const auto &mockSettings : parseTomlArray<Radapter::MockWorkerSettings>("mock")) {
-        addWorker(new Radapter::MockWorker(mockSettings, new QThread(this)));
+    try {
+        setTomlPath("mocks.toml");
+        for (const auto &mockSettings : parseTomlArray<Radapter::MockWorkerSettings>("mock")) {
+            addWorker(new Radapter::MockWorker(mockSettings, new QThread(this)));
+        }
+    } catch (std::exception &e) {
+        reWarn() << "Could not load config for Mocks. Disabling...";
+        return;
     }
     setTomlPath("config.toml");
     auto localizationInfo = parseTomlObj<Settings::LocalizationInfo>("localization");
@@ -173,7 +189,10 @@ void Launcher::prvInit()
 
 void Launcher::initRedis()
 {
-    setTomlPath("redis.toml");
+    try {setTomlPath("redis.toml");} catch (std::exception &e) {
+        reWarn() << "Could not load config for Redis. Disabling...";
+        return;
+    }
     for (auto &streamConsumer : parseTomlArray<Settings::RedisStreamConsumer>("redis.stream.consumer")) {
         addWorker(new Redis::StreamConsumer(streamConsumer, new QThread(this)));
     }
@@ -194,7 +213,12 @@ void Launcher::initRedis()
 
 void Launcher::initModbus()
 {
-    setTomlPath("modbus.toml");
+    try {
+        setTomlPath("modbus.toml");
+    } catch (std::exception &e) {
+        reWarn() << "Could not load config for Modbus. Disabling...";
+        return;
+    }
     for (const auto& slaveInfo : parseTomlArray<Settings::ModbusSlave>("modbus.slave")) {
         addWorker(new Modbus::Slave(slaveInfo, new QThread(this)));
     }
@@ -205,7 +229,13 @@ void Launcher::initModbus()
 
 void Launcher::initWebsockets()
 {
-    setTomlPath("websockets.toml");
+    try {
+        setTomlPath("websockets.toml");
+    } catch (std::exception &e) {
+        reWarn() << "Could not load config for websockets. Disabling...";
+        return;
+
+    }
     for (auto &wsClient : parseTomlArray<Settings::WebsocketClientInfo>("websocket.client")) {
         addWorker(new Websocket::Client(wsClient, new QThread(this)));
     }
@@ -218,7 +248,12 @@ void Launcher::initWebsockets()
 
 void Launcher::initSql()
 {
-    setTomlPath("sql.toml");
+    try {
+        setTomlPath("sql.toml");
+    } catch (std::exception &e) {
+        reWarn() << "Could not load config for sql. Disabling...";
+        return;
+    }
     for (auto &archive : parseTomlArray<Settings::SqlStorageInfo>("mysql.storage.archive")) {
         addWorker(new MySql::ArchiveProducer(archive, new QThread(this)));
     }
@@ -246,19 +281,8 @@ QVariant Launcher::readToml(const QString &tomlPath) {
     return m_filereader->deserialise(tomlPath);
 }
 
-void Launcher::setTomlPath(const QString &tomlPath, bool pedantic) {
-    try {
-        if (!m_filereader->setPath(m_configsDir + "/" + tomlPath)) {
-            throw std::runtime_error("Could not set configs path to: " + (m_configsDir + "/" + tomlPath).toStdString());
-        }
-
-    } catch (const std::exception &e) {
-        if (pedantic) {
-            throw;
-        } else {
-            reError() << e.what();
-        }
-    }
+void Launcher::setTomlPath(const QString &tomlPath) {
+    m_filereader->setPath(m_configsDir + "/" + tomlPath);
 }
 
 void Launcher::init()
