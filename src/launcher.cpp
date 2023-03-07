@@ -1,6 +1,7 @@
 #include "broker/broker.h"
 #include "broker/worker/mockworker.h"
 #include "connectors/websocketserverconnector.h"
+#include "guisettings.h"
 #include "launcher.h"
 #include "radapterlogging.h"
 #include "localstorage.h"
@@ -21,7 +22,9 @@
 #ifdef Q_OS_UNIX
 #include "utils/resourcemonitor.h"
 #endif
-
+#ifdef RADAPTER_GUI
+#include "mainwindow.h"
+#endif
 using namespace Radapter;
 
 Launcher::Launcher(QObject *parent) :
@@ -168,6 +171,27 @@ void Launcher::initLogging()
     }
 }
 
+void Launcher::initGui()
+{
+#ifdef RADAPTER_GUI
+    try {
+        setTomlPath("gui.toml");
+        auto guiSettings = parseTomlObj<GuiSettings>("gui");
+        if (!guiSettings.enabled) {
+            reWarn() << "Gui disabled!";
+            return;
+        }
+        auto guiThread = new QThread(this);
+        auto ui = new Gui::MainWindow();
+        ui->moveToThread(guiThread);
+        connect(this, &Launcher::started, guiThread, &QThread::start);
+    }
+    catch (std::exception &e) {
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "gui.toml" << ")" << " No Gui settings found!";
+    }
+#endif
+}
+
 void Launcher::prvInit()
 {
     preInit();
@@ -309,6 +333,7 @@ void Launcher::run()
         (*worker)->run();
     }
     Broker::instance()->runAll();
+    emit started();
 }
 
 QCommandLineParser &Launcher::commandLineParser()

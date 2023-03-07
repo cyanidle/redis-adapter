@@ -16,6 +16,8 @@ public:
     explicit Launcher(QObject *parent = nullptr);
     const QString &configsDirectory() const;
     QCommandLineParser &commandLineParser();
+signals:
+    void started();
 public slots:
     void addWorker(Radapter::Worker *worker, QSet<Radapter::InterceptorBase *> interceptors = {});
     void init();
@@ -31,6 +33,7 @@ private:
     void initModbus();
     void initWebsockets();
     void initSql();
+    void initGui();
     void parseCommandlineArgs();
 
     template <typename T>

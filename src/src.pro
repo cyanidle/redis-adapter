@@ -1,11 +1,11 @@
 TEMPLATE = lib
-QT -= gui
 QT += core \
     serialbus \
     serialport \
     sql \
     websockets \
-    network
+    network \
+    gui
 
 CONFIG(debug, debug|release){
     TARGET = radapter-sdkd
