@@ -3,6 +3,8 @@ release/
 *[Dd]ebug*
 *[Rr]elease*
 *qmake*
+conf/
+config/
 Makefile*
 *pro.user
 .qtmodules
