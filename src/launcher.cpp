@@ -44,8 +44,8 @@ void Launcher::addWorker(Worker* worker, QSet<InterceptorBase*> interceptors)
 //! чтобы компилятор не удалил "неиспользуемые переменные"
 void Launcher::preInit()
 {
-    initLogging();
     parseCommandlineArgs();
+    initLogging();
     qSetMessagePattern(RADAPTER_CUSTOM_MESSAGE_PATTERN);
     try {
         setTomlPath("bindings.toml");
