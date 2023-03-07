@@ -147,7 +147,7 @@ void Launcher::preInitFilters()
     try {
         setTomlPath("filters.toml");
     }   catch (std::exception &e) {
-        reWarn() << "No Filters Found!";
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "filters.toml" << ")" << " No Filters Found!";
         return;
     }
     auto rawFilters = readToml("filters").toMap();
@@ -164,7 +164,7 @@ void Launcher::initLogging()
         auto flattened = JsonDict{rawMap}.flatten(".");
         setLoggingFilters(Serializer::convertQMap<bool>(flattened));
     } catch (std::exception &e) {
-        reWarn() << "No logging settings found!";
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "config.toml" << ")" << " No logging settings found!";
     }
 }
 
@@ -181,7 +181,7 @@ void Launcher::prvInit()
             addWorker(new Radapter::MockWorker(mockSettings, new QThread(this)));
         }
     } catch (std::exception &e) {
-        reWarn() << "Could not load config for Mocks. Disabling...";
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "mocks.toml" << ")" << " Could not load config for Mocks. Disabling...";
     }
     try {
         setTomlPath("config.toml");
@@ -189,14 +189,14 @@ void Launcher::prvInit()
         Localization::instance()->applyInfo(localizationInfo);
         LocalStorage::init(this);
     } catch (std::exception &e) {
-        reWarn() << "No localization settings found!";
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "config.toml" << ")" << " No localization settings found!";
     }
 }
 
 void Launcher::initRedis()
 {
     try {setTomlPath("redis.toml");} catch (std::exception &e) {
-        reWarn() << "Could not load config for Redis. Disabling...";
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "redis.toml" << ")" << " Could not load config for Redis. Disabling...";
         return;
     }
     for (auto &streamConsumer : parseTomlArray<Settings::RedisStreamConsumer>("redis.stream.consumer")) {
@@ -222,7 +222,7 @@ void Launcher::initModbus()
     try {
         setTomlPath("modbus.toml");
     } catch (std::exception &e) {
-        reWarn() << "Could not load config for Modbus. Disabling...";
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "modbus.toml" << ")" << " Could not load config for Modbus. Disabling...";
         return;
     }
     for (const auto& slaveInfo : parseTomlArray<Settings::ModbusSlave>("modbus.slave")) {
@@ -238,7 +238,7 @@ void Launcher::initWebsockets()
     try {
         setTomlPath("websockets.toml");
     } catch (std::exception &e) {
-        reWarn() << "Could not load config for websockets. Disabling...";
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "websockets.toml" << ")" << " Could not load config for websockets. Disabling...";
         return;
 
     }
@@ -257,7 +257,7 @@ void Launcher::initSql()
     try {
         setTomlPath("sql.toml");
     } catch (std::exception &e) {
-        reWarn() << "Could not load config for sql. Disabling...";
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "sql.toml" << ")" << " Could not load config for sql. Disabling...";
         return;
     }
     for (auto &archive : parseTomlArray<Settings::SqlStorageInfo>("mysql.storage.archive")) {
