@@ -37,7 +37,6 @@ redis-adapter
 *.dll*
 *.so*
 
-!*.toml
 !*.cpp
 !*.h
 !*.hpp
