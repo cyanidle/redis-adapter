@@ -158,12 +158,15 @@ void Launcher::preInitFilters()
 
 void Launcher::initLogging()
 {
-    setTomlPath("config.toml");
-    auto rawMap = m_filereader->deserialise("log_debug").toMap();
-    auto flattened = JsonDict{rawMap}.flatten(".");
-    setLoggingFilters(Serializer::convertQMap<bool>(flattened));
+    try {
+        setTomlPath("config.toml");
+        auto rawMap = m_filereader->deserialise("log_debug").toMap();
+        auto flattened = JsonDict{rawMap}.flatten(".");
+        setLoggingFilters(Serializer::convertQMap<bool>(flattened));
+    } catch (std::exception &e) {
+        reWarn() << "No logging settings found!";
+    }
 }
-
 
 void Launcher::prvInit()
 {
@@ -179,12 +182,15 @@ void Launcher::prvInit()
         }
     } catch (std::exception &e) {
         reWarn() << "Could not load config for Mocks. Disabling...";
-        return;
     }
-    setTomlPath("config.toml");
-    auto localizationInfo = parseTomlObj<Settings::LocalizationInfo>("localization");
-    Localization::instance()->applyInfo(localizationInfo);
-    LocalStorage::init(this);
+    try {
+        setTomlPath("config.toml");
+        auto localizationInfo = parseTomlObj<Settings::LocalizationInfo>("localization");
+        Localization::instance()->applyInfo(localizationInfo);
+        LocalStorage::init(this);
+    } catch (std::exception &e) {
+        reWarn() << "No localization settings found!";
+    }
 }
 
 void Launcher::initRedis()

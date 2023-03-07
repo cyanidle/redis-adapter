@@ -106,7 +106,9 @@ void Connector::pingCallback(redisReply *replyPtr)
 
 void Connector::startAsyncCommand(bool bypassTrack)
 {
-    m_pingTimer->stop();
+    if (m_pingTimer) {
+        m_pingTimer->stop();
+    }
     if (!bypassTrack) {
         m_commandTimeout->start();
     }

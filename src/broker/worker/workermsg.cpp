@@ -116,7 +116,7 @@ QString WorkerMsg::printFullDebug() const
            QStringLiteral("# Sender: ") + senderWorker->printSelf()  + "\n" +
            QStringLiteral("# Targets: [") + printReceivers().join(", ") + "]\n" +
            QStringLiteral("# Flags: ") + printFlags() + "\n" +
-           QStringLiteral("# Flat Msg: \n") + printFlatData() + "\n" +
+           QStringLiteral("# Flat Msg: \n") + printFlatData() + "\n\n" +
            QStringLiteral("# Command: ") + (command() ? command()->metaObject()->className() : "None") + "\n" +
            QStringLiteral("# Reply: ") + (reply() ? reply()->metaObject()->className() : "None") + "\n" +
            QStringLiteral("### Msg Id: ") + QString::number(id()) + QStringLiteral(" Debug End  ###");

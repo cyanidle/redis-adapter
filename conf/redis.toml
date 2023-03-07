@@ -3,20 +3,24 @@ name = "local.1"
 host = "127.0.0.1"
 port = 6379
 
-[[redis.cache.consumer]]
-worker.name = "posts.cache"
+# [[redis.cache.consumer]]
+# worker.name = "posts.cache"
+# server_name = "local.1"
+# object_hash_key = "carwash:{carwash_id}:index"
+
+[[redis.stream.producer]]
+worker.print_msgs = true
+worker.producers = ["modbus.navigard"]
+worker.name = "navigard.commands"
 server_name = "local.1"
-object_hash_key = "carwash:{carwash_id}:index"
+stream_key = "navigard:commands"
 
-# [[redis.stream.producer]]
-# worker.name = "commandwriter"
-# server_name = "local.1"
-# stream_key = "carwash:{carwash_id}:commands"
-
-# [[redis.stream.consumer]]
-# worker.name = "carwashreader"
-# server_name = "local.1"
-# stream_key = "carwash:{carwash_id}"
+[[redis.stream.consumer]]
+worker.print_msgs = true
+#worker.consumers = ["modbus.navigard"]
+worker.name = "navigard.log"
+server_name = "local.1"
+stream_key = "navigard:log"
 
 # [[redis.stream.consumer]]
 # worker.name = "commandreader"

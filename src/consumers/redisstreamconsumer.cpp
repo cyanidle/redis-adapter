@@ -1,5 +1,6 @@
 #include "redisstreamconsumer.h"
 #include <QDateTime>
+#include "formatting/redis/redisstreamentry.h"
 #include "formatting/redis/redisstreamqueries.h"
 #include "localstorage.h"
 #include "radapterlogging.h"
@@ -16,7 +17,7 @@ StreamConsumer::StreamConsumer(const Settings::RedisStreamConsumer &config,
     : Connector(config, thread),
       m_streamKey(config.stream_key),
       m_startMode(config.start_from),
-      m_lastStreamId{}
+      m_lastStreamId{"$"}
 {
     disablePingKeepalive();
     connect(this, &StreamConsumer::commandsFinished, this, &StreamConsumer::doRead);
@@ -30,10 +31,9 @@ QString StreamConsumer::lastReadId() const
 {
     auto lastId = m_lastStreamId;
     if (m_startMode == Settings::RedisStreamConsumer::StartPersistentId) {
-        lastId = LocalStorage::instance()->getLastStreamId(m_streamKey);
-    }
-    if ((lastId.isEmpty() && (m_startMode == Settings::RedisStreamConsumer::StartFromFirst)))
-    {
+        auto fromLast = LocalStorage::instance()->getLastStreamId(m_streamKey);
+        lastId = fromLast.isEmpty() ? lastId : fromLast;
+    } else if (m_startMode == Settings::RedisStreamConsumer::StartFromFirst) {
         lastId = "0-0";
     }
     return lastId;
@@ -53,8 +53,14 @@ void StreamConsumer::doRead()
 
 void StreamConsumer::readCallback(redisReply *reply)
 {
-    auto parsed = parseReply(reply);
-
+    auto parsed = parseReply(reply).toList();
+    if (parsed.isEmpty()) return;
+    auto replies = parsed.first().toList().last().toList();
+    for (const auto &entry: replies) {
+        auto parsedEntry = StreamEntry(entry.toList());
+        emit sendMsg(prepareMsg(parsedEntry.values));
+        setLastReadId(parsedEntry.streamId());
+    }
 }
 
 void StreamConsumer::setLastReadId(const QString &lastId)

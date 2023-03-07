@@ -1,5 +1,0 @@
-# sql archiver should have field
-# [...bind]
-# source_type_id = some:nested:key:type_id
-# source_id = some:nested:key:source
-# {other_field_of_sql_table} = some:nested:key:other

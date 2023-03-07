@@ -51,7 +51,7 @@ void Settings::parseRegisters(const QVariant &registersFile) {
 
 void ModbusSlave::postInit() {
     for (auto &name: register_names) {
-        auto &toMerge = (*allRegisters)[name.replace('.', ':')];
+        auto &toMerge = (*allRegisters).value(name.replace('.', ':'));
         for (auto newRegisters = toMerge.begin(); newRegisters != toMerge.end(); ++newRegisters) {
             auto name = newRegisters.key();
             auto &reg = newRegisters.value();

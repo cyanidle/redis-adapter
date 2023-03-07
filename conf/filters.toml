@@ -1,7 +1,0 @@
-[modbusfilter]
-"post:1:di:1:water_pressure_status" = 0
-"post:1:di:1:phase_status" = 0
-"post:1:di:1:twilight_sensor" = 0
-"post:1:di:1:osmos_low_level" = 0
-"post:1:di:1:osmos_medium_level" = 0
-"post:1:di:1:osmos_high_level" = 0

@@ -6,7 +6,7 @@ QString Redis::addToStream(const QString &stream, const JsonDict &data, quint32 
 {
     QString fields;
     for (const auto &iter : data) {
-        fields.append(iter.key().join(':') + iter.value().toString());
+        fields.append(iter.key().join(':') + " " + iter.value().toString());
     }
     return QStringLiteral("XADD %1 MAXLEN ~ %2 * %3").arg(stream).arg(size).arg(fields);
 }

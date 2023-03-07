@@ -1,5 +1,0 @@
-[[mock]]
-name = "modbus.mock"
-json_file_path = "mocks/posts.json"
-mock_timer_delay = 20000
-consumers = ["modbus.master.post.1", "modbus.master.post.2"]
