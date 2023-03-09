@@ -8,7 +8,7 @@ namespace Radapter {
 struct RADAPTER_SHARED_SRC MockWorkerSettings;
 }
 
-struct Radapter::MockWorkerSettings : WorkerSettings{
+struct Radapter::MockWorkerSettings : WorkerSettings {
     Q_GADGET
     IS_SERIALIZABLE
     SERIAL_FIELD(quint32, mock_timer_delay, 3000);

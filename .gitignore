@@ -17,6 +17,7 @@ Makefile*
 .vscode
 **.o
 moc_**
+mocks
 **.moc
 **.exe
 object_script.*

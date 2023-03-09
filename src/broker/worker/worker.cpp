@@ -95,7 +95,7 @@ bool Worker::wasStarted() const
 
 QString Worker::printSelf() const
 {
-    return QStringLiteral("%2 (%1):").arg(metaObject()->className(), workerName());
+    return QStringLiteral("[%2 (%1)]: ").arg(metaObject()->className(), workerName());
 }
 
 void Worker::run()

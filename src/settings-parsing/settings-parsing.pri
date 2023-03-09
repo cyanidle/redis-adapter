@@ -1,6 +1,6 @@
 SOURCES+= \
-	$$PWD/filereader.cpp  \
-	$$PWD/serializablesettings.cpp
+	$$PWD/filereader.cpp \
+	$$PWD/serializablesettings.cpp 
 
 HEADERS+= \
 	$$PWD/cpptoml.h \

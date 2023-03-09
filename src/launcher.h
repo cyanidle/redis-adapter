@@ -32,6 +32,7 @@ private:
     void initRedis();
     void initModbus();
     void initWebsockets();
+    void initSockets();
     void initSql();
     void initGui();
     void parseCommandlineArgs();

@@ -43,7 +43,7 @@ main () {
         exit -1
     fi
     OUT_FILE=$1
-    DIRS=$(find src -type d | grep -v src/lib)
+    DIRS=$(find src -type d | grep -v src/lib | grep -v src/build)
     echo -n "" > $OUTFILE.pri
     for dir in $DIRS; do 
         NAME_OF_FILE=${dir//\//_} # format src/dir/ -> src_dir_

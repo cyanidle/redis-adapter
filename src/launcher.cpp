@@ -19,6 +19,8 @@
 #include "modbus/modbusmaster.h"
 #include "modbus/modbusslave.h"
 #include "websocket/websocketclient.h"
+#include "raw_sockets/udpproducer.h"
+#include "raw_sockets/udpconsumer.h"
 #ifdef Q_OS_UNIX
 #include "utils/resourcemonitor.h"
 #endif
@@ -55,26 +57,26 @@ void Launcher::preInit()
         auto jsonBindings = JsonBinding::parseMap(m_filereader->deserialise().toMap());
         BindingsProvider::init(jsonBindings);
         reDebug() << "config: Json Bindings count: " << jsonBindings.size();
-    } catch (std::exception &e) {}
+    } catch (std::invalid_argument &e) {}
     try {
         setTomlPath("redis.toml");
         auto redisServers = parseTomlArray<Settings::RedisServer>("redis.server");
         reDebug() << "config: RedisServer count: " << redisServers.size();
-    } catch (std::exception &e) {}
+    } catch (std::invalid_argument &e) {}
     try {
         setTomlPath("sql.toml");
         auto sqlClientsInfo = parseTomlArray<Settings::SqlClientInfo>("mysql.client");
         reDebug() << "config: Sql clients count: " << sqlClientsInfo.size();
-    } catch (std::exception &e) {}
+    } catch (std::invalid_argument &e) {}
     try {
         setTomlPath("modbus.toml");
         auto mbDevices = parseTomlArray<Settings::ModbusDevice>("modbus.devices");
         reDebug() << "config: Modbus devices count: " << mbDevices.size();
-    } catch (std::exception &e) {}
+    } catch (std::invalid_argument &e) {}
     try {
         setTomlPath("registers.toml");
         Settings::parseRegisters(readToml());
-    } catch (std::exception &e) {}
+    } catch (std::invalid_argument &e) {}
 }
 
 
@@ -149,7 +151,7 @@ void Launcher::preInitFilters()
 {
     try {
         setTomlPath("filters.toml");
-    }   catch (std::exception &e) {
+    }   catch (std::invalid_argument &e) {
         reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "filters.toml" << ")" << " No Filters Found!";
         return;
     }
@@ -166,7 +168,7 @@ void Launcher::initLogging()
         auto rawMap = m_filereader->deserialise("log_debug").toMap();
         auto flattened = JsonDict{rawMap}.flatten(".");
         setLoggingFilters(Serializer::convertQMap<bool>(flattened));
-    } catch (std::exception &e) {
+    } catch (std::invalid_argument &e) {
         reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "config.toml" << ")" << " No logging settings found!";
     }
 }
@@ -184,9 +186,9 @@ void Launcher::initGui()
         auto guiThread = new QThread(this);
         auto ui = new Gui::MainWindow();
         ui->moveToThread(guiThread);
-        connect(this, &Launcher::started, guiThread, &QThread::start);
+        connect(this, &Launcher::started, this, [guiThread](){guiThread->start();});
     }
-    catch (std::exception &e) {
+    catch (std::invalid_argument &e) {
         reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "gui.toml" << ")" << " No Gui settings found!";
     }
 #endif
@@ -199,12 +201,13 @@ void Launcher::prvInit()
     initModbus();
     initWebsockets();
     initSql();
+    initSockets();
     try {
         setTomlPath("mocks.toml");
         for (const auto &mockSettings : parseTomlArray<Radapter::MockWorkerSettings>("mock")) {
             addWorker(new Radapter::MockWorker(mockSettings, new QThread(this)));
         }
-    } catch (std::exception &e) {
+    } catch (std::invalid_argument &e) {
         reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "mocks.toml" << ")" << " Could not load config for Mocks. Disabling...";
     }
     try {
@@ -212,14 +215,29 @@ void Launcher::prvInit()
         auto localizationInfo = parseTomlObj<Settings::LocalizationInfo>("localization");
         Localization::instance()->applyInfo(localizationInfo);
         LocalStorage::init(this);
-    } catch (std::exception &e) {
+    } catch (std::invalid_argument &e) {
         reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "config.toml" << ")" << " No localization settings found!";
+    }
+}
+
+void Launcher::initSockets()
+{
+    try {setTomlPath("sockets.toml");}
+    catch (std::invalid_argument &e) {
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "sockets.toml" << ")" << " Could not load config for Sockets. Disabling...";
+        return;
+    }
+    for (const auto &udp : parseTomlArray<Udp::ProducerSettings>("socket.udp.producer")) {
+        addWorker(new Udp::Producer(udp, new QThread(this)));
+    }
+    for (const auto &udp : parseTomlArray<Udp::ConsumerSettings>("socket.udp.consumer")) {
+        addWorker(new Udp::Consumer(udp, new QThread(this)));
     }
 }
 
 void Launcher::initRedis()
 {
-    try {setTomlPath("redis.toml");} catch (std::exception &e) {
+    try {setTomlPath("redis.toml");} catch (std::invalid_argument &e) {
         reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "redis.toml" << ")" << " Could not load config for Redis. Disabling...";
         return;
     }
@@ -245,7 +263,7 @@ void Launcher::initModbus()
 {
     try {
         setTomlPath("modbus.toml");
-    } catch (std::exception &e) {
+    } catch (std::invalid_argument &e) {
         reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "modbus.toml" << ")" << " Could not load config for Modbus. Disabling...";
         return;
     }
@@ -261,10 +279,9 @@ void Launcher::initWebsockets()
 {
     try {
         setTomlPath("websockets.toml");
-    } catch (std::exception &e) {
+    } catch (std::invalid_argument &e) {
         reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "websockets.toml" << ")" << " Could not load config for websockets. Disabling...";
         return;
-
     }
     for (auto &wsClient : parseTomlArray<Settings::WebsocketClientInfo>("websocket.client")) {
         addWorker(new Websocket::Client(wsClient, new QThread(this)));
@@ -280,7 +297,7 @@ void Launcher::initSql()
 {
     try {
         setTomlPath("sql.toml");
-    } catch (std::exception &e) {
+    } catch (std::invalid_argument &e) {
         reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "sql.toml" << ")" << " Could not load config for sql. Disabling...";
         return;
     }

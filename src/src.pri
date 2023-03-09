@@ -8,5 +8,6 @@ HEADERS+= \
 	$$PWD/launcher.h \
 	$$PWD/localization.h \
 	$$PWD/localstorage.h \
-	$$PWD/radapterlogging.h 
+	$$PWD/radapterlogging.h \
+	$$PWD/ui_mainwindow.h 
 

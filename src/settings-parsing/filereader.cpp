@@ -57,7 +57,7 @@ void FileReader::setPath(const QString &path)
             return;
         }
     }
-    throw std::runtime_error("Filereader: Could not set path to: " + path.toStdString());
+    throw std::invalid_argument("Filereader: Could not set path to: " + path.toStdString());
 }
 
 ParsingMap FileReader::getParsingMap()
