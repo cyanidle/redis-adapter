@@ -180,11 +180,11 @@ void Broker::connectTwoProxies(WorkerProxy* producer, WorkerProxy* consumer)
                 ? Qt::DirectConnection
                 : Qt::QueuedConnection);
     m_connected.append(pair);
-    if (!producer->consumersNames().contains(consumer->worker()->workerName())) {
-        producer->addConsumers({consumer->worker()});
+    if (!producer->consumers().contains(consumer->worker())) {
+        producer->addConsumer(consumer->worker());
     }
-    if (!consumer->producersNames().contains(producer->worker()->workerName())) {
-        consumer->addProducers({producer->worker()});
+    if (!consumer->producers().contains(producer->worker())) {
+        consumer->addProducer(producer->worker());
     }
 }
 

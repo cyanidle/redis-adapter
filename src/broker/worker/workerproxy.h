@@ -1,12 +1,12 @@
 #ifndef WORKERPROXY_H
 #define WORKERPROXY_H
 
-#include "workermsg.h"
 #include "private/global.h"
 
 namespace Radapter {
 class Worker;
-
+class WorkerMsg;
+class Broker;
 class RADAPTER_SHARED_SRC WorkerProxy : public QObject
 {
     Q_OBJECT
@@ -29,6 +29,8 @@ private:
     void addConsumers(const QStringList &producers);
     void addProducers(const QSet<Worker*> &producers);
     void addConsumers(const QSet<Worker*> &consumers);
+    void addProducer(Worker* producer);
+    void addConsumer(Worker* consumer);
     friend class Radapter::Worker;
     friend class Radapter::Broker;
     explicit WorkerProxy();

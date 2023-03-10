@@ -13,7 +13,7 @@ public:
     void applyInfo(const Settings::LocalizationInfo &timeZone);
 private:
     Localization();
-    Settings::LocalizationInfo m_info{};
+    Settings::LocalizationInfo m_info;
     mutable QMutex m_mutex{};
 };
 

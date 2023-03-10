@@ -37,6 +37,8 @@ public:
     template <typename Target> bool is() const;
     template <typename Target> const Target *as() const;
     template <typename Target> Target *as();
+    Worker &operator>(Worker &other);
+    Worker &operator<(Worker &other);
     QString printSelf() const;
     virtual ~Worker() = default;
 signals:
@@ -48,6 +50,8 @@ public slots:
     void addProducers(const QStringList &producers);
     void addConsumers(const QSet<Radapter::Worker*> &consumers);
     void addProducers(const QSet<Radapter::Worker*> &producers);
+    void addConsumer(Radapter::Worker* consumer);
+    void addProducer(Radapter::Worker* producer);
 protected slots:
     virtual void onEvent(const Radapter::BrokerEvent &event);
     virtual void onRun();
@@ -76,8 +80,8 @@ private:
     using MsgCallback = void (User::*)(Args...);
     Set m_consumers;
     Set m_producers;
-    QStringList m_consumerNames;
-    QStringList m_producerNames;
+    QSet<QString> m_consumerNames;
+    QSet<QString> m_producerNames;
     WorkerMsg m_baseMsg;
     WorkerProxy* m_proxy;
     QString m_name;

@@ -18,6 +18,7 @@
 #include "settings/redissettings.h"
 #include "modbus/modbusmaster.h"
 #include "modbus/modbusslave.h"
+#include "templates/algorithms.hpp"
 #include "websocket/websocketclient.h"
 #include "raw_sockets/udpproducer.h"
 #include "raw_sockets/udpconsumer.h"
@@ -34,9 +35,17 @@ Launcher::Launcher(QObject *parent) :
     m_workers(),
     m_filereader(new Settings::FileReader("conf/config.toml", this))
 {
-    prvInit();
-    m_parser.setApplicationDescription("Redis Adapter");
     m_filereader->initParsingMap();
+    parseCommandlineArgs();
+    m_parser.setApplicationDescription("Redis Adapter");
+    preInit();
+    initRedis();
+    initModbus();
+    initWebsockets();
+    initSql();
+    initSockets();
+    initMocks();
+    initLocalization();
 }
 
 
@@ -49,7 +58,6 @@ void Launcher::addWorker(Worker* worker, QSet<InterceptorBase*> interceptors)
 //! чтобы компилятор не удалил "неиспользуемые переменные"
 void Launcher::preInit()
 {
-    parseCommandlineArgs();
     initLogging();
     qSetMessagePattern(RADAPTER_CUSTOM_MESSAGE_PATTERN);
     try {
@@ -194,14 +202,20 @@ void Launcher::initGui()
 #endif
 }
 
-void Launcher::prvInit()
+void Launcher::initLocalization()
 {
-    preInit();
-    initRedis();
-    initModbus();
-    initWebsockets();
-    initSql();
-    initSockets();
+    try {
+        setTomlPath("config.toml");
+        auto localizationInfo = parseTomlObj<Settings::LocalizationInfo>("localization");
+        Localization::instance()->applyInfo(localizationInfo);
+        LocalStorage::init(this);
+    } catch (std::invalid_argument &e) {
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "config.toml" << ")" << " No localization settings found!";
+    }
+}
+
+void Launcher::initMocks()
+{
     try {
         setTomlPath("mocks.toml");
         for (const auto &mockSettings : parseTomlArray<Radapter::MockWorkerSettings>("mock")) {
@@ -210,13 +224,35 @@ void Launcher::prvInit()
     } catch (std::invalid_argument &e) {
         reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "mocks.toml" << ")" << " Could not load config for Mocks. Disabling...";
     }
+}
+
+void Launcher::initPipelines()
+{
     try {
         setTomlPath("config.toml");
-        auto localizationInfo = parseTomlObj<Settings::LocalizationInfo>("localization");
-        Localization::instance()->applyInfo(localizationInfo);
-        LocalStorage::init(this);
     } catch (std::invalid_argument &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "config.toml" << ")" << " No localization settings found!";
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "config.toml" << ")" << " No Pipeline settings found!";
+        return;
+    }
+    const auto parsed = parseTomlObj<Settings::Pipelines>();
+    static QRegExp splitter("[<>]");
+    for (const auto &pipe: parsed.pipelines) {
+        auto split = pipe.split(splitter);
+        if (split.size() < 2) {
+            throw std::invalid_argument("Pipeline length must be more than 2!");
+        }
+        auto currentPos = 0;
+        auto lastWorker = split.takeFirst().simplified();
+        for (const auto &worker : split) {
+            currentPos = splitter.indexIn(pipe, currentPos);
+            auto op = pipe[currentPos];
+            if (op == "<") {
+                broker()->connectTwoProxies(worker.simplified(), lastWorker);
+            } else if (op == ">") {
+                broker()->connectTwoProxies(lastWorker, worker.simplified());
+            }
+            lastWorker = worker.simplified();
+        }
     }
 }
 
@@ -290,7 +326,6 @@ void Launcher::initWebsockets()
     if (websocketServer.isValid()) {
         addWorker(new Websocket::ServerConnector(websocketServer, new QThread(this)));
     }
-
 }
 
 void Launcher::initSql()
@@ -324,6 +359,11 @@ void Launcher::parseCommandlineArgs()
     m_configsDir = m_parser.value("directory");
 }
 
+Broker *Launcher::broker() const
+{
+    return Broker::instance();
+}
+
 QVariant Launcher::readToml(const QString &tomlPath) {
     return m_filereader->deserialise(tomlPath);
 }
@@ -350,6 +390,7 @@ void Launcher::run()
         (*worker)->run();
     }
     Broker::instance()->runAll();
+    initPipelines();
     emit started();
 }
 

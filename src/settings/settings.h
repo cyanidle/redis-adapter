@@ -17,6 +17,12 @@ Q_DECLARE_METATYPE(QTimeZone)
 
 namespace Settings {
 
+struct RADAPTER_SHARED_SRC Pipelines : public SerializableSettings {
+    Q_GADGET
+    IS_SERIALIZABLE
+    SERIAL_CONTAINER(QList, QString, pipelines)
+};
+
 struct RADAPTER_SHARED_SRC ServerInfo : public SerializableSettings {
     Q_GADGET
     IS_SERIALIZABLE

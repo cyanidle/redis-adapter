@@ -28,19 +28,23 @@ private:
 
     void initLogging();
     void preInit();
-    void prvInit();
     void initRedis();
     void initModbus();
     void initWebsockets();
     void initSockets();
     void initSql();
     void initGui();
+    void initPipelines();
+    void initMocks();
+    void initLocalization();
     void parseCommandlineArgs();
 
+
+    Broker* broker() const;
     template <typename T>
-    QList<T> parseTomlArray(const QString &tomlPath);
+    QList<T> parseTomlArray(const QString &tomlPath = "");
     template <typename T>
-    T parseTomlObj(const QString &tomlPath, bool mustHave = false);
+    T parseTomlObj(const QString &tomlPath = "", bool mustHave = false);
     QVariant readToml(const QString &tomlPath = "");
     void setTomlPath(const QString &tomlPath);
     QHash<Worker*, QSet<InterceptorBase*>> m_workers;

@@ -1,4 +1,5 @@
 #include "workerproxy.h"
+#include "workermsg.h"
 #include "radapterlogging.h"
 #include "worker.h"
 
@@ -93,6 +94,16 @@ void WorkerProxy::addProducers(const QStringList &producers)
 void WorkerProxy::addConsumers(const QSet<Worker *> &consumers)
 {
     worker()->addConsumers(consumers);
+}
+
+void WorkerProxy::addProducer(Worker *producer)
+{
+    worker()->addProducer(producer);
+}
+
+void WorkerProxy::addConsumer(Worker *consumer)
+{
+    worker()->addConsumer(consumer);
 }
 
 void WorkerProxy::addConsumers(const QStringList &consumers)

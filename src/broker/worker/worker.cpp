@@ -15,8 +15,8 @@ Worker::Worker(const WorkerSettings &settings, QThread *thread) :
     QObject(),
     m_consumers(),
     m_producers(),
-    m_consumerNames(settings.consumers),
-    m_producerNames(settings.producers),
+    m_consumerNames({settings.consumers.begin(), settings.consumers.end()}),
+    m_producerNames({settings.producers.begin(), settings.producers.end()}),
     m_baseMsg(this),
     m_proxy(nullptr),
     m_name(settings.name),
@@ -93,6 +93,18 @@ bool Worker::wasStarted() const
     return m_wasRun;
 }
 
+Worker &Worker::operator>(Worker &other)
+{
+    addConsumers({&other});
+    return *this;
+}
+
+Worker &Worker::operator<(Worker &other)
+{
+    addProducers({&other});
+    return *this;
+}
+
 QString Worker::printSelf() const
 {
     return QStringLiteral("[%2 (%1)]: ").arg(metaObject()->className(), workerName());
@@ -102,22 +114,15 @@ void Worker::run()
 {
     if (m_wasRun) throw std::runtime_error("WorkerBase::onRun() called multiple times for: " + printSelf().toStdString());
     moveToThread(workerThread());
-    for (auto &producerName : m_producerNames) {
+    for (auto &producerName : qAsConst(m_producerNames)) {
         auto worker = broker()->getWorker(producerName);
         if (!worker) throw std::runtime_error("Nonexistent required worker: " + producerName.toStdString());
-        if (!m_producers.contains(worker)) {
-            connect(worker, &QObject::destroyed, this, &Worker::onWorkerDestroyed);
-            m_producers.insert(worker);
-        }
+        addProducers({worker});
     }
-    for (auto &consumerName : m_consumerNames) {
+    for (auto &consumerName : qAsConst(m_consumerNames)) {
         auto worker = broker()->getWorker(consumerName);
         if (!worker) throw std::runtime_error("Nonexistent required worker: " + consumerName.toStdString());
-        if (!m_consumers.contains(worker)) {
-            connect(worker, &QObject::destroyed, this, &Worker::onWorkerDestroyed);
-            m_consumers.insert(worker);
-            m_baseMsg.m_receivers.insert(worker);
-        }
+        addConsumers({worker});
     }
     workerThread()->start();
     m_wasRun = true;
@@ -130,43 +135,59 @@ void Worker::onRun()
 
 void Worker::addConsumers(const QStringList &consumers)
 {
-    Set newConsumers;
     for (auto &name : consumers) {
-        auto worker = broker()->getWorker(name);
-        if (!worker) throw std::runtime_error("Nonexistent worker: " + name.toStdString());
-        newConsumers.insert(worker);
+        m_consumerNames.insert(name);
+        if (wasStarted()) {
+            auto worker = broker()->getWorker(name);
+            if (!worker) throw std::runtime_error("Nonexistent worker: " + name.toStdString());
+            addConsumer(worker);
+        }
     }
-    addConsumers(newConsumers);
 }
 
 void Worker::addProducers(const QStringList &producers)
 {
-    Set newProducers;
     for (auto &name : producers) {
-        auto worker = broker()->getWorker(name);
-        if (!worker) throw std::runtime_error("Nonexistent worker: " + name.toStdString());
-        newProducers.insert(worker);
+        m_producerNames.insert(name);
+        if (wasStarted()) {
+            auto worker = broker()->getWorker(name);
+            if (!worker) throw std::runtime_error("Nonexistent worker: " + name.toStdString());
+            addProducer(worker);
+        }
     }
-    addProducers(newProducers);
 }
 
 void Worker::addConsumers(const Set &consumers)
 {
     for (auto &worker : consumers) {
-        connect(worker, &QObject::destroyed, this, &Worker::onWorkerDestroyed);
-        if (!m_consumerNames.contains(worker->workerName())) m_consumerNames.append(worker->workerName());
+        addConsumer(worker);
     }
-    m_consumers.unite(consumers);
-    m_baseMsg.m_receivers.unite(consumers);
 }
 
 void Worker::addProducers(const Set &producers)
 {
     for (auto &worker : producers) {
-        connect(worker, &QObject::destroyed, this, &Worker::onWorkerDestroyed);
-        if (!m_producerNames.contains(worker->workerName())) m_producerNames.append(worker->workerName());
+        addProducer(worker);
     }
-    m_producers.unite(producers);
+}
+
+void Worker::addConsumer(Worker *consumer)
+{
+    m_consumers.insert(consumer);
+    connect(consumer, &QObject::destroyed, this, &Worker::onWorkerDestroyed);
+    if (!m_consumerNames.contains(consumer->workerName())) {
+        m_consumerNames.insert(consumer->workerName());
+    }
+    m_baseMsg.m_receivers.insert(consumer);
+}
+
+void Worker::addProducer(Worker *producer)
+{
+    m_producers.insert(producer);
+    connect(producer, &QObject::destroyed, this, &Worker::onWorkerDestroyed);
+    if (!m_producerNames.contains(producer->workerName())) {
+        m_producerNames.insert(producer->workerName());
+    }
 }
 
 void Worker::onEvent(const BrokerEvent &event)
@@ -388,12 +409,12 @@ WorkerProxy* Worker::createProxy(const QSet<InterceptorBase*> &interceptors)
 
 QStringList Worker::consumersNames() const
 {
-    return m_consumerNames;
+    return {m_consumerNames.begin(), m_consumerNames.end()};
 }
 
 QStringList Worker::producersNames() const
 {
-    return m_producerNames;
+    return {m_producerNames.begin(), m_producerNames.end()};
 }
 
 QThread *Worker::workerThread() const

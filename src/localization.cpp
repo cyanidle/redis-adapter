@@ -1,8 +1,10 @@
 #include "localization.h"
 #include "radapterlogging.h"
 
-Localization::Localization()
+Localization::Localization() :
+    m_info()
 {
+    m_info.time_zone = QTimeZone::systemTimeZone();
 }
 
 Localization *Localization::instance()
