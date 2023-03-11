@@ -764,7 +764,7 @@ QString JsonDict::processWarn(const QStringList &src, const int& index)
 QVariant& JsonDict::operator[](const QStringList& akey)
 {
     if (akey.isEmpty()) {
-        return m_dict[""];
+        throw std::invalid_argument("Cannot access JsonDict with empty QStringList as key!");
     }
     QVariant* currentVal = &m_dict[akey.constFirst()];
     for (int index = 1; index < (akey.size()); ++index) {
@@ -788,9 +788,17 @@ QVariant& JsonDict::operator[](const QStringList& akey)
                     asList->append(QVariant{});
                 }
                 currentVal = &(asList->operator[](nextIndex));
+            } else if (indexValid) {
+                currentVal->setValue(QVariantList{});
+                auto asList = reinterpret_cast<QVariantList*>(currentVal->data());
+                while (asList->size() <= nextIndex) {
+                    asList->append(QVariant{});
+                }
+                currentVal = &(asList->operator[](nextIndex));
             } else {
-                throw std::invalid_argument("Key overlap! Key: " +
-                                            processWarn(akey, index).toStdString());
+                currentVal->setValue(QVariantMap{});
+                auto asDict = reinterpret_cast<QVariantMap*>(currentVal->data());
+                currentVal = &(asDict->operator[](nextKey));
             }
         } else {
             if (!indexValid) {
