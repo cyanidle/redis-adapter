@@ -174,6 +174,9 @@ void Worker::addProducers(const Set &producers)
 void Worker::addConsumer(Worker *consumer)
 {
     m_consumers.insert(consumer);
+    if (!consumer->producers().contains(this)) {
+        consumer->addProducer(this);
+    }
     connect(consumer, &QObject::destroyed, this, &Worker::onWorkerDestroyed);
     if (!m_consumerNames.contains(consumer->workerName())) {
         m_consumerNames.insert(consumer->workerName());
@@ -184,6 +187,9 @@ void Worker::addConsumer(Worker *consumer)
 void Worker::addProducer(Worker *producer)
 {
     m_producers.insert(producer);
+    if (!producer->consumers().contains(this)) {
+        producer->addConsumer(this);
+    }
     connect(producer, &QObject::destroyed, this, &Worker::onWorkerDestroyed);
     if (!m_producerNames.contains(producer->workerName())) {
         m_producerNames.insert(producer->workerName());

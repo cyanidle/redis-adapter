@@ -705,9 +705,24 @@ JsonDict& JsonDict::nest(const QString &separator)
 {
     JsonDict newState;
     for (auto iter = m_dict.constBegin(); iter != m_dict.constEnd(); ++iter) {
-        newState.insert(iter.key().split(separator), iter.value());
+        const auto &val = iter.value();
+        QVariant toInsert;
+        if (val.type() == QVariant::List) {
+            auto actual = QVariantList{};
+            for (const auto &subval : *reinterpret_cast<const QVariantList*>(val.data())) {
+                if (subval.type() == QVariant::Map) {
+                    actual.append(JsonDict(subval, separator).toVariant());
+                } else {
+                    actual.append(subval);
+                }
+            }
+            toInsert = actual;
+        } else {
+            toInsert = val;
+        }
+        newState.insert(iter.key().split(separator), toInsert);
     }
-    m_dict.swap(newState);
+    swap(newState);
     return *this;
 }
 
@@ -724,11 +739,8 @@ JsonDict& JsonDict::merge(const JsonDict &src, bool overwrite)
 
 JsonDict JsonDict::nest(const QString &separator) const
 {
-    JsonDict result;
-    for (auto iter = m_dict.constBegin(); iter != m_dict.constEnd(); ++iter) {
-        result.insert(iter.key().split(separator), iter.value());
-    }
-    return result;
+    JsonDict result = *this;
+    return result.nest(separator);
 }
 
 JsonDict JsonDict::merge(const JsonDict &src, bool overwrite) const
@@ -842,7 +854,22 @@ inline JsonDict &JsonDict::nest(QChar separator)
 {
     JsonDict newState;
     for (auto iter = m_dict.constBegin(); iter != m_dict.constEnd(); ++iter) {
-        newState.insert(iter.key().split(separator), iter.value());
+        const auto &val = iter.value();
+        QVariant toInsert;
+        if (val.type() == QVariant::List) {
+            auto actual = QVariantList{};
+            for (const auto &subval : *reinterpret_cast<const QVariantList*>(val.data())) {
+                if (subval.type() == QVariant::Map) {
+                    actual.append(JsonDict(subval, separator).toVariant());
+                } else {
+                    actual.append(subval);
+                }
+            }
+            toInsert = actual;
+        } else {
+            toInsert = val;
+        }
+        newState.insert(iter.key().split(separator), toInsert);
     }
     swap(newState);
     return *this;
