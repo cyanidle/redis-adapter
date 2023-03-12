@@ -2,6 +2,8 @@
 #include "radapterlogging.h"
 #include "worker.h"
 #include "broker/broker.h"
+#include "broker/commands/basiccommands.h"
+#include "broker/replies/private/reply.h"
 
 using namespace Radapter;
 

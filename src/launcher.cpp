@@ -10,7 +10,7 @@
 #include "consumers/redisstreamconsumer.h"
 #include "consumers/rediscacheconsumer.h"
 #include "consumers/rediskeyeventsconsumer.h"
-#include "producers/producerfilter.h"
+#include "filters/producerfilter.h"
 #include "producers/sqlarchiveproducer.h"
 #include "producers/redisstreamproducer.h"
 #include "producers/rediscacheproducer.h"

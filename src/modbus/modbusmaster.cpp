@@ -15,10 +15,6 @@ Master::Master(const Settings::ModbusMaster &settings, QThread *thread) :
     m_reconnectTimer(new QTimer(this)),
     m_readTimer(new QTimer(this))
 {
-    if (settings.log_jsons) {
-        addInterceptor(new LoggingInterceptor(*settings.log_jsons));
-    }
-
     m_reconnectTimer->setInterval(settings.reconnect_timeout_ms);
     m_reconnectTimer->callOnTimeout(this, &Master::connectDevice);
     m_reconnectTimer->setSingleShot(true);

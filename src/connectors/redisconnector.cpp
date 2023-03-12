@@ -24,9 +24,6 @@ Connector::Connector(const Settings::RedisConnector &settings, QThread *thread) 
     m_reconnectTimer->setInterval(m_config.reconnect_delay);
     m_commandTimeout->setInterval(m_config.command_timeout);
     enablePingKeepalive();
-    if (settings.log_jsons) {
-        addInterceptor(new Radapter::LoggingInterceptor(*settings.log_jsons));
-    }
 }
 
 Connector::~Connector()

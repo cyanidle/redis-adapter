@@ -1,17 +1,15 @@
 #ifndef WORKERMSG_H
 #define WORKERMSG_H
 
-#include "jsondict/jsondict.hpp"
 #include <QObject>
+#include "jsondict/jsondict.hpp"
 #include "broker/commands/basiccommands.h"
 #include "broker/replies/private/reply.h"
-#include <QDateTime>
 
 namespace Radapter {
 class Broker;
 class Worker;
 class WorkerProxy;
-
 class RADAPTER_SHARED_SRC WorkerMsg : public JsonDict {
     Q_GADGET
 public:
@@ -109,8 +107,6 @@ private:
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Radapter::WorkerMsg::Flags)
 Q_DECLARE_METATYPE(Radapter::WorkerMsg);
-Q_DECLARE_METATYPE(Radapter::WorkerMsg::MsgFlag)
-Q_DECLARE_METATYPE(Radapter::WorkerMsg::ServiceData)
 Q_DECLARE_TYPEINFO(Radapter::WorkerMsg::ServiceData, Q_PRIMITIVE_TYPE);
 Q_DECLARE_TYPEINFO(Radapter::WorkerMsg::MsgFlag, Q_PRIMITIVE_TYPE);
 Q_DECLARE_TYPEINFO(Radapter::WorkerMsg, Q_MOVABLE_TYPE);

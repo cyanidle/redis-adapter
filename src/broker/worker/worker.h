@@ -6,15 +6,14 @@
 #include <QHash>
 #include <QThread>
 #include "workermsg.h"
-#include "workerproxy.h"
-#include "broker/interceptors/interceptor.h"
-#include "workersettings.h"
-#include "broker/events/brokerevent.h"
 #include "workerdebug.h"
 
 namespace Radapter {
 class Broker;
-
+class WorkerProxy;
+class InterceptorBase;
+class BrokerEvent;
+class WorkerSettings;
 //! You can override onCommand(cosnt WorkerMsg &) / onReply(cosnt WorkerMsg &) / onMsg(cosnt WorkerMsg &)
 class RADAPTER_SHARED_SRC Worker : public QObject {
     Q_OBJECT

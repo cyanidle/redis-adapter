@@ -521,10 +521,10 @@ bool JsonDict::contains(const JsonDict &src) const
 
 inline qint64 JsonDict::toIndex(const QString &key)
 {
-    static QRegExp checker{"^\\[[0-9]*\\]$"};
+    bool isBounded = key.size() >= 3 && key.front() == '[' && key.back() == ']';
     bool ok;
     auto result = key.midRef(1, key.length() - 2).toLong(&ok);
-    return ok && checker.exactMatch(key) ? result : -1;
+    return ok && isBounded ? result : -1;
 }
 
 const QVariant *JsonDict::recurseTo(const QStringList &fullKey, int ignoreLastKeys) const

@@ -2,8 +2,11 @@
 #include "radapterlogging.h"
 #include "broker/broker.h"
 #include <QThread>
-#include "broker/interceptors/namespacefilter.h"
+#include "broker/interceptors/interceptor.h"
+#include "workersettings.h"
 #include "radapterlogging.h"
+#include "workerproxy.h"
+#include "broker/events/brokerevent.h"
 
 using namespace Radapter;
 

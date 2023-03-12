@@ -143,7 +143,6 @@ namespace Settings {
         SERIAL_FIELD(quint32, responce_time, 150)
         SERIAL_FIELD(quint32, retries, 3)
         SERIAL_FIELD(PackingMode, endianess, DEFAULT)
-        SERIAL_FIELD_PTR(Radapter::LoggingInterceptorSettings, log_jsons, DEFAULT)
 
         ModbusDevice device{};
         Registers registers{};
