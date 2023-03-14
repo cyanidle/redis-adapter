@@ -85,8 +85,9 @@ namespace Settings {
         typedef QMap<QString, QMetaType::Type> typeMap;
         Q_GADGET
         IS_SERIALIZABLE
-        SERIAL_FIELD_MAPPED(QModbusDataUnit::RegisterType, table, stringToTable())
         SERIAL_FIELD(int, index)
+        SERIAL_FIELD(bool, resetting, false)
+        SERIAL_FIELD_MAPPED(QModbusDataUnit::RegisterType, table, stringToTable())
         SERIAL_FIELD_MAPPED(QMetaType::Type, type, stringToType(), QMetaType::UShort)
     protected:
         static typeMap stringToType() {

@@ -3,6 +3,7 @@
 #include "worker.h"
 #include "broker/broker.h"
 #include "broker/commands/basiccommands.h"
+#include "templates/algorithms.hpp"
 #include "broker/replies/private/reply.h"
 
 using namespace Radapter;
@@ -94,15 +95,23 @@ JsonDict WorkerMsg::printServiceData() const
 
 QString WorkerMsg::printFlatData() const
 {
-    QString result;
+    QStringList result;
     auto flat = flatten(":");
-    for (auto keyVal = flat.constBegin(); keyVal != flat.constEnd(); ++keyVal) {
-        result.append("\n# '");
-        result.append(keyVal.key());
-        result.append("': '");
-        result.append(keyVal.value().value<QString>() + ';');
+    auto biggestSize = 0;
+    for (auto key = flat.keyBegin(); key != flat.keyEnd(); ++key) {
+        auto sz = key->size();
+        if (sz > biggestSize) {
+            biggestSize = sz;
+        }
     }
-    return result;
+    for (auto keyVal = flat.constBegin(); keyVal != flat.constEnd(); ++keyVal) {
+        auto toAppend = keyVal.key();
+        toAppend.append(":");
+        toAppend.resize(biggestSize + 3, ' ');
+        toAppend.append(keyVal.value().value<QString>());
+        result.append(toAppend);
+    }
+    return "\n# " + result.join("\n# ");
 }
 
 QString WorkerMsg::printFullDebug() const
