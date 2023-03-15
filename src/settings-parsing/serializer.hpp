@@ -9,6 +9,8 @@
 #include "templates/metaprogramming.hpp"
 #include "private/global.h"
 #include "radapterlogging.h"
+#include "qmaputils.hpp"
+
 namespace Serializer {
 
 struct Serializable
@@ -106,9 +108,6 @@ using SerializableQObject = QObjectMixin<Serializable>;
 
 template<class T>   T fromQMap(const QVariantMap &src);
 template<class T>   QList<T> fromQList(const QVariantList &src);
-template<class T>   QMap<QString, T> convertQMap(const QVariantMap &src);
-template<class T>   QList<T> convertQList(const QVariantList &src);
-template<class T>   using QStringMap = QMap<QString, T>;
 
 }
 Q_DECLARE_METATYPE(Serializer::Serializable*)
@@ -222,6 +221,7 @@ struct Implementations {
     template <typename T, typename Ret = void>
     using is_shared_ptr_t = typename std::enable_if<is_shared_ptr<T>::value &&
                                                     is_nested<typename T::Type>::value, Ret>::type;
+
 
     template<typename Wrapped, typename Decay>
     static QVariant map(const Decay& val, is_nested_t<Decay, int>* = 0) {
@@ -584,7 +584,7 @@ private: \
                       "Must Not Inherit QObject!"); \
         static_assert(!std::is_base_of<QObject, type>(), \
                       "User IS_SERIALIZABLE_QOBJECT for QObjects!"); \
-        static_assert(Radapter::Private::has_QGadget_Macro<type>::Value, \
+        static_assert(Radapter::has_QGadget_Macro<type>::Value, \
                       "Must have Q_GADGET macro!"); \
 } \
     virtual const QMetaObject * metaObject() const override  { \
@@ -867,31 +867,6 @@ QList<T> fromQList(const QVariantList &src)
         T current{};
         current.deserialize(obj.toMap());
         result.append(current);
-    }
-    return result;
-}
-
-template<typename T>
-QMap<QString, T> convertQMap(const QVariantMap &src)
-{
-    static_assert(QMetaTypeId2<T>::Defined, "Convertion to non-registered type prohibited!");
-    QMap<QString, T> result;
-    for (auto iter = src.constBegin(); iter != src.constEnd(); ++iter) {
-        if (iter.value().canConvert<T>()) {
-            result.insert(iter.key(), iter.value().value<T>());
-        }
-    }
-    return result;
-}
-template<typename T>
-QList<T> convertQList(const QVariantList &src)
-{
-    static_assert(QMetaTypeId2<T>::Defined, "Convertion to non-registered type prohibited!");
-    QList<T> result;
-    for (auto iter = src.constBegin(); iter != src.constEnd(); ++iter) {
-        if (iter->canConvert<T>()) {
-            result.append(iter->value<T>());
-        }
     }
     return result;
 }

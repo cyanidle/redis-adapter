@@ -1,10 +1,10 @@
 SOURCES+= \
-	$$PWD/filereader.cpp \
+	$$PWD/dictreader.cpp \
 	$$PWD/serializablesettings.cpp 
 
 HEADERS+= \
-	$$PWD/cpptoml.h \
-	$$PWD/filereader.h \
+	$$PWD/dictreader.h \
+	$$PWD/qmaputils.hpp \
 	$$PWD/serializablesettings.h \
 	$$PWD/serializer.hpp 
 

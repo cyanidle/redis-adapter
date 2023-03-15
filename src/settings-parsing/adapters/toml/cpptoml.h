@@ -19,6 +19,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <limits>
 #include <unordered_map>
 #include <vector>
 

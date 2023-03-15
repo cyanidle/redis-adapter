@@ -4,8 +4,44 @@
 #include <functional>
 #include <type_traits>
 #include <tuple>
+#include <QMetaObject>
 
 namespace Radapter {
+
+template<typename T> struct has_QGadget_Macro {
+    template <typename U>
+    static char test(void (U::*)());
+    static int test(void (T::*)());
+    enum { Value =  sizeof(test(&T::qt_check_for_QGADGET_macro)) == sizeof(int) };
+};
+
+template<typename T> struct has_QObject_Macro {
+    template <typename U>
+    static char test(int (U::*)(QMetaObject::Call, int, void **));
+    static int test(int (T::*)(QMetaObject::Call, int, void **));
+    enum { Value =  sizeof(test(&T::qt_metacall)) == sizeof(int) };
+};
+
+
+template<typename T> struct has_MetaObject_Func {
+    template <typename U>
+    static char test(const QMetaObject * (U::*)() const);
+    static int test(const QMetaObject * (T::*)() const);
+    enum { Value =  sizeof(test(&T::metaObject)) == sizeof(int) };
+};
+
+template<typename T>
+struct Gadget_With_MetaObj {
+    enum { Value = has_MetaObject_Func<T>::Value &&
+                   has_QGadget_Macro<T>::Value};
+};
+
+template <typename T>
+using stripped_this = typename std::decay<typename std::remove_pointer<T>::type>::type;
+
+template<class... T>
+void Unused(T...) noexcept {};
+
 template <typename Container>
 using decayed_val_t = typename std::decay<typename std::remove_pointer<typename Container::iterator::value_type>::type>::type;
 

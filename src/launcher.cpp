@@ -22,6 +22,8 @@
 #include "websocket/websocketclient.h"
 #include "raw_sockets/udpproducer.h"
 #include "raw_sockets/udpconsumer.h"
+#include "settings-parsing/adapters/toml.hpp"
+#include "settings-parsing/adapters/yaml.hpp"
 #ifdef Q_OS_UNIX
 #include "utils/resourcemonitor.h"
 #endif
@@ -33,9 +35,8 @@ using namespace Radapter;
 Launcher::Launcher(QObject *parent) :
     QObject(parent),
     m_workers(),
-    m_filereader(new Settings::FileReader("conf/config.toml", this))
+    m_reader()
 {
-    m_filereader->initParsingMap();
     parseCommandlineArgs();
     m_parser.setApplicationDescription("Redis Adapter");
     preInit();
@@ -61,30 +62,30 @@ void Launcher::preInit()
     initLogging();
     qSetMessagePattern(RADAPTER_CUSTOM_MESSAGE_PATTERN);
     try {
-        setTomlPath("bindings.toml");
-        auto jsonBindings = JsonBinding::parseMap(m_filereader->deserialise().toMap());
+        setSettingsPath("bindings");
+        auto jsonBindings = JsonBinding::parseMap(readSettings().toMap());
         BindingsProvider::init(jsonBindings);
         reDebug() << "config: Json Bindings count: " << jsonBindings.size();
-    } catch (std::invalid_argument &e) {}
+    } catch (std::runtime_error &e) {}
     try {
-        setTomlPath("redis.toml");
-        auto redisServers = parseTomlArray<Settings::RedisServer>("redis.server");
+        setSettingsPath("redis");
+        auto redisServers = parseArray<Settings::RedisServer>("redis.server");
         reDebug() << "config: RedisServer count: " << redisServers.size();
-    } catch (std::invalid_argument &e) {}
+    } catch (std::runtime_error &e) {}
     try {
-        setTomlPath("sql.toml");
-        auto sqlClientsInfo = parseTomlArray<Settings::SqlClientInfo>("mysql.client");
+        setSettingsPath("sql");
+        auto sqlClientsInfo = parseArray<Settings::SqlClientInfo>("mysql.client");
         reDebug() << "config: Sql clients count: " << sqlClientsInfo.size();
-    } catch (std::invalid_argument &e) {}
+    } catch (std::runtime_error &e) {}
     try {
-        setTomlPath("modbus.toml");
-        auto mbDevices = parseTomlArray<Settings::ModbusDevice>("modbus.devices");
+        setSettingsPath("modbus");
+        auto mbDevices = parseArray<Settings::ModbusDevice>("modbus.devices");
         reDebug() << "config: Modbus devices count: " << mbDevices.size();
-    } catch (std::invalid_argument &e) {}
+    } catch (std::runtime_error &e) {}
     try {
-        setTomlPath("registers.toml");
-        Settings::parseRegisters(readToml());
-    } catch (std::invalid_argument &e) {}
+        setSettingsPath("registers");
+        Settings::parseRegisters(readSettings());
+    } catch (std::runtime_error &e) {}
 }
 
 
@@ -158,26 +159,26 @@ void Launcher::setLoggingFilters(const QMap<QString, bool> &loggers)
 void Launcher::preInitFilters()
 {
     try {
-        setTomlPath("filters.toml");
-    }   catch (std::invalid_argument &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "filters.toml" << ")" << " No Filters Found!";
+        setSettingsPath("filters");
+    }   catch (std::runtime_error &e) {
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "filters" << ")" << " No Filters Found!";
         return;
     }
-    auto rawFilters = readToml("filters").toMap();
+    auto rawFilters = readSettings("filters").toMap();
     for (auto iter = rawFilters.constBegin(); iter != rawFilters.constEnd(); ++iter) {
-        Settings::Filters::table().insert(iter.key(), Serializer::convertQMap<double>(iter.value().toMap()));
+        Settings::Filters::table().insert(iter.key(), convertQMap<double>(iter.value().toMap()));
     }
 }
 
 void Launcher::initLogging()
 {
     try {
-        setTomlPath("config.toml");
-        auto rawMap = m_filereader->deserialise("log_debug").toMap();
+        setSettingsPath("config");
+        auto rawMap = readSettings("log_debug").toMap();
         auto flattened = JsonDict{rawMap}.flatten(".");
-        setLoggingFilters(Serializer::convertQMap<bool>(flattened));
-    } catch (std::invalid_argument &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "config.toml" << ")" << " No logging settings found!";
+        setLoggingFilters(convertQMap<bool>(flattened));
+    } catch (std::runtime_error &e) {
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "config" << ")" << " No logging settings found!";
     }
 }
 
@@ -185,8 +186,8 @@ void Launcher::initGui()
 {
 #ifdef RADAPTER_GUI
     try {
-        setTomlPath("gui.toml");
-        auto guiSettings = parseTomlObj<GuiSettings>("gui");
+        setSettingsPath("gui");
+        auto guiSettings = parseObj<GuiSettings>("gui");
         if (!guiSettings.enabled) {
             reWarn() << "Gui disabled!";
             return;
@@ -196,8 +197,8 @@ void Launcher::initGui()
         ui->moveToThread(guiThread);
         connect(this, &Launcher::started, this, [guiThread](){guiThread->start();});
     }
-    catch (std::invalid_argument &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "gui.toml" << ")" << " No Gui settings found!";
+    catch (std::runtime_error &e) {
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "gui" << ")" << " No Gui settings found!";
     }
 #endif
 }
@@ -205,41 +206,41 @@ void Launcher::initGui()
 void Launcher::initLocalization()
 {
     try {
-        setTomlPath("config.toml");
-        auto localizationInfo = parseTomlObj<Settings::LocalizationInfo>("localization");
+        setSettingsPath("config");
+        auto localizationInfo = parseObj<Settings::LocalizationInfo>("localization");
         Localization::instance()->applyInfo(localizationInfo);
         LocalStorage::init(this);
-    } catch (std::invalid_argument &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "config.toml" << ")" << " No localization settings found!";
+    } catch (std::runtime_error &e) {
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "config" << ")" << " No localization settings found!";
     }
 }
 
 void Launcher::initMocks()
 {
     try {
-        setTomlPath("mocks.toml");
-        for (const auto &mockSettings : parseTomlArray<Radapter::MockWorkerSettings>("mock")) {
+        setSettingsPath("mocks");
+        for (const auto &mockSettings : parseArray<Radapter::MockWorkerSettings>("mock")) {
             addWorker(new Radapter::MockWorker(mockSettings, new QThread(this)));
         }
-    } catch (std::invalid_argument &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "mocks.toml" << ")" << " Could not load config for Mocks. Disabling...";
+    } catch (std::runtime_error &e) {
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "mocks" << ")" << " Could not load config for Mocks. Disabling...";
     }
 }
 
 void Launcher::initPipelines()
 {
     try {
-        setTomlPath("config.toml");
-    } catch (std::invalid_argument &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "config.toml" << ")" << " No Pipeline settings found!";
+        setSettingsPath("config");
+    } catch (std::runtime_error &e) {
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "config" << ")" << " No Pipeline settings found!";
         return;
     }
-    const auto parsed = parseTomlObj<Settings::Pipelines>();
+    const auto parsed = parseObj<Settings::Pipelines>();
     static QRegExp splitter("[<>]");
     for (const auto &pipe: parsed.pipelines) {
         auto split = pipe.split(splitter);
         if (split.size() < 2) {
-            throw std::invalid_argument("Pipeline length must be more than 2!");
+            throw std::runtime_error("Pipeline length must be more than 2!");
         }
         auto currentPos = 0;
         auto lastWorker = split.takeFirst().simplified();
@@ -258,38 +259,38 @@ void Launcher::initPipelines()
 
 void Launcher::initSockets()
 {
-    try {setTomlPath("sockets.toml");}
-    catch (std::invalid_argument &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "sockets.toml" << ")" << " Could not load config for Sockets. Disabling...";
+    try {setSettingsPath("sockets");}
+    catch (std::runtime_error &e) {
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "sockets" << ")" << " Could not load config for Sockets. Disabling...";
         return;
     }
-    for (const auto &udp : parseTomlArray<Udp::ProducerSettings>("socket.udp.producer")) {
+    for (const auto &udp : parseArray<Udp::ProducerSettings>("socket.udp.producer")) {
         addWorker(new Udp::Producer(udp, new QThread(this)));
     }
-    for (const auto &udp : parseTomlArray<Udp::ConsumerSettings>("socket.udp.consumer")) {
+    for (const auto &udp : parseArray<Udp::ConsumerSettings>("socket.udp.consumer")) {
         addWorker(new Udp::Consumer(udp, new QThread(this)));
     }
 }
 
 void Launcher::initRedis()
 {
-    try {setTomlPath("redis.toml");} catch (std::invalid_argument &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "redis.toml" << ")" << " Could not load config for Redis. Disabling...";
+    try {setSettingsPath("redis");} catch (std::runtime_error &e) {
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "redis" << ")" << " Could not load config for Redis. Disabling...";
         return;
     }
-    for (auto &streamConsumer : parseTomlArray<Settings::RedisStreamConsumer>("redis.stream.consumer")) {
+    for (auto &streamConsumer : parseArray<Settings::RedisStreamConsumer>("redis.stream.consumer")) {
         addWorker(new Redis::StreamConsumer(streamConsumer, new QThread(this)));
     }
-    for (auto &streamProducer : parseTomlArray<Settings::RedisStreamProducer>("redis.stream.producer")) {
+    for (auto &streamProducer : parseArray<Settings::RedisStreamProducer>("redis.stream.producer")) {
         addWorker(new Redis::StreamProducer(streamProducer, new QThread(this)));
     }
-    for (auto &cacheConsumer : parseTomlArray<Settings::RedisCacheConsumer>("redis.cache.consumer")) {
+    for (auto &cacheConsumer : parseArray<Settings::RedisCacheConsumer>("redis.cache.consumer")) {
         addWorker(new Redis::CacheConsumer(cacheConsumer, new QThread(this)));
     }
-    for (auto &cacheProducer : parseTomlArray<Settings::RedisCacheProducer>("redis.cache.producer")) {
+    for (auto &cacheProducer : parseArray<Settings::RedisCacheProducer>("redis.cache.producer")) {
         addWorker(new Redis::CacheProducer(cacheProducer, new QThread(this)));
     }
-    for (auto &keyEventConsumer : parseTomlArray<Settings::RedisKeyEventSubscriber>("redis.keyevents.subscriber")) {
+    for (auto &keyEventConsumer : parseArray<Settings::RedisKeyEventSubscriber>("redis.keyevents.subscriber")) {
         addWorker(new Redis::KeyEventsConsumer(keyEventConsumer, new QThread(this)));
     }
     //auto redisStreamGroupConsumers = readFromToml<Settings::RedisStreamGroupConsumer>("redis.stream.group_consumer");
@@ -298,15 +299,15 @@ void Launcher::initRedis()
 void Launcher::initModbus()
 {
     try {
-        setTomlPath("modbus.toml");
-    } catch (std::invalid_argument &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "modbus.toml" << ")" << " Could not load config for Modbus. Disabling...";
+        setSettingsPath("modbus");
+    } catch (std::runtime_error &e) {
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "modbus" << ")" << " Could not load config for Modbus. Disabling...";
         return;
     }
-    for (const auto& slaveInfo : parseTomlArray<Settings::ModbusSlave>("modbus.slave")) {
+    for (const auto& slaveInfo : parseArray<Settings::ModbusSlave>("modbus.slave")) {
         addWorker(new Modbus::Slave(slaveInfo, new QThread(this)));
     }
-    for (const auto& masterInfo : parseTomlArray<Settings::ModbusMaster>("modbus.master")) {
+    for (const auto& masterInfo : parseArray<Settings::ModbusMaster>("modbus.master")) {
         addWorker(new Modbus::Master(masterInfo, new QThread(this)));
     }
 }
@@ -314,15 +315,15 @@ void Launcher::initModbus()
 void Launcher::initWebsockets()
 {
     try {
-        setTomlPath("websockets.toml");
-    } catch (std::invalid_argument &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "websockets.toml" << ")" << " Could not load config for websockets. Disabling...";
+        setSettingsPath("websockets");
+    } catch (std::runtime_error &e) {
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "websockets" << ")" << " Could not load config for websockets. Disabling...";
         return;
     }
-    for (auto &wsClient : parseTomlArray<Settings::WebsocketClientInfo>("websocket.client")) {
+    for (auto &wsClient : parseArray<Settings::WebsocketClientInfo>("websocket.client")) {
         addWorker(new Websocket::Client(wsClient, new QThread(this)));
     }
-    auto websocketServer = parseTomlObj<Settings::WebsocketServerInfo>("websocket.server");
+    auto websocketServer = parseObj<Settings::WebsocketServerInfo>("websocket.server");
     if (websocketServer.isValid()) {
         addWorker(new Websocket::ServerConnector(websocketServer, new QThread(this)));
     }
@@ -331,12 +332,12 @@ void Launcher::initWebsockets()
 void Launcher::initSql()
 {
     try {
-        setTomlPath("sql.toml");
-    } catch (std::invalid_argument &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "sql.toml" << ")" << " Could not load config for sql. Disabling...";
+        setSettingsPath("sql");
+    } catch (std::runtime_error &e) {
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "sql" << ")" << " Could not load config for sql. Disabling...";
         return;
     }
-    for (auto &archive : parseTomlArray<Settings::SqlStorageInfo>("mysql.storage.archive")) {
+    for (auto &archive : parseArray<Settings::SqlStorageInfo>("mysql.storage.archive")) {
         addWorker(new MySql::ArchiveProducer(archive, new QThread(this)));
     }
 }
@@ -353,10 +354,20 @@ void Launcher::parseCommandlineArgs()
     m_parser.addVersionOption();
     m_parser.addOptions({
                       {{"d", "directory"},
-                        "Config will be read from <directory>", "directory", "conf"}
+                        "Config will be read from <directory>", "directory", "conf"},
+                      {{"f", "format"},
+                        "Config will be read from yaml/toml files", "format", "yaml"}
                       });
     m_parser.process(*QCoreApplication::instance());
     m_configsDir = m_parser.value("directory");
+    m_configsFormat = m_parser.value("format");
+    if (m_configsFormat == "toml") {
+        m_reader = new Settings::TomlReader("conf/config", this);
+    } else if (m_configsFormat == "yaml") {
+        m_reader = new Settings::YamlReader("conf/config", this);
+    } else {
+        throw std::runtime_error("Invalid configs format: " + m_configsFormat.toStdString() + "; Can be (toml/yaml)");
+    }
 }
 
 Broker *Launcher::broker() const
@@ -364,12 +375,12 @@ Broker *Launcher::broker() const
     return Broker::instance();
 }
 
-QVariant Launcher::readToml(const QString &tomlPath) {
-    return m_filereader->deserialise(tomlPath);
+QVariant Launcher::readSettings(const QString &tomlPath) {
+    return m_reader->get(tomlPath);
 }
 
-void Launcher::setTomlPath(const QString &tomlPath) {
-    m_filereader->setPath(m_configsDir + "/" + tomlPath);
+void Launcher::setSettingsPath(const QString &tomlPath) {
+    m_reader->setPath(m_configsDir + "/" + tomlPath);
 }
 
 void Launcher::init()

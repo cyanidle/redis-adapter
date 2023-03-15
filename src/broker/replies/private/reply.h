@@ -5,6 +5,7 @@
 #include <QSharedPointer>
 #include <limits>
 #include "private/commandreplymacros.h"
+#include "templates/metaprogramming.hpp"
 
 namespace Radapter {
 
@@ -87,7 +88,7 @@ WantedReply reply_cast(Reply *reply) {
 
 template <typename Target, Reply::Type builtin = Reply::Type::None>
 struct ReplyInfoSpecialized {
-    static_assert(Radapter::Private::Gadget_With_MetaObj<Target>::Value, "Place in class body RADAPTER_REPLY");
+    static_assert(Radapter::Gadget_With_MetaObj<Target>::Value, "Place in class body RADAPTER_REPLY");
     static Reply::Type type() {
         static quint32 type{IsBuiltIn ? builtin : Reply::generateUserType()};;
         return static_cast<Reply::Type>(type);

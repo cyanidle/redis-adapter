@@ -1,4 +1,4 @@
-
 INCLUDEPATH += \
     $$PWD \
-    $$PWD/googletest
+    $$PWD/googletest \
+    $$PWD/yaml-cpp/include

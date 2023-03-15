@@ -127,7 +127,7 @@ struct has_wanted_reply<T, std::void_t<
 
 template <typename Target, Command::Type builtin = Command::Type::None>
 struct CommandInfoSpecialized {
-    static_assert(has_wanted_reply<Target>::value && Radapter::Private::Gadget_With_MetaObj<Target>::Value,
+    static_assert(has_wanted_reply<Target>::value && Radapter::Gadget_With_MetaObj<Target>::Value,
         "Place in class body RADAPTER_COMMAND_WANTS(<wanted reply>) in public: section");
     using WantedReply = typename Target::WantedReply;
     static Command::Type type() {

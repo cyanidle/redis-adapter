@@ -3,6 +3,9 @@
 
 #include "global.h"
 
+#define GADGET_BODY \
+    virtual const QMetaObject *metaObject() const override {return &this->staticMetaObject;};
+
 #define RADAPTER_DECLARE_COMMAND(command) \
     namespace Radapter{ \
     template<> \
@@ -42,14 +45,14 @@
         return &wanted_reply::staticMetaObject; \
     } \
     virtual Radapter::Command* newCopy() const override { \
-        auto copy = new Radapter::Private::stripped_this<decltype(this)>(*this); \
+        auto copy = new Radapter::stripped_this<decltype(this)>(*this); \
         return copy;\
     }
 
 #define RADAPTER_REPLY \
     GADGET_BODY \
     virtual Radapter::Reply* newCopy() const override { \
-        auto copy = new Radapter::Private::stripped_this<decltype(this)>(*this); \
+        auto copy = new Radapter::stripped_this<decltype(this)>(*this); \
         return copy;\
     }
 

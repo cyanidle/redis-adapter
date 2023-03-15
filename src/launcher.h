@@ -3,7 +3,7 @@
 
 #include <QCommandLineParser>
 #include "settings/settings.h"
-#include "settings-parsing/filereader.h"
+#include "settings-parsing/dictreader.h"
 #include "broker/worker/worker.h"
 #include <QObject>
 
@@ -42,20 +42,21 @@ private:
 
     Broker* broker() const;
     template <typename T>
-    QList<T> parseTomlArray(const QString &tomlPath = "");
+    QList<T> parseArray(const QString &tomlPath = "");
     template <typename T>
-    T parseTomlObj(const QString &tomlPath = "", bool mustHave = false);
-    QVariant readToml(const QString &tomlPath = "");
-    void setTomlPath(const QString &tomlPath);
+    T parseObj(const QString &tomlPath = "", bool mustHave = false);
+    QVariant readSettings(const QString &tomlPath = "");
+    void setSettingsPath(const QString &tomlPath);
     QHash<Worker*, QSet<InterceptorBase*>> m_workers;
-    Settings::FileReader* m_filereader;
+    Settings::Reader* m_reader;
     QString m_configsDir{"conf"};
+    QString m_configsFormat{"toml"};
     QCommandLineParser m_parser{};
 };
 
 template <typename T>
-QList<T> Launcher::parseTomlArray(const QString &tomlPath) {
-    auto result = readToml(tomlPath);
+QList<T> Launcher::parseArray(const QString &tomlPath) {
+    auto result = readSettings(tomlPath);
     if (result.isValid() && !result.canConvert<QVariantList>()) {
         throw std::runtime_error("Expected List from: " + tomlPath.toStdString());
     }
@@ -65,12 +66,12 @@ QList<T> Launcher::parseTomlArray(const QString &tomlPath) {
         throw std::runtime_error(QString(e.what()).replace(ROOT_PREFIX, tomlPath).toStdString() +
                                  std::string("; While Parsing List --> [[") +
                                  tomlPath.toStdString() + "]]; In --> " +
-                                 m_filereader->filePath().toStdString());
+                                 m_reader->path().toStdString());
     }
 }
 template <typename T>
-T Launcher::parseTomlObj(const QString &tomlPath, bool mustHave) {
-    auto result = readToml(tomlPath);
+T Launcher::parseObj(const QString &tomlPath, bool mustHave) {
+    auto result = readSettings(tomlPath);
     if (result.isValid() && !result.canConvert<QVariantMap>()) {
         throw std::runtime_error("Expected Map from: " + tomlPath.toStdString());
     } else if ((!result.isValid() || !result.canConvert<QVariantMap>()) && !mustHave) {
@@ -82,7 +83,7 @@ T Launcher::parseTomlObj(const QString &tomlPath, bool mustHave) {
         throw std::runtime_error(QString(e.what()).replace(ROOT_PREFIX, tomlPath).toStdString() +
                                  std::string("; While Parsing Object --> [") +
                                  tomlPath.toStdString() + "]; In --> " +
-                                 m_filereader->filePath().toStdString());
+                                 m_reader->path().toStdString());
     }
 }
 
