@@ -1,7 +1,5 @@
 SOURCES+= \
-	$$PWD/rediscachecontext.cpp 
-
+   $$PWD/rediscachecontext.cpp
 HEADERS+= \
-	$$PWD/contextmanager.h \
-	$$PWD/rediscachecontext.h 
-
+   $$PWD/contextmanager.h \
+   $$PWD/rediscachecontext.h

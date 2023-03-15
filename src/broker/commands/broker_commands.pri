@@ -1,6 +1,6 @@
 SOURCES+= \
-	$$PWD/basiccommands.cpp 
-
+   $$PWD/basiccommands.cpp
 HEADERS+= \
-	$$PWD/basiccommands.h 
+   $$PWD/basiccommands.h
 
+include($$PWD/private/broker_commands_private.pri)

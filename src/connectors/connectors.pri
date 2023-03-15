@@ -1,10 +1,8 @@
 SOURCES+= \
-	$$PWD/mysqlconnector.cpp \
-	$$PWD/redisconnector.cpp \
-	$$PWD/websocketserverconnector.cpp 
-
+   $$PWD/websocketserverconnector.cpp \
+   $$PWD/mysqlconnector.cpp \
+   $$PWD/redisconnector.cpp
 HEADERS+= \
-	$$PWD/mysqlconnector.h \
-	$$PWD/redisconnector.h \
-	$$PWD/websocketserverconnector.h 
-
+   $$PWD/redisconnector.h \
+   $$PWD/mysqlconnector.h \
+   $$PWD/websocketserverconnector.h

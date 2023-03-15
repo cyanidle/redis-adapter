@@ -1,6 +1,4 @@
 SOURCES+= \
-	$$PWD/mysqlclient.cpp 
-
+   $$PWD/mysqlclient.cpp
 HEADERS+= \
-	$$PWD/mysqlclient.h 
-
+   $$PWD/mysqlclient.h

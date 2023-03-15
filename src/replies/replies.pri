@@ -1,6 +1,4 @@
 SOURCES+= \
-	$$PWD/redisreplies.cpp 
-
+   $$PWD/redisreplies.cpp
 HEADERS+= \
-	$$PWD/redisreplies.h 
-
+   $$PWD/redisreplies.h

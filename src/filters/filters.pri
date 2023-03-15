@@ -1,8 +1,6 @@
 SOURCES+= \
-	$$PWD/namespacefilter.cpp \
-	$$PWD/producerfilter.cpp 
-
+   $$PWD/producerfilter.cpp \
+   $$PWD/namespacefilter.cpp
 HEADERS+= \
-	$$PWD/namespacefilter.h \
-	$$PWD/producerfilter.h 
-
+   $$PWD/producerfilter.h \
+   $$PWD/namespacefilter.h

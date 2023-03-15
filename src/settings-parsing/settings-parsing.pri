@@ -1,10 +1,10 @@
 SOURCES+= \
-	$$PWD/dictreader.cpp \
-	$$PWD/serializablesettings.cpp 
-
+   $$PWD/serializablesettings.cpp \
+   $$PWD/dictreader.cpp
 HEADERS+= \
-	$$PWD/dictreader.h \
-	$$PWD/qmaputils.hpp \
-	$$PWD/serializablesettings.h \
-	$$PWD/serializer.hpp 
+   $$PWD/qmaputils.hpp \
+   $$PWD/serializer.hpp \
+   $$PWD/serializablesettings.h \
+   $$PWD/dictreader.h
 
+include($$PWD/adapters/settings-parsing_adapters.pri)

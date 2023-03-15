@@ -37,6 +37,7 @@ Launcher::Launcher(QObject *parent) :
     m_workers(),
     m_reader()
 {
+    qSetMessagePattern(RADAPTER_CUSTOM_MESSAGE_PATTERN);
     parseCommandlineArgs();
     m_parser.setApplicationDescription("Redis Adapter");
     preInit();
@@ -60,7 +61,6 @@ void Launcher::addWorker(Worker* worker, QSet<InterceptorBase*> interceptors)
 void Launcher::preInit()
 {
     initLogging();
-    qSetMessagePattern(RADAPTER_CUSTOM_MESSAGE_PATTERN);
     try {
         setSettingsPath("bindings");
         auto jsonBindings = JsonBinding::parseMap(readSettings().toMap());
@@ -161,7 +161,7 @@ void Launcher::preInitFilters()
     try {
         setSettingsPath("filters");
     }   catch (std::runtime_error &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "filters" << ")" << " No Filters Found!";
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "filters" << "." + m_configsFormat << ")" << " No Filters Found!";
         return;
     }
     auto rawFilters = readSettings("filters").toMap();
@@ -178,7 +178,7 @@ void Launcher::initLogging()
         auto flattened = JsonDict{rawMap}.flatten(".");
         setLoggingFilters(convertQMap<bool>(flattened));
     } catch (std::runtime_error &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "config" << ")" << " No logging settings found!";
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "config" << "." + m_configsFormat << ")" << " No logging settings found!";
     }
 }
 
@@ -198,7 +198,7 @@ void Launcher::initGui()
         connect(this, &Launcher::started, this, [guiThread](){guiThread->start();});
     }
     catch (std::runtime_error &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "gui" << ")" << " No Gui settings found!";
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "gui" << "." + m_configsFormat << ")" << " No Gui settings found!";
     }
 #endif
 }
@@ -211,7 +211,7 @@ void Launcher::initLocalization()
         Localization::instance()->applyInfo(localizationInfo);
         LocalStorage::init(this);
     } catch (std::runtime_error &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "config" << ")" << " No localization settings found!";
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "config" << "." + m_configsFormat << ")" << " No localization settings found!";
     }
 }
 
@@ -223,7 +223,7 @@ void Launcher::initMocks()
             addWorker(new Radapter::MockWorker(mockSettings, new QThread(this)));
         }
     } catch (std::runtime_error &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "mocks" << ")" << " Could not load config for Mocks. Disabling...";
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "mocks" << "." + m_configsFormat << ")" << " Could not load config for Mocks. Disabling...";
     }
 }
 
@@ -232,7 +232,7 @@ void Launcher::initPipelines()
     try {
         setSettingsPath("config");
     } catch (std::runtime_error &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "config" << ")" << " No Pipeline settings found!";
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "config" << "." + m_configsFormat << ")" << " No Pipeline settings found!";
         return;
     }
     const auto parsed = parseObj<Settings::Pipelines>();
@@ -261,7 +261,7 @@ void Launcher::initSockets()
 {
     try {setSettingsPath("sockets");}
     catch (std::runtime_error &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "sockets" << ")" << " Could not load config for Sockets. Disabling...";
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "sockets" << "." + m_configsFormat << ")" << " Could not load config for Sockets. Disabling...";
         return;
     }
     for (const auto &udp : parseArray<Udp::ProducerSettings>("socket.udp.producer")) {
@@ -275,7 +275,7 @@ void Launcher::initSockets()
 void Launcher::initRedis()
 {
     try {setSettingsPath("redis");} catch (std::runtime_error &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "redis" << ")" << " Could not load config for Redis. Disabling...";
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "redis" << "." + m_configsFormat << ")" << " Could not load config for Redis. Disabling...";
         return;
     }
     for (auto &streamConsumer : parseArray<Settings::RedisStreamConsumer>("redis.stream.consumer")) {
@@ -301,7 +301,7 @@ void Launcher::initModbus()
     try {
         setSettingsPath("modbus");
     } catch (std::runtime_error &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "modbus" << ")" << " Could not load config for Modbus. Disabling...";
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "modbus" << "." + m_configsFormat << ")" << " Could not load config for Modbus. Disabling...";
         return;
     }
     for (const auto& slaveInfo : parseArray<Settings::ModbusSlave>("modbus.slave")) {
@@ -317,7 +317,7 @@ void Launcher::initWebsockets()
     try {
         setSettingsPath("websockets");
     } catch (std::runtime_error &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "websockets" << ")" << " Could not load config for websockets. Disabling...";
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "websockets" << "." + m_configsFormat << ")" << " Could not load config for websockets. Disabling...";
         return;
     }
     for (auto &wsClient : parseArray<Settings::WebsocketClientInfo>("websocket.client")) {
@@ -334,7 +334,7 @@ void Launcher::initSql()
     try {
         setSettingsPath("sql");
     } catch (std::runtime_error &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "sql" << ")" << " Could not load config for sql. Disabling...";
+        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "sql" << "." + m_configsFormat << ")" << " Could not load config for sql. Disabling...";
         return;
     }
     for (auto &archive : parseArray<Settings::SqlStorageInfo>("mysql.storage.archive")) {
@@ -354,9 +354,9 @@ void Launcher::parseCommandlineArgs()
     m_parser.addVersionOption();
     m_parser.addOptions({
                       {{"d", "directory"},
-                        "Config will be read from <directory>", "directory", "conf"},
+                        "Config will be read from <directory> (default: ./conf)", "directory", "conf"},
                       {{"f", "format"},
-                        "Config will be read from yaml/toml files", "format", "yaml"}
+                        "Config will be read from .<format> files (available: yaml, toml) (default: ./yaml)", "format", "yaml"}
                       });
     m_parser.process(*QCoreApplication::instance());
     m_configsDir = m_parser.value("directory");
@@ -368,6 +368,7 @@ void Launcher::parseCommandlineArgs()
     } else {
         throw std::runtime_error("Invalid configs format: " + m_configsFormat.toStdString() + "; Can be (toml/yaml)");
     }
+    settingsParsingWarn() << "Using parser:" << m_configsFormat;
 }
 
 Broker *Launcher::broker() const

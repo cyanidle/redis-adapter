@@ -1,6 +1,4 @@
 SOURCES+= \
-	$$PWD/rediscommands.cpp 
-
+   $$PWD/rediscommands.cpp
 HEADERS+= \
-	$$PWD/rediscommands.h 
-
+   $$PWD/rediscommands.h

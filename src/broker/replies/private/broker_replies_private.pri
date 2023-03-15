@@ -1,6 +1,4 @@
 SOURCES+= \
-	$$PWD/reply.cpp 
-
+   $$PWD/reply.cpp
 HEADERS+= \
-	$$PWD/reply.h 
-
+   $$PWD/reply.h

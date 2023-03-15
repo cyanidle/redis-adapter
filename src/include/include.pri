@@ -1,4 +1,4 @@
+SOURCES+=
 HEADERS+= \
-	$$PWD/redisconstants.h \
-	$$PWD/sqlkeyvaultfields.h 
-
+   $$PWD/redisconstants.h \
+   $$PWD/sqlkeyvaultfields.h

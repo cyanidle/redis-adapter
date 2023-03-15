@@ -1,6 +1,4 @@
 SOURCES+= \
-	$$PWD/channel.cpp 
-
+   $$PWD/channel.cpp
 HEADERS+= \
-	$$PWD/channel.h 
-
+   $$PWD/channel.h

@@ -1,3 +1,3 @@
+SOURCES+=
 HEADERS+= \
-	$$PWD/jsondict.hpp 
-
+   $$PWD/jsondict.hpp

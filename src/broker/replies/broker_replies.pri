@@ -1,6 +1,6 @@
 SOURCES+= \
-	$$PWD/basicreplies.cpp 
-
+   $$PWD/basicreplies.cpp
 HEADERS+= \
-	$$PWD/basicreplies.h 
+   $$PWD/basicreplies.h
 
+include($$PWD/private/broker_replies_private.pri)

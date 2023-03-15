@@ -1,7 +1,5 @@
 SOURCES+= \
-    $$PWD/yamlreader.cpp
-
+   $$PWD/yamlreader.cpp
 HEADERS+= \
-	$$PWD/yamlqttypesadapter.hpp  \
-	$$PWD/yamlreader.h
-
+   $$PWD/yamlqttypesadapter.hpp \
+   $$PWD/yamlreader.h

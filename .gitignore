@@ -43,3 +43,5 @@ redis-adapter
 !*.hpp
 !*.pri
 !*.pro
+
+**/__pycache__

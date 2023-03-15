@@ -1,10 +1,8 @@
 SOURCES+= \
-	$$PWD/modbusmaster.cpp \
-	$$PWD/modbusparsing.cpp \
-	$$PWD/modbusslave.cpp 
-
+   $$PWD/modbusmaster.cpp \
+   $$PWD/modbusparsing.cpp \
+   $$PWD/modbusslave.cpp
 HEADERS+= \
-	$$PWD/modbusmaster.h \
-	$$PWD/modbusparsing.h \
-	$$PWD/modbusslave.h 
-
+   $$PWD/modbusslave.h \
+   $$PWD/modbusmaster.h \
+   $$PWD/modbusparsing.h
