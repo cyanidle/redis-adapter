@@ -9,12 +9,13 @@ using namespace Radapter;
 MockWorker::MockWorker(const MockWorkerSettings &settings, QThread* thread) :
     Worker(settings, thread),
     m_file(new QFile(settings.json_file_path)),
-    m_mockTimer(new QTimer(this)),
+    m_mockTimer(),
     m_currentIndex()
 {
     if (settings.json_file_path.isEmpty()) {
         return;
     }
+    m_mockTimer = new QTimer(this);
     m_mockTimer->setInterval(settings.mock_timer_delay);
     connect(m_mockTimer, &QTimer::timeout, this, &MockWorker::onMock);
     if (!m_file->isOpen()) {
@@ -42,7 +43,9 @@ MockWorker::MockWorker(const MockWorkerSettings &settings, QThread* thread) :
 
 void MockWorker::onRun()
 {
-    m_mockTimer->start();
+    if (m_mockTimer) {
+        m_mockTimer->start();
+    }
     Worker::onRun();
 }
 

@@ -9,7 +9,7 @@ class RADAPTER_SHARED_SRC ResourceMonitor : public QObject
     Q_OBJECT
 #ifndef _MSC_VER
 public:
-    explicit ResourceMonitor(QObject *parent);
+    explicit ResourceMonitor(QObject *parent = nullptr);
 
 signals:
 

@@ -17,14 +17,14 @@ ResourceMonitor::ResourceMonitor(QObject *parent)
       m_lastUserTime{},
       m_lastSystemTime{}
 {
-    m_readStatsTimer = new QTimer(this);
-    m_readStatsTimer->setSingleShot(false);
-    m_readStatsTimer->setInterval(GET_USAGE_TIMEOUT_MS);
-    m_readStatsTimer->callOnTimeout(this, &ResourceMonitor::readStats);
 }
 
 void ResourceMonitor::run()
 {
+    m_readStatsTimer = new QTimer(this);
+    m_readStatsTimer->setSingleShot(false);
+    m_readStatsTimer->setInterval(GET_USAGE_TIMEOUT_MS);
+    m_readStatsTimer->callOnTimeout(this, &ResourceMonitor::readStats);
     m_readStatsTimer->start();
 }
 

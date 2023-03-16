@@ -325,7 +325,7 @@ void Launcher::run()
 {
 #ifdef Q_OS_UNIX
     auto resmonThr = new QThread(this);
-    auto resmon = new ResourceMonitor(this);
+    auto resmon = new ResourceMonitor();
     connect(resmonThr, &QThread::started, resmon, &ResourceMonitor::run);
     resmon->moveToThread(resmonThr);
     resmonThr->start(QThread::LowPriority);
