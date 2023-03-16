@@ -12,12 +12,8 @@ class RADAPTER_SHARED_SRC YamlReader : public DictReader
 {
     Q_OBJECT
 public:
-    YamlReader(QString path, QObject *parent);
-    QVariantMap parse() override;
-protected:
-    void onPathSet() override;
-
-    YAML::Node m_config;
+    YamlReader(const QString &dir, const QString &file, QObject *parent);
+    QVariant getAll() override;
 };
 
 }

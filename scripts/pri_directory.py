@@ -1,5 +1,8 @@
+from logging import getLogger
 from pathlib import Path
 from typing import List
+
+log = getLogger("sources-directory")
 
 class PriDirectory:
     def __init__(self, dir: Path, exc: List[str], is_root = False) -> None:
@@ -23,6 +26,7 @@ class PriDirectory:
             return self.dir.joinpath("/".join(self.dir.parts).replace("/", "_") + ".pri")
         return self.dir.joinpath("/".join(self.dir.parts[1:]).replace("/", "_") + ".pri")
     def fill_pri_file(self):
+        log.info(f"Filling {self.pri_file}...")
         with open(self.pri_file, "w") as file:
             file.truncate()
             file.write("SOURCES+=")

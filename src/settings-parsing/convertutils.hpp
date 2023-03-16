@@ -1,5 +1,5 @@
-#ifndef QMAPUTILS_HPP
-#define QMAPUTILS_HPP
+#ifndef CONVERTUTILS_H
+#define CONVERTUTILS_H
 
 #include <QList>
 #include <QVariantMap>
@@ -30,4 +30,4 @@ QList<T> convertQList(const QVariantList &src)
     return result;
 }
 
-#endif // QMAPUTILS_HPP
+#endif // CONVERTUTILS_H

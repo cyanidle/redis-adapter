@@ -10,7 +10,6 @@
 #include "consumers/redisstreamconsumer.h"
 #include "consumers/rediscacheconsumer.h"
 #include "consumers/rediskeyeventsconsumer.h"
-#include "filters/producerfilter.h"
 #include "producers/sqlarchiveproducer.h"
 #include "producers/redisstreamproducer.h"
 #include "producers/rediscacheproducer.h"
@@ -18,12 +17,12 @@
 #include "settings/redissettings.h"
 #include "modbus/modbusmaster.h"
 #include "modbus/modbusslave.h"
-#include "templates/algorithms.hpp"
 #include "websocket/websocketclient.h"
 #include "raw_sockets/udpproducer.h"
 #include "raw_sockets/udpconsumer.h"
 #include "settings-parsing/adapters/toml.hpp"
 #include "settings-parsing/adapters/yaml.hpp"
+#include "filters/producerfilter.h"
 #ifdef Q_OS_UNIX
 #include "utils/resourcemonitor.h"
 #endif
@@ -38,18 +37,26 @@ Launcher::Launcher(QObject *parent) :
     m_reader()
 {
     qSetMessagePattern(RADAPTER_CUSTOM_MESSAGE_PATTERN);
+    m_argsParser.setApplicationDescription("Redis Adapter");
     parseCommandlineArgs();
-    m_parser.setApplicationDescription("Redis Adapter");
-    preInit();
-    initRedis();
-    initModbus();
-    initWebsockets();
-    initSql();
-    initSockets();
-    initMocks();
-    initLocalization();
+    auto tryInit = [&](void(Launcher::*method)(), const QString &moduleName) {
+        try {
+            (this->*method)();
+        } catch(std::runtime_error &exc) {
+            settingsParsingWarn() << "Could not enable module:" << moduleName << "Details:" << exc.what();
+        }
+    };
+    tryInit(&Launcher::appPreInit, "pre-initialization");
+    tryInit(&Launcher::initLogging, "logging");
+    tryInit(&Launcher::initRedis, "redis");
+    tryInit(&Launcher::initModbus, "modbus");
+    tryInit(&Launcher::initWebsockets, "websockets");
+    tryInit(&Launcher::initSql, "sql");
+    tryInit(&Launcher::initSockets, "raw-sockets");
+    tryInit(&Launcher::initMocks, "mocks");
+    tryInit(&Launcher::initLocalization, "localization");
+    LocalStorage::init(this);
 }
-
 
 void Launcher::addWorker(Worker* worker, QSet<InterceptorBase*> interceptors)
 {
@@ -58,34 +65,16 @@ void Launcher::addWorker(Worker* worker, QSet<InterceptorBase*> interceptors)
 
 //! Все эти классы сохраняютс япри инициализации, логгинг их количества нужен,
 //! чтобы компилятор не удалил "неиспользуемые переменные"
-void Launcher::preInit()
+void Launcher::appPreInit()
 {
-    initLogging();
-    try {
-        setSettingsPath("bindings");
-        auto jsonBindings = JsonBinding::parseMap(readSettings().toMap());
-        BindingsProvider::init(jsonBindings);
-        reDebug() << "config: Json Bindings count: " << jsonBindings.size();
-    } catch (std::runtime_error &e) {}
-    try {
-        setSettingsPath("redis");
-        auto redisServers = parseArray<Settings::RedisServer>("redis.server");
-        reDebug() << "config: RedisServer count: " << redisServers.size();
-    } catch (std::runtime_error &e) {}
-    try {
-        setSettingsPath("sql");
-        auto sqlClientsInfo = parseArray<Settings::SqlClientInfo>("mysql.client");
-        reDebug() << "config: Sql clients count: " << sqlClientsInfo.size();
-    } catch (std::runtime_error &e) {}
-    try {
-        setSettingsPath("modbus");
-        auto mbDevices = parseArray<Settings::ModbusDevice>("modbus.devices");
-        reDebug() << "config: Modbus devices count: " << mbDevices.size();
-    } catch (std::runtime_error &e) {}
-    try {
-        setSettingsPath("registers");
-        Settings::parseRegisters(readSettings());
-    } catch (std::runtime_error &e) {}
+    initFilters();
+    auto jsonBindings = JsonBinding::parseMap(readSetting("bindings").toMap());
+    BindingsProvider::init(jsonBindings);
+    reDebug() << "config: Json Bindings count: " << jsonBindings.size();
+    auto redisServers = parseArrayOf<Settings::RedisServer>("redis.servers");
+    reDebug() << "config: RedisServer count: " << redisServers.size();
+    auto sqlClientsInfo = parseArrayOf<Settings::SqlClientInfo>("sql.clients");
+    reDebug() << "config: Sql clients count: " << sqlClientsInfo.size();
 }
 
 
@@ -156,15 +145,9 @@ void Launcher::setLoggingFilters(const QMap<QString, bool> &loggers)
     QLoggingCategory::setFilterRules(filterString);
 }
 
-void Launcher::preInitFilters()
+void Launcher::initFilters()
 {
-    try {
-        setSettingsPath("filters");
-    }   catch (std::runtime_error &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "filters" << "." + m_configsFormat << ")" << " No Filters Found!";
-        return;
-    }
-    auto rawFilters = readSettings("filters").toMap();
+    auto rawFilters = readSetting("filters").toMap();
     for (auto iter = rawFilters.constBegin(); iter != rawFilters.constEnd(); ++iter) {
         Settings::Filters::table().insert(iter.key(), convertQMap<double>(iter.value().toMap()));
     }
@@ -172,70 +155,42 @@ void Launcher::preInitFilters()
 
 void Launcher::initLogging()
 {
-    try {
-        setSettingsPath("config");
-        auto rawMap = readSettings("log_debug").toMap();
-        auto flattened = JsonDict{rawMap}.flatten(".");
-        setLoggingFilters(convertQMap<bool>(flattened));
-    } catch (std::runtime_error &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "config" << "." + m_configsFormat << ")" << " No logging settings found!";
-    }
+    auto rawMap = readSetting("log_debug").toMap();
+    auto flattened = JsonDict{rawMap}.flatten(".");
+    setLoggingFilters(convertQMap<bool>(flattened));
 }
 
 void Launcher::initGui()
 {
 #ifdef RADAPTER_GUI
-    try {
-        setSettingsPath("gui");
-        auto guiSettings = parseObj<GuiSettings>("gui");
-        if (!guiSettings.enabled) {
-            reWarn() << "Gui disabled!";
-            return;
-        }
-        auto guiThread = new QThread(this);
-        auto ui = new Gui::MainWindow();
-        ui->moveToThread(guiThread);
-        connect(this, &Launcher::started, this, [guiThread](){guiThread->start();});
+    auto guiSettings = parseObject<GuiSettings>("gui");
+    if (!guiSettings.enabled) {
+        reWarn() << "Gui disabled!";
+        return;
     }
-    catch (std::runtime_error &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "gui" << "." + m_configsFormat << ")" << " No Gui settings found!";
-    }
+    auto guiThread = new QThread(this);
+    auto ui = new Gui::MainWindow();
+    ui->moveToThread(guiThread);
+    connect(this, &Launcher::started, this, [guiThread](){guiThread->start();});
 #endif
 }
 
 void Launcher::initLocalization()
 {
-    try {
-        setSettingsPath("config");
-        auto localizationInfo = parseObj<Settings::LocalizationInfo>("localization");
-        Localization::instance()->applyInfo(localizationInfo);
-        LocalStorage::init(this);
-    } catch (std::runtime_error &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "config" << "." + m_configsFormat << ")" << " No localization settings found!";
-    }
+    auto localizationInfo = parseObject<Settings::LocalizationInfo>("localization");
+    Localization::instance()->applyInfo(localizationInfo);
 }
 
 void Launcher::initMocks()
 {
-    try {
-        setSettingsPath("mocks");
-        for (const auto &mockSettings : parseArray<Radapter::MockWorkerSettings>("mock")) {
-            addWorker(new Radapter::MockWorker(mockSettings, new QThread(this)));
-        }
-    } catch (std::runtime_error &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "mocks" << "." + m_configsFormat << ")" << " Could not load config for Mocks. Disabling...";
+    for (const auto &mockSettings : parseArrayOf<Radapter::MockWorkerSettings>("mocks")) {
+        addWorker(new Radapter::MockWorker(mockSettings, new QThread(this)));
     }
 }
 
 void Launcher::initPipelines()
 {
-    try {
-        setSettingsPath("config");
-    } catch (std::runtime_error &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "config" << "." + m_configsFormat << ")" << " No Pipeline settings found!";
-        return;
-    }
-    const auto parsed = parseObj<Settings::Pipelines>();
+    const auto parsed = parseObject<Settings::Pipelines>();
     static QRegExp splitter("[<>]");
     for (const auto &pipe: parsed.pipelines) {
         auto split = pipe.split(splitter);
@@ -259,38 +214,29 @@ void Launcher::initPipelines()
 
 void Launcher::initSockets()
 {
-    try {setSettingsPath("sockets");}
-    catch (std::runtime_error &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "sockets" << "." + m_configsFormat << ")" << " Could not load config for Sockets. Disabling...";
-        return;
-    }
-    for (const auto &udp : parseArray<Udp::ProducerSettings>("socket.udp.producer")) {
+    for (const auto &udp : parseArrayOf<Udp::ProducerSettings>("sockets.udp.producers")) {
         addWorker(new Udp::Producer(udp, new QThread(this)));
     }
-    for (const auto &udp : parseArray<Udp::ConsumerSettings>("socket.udp.consumer")) {
+    for (const auto &udp : parseArrayOf<Udp::ConsumerSettings>("sockets.udp.consumers")) {
         addWorker(new Udp::Consumer(udp, new QThread(this)));
     }
 }
 
 void Launcher::initRedis()
 {
-    try {setSettingsPath("redis");} catch (std::runtime_error &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "redis" << "." + m_configsFormat << ")" << " Could not load config for Redis. Disabling...";
-        return;
-    }
-    for (auto &streamConsumer : parseArray<Settings::RedisStreamConsumer>("redis.stream.consumer")) {
+    for (auto &streamConsumer : parseArrayOf<Settings::RedisStreamConsumer>("redis.stream.consumers")) {
         addWorker(new Redis::StreamConsumer(streamConsumer, new QThread(this)));
     }
-    for (auto &streamProducer : parseArray<Settings::RedisStreamProducer>("redis.stream.producer")) {
+    for (auto &streamProducer : parseArrayOf<Settings::RedisStreamProducer>("redis.stream.producers")) {
         addWorker(new Redis::StreamProducer(streamProducer, new QThread(this)));
     }
-    for (auto &cacheConsumer : parseArray<Settings::RedisCacheConsumer>("redis.cache.consumer")) {
+    for (auto &cacheConsumer : parseArrayOf<Settings::RedisCacheConsumer>("redis.cache.consumers")) {
         addWorker(new Redis::CacheConsumer(cacheConsumer, new QThread(this)));
     }
-    for (auto &cacheProducer : parseArray<Settings::RedisCacheProducer>("redis.cache.producer")) {
+    for (auto &cacheProducer : parseArrayOf<Settings::RedisCacheProducer>("redis.cache.producers")) {
         addWorker(new Redis::CacheProducer(cacheProducer, new QThread(this)));
     }
-    for (auto &keyEventConsumer : parseArray<Settings::RedisKeyEventSubscriber>("redis.keyevents.subscriber")) {
+    for (auto &keyEventConsumer : parseArrayOf<Settings::RedisKeyEventSubscriber>("redis.keyevents.subscribers")) {
         addWorker(new Redis::KeyEventsConsumer(keyEventConsumer, new QThread(this)));
     }
     //auto redisStreamGroupConsumers = readFromToml<Settings::RedisStreamGroupConsumer>("redis.stream.group_consumer");
@@ -298,32 +244,23 @@ void Launcher::initRedis()
 
 void Launcher::initModbus()
 {
-    try {
-        setSettingsPath("modbus");
-    } catch (std::runtime_error &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "modbus" << "." + m_configsFormat << ")" << " Could not load config for Modbus. Disabling...";
-        return;
-    }
-    for (const auto& slaveInfo : parseArray<Settings::ModbusSlave>("modbus.slave")) {
+    Settings::parseRegisters(readSetting("registers"));
+    auto mbDevices = parseArrayOf<Settings::ModbusDevice>("modbus.devices");
+    reDebug() << "config: Modbus devices count: " << mbDevices.size();
+    for (const auto& slaveInfo : parseArrayOf<Settings::ModbusSlave>("modbus.slaves")) {
         addWorker(new Modbus::Slave(slaveInfo, new QThread(this)));
     }
-    for (const auto& masterInfo : parseArray<Settings::ModbusMaster>("modbus.master")) {
+    for (const auto& masterInfo : parseArrayOf<Settings::ModbusMaster>("modbus.masters")) {
         addWorker(new Modbus::Master(masterInfo, new QThread(this)));
     }
 }
 
 void Launcher::initWebsockets()
 {
-    try {
-        setSettingsPath("websockets");
-    } catch (std::runtime_error &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "websockets" << "." + m_configsFormat << ")" << " Could not load config for websockets. Disabling...";
-        return;
-    }
-    for (auto &wsClient : parseArray<Settings::WebsocketClientInfo>("websocket.client")) {
+    for (auto &wsClient : parseArrayOf<Settings::WebsocketClientInfo>("websocket.clients")) {
         addWorker(new Websocket::Client(wsClient, new QThread(this)));
     }
-    auto websocketServer = parseObj<Settings::WebsocketServerInfo>("websocket.server");
+    auto websocketServer = parseObject<Settings::WebsocketServerInfo>("websocket.server");
     if (websocketServer.isValid()) {
         addWorker(new Websocket::ServerConnector(websocketServer, new QThread(this)));
     }
@@ -331,13 +268,7 @@ void Launcher::initWebsockets()
 
 void Launcher::initSql()
 {
-    try {
-        setSettingsPath("sql");
-    } catch (std::runtime_error &e) {
-        reWarn().noquote().nospace() << "(" << m_configsDir << "/" << "sql" << "." + m_configsFormat << ")" << " Could not load config for sql. Disabling...";
-        return;
-    }
-    for (auto &archive : parseArray<Settings::SqlStorageInfo>("mysql.storage.archive")) {
+    for (auto &archive : parseArrayOf<Settings::SqlStorageInfo>("sql.storage.archives")) {
         addWorker(new MySql::ArchiveProducer(archive, new QThread(this)));
     }
 }
@@ -350,21 +281,24 @@ void Launcher::parseCommandlineArgs()
     if (QCoreApplication::applicationVersion().isEmpty()) {
         QCoreApplication::setApplicationVersion(RADAPTER_VERSION);
     }
-    m_parser.addHelpOption();
-    m_parser.addVersionOption();
-    m_parser.addOptions({
-                      {{"d", "directory"},
-                        "Config will be read from <directory> (default: ./conf)", "directory", "conf"},
-                      {{"f", "format"},
-                        "Config will be read from .<format> files (available: yaml, toml) (default: ./yaml)", "format", "yaml"}
-                      });
-    m_parser.process(*QCoreApplication::instance());
-    m_configsDir = m_parser.value("directory");
-    m_configsFormat = m_parser.value("format");
+    m_argsParser.addHelpOption();
+    m_argsParser.addVersionOption();
+    m_argsParser.addOptions({
+                  {{"d", "directory"},
+                    "Config will be read from <directory> (default: ./conf)", "directory", "conf"},
+                  {{"f", "format"},
+                    "Config will be read from .<format> files (available: yaml, toml) (default: ./yaml)", "format", "yaml"},
+                  {{"m", "main_file"},
+                    "Allows to read config either from main file with <key.subkey> or from file <key> with <subkey> (default: config)", "main_file", "config"}
+                  });
+    m_argsParser.process(*QCoreApplication::instance());
+    m_configsResource = m_argsParser.value("directory");
+    m_configsFormat = m_argsParser.value("format");
+    m_mainPath = m_argsParser.value("main_file");
     if (m_configsFormat == "toml") {
-        m_reader = new Settings::TomlReader("conf/config", this);
+        m_reader = new Settings::TomlReader(m_configsResource, m_mainPath, this);
     } else if (m_configsFormat == "yaml") {
-        m_reader = new Settings::YamlReader("conf/config", this);
+        m_reader = new Settings::YamlReader(m_configsResource, m_mainPath, this);
     } else {
         throw std::runtime_error("Invalid configs format: " + m_configsFormat.toStdString() + "; Can be (toml/yaml)");
     }
@@ -376,12 +310,8 @@ Broker *Launcher::broker() const
     return Broker::instance();
 }
 
-QVariant Launcher::readSettings(const QString &tomlPath) {
-    return m_reader->get(tomlPath);
-}
-
-void Launcher::setSettingsPath(const QString &tomlPath) {
-    m_reader->setPath(m_configsDir + "/" + tomlPath);
+QVariant Launcher::readSetting(const QString &path) {
+    return m_reader->get(path);
 }
 
 void Launcher::init()
@@ -389,14 +319,17 @@ void Launcher::init()
     for (auto workerIter = m_workers.begin(); workerIter != m_workers.end(); ++workerIter) {
         Broker::instance()->registerProxy(workerIter.key()->createProxy(workerIter.value()));
     }
-#ifdef Q_OS_UNIX
-    auto resmon = new ResourceMonitor(this);
-    resmon->run();
-#endif
 }
 
 void Launcher::run()
 {
+#ifdef Q_OS_UNIX
+    auto resmonThr = new QThread(this);
+    auto resmon = new ResourceMonitor(this);
+    connect(resmonThr, &QThread::started, resmon, &ResourceMonitor::run);
+    resmon->moveToThread(resmonThr);
+    resmonThr->start(QThread::LowPriority);
+#endif
     Broker::instance()->connectProducersAndConsumers();
     for (auto worker = m_workers.keyBegin(); worker != m_workers.keyEnd(); ++worker) {
         (*worker)->run();
@@ -408,11 +341,11 @@ void Launcher::run()
 
 QCommandLineParser &Launcher::commandLineParser()
 {
-    return m_parser;
+    return m_argsParser;
 }
 
 const QString &Launcher::configsDirectory() const
 {
-    return m_configsDir;
+    return m_configsResource;
 }
 

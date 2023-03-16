@@ -9,7 +9,7 @@
 #include "templates/metaprogramming.hpp"
 #include "private/global.h"
 #include "radapterlogging.h"
-#include "qmaputils.hpp"
+#include "convertutils.hpp"
 
 namespace Serializer {
 

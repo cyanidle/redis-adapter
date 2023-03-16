@@ -1,47 +1,41 @@
 #include "dictreader.h"
 
-Settings::Reader::Reader(const QString &path, QObject *parent) :
-    QObject(parent),
-    m_path(path)
-{
+using namespace Settings;
 
-}
-
-QVariant Settings::Reader::operator[](QString key) {
-    return get(key);
-}
-
-const QString &Settings::Reader::path() const {
-    return m_path;
-}
-
-void Settings::Reader::setPath(const QString &path)
-{
-    m_path = path;
-    onPathSet();
-}
-
-Settings::DictReader::DictReader(const QString &path, QObject *parent) :
-    Reader(path, parent)
+DictReader::DictReader(const QString &resource, const QString &path, QObject *parent) :
+    Reader(resource, path, parent)
 {
 }
 
-QVariant Settings::DictReader::get(QString key) {
+QVariant DictReader::get(const QString &key) {
+    auto copy = key;
     if (m_config.isEmpty()) {
-        onPathSet();
-        m_config = parse();
+        m_config = getAll().toMap();
     }
     if (key.isEmpty()) {
         return m_config;
     }
-    auto fullKey = key.replace(".", ":").split(":");
+    auto fullKey = copy.replace(".", ":").split(":");
     QVariant result = m_config;
     for (const auto &subkey: fullKey) {
         auto asMap = result.toMap();
         if (result.type() != QVariant::Map || !asMap.contains(subkey)) {
-            throw std::runtime_error("[Reader]: Key " + key.toStdString() + " was not found! Error on: " + subkey.toStdString());
+            throw std::runtime_error("[Reader]: Key '" + key.toStdString() + "' was not found! Error in: " +
+                                     (resource() + "/" + path()).toStdString());
         }
         result = asMap[subkey];
     }
     return result;
+}
+
+void DictReader::setResource(const QString path)
+{
+    m_config.clear();
+    Reader::setResource(path);
+}
+
+void DictReader::setPath(const QString &path)
+{
+    m_config.clear();
+    Reader::setPath(path);
 }

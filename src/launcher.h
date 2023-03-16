@@ -24,10 +24,11 @@ public slots:
     void run();
 private:
     void setLoggingFilters(const QMap<QString, bool> &loggers);
-    void preInitFilters();
 
     void initLogging();
-    void preInit();
+    void appPreInit();
+    void initFilters();
+
     void initRedis();
     void initModbus();
     void initWebsockets();
@@ -42,47 +43,48 @@ private:
 
     Broker* broker() const;
     template <typename T>
-    QList<T> parseArray(const QString &tomlPath = "");
+    const QList<T> parseArrayOf(const QString &path = "");
     template <typename T>
-    T parseObj(const QString &tomlPath = "", bool mustHave = false);
-    QVariant readSettings(const QString &tomlPath = "");
-    void setSettingsPath(const QString &tomlPath);
+    T parseObject(const QString &path = "");
+    QVariant readSetting(const QString &path = "");
     QHash<Worker*, QSet<InterceptorBase*>> m_workers;
     Settings::Reader* m_reader;
-    QString m_configsDir{"conf"};
+    QString m_configsResource{"conf"};
     QString m_configsFormat{"toml"};
-    QCommandLineParser m_parser{};
+    QString m_mainPath{"config"};
+    QVariantMap m_allSettings{};
+    QCommandLineParser m_argsParser{};
 };
 
 template <typename T>
-QList<T> Launcher::parseArray(const QString &tomlPath) {
-    auto result = readSettings(tomlPath);
+const QList<T> Launcher::parseArrayOf(const QString &path) {
+    auto result = readSetting(path);
     if (result.isValid() && !result.canConvert<QVariantList>()) {
-        throw std::runtime_error("Expected List from: " + tomlPath.toStdString());
+        throw std::runtime_error("Expected List from: " + path.toStdString());
     }
     try {
         return Serializer::fromQList<T>(result.toList());
     } catch (const std::exception &e) {
-        throw std::runtime_error(QString(e.what()).replace(ROOT_PREFIX, tomlPath).toStdString() +
+        throw std::runtime_error(QString(e.what()).replace(ROOT_PREFIX, path).toStdString() +
                                  std::string("; While Parsing List --> [[") +
-                                 tomlPath.toStdString() + "]]; In --> " +
+                                 path.toStdString() + "]]; In --> " +
                                  m_reader->path().toStdString());
     }
 }
 template <typename T>
-T Launcher::parseObj(const QString &tomlPath, bool mustHave) {
-    auto result = readSettings(tomlPath);
+T Launcher::parseObject(const QString &path) {
+    auto result = readSetting(path);
     if (result.isValid() && !result.canConvert<QVariantMap>()) {
-        throw std::runtime_error("Expected Map from: " + tomlPath.toStdString());
-    } else if ((!result.isValid() || !result.canConvert<QVariantMap>()) && !mustHave) {
+        throw std::runtime_error("Expected Map from: " + path.toStdString());
+    } else if (!result.isValid() || !result.canConvert<QVariantMap>()) {
         return {};
     }
     try {
         return Serializer::fromQMap<T>(result.toMap());
     } catch (const std::exception &e) {
-        throw std::runtime_error(QString(e.what()).replace(ROOT_PREFIX, tomlPath).toStdString() +
+        throw std::runtime_error(QString(e.what()).replace(ROOT_PREFIX, path).toStdString() +
                                  std::string("; While Parsing Object --> [") +
-                                 tomlPath.toStdString() + "]; In --> " +
+                                 path.toStdString() + "]; In --> " +
                                  m_reader->path().toStdString());
     }
 }

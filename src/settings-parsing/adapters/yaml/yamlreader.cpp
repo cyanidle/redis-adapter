@@ -1,24 +1,30 @@
 #include "yamlreader.h"
 #include <yaml-cpp/yaml.h>
+#include "jsondict/jsondict.hpp"
 #include "yamlqttypesadapter.hpp"
 
 using namespace YAML;
 using namespace Settings;
 
-YamlReader::YamlReader(QString path, QObject *parent) :
-    DictReader(path, parent)
+YamlReader::YamlReader(const QString &dir, const QString &file, QObject *parent) :
+    DictReader(dir, file, parent)
 {
-
 }
 
-QVariantMap YamlReader::parse()
+QVariant YamlReader::getAll()
 {
-    auto result = m_config.as<QVariantMap>();
-    return result;
+    static const QString extension(".yaml");
+    auto pathWas = path();
+    auto wantedPath = resource() + "/" + path();
+    auto actualPath = wantedPath.endsWith(extension) ? wantedPath : wantedPath + extension;
+    auto config = LoadFile(actualPath.toStdString());
+    auto result = JsonDict(config.as<QVariantMap>());
+    for (const auto &node: config) {
+        if (node.second.IsDefined() && node.second.Tag() == "!include") {
+            setPath(node.second.as<QString>());
+            result[node.first.as<QString>()] = getAll();
+        }
+    }
+    setPath(pathWas);
+    return result.toVariant();
 }
-
-void YamlReader::onPathSet()
-{
-    m_config = LoadFile(path().toStdString() + ".yaml");
-}
-

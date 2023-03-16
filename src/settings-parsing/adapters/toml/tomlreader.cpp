@@ -5,7 +5,7 @@
 #include <QDateTime>
 #include <QTimeZone>
 #include "cpptoml.h"
-#include "../../qmaputils.hpp"
+#include "../../convertutils.hpp"
 #include "settings-parsing/dictreader.h"
 
 using namespace Settings;
@@ -21,15 +21,6 @@ std::shared_ptr<cpptoml::table> initTable(const QString &path)
         nativePath = QDir::toNativeSeparators(path);
     }
     return cpptoml::parse_file(nativePath.toStdString());
-}
-
-ParsingMap TomlReader::getParsingMap()
-{
-    try {
-        return convertQMap<QString>(get("parsing").toMap());
-    } catch (const std::runtime_error &exc) {
-        return {};
-    }
 }
 
 QString decodeString(const QString &encodedString, const ParsingMap &parsingMap)
@@ -138,19 +129,19 @@ QVariant deserialise(const std::shared_ptr<cpptoml::table> &table, const Parsing
     }
 }
 
-TomlReader::TomlReader(QString path, QObject *parent, bool enableParsingMap) :
-    DictReader(path, parent),
+TomlReader::TomlReader(const QString &dir, const QString &file, QObject *parent, bool enableParsingMap) :
+    DictReader(dir, file, parent),
     m_parsingMapEnabled(enableParsingMap)
 {
 }
 
-void TomlReader::onPathSet()
+QVariant Settings::TomlReader::getAll()
 {
-    m_config = initTable(path());
-    m_parsingMap = m_parsingMapEnabled ? getParsingMap() : ParsingMap{};
+    // auto config = initTable(resource() + "/" + path());
+    // return convertQMap<QString>(get("parsing").toMap());
+    // m_parsingMap = m_parsingMapEnabled ? getParsingMap() : ParsingMap{};
+
+
+    return deserialise(initTable(resource() + "/" + path()), m_parsingMap).toMap();
 }
 
-QVariantMap Settings::TomlReader::parse()
-{
-    return deserialise(initTable(path() + ".toml"), m_parsingMap).toMap();
-}

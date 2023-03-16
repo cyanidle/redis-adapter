@@ -142,7 +142,9 @@ struct JsonDict::iterator_base {
     using map_iter = typename std::conditional<std::is_const<MapT>::value, QVariantMap::const_iterator, QVariantMap::iterator>::type;
     using list_iter = typename std::conditional<std::is_const<MapT>::value, QVariantList::const_iterator, QVariantList::iterator>::type;
     using value_type = typename map_iter::value_type;
-    using qual_val_t = typename std::conditional<std::is_const<MapT>::value, const value_type, value_type>::type;
+    template <typename T>
+    using qual_val = typename std::conditional<std::is_const<MapT>::value, const T, T>::type;
+    using qual_map_value = typename std::conditional<std::is_const<MapT>::value, const value_type, value_type>::type;
     using ListT = typename std::conditional<std::is_const<MapT>::value, const QVariantList, QVariantList>::type;
     QStringList key() const;
     QStringList domainKey() const;
@@ -152,13 +154,15 @@ struct JsonDict::iterator_base {
     int depth() const;
     bool isDomainMap() const;
     bool isDomainList() const;
-    qual_val_t &value() const;
+    qual_map_value &value() const;
+    template <typename T>
+    qual_val<T> &value() const {return value().template value<T>();}
     bool operator==(const iterator_base &other) const;
     bool operator!=(const iterator_base &other) const;
     iterator_base &operator++();
     iterator_base operator++(int);
     iterator_base &operator*();
-    qual_val_t *operator->();
+    qual_map_value *operator->();
     iterator_base(map_iter start, map_iter end);
 protected:
     constexpr bool isEnd () const noexcept {return m_flags.testFlag(IsEnd);}
@@ -183,7 +187,7 @@ private:
             assert(is_valid);
             return is_map ? map.key() : QStringLiteral("[%1]").arg(count);
         }
-        qual_val_t &value() const {
+        qual_map_value &value() const {
             assert(is_valid);
             return is_map ? map.value() : *list;
         }
@@ -333,7 +337,7 @@ bool JsonDict::iterator_base<MapT>::isDomainList() const
 
 template<typename MapT>
 typename
-JsonDict::iterator_base<MapT>::qual_val_t &JsonDict::iterator_base<MapT>::value() const
+JsonDict::iterator_base<MapT>::qual_map_value &JsonDict::iterator_base<MapT>::value() const
 {
     return m_current.value();
 }
@@ -401,7 +405,7 @@ JsonDict::iterator_base<MapT> &JsonDict::iterator_base<MapT>::operator*()
 
 template<typename MapT>
 typename
-JsonDict::iterator_base<MapT>::qual_val_t *JsonDict::iterator_base<MapT>::operator->()
+JsonDict::iterator_base<MapT>::qual_map_value *JsonDict::iterator_base<MapT>::operator->()
 {
     return &value();
 }
