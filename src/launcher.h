@@ -7,6 +7,17 @@
 #include "broker/worker/worker.h"
 #include <QObject>
 
+#include "settings-parsing/experimental/serializable.h"
+
+
+
+struct Test : Serializable::Gadget {
+    Q_GADGET
+    FIELDS(a, b)
+    Serializable::Field<int> a;
+    Serializable::Field<int> b;
+};
+
 namespace Radapter {
 
 class RADAPTER_SHARED_SRC Launcher : public QObject

@@ -1,6 +1,7 @@
-SOURCES+=
+SOURCES+= \
+    $$PWD/serializable.cpp
 HEADERS+= \
-   $$PWD/serializable.hpp \
-   $$PWD/common_fields.hpp
+   $$PWD/common_fields.hpp \
+   $$PWD/serializable.h
 
 include($$PWD/private/private.pri)

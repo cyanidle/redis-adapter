@@ -36,6 +36,9 @@ Launcher::Launcher(QObject *parent) :
     m_workers(),
     m_reader()
 {
+    QVariantMap src {{"a", 1}, {"b", 2}};
+    Test a;
+    a.deserialize(src);
     qSetMessagePattern(RADAPTER_CUSTOM_MESSAGE_PATTERN);
     m_argsParser.setApplicationDescription("Redis Adapter");
     parseCommandlineArgs();
