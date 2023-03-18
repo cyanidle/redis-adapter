@@ -22,9 +22,7 @@ class PriDirectory:
         return repr(self.dir)
     @property
     def pri_file(self) -> Path:
-        if self.is_root:
-            return self.dir.joinpath("/".join(self.dir.parts).replace("/", "_") + ".pri")
-        return self.dir.joinpath("/".join(self.dir.parts[1:]).replace("/", "_") + ".pri")
+        return self.dir.joinpath(f"{self.dir.parts[-1]}.pri")
     def fill_pri_file(self):
         log.info(f"Filling {self.pri_file}...")
         with open(self.pri_file, "w") as file:
@@ -39,7 +37,6 @@ class PriDirectory:
     def recurse(self):
         self.fill_pri_file()
         for child in self.children:
-            child.fill_pri_file()
             child.recurse()
     
 def format_file(file: Path):

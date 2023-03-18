@@ -16,10 +16,10 @@ template<typename T> struct has_QGadget_Macro {
 };
 
 template<typename T> struct has_QObject_Macro {
-    template <typename U>
-    static char test(int (U::*)(QMetaObject::Call, int, void **));
-    static int test(int (T::*)(QMetaObject::Call, int, void **));
-    enum { Value =  sizeof(test(&T::qt_metacall)) == sizeof(int) };
+    template<typename> static std::false_type impl(...);
+    template<typename U> static auto impl(int) ->
+        decltype(std::declval<U>().qt_metacall(QMetaObject::Call::IndexOfMethod, 1, nullptr), std::true_type());
+    enum { Value = decltype(impl<T>(0))::value};
 };
 
 

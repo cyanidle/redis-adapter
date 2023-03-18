@@ -133,7 +133,7 @@ void Worker::run()
 
 void Worker::onRun()
 {
-    workerInfo(this) << ": started!";
+    workerInfo(this) << "started!";
 }
 
 void Worker::addConsumers(const QStringList &consumers)

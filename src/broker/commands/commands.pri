@@ -3,4 +3,4 @@ SOURCES+= \
 HEADERS+= \
    $$PWD/basiccommands.h
 
-include($$PWD/private/broker_commands_private.pri)
+include($$PWD/private/private.pri)

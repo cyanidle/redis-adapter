@@ -3,9 +3,9 @@ SOURCES+= \
 HEADERS+= \
    $$PWD/broker.h
 
-include($$PWD/interceptors/broker_interceptors.pri)
-include($$PWD/sync/broker_sync.pri)
-include($$PWD/replies/broker_replies.pri)
-include($$PWD/worker/broker_worker.pri)
-include($$PWD/events/broker_events.pri)
-include($$PWD/commands/broker_commands.pri)
+include($$PWD/interceptors/interceptors.pri)
+include($$PWD/sync/sync.pri)
+include($$PWD/replies/replies.pri)
+include($$PWD/worker/worker.pri)
+include($$PWD/events/events.pri)
+include($$PWD/commands/commands.pri)

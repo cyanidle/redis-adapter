@@ -45,14 +45,14 @@
         return &wanted_reply::staticMetaObject; \
     } \
     virtual Radapter::Command* newCopy() const override { \
-        auto copy = new Radapter::stripped_this<decltype(this)>(*this); \
+        auto copy = new Radapter::stripped_this<decltype(this)>(*this)/*copy ctor*/; \
         return copy;\
     }
 
 #define RADAPTER_REPLY \
     GADGET_BODY \
     virtual Radapter::Reply* newCopy() const override { \
-        auto copy = new Radapter::stripped_this<decltype(this)>(*this); \
+        auto copy = new Radapter::stripped_this<decltype(this)>(*this)/*copy ctor*/; \
         return copy;\
     }
 

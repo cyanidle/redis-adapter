@@ -178,7 +178,6 @@ Command::Type Command::typeInConstructor(const Target* thisPtr)
 
 } // namespace Radapter
 
-
 Q_DECLARE_METATYPE(QSharedPointer<Radapter::Command>)
 IMPL_RADAPTER_DECLARE_COMMAND_BUILTIN(Radapter::Command, Command::None)
 

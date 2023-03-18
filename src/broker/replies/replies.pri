@@ -3,4 +3,4 @@ SOURCES+= \
 HEADERS+= \
    $$PWD/basicreplies.h
 
-include($$PWD/private/broker_replies_private.pri)
+include($$PWD/private/private.pri)

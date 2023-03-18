@@ -9,4 +9,5 @@ HEADERS+= \
    $$PWD/convertutils.hpp \
    $$PWD/dictreader.h
 
-include($$PWD/adapters/settings-parsing_adapters.pri)
+include($$PWD/adapters/adapters.pri)
+include($$PWD/experimental/experimental.pri)
