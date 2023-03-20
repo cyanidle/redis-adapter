@@ -7,7 +7,7 @@
 #include "radapterlogging.h"
 #include "localstorage.h"
 #include "localization.h"
-#include "bindings/bindingsprovider.h"
+#include "bindings/routesprovider.h"
 #include "consumers/redisstreamconsumer.h"
 #include "consumers/rediscacheconsumer.h"
 #include "consumers/rediskeyeventsconsumer.h"
@@ -47,12 +47,13 @@ Launcher::Launcher(QObject *parent) :
             settingsParsingWarn() << "Could not enable module:" << moduleName << "Details:" << exc.what();
         }
     };
-    tryInit(&Launcher::appPreInit, "pre-initialization");
+    tryInit(&Launcher::initRoutedJsons, "routed_jsons");
     tryInit(&Launcher::initLogging, "logging");
     tryInit(&Launcher::initRedis, "redis");
     tryInit(&Launcher::initModbus, "modbus");
     tryInit(&Launcher::initWebsockets, "websockets");
     tryInit(&Launcher::initSql, "sql");
+    tryInit(&Launcher::initFilters, "filters");
     tryInit(&Launcher::initSockets, "raw-sockets");
     tryInit(&Launcher::initMocks, "mocks");
     tryInit(&Launcher::initLocalization, "localization");
@@ -66,16 +67,11 @@ void Launcher::addWorker(Worker* worker, QSet<InterceptorBase*> interceptors)
 
 //! Все эти классы сохраняютс япри инициализации, логгинг их количества нужен,
 //! чтобы компилятор не удалил "неиспользуемые переменные"
-void Launcher::appPreInit()
+void Launcher::initRoutedJsons()
 {
-    initFilters();
-    auto jsonBindings = JsonBinding::parseMap(readSetting("bindings").toMap());
-    BindingsProvider::init(jsonBindings);
-    reDebug() << "config: Json Bindings count: " << jsonBindings.size();
-    auto redisServers = parseArrayOf<Settings::RedisServer>("redis.servers");
-    reDebug() << "config: RedisServer count: " << redisServers.size();
-    auto sqlClientsInfo = parseArrayOf<Settings::SqlClientInfo>("sql.clients");
-    reDebug() << "config: Sql clients count: " << sqlClientsInfo.size();
+    auto jsonBindings = JsonRoute::parseMap(readSetting("json_routes").toMap());
+    JsonRoutesProvider::init(jsonBindings);
+    reDebug() << "config: Json Routes count: " << jsonBindings.size();
 }
 
 
@@ -225,6 +221,8 @@ void Launcher::initSockets()
 
 void Launcher::initRedis()
 {
+    auto redisServers = parseArrayOf<Settings::RedisServer>("redis.servers");
+    reDebug() << "config: RedisServer count: " << redisServers.size();
     for (auto &streamConsumer : parseArrayOf<Settings::RedisStreamConsumer>("redis.stream.consumers")) {
         addWorker(new Redis::StreamConsumer(streamConsumer, new QThread(this)));
     }
@@ -269,6 +267,8 @@ void Launcher::initWebsockets()
 
 void Launcher::initSql()
 {
+    auto sqlClientsInfo = parseArrayOf<Settings::SqlClientInfo>("sql.clients");
+    reDebug() << "config: Sql clients count: " << sqlClientsInfo.size();
     for (auto &archive : parseArrayOf<Settings::SqlStorageInfo>("sql.storage.archives")) {
         addWorker(new MySql::ArchiveProducer(archive, new QThread(this)));
     }

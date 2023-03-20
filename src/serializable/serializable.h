@@ -6,8 +6,6 @@
 namespace Serializable {
 
 struct RADAPTER_API Object {
-    Q_GADGET
-public:
     FieldConcept *field(const QString &fieldName);
     const FieldConcept *field(const QString &fieldName) const;
     const QList<QString> &fields() const;
@@ -19,6 +17,8 @@ public:
 protected:
     void fillFields() const;
     virtual void postUpdate(){};
+    template <typename T>
+    FieldConcept *upcastField(T *raw) {return raw;}
 private:
     virtual QVariant readProp(const QMetaProperty &prop) const = 0;
     virtual bool writeProp(const QMetaProperty &prop, const QVariant &val) = 0;

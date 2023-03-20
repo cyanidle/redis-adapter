@@ -45,7 +45,7 @@ void Client::initTimers()
 
 void Client::init()
 {
-    m_sock = new QWebSocket{ "radapter", QWebSocketProtocol::VersionLatest, this };
+    m_sock = new QWebSocket{QStringLiteral("radapter:%1").arg(workerName()), QWebSocketProtocol::VersionLatest, this };
     connect(m_sock, &QWebSocket::connected, this, &Client::onConnected);
     connect(m_sock, &QWebSocket::disconnected, this, &Client::onDisconnected);
     connect(m_sock, QOverload<QAbstractSocket::SocketError>::of(&QWebSocket::error),
@@ -126,8 +126,8 @@ void Client::onPong(quint64 elapsedTime, const QByteArray &payload)
 void Client::onSocketReceived(const QString &message)
 {
     auto parseStatus = QJsonParseError{};
-    auto jsonMessage = QJsonDocument::fromJson(message.toUtf8(), &parseStatus);
-    if (jsonMessage.isNull()) {
+    auto jsonMessage = JsonDict::fromJson(message.toUtf8(), &parseStatus);
+    if (parseStatus.error != parseStatus.NoError) {
         wsockClientDebug() << "json reply error:" << parseStatus.error << parseStatus.errorString();
         return;
     }
@@ -135,12 +135,7 @@ void Client::onSocketReceived(const QString &message)
         wsockClientDebug() << "empty json received";
         return;
     }
-
-    wsockClientDebug().noquote() << "new message:" << jsonMessage.toJson(QJsonDocument::Indented);
-    auto messageData = JsonDict{ jsonMessage.toVariant() };
-    if (!messageData.isEmpty()) {
-        emit sendMsg(prepareMsg(messageData));
-    }
+    emit sendMsg(prepareMsg(jsonMessage));
 }
 
 void Client::onConnectionLost()

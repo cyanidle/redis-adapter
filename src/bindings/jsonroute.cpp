@@ -1,8 +1,8 @@
-#include "jsonbinding.h"
-#include "bindingsprovider.h"
+#include "jsonroute.h"
+#include "routesprovider.h"
 #include "radapterlogging.h"
 
-JsonBinding::JsonBinding(const QString &name, const JsonDict &json) :
+JsonRoute::JsonRoute(const QString &name, const JsonDict &json) :
     m_name(name),
     m_mappings(),
     m_requiredKeys(),
@@ -33,10 +33,10 @@ JsonBinding::JsonBinding(const QString &name, const JsonDict &json) :
     }
 }
 
-JsonBinding JsonBinding::optimise(const KeysFilter &keysFilter) const
+JsonRoute JsonRoute::optimise(const KeysFilter &keysFilter) const
 {
     if (m_isOptimised) throw std::runtime_error("Attempt to optimised already optimised Binding!");
-    JsonBinding result(*this);
+    JsonRoute result(*this);
     result.m_isOptimised = true;
     checkKeys(keysFilter, "optimise()");
     for (auto &mapping : result.m_mappings) {
@@ -48,7 +48,7 @@ JsonBinding JsonBinding::optimise(const KeysFilter &keysFilter) const
     return result;
 }
 
-void JsonBinding::checkKeys(const KeysFilter &keysFilter, const QString &funcName) const
+void JsonRoute::checkKeys(const KeysFilter &keysFilter, const QString &funcName) const
 {
     auto keys = keysFilter.keys();
     if (!unorderedEqual(keys, m_requiredKeys)) {
@@ -61,24 +61,24 @@ void JsonBinding::checkKeys(const KeysFilter &keysFilter, const QString &funcNam
     }
 }
 
-JsonBinding::Map JsonBinding::parseMap(const QVariantMap &src)
+JsonRoute::Map JsonRoute::parseMap(const QVariantMap &src)
 {
     auto result = Map();
     for (auto iter = src.begin(); iter != src.end(); ++iter) {
         auto currentName = iter.key();
         auto currentJson = iter.value().toMap();
-        result.insert(currentName, JsonBinding(currentName, currentJson));
+        result.insert(currentName, JsonRoute(currentName, currentJson));
     }
     return result;
 }
 
-JsonBinding::JsonBinding() :
+JsonRoute::JsonRoute() :
     m_name("Error")
 {
 
 }
 
-JsonBinding::Result JsonBinding::receive(const JsonDict &msg, const KeysFilter &keysFilter) const
+JsonRoute::Result JsonRoute::receive(const JsonDict &msg, const KeysFilter &keysFilter) const
 {
     if (!m_isOptimised) checkKeys(keysFilter, Q_FUNC_INFO);
     else if (!keysFilter.isEmpty()) throw std::runtime_error("Keys Passed to optimised binding!");
@@ -102,7 +102,7 @@ JsonBinding::Result JsonBinding::receive(const JsonDict &msg, const KeysFilter &
     return {std::move(result), availableValueNames()};
 }
 
-JsonDict JsonBinding::send(const JsonDict &values, const KeysFilter &keysFilter) const
+JsonDict JsonRoute::send(const JsonDict &values, const KeysFilter &keysFilter) const
 {
     if (!m_isOptimised) {
         checkKeys(keysFilter, Q_FUNC_INFO);
@@ -124,13 +124,13 @@ JsonDict JsonBinding::send(const JsonDict &values, const KeysFilter &keysFilter)
     return result;
 }
 
-const QRegExp &JsonBinding::matcher()
+const QRegExp &JsonRoute::matcher()
 {
     static QRegExp result("^\\{\\w*\\}$");
     return result;
 }
 
-void JsonBinding::checkValues(const JsonDict &values, const QString &funcName) const
+void JsonRoute::checkValues(const JsonDict &values, const QString &funcName) const
 {
     auto keys = values.keys();
     if (!unorderedEqual(keys, availableValueNames())) {
@@ -141,7 +141,7 @@ void JsonBinding::checkValues(const JsonDict &values, const QString &funcName) c
     }
 }
 
-const QVariant JsonBinding::Result::value(const QString &key) const
+const QVariant JsonRoute::Result::value(const QString &key) const
 {
     if (!m_availableFields.contains(key)) {
         throw std::runtime_error(std::string("Unavailable key requested: ") + key.toStdString());
@@ -149,7 +149,7 @@ const QVariant JsonBinding::Result::value(const QString &key) const
     return m_dict[key];
 }
 
-QVariant &JsonBinding::Result::value(const QString &key)
+QVariant &JsonRoute::Result::value(const QString &key)
 {
     if (!m_availableFields.contains(key)) {
         throw std::runtime_error(std::string("Unavailable key requested: ") + key.toStdString());

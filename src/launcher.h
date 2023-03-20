@@ -26,7 +26,7 @@ private:
     void setLoggingFilters(const QMap<QString, bool> &loggers);
 
     void initLogging();
-    void appPreInit();
+    void initRoutedJsons();
     void initFilters();
 
     void initRedis();

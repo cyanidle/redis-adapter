@@ -1,23 +1,23 @@
-#ifndef JSONBINDING_H
-#define JSONBINDING_H
+#ifndef JSONROUTE_H
+#define JSONROUTE_H
 
 #include "private/global.h"
 #include "jsondict/jsondict.hpp"
 #include <QVariantMap>
 
-class RADAPTER_API JsonBinding
+class RADAPTER_API JsonRoute
 {
 public:
     static constexpr const char *ignoreField = "<ignore>";
     struct Result;
     typedef QMap<QString, QString> KeysFilter;
-    typedef QMap<QString, JsonBinding> Map;
+    typedef QMap<QString, JsonRoute> Map;
 
     static Map parseMap(const QVariantMap &src);
 
-    JsonBinding();
-    JsonBinding(const QString &name, const JsonDict &json);
-    JsonBinding optimise(const KeysFilter &keysFilter) const;
+    JsonRoute();
+    JsonRoute(const QString &name, const JsonDict &json);
+    JsonRoute optimise(const KeysFilter &keysFilter) const;
     Result receive(const JsonDict &msg, const KeysFilter &keysFilter = {}) const;
     JsonDict send(const JsonDict &values, const KeysFilter &keysFilter = {}) const;
     void requireValueName(const QString &valueName) const;
@@ -26,7 +26,7 @@ public:
     const QStringList &requiredKeys() const {return m_requiredKeys;}
     const QStringList &availableValueNames() const {return m_valueNames;}
     struct Result {
-        friend class JsonBinding;
+        friend class JsonRoute;
         const QVariant value(const QString &key) const;
         QVariant &value(const QString &key);
         const JsonDict &data() const {return m_dict;}
@@ -59,7 +59,7 @@ private:
     static QRegExp sm_matcher;
 };
 
-inline void JsonBinding::requireValueName(const QString &valueName) const
+inline void JsonRoute::requireValueName(const QString &valueName) const
 {
     if (!availableValueNames().contains(valueName)) {
         throw std::runtime_error("Binding: (" + name().toStdString() +
@@ -68,13 +68,13 @@ inline void JsonBinding::requireValueName(const QString &valueName) const
     }
 }
 
-inline const QString &JsonBinding::name() const {return m_name;}
+inline const QString &JsonRoute::name() const {return m_name;}
 
-Q_DECLARE_TYPEINFO(JsonBinding, Q_MOVABLE_TYPE);
-Q_DECLARE_TYPEINFO(JsonBinding::Result, Q_MOVABLE_TYPE);
+Q_DECLARE_TYPEINFO(JsonRoute, Q_MOVABLE_TYPE);
+Q_DECLARE_TYPEINFO(JsonRoute::Result, Q_MOVABLE_TYPE);
 
 template<typename T>
-bool JsonBinding::unorderedEqual(const QList<T> &target, const QList<T> &source) {
+bool JsonRoute::unorderedEqual(const QList<T> &target, const QList<T> &source) {
     for (const auto &item : source) {
         if (!target.contains(item)) {
             return false;
@@ -88,4 +88,4 @@ bool JsonBinding::unorderedEqual(const QList<T> &target, const QList<T> &source)
     return true;
 }
 
-#endif // JSONBINDING_H
+#endif // JSONROUTE_H

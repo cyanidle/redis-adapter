@@ -5,6 +5,7 @@
 #include <QSet>
 
 namespace Serializable {
+struct Object;
 namespace Private {
 struct BindableSignals : public QObject {
     Q_OBJECT
@@ -14,12 +15,17 @@ signals:
 };
 }
 
-template<typename Target>
+template<typename User, typename UnderlyingValue>
+using BindCallback = void (User::*)(UnderlyingValue &);
+
+template<typename Target, BindCallback<Target, typename Target::valueType>...callbacks>
 struct Bindable : protected Private::BindableSignals, public Target {
     using typename Target::valueType;
     using typename Target::valueRef;
-    using Target::Target;
-    using Target::operator=;
+    template<typename User>
+    Bindable(User *user) {
+        helpBind(user, callbacks...);
+    }
     virtual const QStringList &attributes() const override {
         static const QStringList attrs = Target::attributes() + QStringList{"bindable"};
         return attrs;
@@ -39,6 +45,16 @@ struct Bindable : protected Private::BindableSignals, public Target {
             emit updateFailed();
         }
         return status;
+    }
+protected:
+    template<typename User, typename Slot>
+    void helpBind(const User *who, Slot *what) {
+        onUpdate(who, what);
+    }
+    template<typename User, typename Slot, typename...Slots>
+    void helpBind(const User *who, Slot *what, Slots*...rest) {
+        helpBind(who, what);
+        helpBind(who, rest...);
     }
 };
 

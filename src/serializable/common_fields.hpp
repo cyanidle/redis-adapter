@@ -18,29 +18,30 @@ namespace Serializable {
         FieldMappingOfNested
     };
     Q_ENUM_NS(FieldType)
+    struct FieldConcept {
+        friend Object;
+        virtual QVariant schema() const = 0;
+        virtual QVariant readVariant() const = 0;
+        virtual bool updateWithVariant(const QVariant &source) = 0;
+        virtual FieldType type() const = 0;
+        QString typeName() const {return QMetaEnum::fromType<FieldType>().valueToKey(type());}
+        virtual int valueMetaTypeId() const = 0;
+        virtual void *rawValue() = 0;
+        virtual const void *rawValue() const = 0;
+        virtual const QStringList &attributes() const {static QStringList attrs; return attrs;}
+        virtual const NestedIntrospection introspectNested() const {return NestedIntrospection();}
+        virtual NestedIntrospection introspectNested() {return NestedIntrospection();}
+        bool isNested() const {auto res = type(); return res == FieldNested || res == FieldSequenceOfNested || res == FieldMappingOfNested;};
+        virtual ~FieldConcept() = default;
+    };
 }
 Q_DECLARE_METATYPE(Serializable::FieldConcept*)
 namespace Serializable {
 
-struct FieldConcept {
-    virtual QVariant schema() const = 0;
-    virtual QVariant readVariant() const = 0;
-    virtual bool updateWithVariant(const QVariant &source) = 0;
-    virtual FieldType type() const = 0;
-    QString typeName() const {return QMetaEnum::fromType<FieldType>().valueToKey(type());}
-    virtual int valueMetaTypeId() const = 0;
-    virtual void *rawValue() = 0;
-    virtual const void *rawValue() const = 0;
-    virtual const QStringList &attributes() const {static QStringList attrs; return attrs;}
-    virtual const NestedIntrospection introspectNested() const {return NestedIntrospection();}
-    virtual NestedIntrospection introspectNested() {return NestedIntrospection();}
-    bool isNested() const {return type() == FieldNested || type() == FieldSequenceOfNested || type() == FieldMappingOfNested;};
-    virtual ~FieldConcept() = default;
-};
-
 namespace Private {
 template<typename T, bool isBig = true>
-struct FieldCommon : public FieldConcept {
+struct FieldCommon : protected FieldConcept {
+    friend Serializable::Object;
     using valueType = T;
     using valueRef = typename std::conditional<isBig, T, T&>::type;
     FieldCommon() : value() {}

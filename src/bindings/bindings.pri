@@ -1,8 +1,8 @@
 SOURCES+= \
-   $$PWD/bindable.cpp \
-   $$PWD/jsonbinding.cpp \
-   $$PWD/bindingsprovider.cpp
+   $$PWD/jsonroute.cpp \
+   $$PWD/routed.cpp \
+   $$PWD/routesprovider.cpp
 HEADERS+= \
-   $$PWD/jsonbinding.h \
-   $$PWD/bindingsprovider.h \
-   $$PWD/bindable.h
+   $$PWD/jsonroute.h \
+   $$PWD/routed.h \
+   $$PWD/routesprovider.h

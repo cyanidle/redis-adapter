@@ -1,13 +1,13 @@
-#include "bindingsprovider.h"
+#include "routesprovider.h"
 #include "radapterlogging.h"
 
-BindingsProvider::BindingsProvider(const JsonBinding::Map &bindings, QObject* parent) :
+JsonRoutesProvider::JsonRoutesProvider(const JsonRoute::Map &bindings, QObject* parent) :
     QObject(parent),
     m_bindings(bindings)
 {
 }
 
-const JsonBinding &BindingsProvider::getBinding(const QString &name)
+const JsonRoute &JsonRoutesProvider::getBinding(const QString &name)
 {
     if (m_bindings.contains(name)) {
         return m_bindings[name];

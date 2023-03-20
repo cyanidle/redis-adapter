@@ -85,16 +85,16 @@ void check_type() {
     constexpr auto isQGadget = Radapter::has_QObject_Macro<T>::Value && std::is_base_of<QObject, T>::value;
     static_assert(isQGadget || isQObject, "Please add Q_GADGET or Q_OBJECT macro!");
 }
-inline void check_field(const FieldConcept &field) {Q_UNUSED(field)}
+inline void check_field(const FieldConcept *field) {Q_UNUSED(field)}
 }
 
 #define _PROP_NAME(...) BOOST_PP_LIST_CAT(BOOST_PP_VARIADIC_TO_LIST(__fields__, __VA_ARGS__))
-#define _IMPL_FIELD(field) {#field, &field}
-#define _CHECK_FIELD(r, macro, i, elem) Serializable::Private::check_field(elem);
+#define _IMPL_FIELD(field) {#field, upcastField(&field)}
+#define _CHECK_FIELD(r, macro, i, elem) Serializable::Private::check_field(upcastField(&elem));
 #define _VARIADIC_MAP(r, macro, i, elem) BOOST_PP_COMMA_IF(i) macro(elem)
 #define _IMPL_FIELDS(...) BOOST_PP_SEQ_FOR_EACH_I(_VARIADIC_MAP, _IMPL_FIELD, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))
 #define _IMPL_CHECK_FIELDS(...) BOOST_PP_SEQ_FOR_EACH_I(_CHECK_FIELD, _, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))
-#define FIELDS(...) \
+#define _FIELDS_BASE(...) \
     private: \
     Q_PROPERTY(QVariant _PROP_NAME(__VA_ARGS__) READ _priv_fields) \
     QVariant _priv_fields() { \
@@ -102,8 +102,13 @@ inline void check_field(const FieldConcept &field) {Q_UNUSED(field)}
         using this_type = Radapter::stripped_this<decltype(this)>; \
         Serializable::Private::check_type<this_type>(); \
         return QVariant::fromValue(QMap<QString, Serializable::FieldConcept*>{_IMPL_FIELDS(__VA_ARGS__)}); \
-    } public: \
+    } public:
+
+#define FIELDS(...) _FIELDS_BASE(__VA_ARGS__) \
     virtual const QMetaObject *metaObject() const override {return &this->staticMetaObject;}
+
+#define FIELDS_QOBJECT(...) _FIELDS_BASE(__VA_ARGS__)
+
 
 }
 
