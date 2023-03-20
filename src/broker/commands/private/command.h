@@ -11,7 +11,7 @@
 
 namespace Radapter {
 
-class RADAPTER_SHARED_SRC Command
+class RADAPTER_API Command
 {
     Q_GADGET
 public:

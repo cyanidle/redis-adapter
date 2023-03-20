@@ -9,7 +9,7 @@
 
 namespace Radapter {
 
-class RADAPTER_SHARED_SRC Reply
+class RADAPTER_API Reply
 {
     Q_GADGET
 public:

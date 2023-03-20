@@ -9,7 +9,7 @@
 
 namespace Radapter {
 
-class RADAPTER_SHARED_SRC Broker : public QObject
+class RADAPTER_API Broker : public QObject
 {
     Q_OBJECT
 public:

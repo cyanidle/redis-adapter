@@ -6,8 +6,8 @@
 
 #define RADAPTER_VERSION "0.3"
 
-#ifndef RADAPTER_SHARED_SRC
-#define RADAPTER_SHARED_SRC
+#ifndef RADAPTER_API
+#define RADAPTER_API
 #endif
 
 typedef QMap<QString /*encoded string*/, QString /*decoded value*/> ParsingMap;

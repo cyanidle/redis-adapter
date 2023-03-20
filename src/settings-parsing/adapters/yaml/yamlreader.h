@@ -8,7 +8,7 @@
 
 namespace Settings {
 
-class RADAPTER_SHARED_SRC YamlReader : public DictReader
+class RADAPTER_API YamlReader : public DictReader
 {
     Q_OBJECT
 public:

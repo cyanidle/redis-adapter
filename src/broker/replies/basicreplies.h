@@ -7,7 +7,7 @@
 
 namespace Radapter {
 
-class RADAPTER_SHARED_SRC ReplyWithReason : public Reply
+class RADAPTER_API ReplyWithReason : public Reply
 {
     Q_GADGET
 public:
@@ -20,7 +20,7 @@ private:
     QString m_reason;
 };
 
-class RADAPTER_SHARED_SRC ReplyOk : public Reply
+class RADAPTER_API ReplyOk : public Reply
 {
     Q_GADGET
 public:
@@ -28,7 +28,7 @@ public:
     RADAPTER_REPLY
 };
 
-class RADAPTER_SHARED_SRC ReplyFail : public ReplyWithReason
+class RADAPTER_API ReplyFail : public ReplyWithReason
 {
     Q_GADGET
 public:
@@ -36,7 +36,7 @@ public:
     RADAPTER_REPLY
 };
 
-class RADAPTER_SHARED_SRC ReplyJson : public Reply
+class RADAPTER_API ReplyJson : public Reply
 {
     Q_GADGET
 public:
@@ -50,7 +50,7 @@ private:
     JsonDict m_json;
 };
 
-class RADAPTER_SHARED_SRC ReplyPack : public Reply
+class RADAPTER_API ReplyPack : public Reply
 {
     Q_GADGET
 public:

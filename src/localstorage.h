@@ -9,7 +9,7 @@
 #include <QFile>
 #include "radapterlogging.h"
 
-class RADAPTER_SHARED_SRC LocalStorage : public QObject
+class RADAPTER_API LocalStorage : public QObject
 {
     Q_OBJECT
 public:

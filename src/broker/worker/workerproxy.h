@@ -7,7 +7,7 @@ namespace Radapter {
 class Worker;
 class WorkerMsg;
 class Broker;
-class RADAPTER_SHARED_SRC WorkerProxy : public QObject
+class RADAPTER_API WorkerProxy : public QObject
 {
     Q_OBJECT
 public:

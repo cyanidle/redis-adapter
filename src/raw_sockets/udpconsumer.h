@@ -12,9 +12,9 @@ namespace Udp {
 struct ConsumerSettings : Settings::SerializableSettings
 {
     Q_GADGET
-    IS_SERIALIZABLE
-    SERIAL_FIELD(Radapter::WorkerSettings, worker)
-    SERIAL_FIELD(quint16, port)
+    FIELDS(worker, port)
+    Settings::RequiredField<Radapter::WorkerSettings> worker;
+    Settings::RequiredField<quint16> port;
 };
 
 class Consumer : public Radapter::Worker

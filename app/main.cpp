@@ -9,4 +9,3 @@ int main (int argc, char **argv) {
     launcher->run();
     return app.exec();
 }
-

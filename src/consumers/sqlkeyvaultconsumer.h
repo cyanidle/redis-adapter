@@ -7,7 +7,7 @@
 #include "broker/worker/worker.h"
 
 namespace MySql {
-class RADAPTER_SHARED_SRC KeyVaultConsumer : public Radapter::Worker
+class RADAPTER_API KeyVaultConsumer : public Radapter::Worker
 {
     Q_OBJECT
 public:

@@ -7,7 +7,7 @@
 
 namespace Radapter {
 
-class RADAPTER_SHARED_SRC CommandAck : public Command
+class RADAPTER_API CommandAck : public Command
 {
     Q_GADGET
 public:
@@ -19,7 +19,7 @@ private:
     JsonDict m_json;
 };
 
-class RADAPTER_SHARED_SRC CommandTriggerRead : public Command
+class RADAPTER_API CommandTriggerRead : public Command
 {
     Q_GADGET
 public:
@@ -27,7 +27,7 @@ public:
     RADAPTER_COMMAND_WANTS(Radapter::Reply)
 };
 
-class RADAPTER_SHARED_SRC CommandTrigger : public Command
+class RADAPTER_API CommandTrigger : public Command
 {
     Q_GADGET
 public:
@@ -35,7 +35,7 @@ public:
     RADAPTER_COMMAND_WANTS(Radapter::Reply)
 };
 
-class RADAPTER_SHARED_SRC CommandDummy : public Command
+class RADAPTER_API CommandDummy : public Command
 {
     Q_GADGET
 public:
@@ -43,7 +43,7 @@ public:
     RADAPTER_COMMAND_WANTS(Radapter::Reply)
 };
 
-class RADAPTER_SHARED_SRC CommandPack : public Command
+class RADAPTER_API CommandPack : public Command
 {
     Q_GADGET
 public:

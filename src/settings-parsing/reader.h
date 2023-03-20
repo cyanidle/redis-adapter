@@ -6,7 +6,7 @@
 
 namespace Settings {
 
-class RADAPTER_SHARED_SRC Reader : public QObject
+class RADAPTER_API Reader : public QObject
 {
     Q_OBJECT
 public:

@@ -18,7 +18,7 @@ void Producer::onMsg(const Radapter::WorkerMsg &msg)
 {
     static QByteArray crlf("\r\n");
     auto payload = msg.json().toBytes().append(crlf);
-    auto datagram = QNetworkDatagram(payload, QHostAddress(m_settings.server.host), m_settings.server.port);
+    auto datagram = QNetworkDatagram(payload, QHostAddress(m_settings.server->host.value), m_settings.server->port);
     m_socket->writeDatagram(datagram);
 }
 

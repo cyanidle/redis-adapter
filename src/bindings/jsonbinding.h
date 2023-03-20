@@ -5,7 +5,7 @@
 #include "jsondict/jsondict.hpp"
 #include <QVariantMap>
 
-class RADAPTER_SHARED_SRC JsonBinding
+class RADAPTER_API JsonBinding
 {
 public:
     static constexpr const char *ignoreField = "<ignore>";

@@ -5,7 +5,7 @@
 #include "private/global.h"
 #include <QMutex>
 
-class RADAPTER_SHARED_SRC BindingsProvider : public QObject
+class RADAPTER_API BindingsProvider : public QObject
 {
     Q_OBJECT
 public:

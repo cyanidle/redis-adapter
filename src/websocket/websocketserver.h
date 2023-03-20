@@ -8,7 +8,7 @@
 #include <QTimer>
 
 namespace Websocket {
-    class RADAPTER_SHARED_SRC Server;
+    class RADAPTER_API Server;
 }
 
 class Websocket::Server : public QObject

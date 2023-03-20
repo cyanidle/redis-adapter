@@ -15,7 +15,7 @@ class InterceptorBase;
 class BrokerEvent;
 class WorkerSettings;
 //! You can override onCommand(cosnt WorkerMsg &) / onReply(cosnt WorkerMsg &) / onMsg(cosnt WorkerMsg &)
-class RADAPTER_SHARED_SRC Worker : public QObject {
+class RADAPTER_API Worker : public QObject {
     Q_OBJECT
 public:
     using Set = QSet<Worker*>;

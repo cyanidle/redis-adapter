@@ -12,7 +12,7 @@ MockWorker::MockWorker(const MockWorkerSettings &settings, QThread* thread) :
     m_mockTimer(),
     m_currentIndex()
 {
-    if (settings.json_file_path.isEmpty()) {
+    if (settings.json_file_path->isEmpty()) {
         return;
     }
     m_mockTimer = new QTimer(this);

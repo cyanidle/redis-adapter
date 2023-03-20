@@ -7,7 +7,7 @@
 namespace Redis{
 
 
-class RADAPTER_SHARED_SRC CacheConsumer : public Connector
+class RADAPTER_API CacheConsumer : public Connector
 {
     Q_OBJECT
     using CtxHandle = Radapter::ContextBase::Handle;

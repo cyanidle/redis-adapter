@@ -5,8 +5,8 @@
 
 struct GuiSettings : Settings::SerializableSettings {
     Q_GADGET
-    IS_SERIALIZABLE
-    SERIAL_FIELD(bool, enabled, false)
+    FIELDS(enabled)
+    Settings::NonRequiredField<bool> enabled{false};
 };
 
 

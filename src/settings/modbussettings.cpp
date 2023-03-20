@@ -2,7 +2,7 @@
 #include "templates/algorithms.hpp"
 
 using namespace Settings;
-using namespace Serializer;
+using namespace Serializable;
 Q_GLOBAL_STATIC(DevicesRegisters, allRegisters)
 
 void Settings::parseRegisters(const QVariant &registersFile) {
@@ -49,7 +49,7 @@ void Settings::parseRegisters(const QVariant &registersFile) {
     }
 }
 
-void ModbusSlave::postInit() {
+void ModbusSlave::postUpdate() {
     for (auto &name: register_names) {
         auto &toMerge = (*allRegisters).value(name.replace('.', ':'));
         for (auto newRegisters = toMerge.begin(); newRegisters != toMerge.end(); ++newRegisters) {
@@ -85,7 +85,7 @@ void ModbusSlave::postInit() {
     device = Settings::ModbusDevice::get(device_name);
 }
 
-void ModbusMaster::postInit()
+void ModbusMaster::postUpdate()
 {
     for (auto &name: register_names) {
         auto &toMerge = (*allRegisters)[name.replace('.', ':')];

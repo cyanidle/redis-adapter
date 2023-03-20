@@ -4,7 +4,7 @@
 #include <QObject>
 #include <QTimer>
 
-class RADAPTER_SHARED_SRC ResourceMonitor : public QObject
+class RADAPTER_API ResourceMonitor : public QObject
 {
     Q_OBJECT
 #ifndef _MSC_VER

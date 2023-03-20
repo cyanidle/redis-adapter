@@ -4,93 +4,104 @@
 #include "broker/interceptors/logginginterceptorsettings.h"
 
 namespace Settings {
-    struct RADAPTER_SHARED_SRC RedisServer : ServerInfo {
+    struct RADAPTER_API RedisServer : ServerInfo {
         typedef QMap<QString, RedisServer> Map;
         static Map &cacheMap() {
             static Map map{};
             return map;
         }
         Q_GADGET
-        IS_SERIALIZABLE
-        SERIAL_FIELD(QString, name)
-        SERIAL_POST_INIT(cache)
-        void cache() {
+        FIELDS(name)
+        RequiredField<QString> name;
+        POST_UPDATE {
             cacheMap().insert(name, *this);
         }
     };
 
-    struct RADAPTER_SHARED_SRC RedisConnector : Settings::SerializableSettings {
+    struct RADAPTER_API RedisConnector : Settings::SerializableSettings {
         Q_GADGET
-        IS_SERIALIZABLE
-        SERIAL_FIELD(Radapter::WorkerSettings, worker)
-        SERIAL_FIELD(QString, server_name)
-        SERIAL_FIELD(quint16, db_index, 0)
-        SERIAL_FIELD(quint16, ping_delay, 10000)
-        SERIAL_FIELD(quint16, reconnect_delay, 1500)
-        SERIAL_FIELD(quint16, max_command_errors, 3)
-        SERIAL_FIELD(quint16, tcp_timeout, 1000)
-        SERIAL_FIELD(quint16, command_timeout, 150)
+        FIELDS(worker,
+               server_name,
+               db_index,
+               ping_delay,
+               reconnect_delay,
+               max_command_errors,
+               tcp_timeout,
+               command_timeout)
+        RequiredField<Radapter::WorkerSettings> worker;
+        NonRequiredField<QString> server_name;
+        NonRequiredField<quint16> db_index{0};
+        NonRequiredField<quint16> ping_delay{10000};
+        NonRequiredField<quint16> reconnect_delay{1500};
+        NonRequiredField<quint16> max_command_errors{3};
+        NonRequiredField<quint16> tcp_timeout{1000};
+        NonRequiredField<quint16> command_timeout{150};
+
         RedisServer server;
-        SERIAL_POST_INIT(postInit)
-        void postInit() {
+        POST_UPDATE {
             server = RedisServer::cacheMap().value(server_name);
         }
     };
 
-    struct RADAPTER_SHARED_SRC RedisKeyEventSubscriber : RedisConnector {
+    struct RADAPTER_API RedisKeyEventSubscriber : RedisConnector {
         Q_GADGET
-        IS_SERIALIZABLE
-        SERIAL_CONTAINER(QList, QString, keyEvents)
+        FIELDS(keyEvents)
+        RequiredSeq<QString> keyEvents;
     };
 
-    struct RADAPTER_SHARED_SRC RedisStreamBase : RedisConnector {
+    struct RADAPTER_API RedisStreamBase : RedisConnector {
         Q_GADGET
-        IS_SERIALIZABLE
-        SERIAL_FIELD(QString, stream_key)
-        SERIAL_FIELD(qint32, stream_size, 1000000u)
+        FIELDS(stream_key, stream_size)
+        RequiredField<QString> stream_key;
+        RequiredField<quint32> stream_size{1000000u};
     };
 
-    struct RADAPTER_SHARED_SRC RedisStreamConsumer : RedisStreamBase {
+    struct RADAPTER_API RedisStreamConsumer : RedisStreamBase {
         enum StartMode {
             StartPersistentId = 0,
             StartFromTop,
             StartFromFirst
         };
+        static bool validate(QVariant &target) {
+            auto asStr = target.toString().toLower();
+            if (asStr == "persistent_id") {
+                target.setValue(StartPersistentId);
+            } else if (asStr == "from_top") {
+                target.setValue(StartFromTop);
+            } else if (asStr == "from_first") {
+                target.setValue(StartFromFirst);
+            } else {
+                return false;
+            }
+            return true;
+        }
         Q_ENUM(StartMode)
         Q_GADGET
-        IS_SERIALIZABLE
-        SERIAL_FIELD_MAPPED(StartMode, start_from, startModesMap(), StartPersistentId)
-        static QMap<QString, StartMode> &startModesMap() {
-            static QMap<QString, StartMode> map {
-                {"persistent_id", StartPersistentId},
-                {"top", StartFromTop},
-                {"first", StartFromFirst}
-            };
-            return map;
-        }
+        FIELDS(start_from)
+        using StartFromField = Serializable::Validated<NonRequiredField<StartMode>>::With<RedisStreamConsumer>;
+        StartFromField start_from{StartPersistentId};
     };
-    struct RADAPTER_SHARED_SRC RedisStreamGroupConsumer : RedisStreamConsumer {
+    struct RADAPTER_API RedisStreamGroupConsumer : RedisStreamConsumer {
         Q_GADGET
-        IS_SERIALIZABLE
-        SERIAL_FIELD(QString, consumer_group_name)
-        SERIAL_FIELD(bool, start_from_last_unread, true)
+        FIELDS(consumer_group_name, start_from_last_unread)
+        RequiredField<QString> consumer_group_name;
+        NonRequiredField<bool> start_from_last_unread{true};
     };
-    struct RADAPTER_SHARED_SRC RedisStreamProducer : RedisStreamBase {
+    struct RADAPTER_API RedisStreamProducer : RedisStreamBase {
         Q_GADGET
-        IS_SERIALIZABLE
     };
 
-    struct RADAPTER_SHARED_SRC RedisCacheConsumer : RedisConnector {
+    struct RADAPTER_API RedisCacheConsumer : RedisConnector {
         Q_GADGET
-        IS_SERIALIZABLE
-        SERIAL_FIELD(QString, object_hash_key, "")
-        SERIAL_FIELD(quint32, update_rate, 600)
+        FIELDS(object_hash_key, update_rate)
+        NonRequiredField<QString> object_hash_key;
+        NonRequiredField<quint32> update_rate{600};
     };
 
-    struct RADAPTER_SHARED_SRC RedisCacheProducer : RedisConnector {
+    struct RADAPTER_API RedisCacheProducer : RedisConnector {
         Q_GADGET
-        IS_SERIALIZABLE
-        SERIAL_FIELD(QString, object_hash_key)
+        FIELDS(object_hash_key)
+        RequiredField<QString> object_hash_key;
     };
 }
 

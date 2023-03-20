@@ -8,7 +8,7 @@
 
 namespace Settings {
 
-class RADAPTER_SHARED_SRC DictReader : public Reader
+class RADAPTER_API DictReader : public Reader
 {
 public:
     DictReader(const QString &resource, const QString &path, QObject *parent = nullptr);

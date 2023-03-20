@@ -8,7 +8,7 @@
 
 namespace Redis{
 
-class RADAPTER_SHARED_SRC StreamConsumer : public Connector
+class RADAPTER_API StreamConsumer : public Connector
 {
     Q_OBJECT
 public:

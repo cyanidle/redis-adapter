@@ -6,7 +6,7 @@
 
 namespace Settings {
 
-class RADAPTER_SHARED_SRC TomlReader : public DictReader
+class RADAPTER_API TomlReader : public DictReader
 {
     Q_OBJECT
 public:

@@ -8,7 +8,7 @@ QT += core \
     gui
 TARGET = redis-adapter
 
-DEFINES += RADAPTER_SHARED_SRC=
+DEFINES += RADAPTER_API=
 CONFIG += c++11 console link_prl
 CONFIG -= app_bundle
 

@@ -6,7 +6,7 @@
 #include "mysql/mysqlclient.h"
 
 namespace MySql {
-class RADAPTER_SHARED_SRC Connector : public QObject
+class RADAPTER_API Connector : public QObject
 {
     Q_OBJECT
 public:

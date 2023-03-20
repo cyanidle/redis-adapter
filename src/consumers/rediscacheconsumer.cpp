@@ -12,7 +12,7 @@ CacheConsumer::CacheConsumer(const Settings::RedisCacheConsumer &config, QThread
     Connector(config, thread),
     m_objectKey(config.object_hash_key)
 {
-    if (!config.object_hash_key.isEmpty()) {
+    if (!config.object_hash_key->isEmpty()) {
         m_objectRead = new QTimer(this);
         m_objectRead->callOnTimeout(this, &CacheConsumer::requestObjectSimple);
         m_objectRead->setInterval(config.update_rate);

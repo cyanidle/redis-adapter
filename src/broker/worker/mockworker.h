@@ -9,7 +9,7 @@
 
 
 namespace Radapter {
-class RADAPTER_SHARED_SRC MockWorker;
+class RADAPTER_API MockWorker;
 }
 
 class Radapter::MockWorker : public Radapter::Worker

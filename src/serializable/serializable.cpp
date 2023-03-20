@@ -20,19 +20,19 @@ const QList<QString> &Object::fields() const
     return m_fields;
 }
 
-bool Object::deserialize(const QVariantMap &source)
+bool Object::update(const QVariantMap &source)
 {
     fillFields();
-    bool status = false;
+    bool wasUpdated = false;
     for (auto iter = source.cbegin(); iter != source.cend(); ++iter) {
         auto found = m_fieldsMap.value(iter.key());
         if (found) {
-            status = found->updateVariant(iter.value()) || status; // stays true once set
+            wasUpdated = found->updateWithVariant(iter.value()) || wasUpdated; // stays true once set
         } else {
-            status = status || false;
+            wasUpdated = wasUpdated || false;
         }
     }
-    return status; // --> was updated? true/false
+    return wasUpdated; // --> was updated? true/false
 }
 
 QVariantMap Object::serialize() const
@@ -46,9 +46,21 @@ QVariantMap Object::serialize() const
     return result;
 }
 
+QVariantMap Object::schema() const
+{
+    fillFields();
+    QVariantMap result;
+    auto copy = m_fieldsMap;
+    for (auto iter = copy.cbegin(); iter != copy.cend(); ++iter) {
+        result.insert(iter.key(), iter.value()->schema());
+    }
+    return result;
+
+}
+
 void Object::fillFields() const
 {
-    if (m_wasCacheFilled) return;
+    if (!m_fields.isEmpty()) return;
     auto mobj = metaObject();
     auto props = mobj->propertyCount();
     for (auto i = 0; i < props; i++) {

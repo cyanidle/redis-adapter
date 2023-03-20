@@ -11,7 +11,7 @@
 #include <QMutex>
 
 namespace Radapter {
-class RADAPTER_SHARED_SRC LoggingInterceptor;
+class RADAPTER_API LoggingInterceptor;
 }
 
 class Radapter::LoggingInterceptor : public Radapter::InterceptorBase

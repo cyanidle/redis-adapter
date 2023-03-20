@@ -6,7 +6,7 @@ using namespace Utils;
 
 bool mergeDataUnit(QList<QModbusDataUnit> &target, const QModbusDataUnit &unit) {
     for (auto &item : target) {
-        if (item.startAddress() + item.valueCount() == unit.startAddress() &&
+        if (item.startAddress() + item.valueCount() == static_cast<quint32>(unit.startAddress()) &&
                 item.registerType() == unit.registerType()) {
             item.setValues(item.values() + unit.values());
             return true;
@@ -74,7 +74,7 @@ QModbusDataUnit Modbus::parseValueToDataUnit(const QVariant &src, const Settings
 {
     if (!src.canConvert(regInfo.type)) {
         reError() << "Error writing data to modbus: "
-                  << src << "; Index: " << regInfo.index;
+                  << src << "; Index: " << regInfo.index.value;
         return {};
     }
     const auto sizeWords = QMetaType::sizeOf(regInfo.type)/2;

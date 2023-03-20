@@ -9,7 +9,7 @@
 #include "settings/settings.h"
 
 namespace Websocket {
-class RADAPTER_SHARED_SRC ServerConnector : public Radapter::Worker
+class RADAPTER_API ServerConnector : public Radapter::Worker
 {
     Q_OBJECT
 public:

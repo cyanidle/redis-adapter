@@ -5,7 +5,7 @@
 #include "replies/redisreplies.h"
 namespace Redis {
 namespace Cache{
-class RADAPTER_SHARED_SRC ReadObject : public Radapter::Command
+class RADAPTER_API ReadObject : public Radapter::Command
 {
     Q_GADGET
 public:
@@ -15,7 +15,7 @@ public:
 private:
     QString m_key;
 };
-class RADAPTER_SHARED_SRC ReadKeys : public Radapter::Command
+class RADAPTER_API ReadKeys : public Radapter::Command
 {
     Q_GADGET
 public:
@@ -25,7 +25,7 @@ public:
 private:
     QStringList m_keys;
 };
-class RADAPTER_SHARED_SRC ReadKey : public Radapter::Command
+class RADAPTER_API ReadKey : public Radapter::Command
 {
     Q_GADGET
 public:
@@ -35,7 +35,7 @@ public:
 private:
     QString m_key;
 };
-class RADAPTER_SHARED_SRC ReadSet : public Radapter::Command
+class RADAPTER_API ReadSet : public Radapter::Command
 {
     Q_GADGET
 public:
@@ -45,7 +45,7 @@ public:
 private:
     QString m_set;
 };
-class RADAPTER_SHARED_SRC ReadHash : public Radapter::Command
+class RADAPTER_API ReadHash : public Radapter::Command
 {
     Q_GADGET
 public:
@@ -57,7 +57,7 @@ private:
 };
 
 //! Producer commands
-class RADAPTER_SHARED_SRC WriteHash : public Radapter::Command
+class RADAPTER_API WriteHash : public Radapter::Command
 {
     Q_GADGET
 public:
@@ -70,7 +70,7 @@ private:
     QVariantMap m_flatMap;
 };
 
-class RADAPTER_SHARED_SRC WriteSet : public Radapter::Command
+class RADAPTER_API WriteSet : public Radapter::Command
 {
     Q_GADGET
 public:
@@ -83,7 +83,7 @@ private:
     QStringList m_keys;
 };
 
-class RADAPTER_SHARED_SRC Delete : public Radapter::Command
+class RADAPTER_API Delete : public Radapter::Command
 {
     Q_GADGET
 public:
@@ -93,7 +93,7 @@ public:
 private:
     QString m_target;
 };
-class RADAPTER_SHARED_SRC WriteKeys : public Radapter::Command
+class RADAPTER_API WriteKeys : public Radapter::Command
 {
     Q_GADGET
 public:
@@ -103,7 +103,7 @@ public:
 private:
     QVariantMap m_keys;
 };
-class RADAPTER_SHARED_SRC WriteObject : public Radapter::Command
+class RADAPTER_API WriteObject : public Radapter::Command
 {
     Q_GADGET
 public:

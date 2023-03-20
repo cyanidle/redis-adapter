@@ -6,7 +6,7 @@ QT += testlib
 CONFIG += qt console warn_on depend_includepath testcase link_prl
 CONFIG -= app_bundle gui
 TEMPLATE = app
-DEFINES += RADAPTER_SHARED_SRC=Q_DECL_IMPORT
+DEFINES += RADAPTER_API=Q_DECL_IMPORT
 SOURCES += \
     tst_$${RSK_TEST_NAME}.cpp
 HEADERS += \

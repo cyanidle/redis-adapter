@@ -8,7 +8,7 @@
 
 namespace Settings {
 
-class RADAPTER_SHARED_SRC TomlReader
+class RADAPTER_API TomlReader
 {
 public:
     static QVariantMap parse(const QString &path, const ParsingMap& parsingMap = {});

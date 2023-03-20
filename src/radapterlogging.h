@@ -5,37 +5,37 @@
 #include <QDebug>
 
 
-RADAPTER_SHARED_SRC Q_DECLARE_LOGGING_CATEGORY(workersLogging);
-RADAPTER_SHARED_SRC Q_DECLARE_LOGGING_CATEGORY(radapter);
+RADAPTER_API Q_DECLARE_LOGGING_CATEGORY(workersLogging);
+RADAPTER_API Q_DECLARE_LOGGING_CATEGORY(radapter);
 #define reDebug()   qCDebug(radapter)
 #define reInfo()    qCInfo(radapter)
 #define reWarn()    qCWarning(radapter)
 #define reError()   qCCritical(radapter)
 
-RADAPTER_SHARED_SRC Q_DECLARE_LOGGING_CATEGORY(modbus);
+RADAPTER_API Q_DECLARE_LOGGING_CATEGORY(modbus);
 #define mbDebug()   qCDebug(modbus)
 
-RADAPTER_SHARED_SRC Q_DECLARE_LOGGING_CATEGORY(mysql);
+RADAPTER_API Q_DECLARE_LOGGING_CATEGORY(mysql);
 #define sqlDebug()  qCDebug(mysql)
 
-RADAPTER_SHARED_SRC Q_DECLARE_LOGGING_CATEGORY(wsockserver);
+RADAPTER_API Q_DECLARE_LOGGING_CATEGORY(wsockserver);
 #define wsockServDebug()  qCDebug(wsockserver)
 
-RADAPTER_SHARED_SRC Q_DECLARE_LOGGING_CATEGORY(wsockclient);
+RADAPTER_API Q_DECLARE_LOGGING_CATEGORY(wsockclient);
 #define wsockClientDebug()  qCDebug(wsockclient)
 
-RADAPTER_SHARED_SRC Q_DECLARE_LOGGING_CATEGORY(resmon);
+RADAPTER_API Q_DECLARE_LOGGING_CATEGORY(resmon);
 #define resmonDebug() qCDebug(resmon)
 
-RADAPTER_SHARED_SRC Q_DECLARE_LOGGING_CATEGORY(settingsParsingLogging);
+RADAPTER_API Q_DECLARE_LOGGING_CATEGORY(settingsParsingLogging);
 #define settingsParsingWarn() qCWarning(settingsParsingLogging)
 
-RADAPTER_SHARED_SRC Q_DECLARE_LOGGING_CATEGORY(brokerLogging);
+RADAPTER_API Q_DECLARE_LOGGING_CATEGORY(brokerLogging);
 #define brokerInfo() qCInfo(brokerLogging)
 #define brokerWarn() qCWarning(brokerLogging)
 #define brokerError() qCCritical(brokerLogging)
 
-RADAPTER_SHARED_SRC Q_DECLARE_LOGGING_CATEGORY(bindingsLogging);
+RADAPTER_API Q_DECLARE_LOGGING_CATEGORY(bindingsLogging);
 #define bindingsError() qCCritical(bindingsLogging)
 
 

@@ -7,7 +7,7 @@
 #include "connectors/redisconnector.h"
 
 namespace Redis {
-class RADAPTER_SHARED_SRC StreamProducer;
+class RADAPTER_API StreamProducer;
 }
 
 class Redis::StreamProducer : public Connector

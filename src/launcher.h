@@ -7,20 +7,9 @@
 #include "broker/worker/worker.h"
 #include <QObject>
 
-#include "settings-parsing/experimental/serializable.h"
-
-
-
-struct Test : Serializable::Gadget {
-    Q_GADGET
-    FIELDS(a, b)
-    Serializable::Field<int> a;
-    Serializable::Field<int> b;
-};
-
 namespace Radapter {
 
-class RADAPTER_SHARED_SRC Launcher : public QObject
+class RADAPTER_API Launcher : public QObject
 {
     Q_OBJECT
 public:
@@ -74,9 +63,9 @@ const QList<T> Launcher::parseArrayOf(const QString &path) {
         throw std::runtime_error("Expected List from: " + path.toStdString());
     }
     try {
-        return Serializer::fromQList<T>(result.toList());
+        return Serializable::fromQList<T>(result.toList());
     } catch (const std::exception &e) {
-        throw std::runtime_error(QString(e.what()).replace(ROOT_PREFIX, path).toStdString() +
+        throw std::runtime_error(QString(e.what()).toStdString() +
                                  std::string("; While Parsing List --> [[") +
                                  path.toStdString() + "]]; In --> " +
                                  m_reader->path().toStdString());
@@ -91,9 +80,9 @@ T Launcher::parseObject(const QString &path) {
         return {};
     }
     try {
-        return Serializer::fromQMap<T>(result.toMap());
+        return Serializable::fromQMap<T>(result.toMap());
     } catch (const std::exception &e) {
-        throw std::runtime_error(QString(e.what()).replace(ROOT_PREFIX, path).toStdString() +
+        throw std::runtime_error(QString(e.what()).toStdString() +
                                  std::string("; While Parsing Object --> [") +
                                  path.toStdString() + "]; In --> " +
                                  m_reader->path().toStdString());

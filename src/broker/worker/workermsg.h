@@ -10,7 +10,7 @@ namespace Radapter {
 class Broker;
 class Worker;
 class WorkerProxy;
-class RADAPTER_SHARED_SRC WorkerMsg : public JsonDict {
+class RADAPTER_API WorkerMsg : public JsonDict {
     Q_GADGET
 public:
     using Scoped = QScopedPointer<WorkerMsg>;

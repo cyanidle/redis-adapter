@@ -52,7 +52,7 @@ void Connector::tryConnect()
     }
     timeval timeout{0, m_config.tcp_timeout};
     auto options = redisOptions{};
-    REDIS_OPTIONS_SET_TCP(&options, m_config.server.host.toStdString().c_str(), m_config.server.port);
+    REDIS_OPTIONS_SET_TCP(&options, m_config.server.host->toStdString().c_str(), m_config.server.port);
     options.connect_timeout = &timeout;
     m_redisContext = redisAsyncConnectWithOptions(&options);
     m_redisContext->data = this;
@@ -281,7 +281,7 @@ void Connector::setDbIndex(const quint16 dbIndex)
 void Connector::onRun()
 {
     workerInfo(this, .noquote().nospace()) << ": Connnecting to: " << m_config.print() <<
-                                    "(Host: " << m_config.server.host << "; Port: " << m_config.server.port << ")";
+                                    "(Host: " << m_config.server.host.value << "; Port: " << m_config.server.port.value << ")";
     m_client = new RedisQtAdapter(this);
     tryConnect();
     Radapter::Worker::onRun();

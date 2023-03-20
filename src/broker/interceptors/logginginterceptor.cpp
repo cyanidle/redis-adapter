@@ -15,7 +15,7 @@ LoggingInterceptor::LoggingInterceptor(const LoggingInterceptorSettings &setting
     m_error(false)
 {
     connect(m_flushTimer, &QTimer::timeout, this, &LoggingInterceptor::onFlush);
-    QDir().mkpath(settings.filepath.left(settings.filepath.lastIndexOf("/")));
+    QDir().mkpath(settings.filepath->left(settings.filepath->lastIndexOf("/")));
     m_file->open(QIODevice::ReadOnly | QIODevice::Text);
     QJsonParseError err;
     QTextStream in(m_file);
@@ -55,17 +55,17 @@ void LoggingInterceptor::onFlush()
 }
 
 bool LoggingInterceptor::testMsgForLog(const Radapter::WorkerMsg &msg) {
-    if (m_settings.log.testFlag(LoggingInterceptorSettings::LogAll)) {
+    if (m_settings.log_.testFlag(LoggingInterceptorSettings::LogAll)) {
         return true;
     }
     if (!msg.isCommand() && !msg.isReply())
-        return m_settings.log.testFlag(
+        return m_settings.log_.testFlag(
             LoggingInterceptorSettings::LogNormal);
     if (msg.isReply())
-        return m_settings.log.testFlag(
+        return m_settings.log_.testFlag(
             LoggingInterceptorSettings::LogReply);
     if (msg.isCommand())
-        return m_settings.log.testFlag(
+        return m_settings.log_.testFlag(
             LoggingInterceptorSettings::LogCommand);
     return true;
 }

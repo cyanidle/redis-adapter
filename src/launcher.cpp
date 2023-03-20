@@ -1,5 +1,6 @@
 #include "broker/broker.h"
 #include "broker/worker/mockworker.h"
+#include "settings-parsing/convertutils.hpp"
 #include "connectors/websocketserverconnector.h"
 #include "guisettings.h"
 #include "launcher.h"
@@ -36,9 +37,6 @@ Launcher::Launcher(QObject *parent) :
     m_workers(),
     m_reader()
 {
-    QVariantMap src {{"a", 1}, {"b", 2}};
-    Test a;
-    a.deserialize(src);
     qSetMessagePattern(RADAPTER_CUSTOM_MESSAGE_PATTERN);
     m_argsParser.setApplicationDescription("Redis Adapter");
     parseCommandlineArgs();
@@ -195,7 +193,7 @@ void Launcher::initPipelines()
 {
     const auto parsed = parseObject<Settings::Pipelines>();
     static QRegExp splitter("[<>]");
-    for (const auto &pipe: parsed.pipelines) {
+    for (const auto &pipe: parsed.pipelines.value) {
         auto split = pipe.split(splitter);
         if (split.size() < 2) {
             throw std::runtime_error("Pipeline length must be more than 2!");
@@ -264,7 +262,7 @@ void Launcher::initWebsockets()
         addWorker(new Websocket::Client(wsClient, new QThread(this)));
     }
     auto websocketServer = parseObject<Settings::WebsocketServerInfo>("websocket.server");
-    if (websocketServer.isValid()) {
+    if (websocketServer.port) {
         addWorker(new Websocket::ServerConnector(websocketServer, new QThread(this)));
     }
 }

@@ -20,16 +20,16 @@ Master::Master(const Settings::ModbusMaster &settings, QThread *thread) :
     m_reconnectTimer->setSingleShot(true);
     m_readTimer->setInterval(settings.poll_rate);
     m_readTimer->callOnTimeout(this, &Master::doRead);
-    if (settings.device.tcp) {
+    if (settings.device.tcp.value) {
         m_device = new QModbusTcpClient(this);
-        m_device->setConnectionParameter(QModbusDevice::NetworkAddressParameter, settings.device.tcp->host);
-        m_device->setConnectionParameter(QModbusDevice::NetworkPortParameter, settings.device.tcp->port);
+        m_device->setConnectionParameter(QModbusDevice::NetworkAddressParameter, settings.device.tcp->host.value);
+        m_device->setConnectionParameter(QModbusDevice::NetworkPortParameter, settings.device.tcp->port.value);
     } else {
         m_device = new QModbusRtuSerialMaster(this);
         m_device->setConnectionParameter(QModbusDevice::SerialBaudRateParameter, settings.device.rtu->baud);
         m_device->setConnectionParameter(QModbusDevice::SerialDataBitsParameter, settings.device.rtu->data_bits);
         m_device->setConnectionParameter(QModbusDevice::SerialParityParameter, settings.device.rtu->parity);
-        m_device->setConnectionParameter(QModbusDevice::SerialPortNameParameter, settings.device.rtu->port_name);
+        m_device->setConnectionParameter(QModbusDevice::SerialPortNameParameter, settings.device.rtu->port_name.value);
         m_device->setConnectionParameter(QModbusDevice::SerialStopBitsParameter, settings.device.rtu->stop_bits);
     }
     m_device->setTimeout(settings.responce_time);
@@ -41,7 +41,7 @@ Master::Master(const Settings::ModbusMaster &settings, QThread *thread) :
                                         "; With --> " +
                                         m_reverseRegisters[regIter->table][regIter->index].toStdString() +
                                         " (Table: "+ tableToString(regIter->table).toStdString() +
-                                        "; Register: " + QString::number(regIter->index).toStdString() + ")");
+                                        "; Register: " + QString::number(regIter->index.value).toStdString() + ")");
         }
         m_reverseRegisters[regIter->table][regIter->index] = regIter.key();
     }

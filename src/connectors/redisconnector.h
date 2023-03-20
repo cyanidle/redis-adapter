@@ -9,7 +9,7 @@
 
 namespace Redis {
 
-class RADAPTER_SHARED_SRC Connector : public Radapter::Worker
+class RADAPTER_API Connector : public Radapter::Worker
 {
     Q_OBJECT
 public:

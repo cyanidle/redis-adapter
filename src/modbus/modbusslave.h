@@ -8,7 +8,7 @@
 
 namespace Modbus {
 
-class RADAPTER_SHARED_SRC Slave : public Radapter::Worker
+class RADAPTER_API Slave : public Radapter::Worker
 {
     Q_OBJECT
 public:

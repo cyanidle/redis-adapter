@@ -5,7 +5,7 @@
 #include "private/global.h"
 
 namespace Radapter {
-class RADAPTER_SHARED_SRC InterceptorBase;
+class RADAPTER_API InterceptorBase;
 typedef QSet<InterceptorBase*> Interceptors;
 }
 

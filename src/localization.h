@@ -5,7 +5,7 @@
 #include <QMutex>
 #include "settings/settings.h"
 
-class RADAPTER_SHARED_SRC Localization
+class RADAPTER_API Localization
 {
 public:
     static Localization* instance();

@@ -22,7 +22,7 @@ QTimeZone Localization::timeZone() const
 void Localization::applyInfo(const Settings::LocalizationInfo &timeZone)
 {
     QMutexLocker lock(&m_mutex);
-    if (!timeZone.time_zone.isValid()) {
+    if (!timeZone.time_zone->isValid()) {
         throw std::invalid_argument("Localization: incorrect timezone!");
     }
     m_info = timeZone;

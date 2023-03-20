@@ -5,12 +5,11 @@
 #include "settings-parsing/serializablesettings.h"
 #include "private/global.h"
 
-Q_DECLARE_METATYPE(QJsonDocument::JsonFormat)
 namespace Radapter {
 
-struct RADAPTER_SHARED_SRC LoggingInterceptorSettings : public Settings::SerializableSettings  {
+struct RADAPTER_API LoggingInterceptorSettings : public Settings::SerializableSettings  {
     Q_GADGET
-    IS_SERIALIZABLE
+    FIELDS(filepath, flush_delay, max_size_bytes, rotating)
     enum LogMsgTypes {
         LogNone = 0,
         LogAll = 0x0001,
@@ -20,12 +19,14 @@ struct RADAPTER_SHARED_SRC LoggingInterceptorSettings : public Settings::Seriali
     };
     Q_DECLARE_FLAGS(LogMsgs, LogMsgTypes)
     Q_ENUM(LogMsgTypes)
-    SERIAL_FIELD(QString, filepath)
-    SERIAL_FIELD(quint32, flush_delay, 1000u)
-    SERIAL_FIELD(quint64, max_size_bytes, 100000000UL)
-    SERIAL_FIELD(quint64, rotating, true)
-    SERIAL_CUSTOM(LogMsgs, log, initLog, NO_READ, LogNormal)
-    SERIAL_FIELD_MAPPED(QJsonDocument::JsonFormat, format, mapping(), QJsonDocument::Indented)
+    Settings::RequiredField<QString> filepath;
+    Settings::NonRequiredField<quint32> flush_delay{1000u};
+    Settings::NonRequiredField<quint64> max_size_bytes{100000000UL};
+    Settings::NonRequiredField<quint64> rotating{true};
+    Settings::NonRequiredField<QString> log{"normal"};
+    LogMsgs log_{LogNormal};
+    using JsonField = Serializable::Validated<Settings::NonRequiredField<QJsonDocument::JsonFormat>>::With<Settings::ChooseJsonFormat>;
+    JsonField format{QJsonDocument::Indented};
 protected:
     static QMap<QString, QJsonDocument::JsonFormat> &mapping() {
         static QMap<QString, QJsonDocument::JsonFormat> map {
@@ -34,26 +35,22 @@ protected:
         };
         return map;
     }
-    bool initLog(const QVariant &src) {
-        const auto strRep = src.toString().toLower();
+    POST_UPDATE {
+        const auto strRep = log->toLower();
         if (strRep == "all") {
-            log = LogAll;
+            log_ = LogAll;
         } else {
-            const auto splitVersions = src.toList();
+            const auto splitVersions = log->split(" | ");
             if (splitVersions.contains("normal") || strRep == "normal") {
-                log |= LogNormal;
+                log_ |= LogNormal;
             }
             if (splitVersions.contains("reply") || strRep == "reply") {
-                log |= LogReply;
+                log_ |= LogReply;
             }
             if (splitVersions.contains("command") || strRep == "command") {
-                log |= LogCommand;
+                log_ |= LogCommand;
             }
         }
-        if (!log) {
-            return false;
-        }
-        return true;
     }
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(LoggingInterceptorSettings::LogMsgs)

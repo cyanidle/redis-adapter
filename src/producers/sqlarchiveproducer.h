@@ -8,7 +8,7 @@
 #include "connectors/mysqlconnector.h"
 
 namespace MySql {
-class RADAPTER_SHARED_SRC ArchiveProducer;
+class RADAPTER_API ArchiveProducer;
 }
 
 class MySql::ArchiveProducer : public Radapter::Worker

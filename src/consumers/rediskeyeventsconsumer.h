@@ -6,7 +6,7 @@
 #include "formatting/redis/rediscachequeries.h"
 
 namespace Redis {
-class RADAPTER_SHARED_SRC KeyEventsConsumer;
+class RADAPTER_API KeyEventsConsumer;
 }
 
 class Redis::KeyEventsConsumer : public Connector

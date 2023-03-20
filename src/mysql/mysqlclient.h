@@ -6,7 +6,7 @@
 #include "settings/settings.h"
 
 namespace MySql {
-    struct RADAPTER_SHARED_SRC QueryField {
+    struct RADAPTER_API QueryField {
         QString name{};
         QVariant value{};
         bool isFunction{};
@@ -24,7 +24,7 @@ namespace MySql {
     typedef QList<QVariantList> RecordValuesMap;
 
 
-    class RADAPTER_SHARED_SRC Client : public QObject
+    class RADAPTER_API Client : public QObject
     {
         Q_OBJECT
     public:

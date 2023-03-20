@@ -1,28 +1,53 @@
 #ifndef SETTINGS_SERIALIZABLESETTINGS_H
 #define SETTINGS_SERIALIZABLESETTINGS_H
 
-#include "settings-parsing/serializer.hpp"
-#define ROOT_PREFIX QStringLiteral("~")
+#include <QJsonDocument>
+#include "serializable/serializable.h"
+#include "serializable/validated.hpp"
+
+Q_DECLARE_METATYPE(QJsonDocument::JsonFormat)
 
 namespace Settings {
 
-class SerializableSettings : protected Serializer::SerializableGadget
+template<typename Target>
+struct NonRequired : public Target {
+    using typename Target::valueType;
+    using typename Target::valueRef;
+    using Target::Target;
+    using Target::operator=;
+    virtual const QStringList &attributes() const override {
+        static const QStringList attrs = Target::attributes() + QStringList{"non_required"};
+        return attrs;
+    }
+};
+
+template<typename T>
+using NonRequiredSeq = NonRequired<Serializable::Sequence<T>>;
+template<typename T>
+using NonRequiredField = NonRequired<Serializable::Field<T>>;
+template<typename T>
+using RequiredSeq = Serializable::Sequence<T>;
+template<typename T>
+using RequiredField = Serializable::Field<T>;
+
+struct SerializableSettings : public Serializable::Gadget
 {
     Q_GADGET
-    IS_SERIALIZABLE
 public:
-    SerializableSettings();
     QString print() const;
-    SerializableSettings *parent();
-    const SerializableSettings *parent() const;
-    virtual void deserialize(const QVariantMap &src) override;
-    QString prefix() const;
-private:
-    void performCheck();
-    void throwOnNonSettings(const Serializable *child) const;
-    void updatePrefix(const QString &name);
+    virtual bool update(const QVariantMap &src) override;
+};
 
-    QString m_prefix{ROOT_PREFIX};
+struct ChooseJsonFormat {
+    static bool validate(QVariant &src) {
+        static QMap<QString, QJsonDocument::JsonFormat> map {
+            {"compact", QJsonDocument::Compact},
+            {"indented", QJsonDocument::Indented}
+        };
+        auto asStr = src.toString().toLower();
+        src.setValue(map.value(asStr));
+        return map.contains(asStr);
+    }
 };
 
 } // namespace Settings

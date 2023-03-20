@@ -7,7 +7,7 @@ CONFIG += link_prl
 CONFIG -= app_bundle gui 
 QT += testlib
 TEMPLATE = app
-DEFINES += RADAPTER_SHARED_SRC=Q_DECL_IMPORT
+DEFINES += RADAPTER_API=Q_DECL_IMPORT
 CONFIG += console c++11
 CONFIG += thread
 SOURCES += \

@@ -7,7 +7,7 @@
 #include "async_context/rediscachecontext.h"
 
 namespace Redis {
-class RADAPTER_SHARED_SRC CacheProducer;
+class RADAPTER_API CacheProducer;
 }
 
 class Redis::CacheProducer : public Connector
