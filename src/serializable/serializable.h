@@ -18,7 +18,10 @@ protected:
     void fillFields() const;
     virtual void postUpdate(){};
     template <typename T>
-    FieldConcept *upcastField(T *raw) {return raw;}
+    FieldConcept *upcastField(T *raw) {
+        static_assert(std::is_base_of<FieldConcept, T>(), "Fields must inherit and implement FieldConcept!");
+        return raw;
+    }
 private:
     virtual QVariant readProp(const QMetaProperty &prop) const = 0;
     virtual bool writeProp(const QMetaProperty &prop, const QVariant &val) = 0;

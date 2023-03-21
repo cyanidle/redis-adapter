@@ -2,12 +2,11 @@
 #include "broker/worker/mockworker.h"
 #include "settings-parsing/convertutils.hpp"
 #include "connectors/websocketserverconnector.h"
-#include "guisettings.h"
 #include "launcher.h"
 #include "radapterlogging.h"
 #include "localstorage.h"
 #include "localization.h"
-#include "bindings/routesprovider.h"
+#include "routed_object/routesprovider.h"
 #include "consumers/redisstreamconsumer.h"
 #include "consumers/rediscacheconsumer.h"
 #include "consumers/rediskeyeventsconsumer.h"
@@ -28,6 +27,7 @@
 #include "utils/resourcemonitor.h"
 #endif
 #ifdef RADAPTER_GUI
+#include "gui/settings.h"
 #include "mainwindow.h"
 #endif
 using namespace Radapter;

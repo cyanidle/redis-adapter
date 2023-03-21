@@ -1,4 +1,4 @@
 SOURCES+= \
-    $$PWD/impl_serializable.cpp
+   $$PWD/impl_serializable.cpp
 HEADERS+= \
-    $$PWD/impl_serializable.h
+   $$PWD/impl_serializable.h

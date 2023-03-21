@@ -10,7 +10,6 @@ HEADERS+= \
    $$PWD/launcher.h \
    $$PWD/radapterlogging.h
 
-include($$PWD/bindings/bindings.pri)
 include($$PWD/settings-parsing/settings-parsing.pri)
 include($$PWD/replies/replies.pri)
 include($$PWD/websocket/websocket.pri)
@@ -29,6 +28,7 @@ include($$PWD/commands/commands.pri)
 include($$PWD/connectors/connectors.pri)
 include($$PWD/broker/broker.pri)
 include($$PWD/filters/filters.pri)
+include($$PWD/routed_object/routed_object.pri)
 include($$PWD/settings/settings.pri)
 include($$PWD/formatting/formatting.pri)
 include($$PWD/async_context/async_context.pri)

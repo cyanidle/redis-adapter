@@ -75,7 +75,6 @@ JsonRoute::Map JsonRoute::parseMap(const QVariantMap &src)
 JsonRoute::JsonRoute() :
     m_name("Error")
 {
-
 }
 
 JsonRoute::Result JsonRoute::receive(const JsonDict &msg, const KeysFilter &keysFilter) const

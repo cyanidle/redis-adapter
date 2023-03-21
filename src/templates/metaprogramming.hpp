@@ -9,10 +9,10 @@
 namespace Radapter {
 
 template<typename T> struct has_QGadget_Macro {
-    template <typename U>
-    static char test(void (U::*)());
-    static int test(void (T::*)());
-    enum { Value =  sizeof(test(&T::qt_check_for_QGADGET_macro)) == sizeof(int) };
+    template<typename> static std::false_type impl(...);
+    template<typename U> static auto impl(int) ->
+        decltype(std::declval<U>().qt_check_for_QGADGET_macro(), std::true_type());
+    enum { Value = decltype(impl<T>(0))::value};
 };
 
 template<typename T> struct has_QObject_Macro {

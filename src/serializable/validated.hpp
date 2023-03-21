@@ -29,14 +29,16 @@ struct PreValidator : public Target {
     using typename Target::valueRef;
     using Target::Target;
     using Target::operator=;
-    virtual const QStringList &attributes() const override {
-        static const QStringList attrs = Target::attributes() + QStringList{"pre_validated"};
-        return attrs;
-    }
+    using Target::operator==;
+protected:
     bool updateWithVariant(const QVariant &source) override {
         auto copy = source;
         validate<Validator, Validators...>(copy);
         return Target::updateWithVariant(copy);
+    }
+    virtual const QStringList &attributes() const override {
+        static const QStringList attrs = Target::attributes() + QStringList{"pre_validated"};
+        return attrs;
     }
 };
 

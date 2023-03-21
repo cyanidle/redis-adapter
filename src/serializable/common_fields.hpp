@@ -1,6 +1,7 @@
 #ifndef COMMON_FIELDS_H
 #define COMMON_FIELDS_H
 
+#include "private/global.h"
 #include "private/impl_serializable.h"
 #include "radapterlogging.h"
 
@@ -47,8 +48,12 @@ struct FieldCommon : protected FieldConcept {
     FieldCommon() : value() {}
     template<typename U>
     FieldCommon(U&&other) : value(std::forward<U>(other)) {}
+    FieldCommon(const FieldCommon &other) : value(other.value) {}
     template<typename U>
     FieldCommon &operator=(U&&other){value = std::forward<U>(other); return *this;}
+    FieldCommon &operator=(const FieldCommon &other){value = other.value; return *this;}
+    bool operator==(const valueRef other) const {return value == other;}
+    bool operator==(const FieldCommon &other) const {return value == other.value;}
     T* operator->() {return &value;}
     const T* operator->() const {return &value;}
     T& operator*() {return value;}
@@ -66,13 +71,14 @@ struct FieldCommon : protected FieldConcept {
 }
 
 template<typename T>
-struct PlainField : public Private::FieldCommon<T, (sizeof(T) > sizeof(void*))>
+struct PlainField : public Private::FieldCommon<T>
 {
-    using typename Private::FieldCommon<T, (sizeof(T) > sizeof(void*))>::valueType;
-    using typename Private::FieldCommon<T, (sizeof(T) > sizeof(void*))>::valueRef;
-    using Private::FieldCommon<T, (sizeof(T) > sizeof(void*))>::FieldCommon;
-    using Private::FieldCommon<T, (sizeof(T) > sizeof(void*))>::operator=;
-    using Private::FieldCommon<T, (sizeof(T) > sizeof(void*))>::value;
+    using typename Private::FieldCommon<T>::valueType;
+    using typename Private::FieldCommon<T>::valueRef;
+    using Private::FieldCommon<T>::FieldCommon;
+    using Private::FieldCommon<T>::operator=;
+    using Private::FieldCommon<T>::operator==;
+    using Private::FieldCommon<T>::value;
     static int staticValueMetaTypeId() {return QMetaType::fromType<T>().id();}
     int valueMetaTypeId() const override {return staticValueMetaTypeId();}
     enum {fieldType = FieldPlain};
@@ -114,6 +120,7 @@ struct NestedField : public Private::FieldCommon<T> {
     using Private::FieldCommon<T>::value;
     using Private::FieldCommon<T>::FieldCommon;
     using Private::FieldCommon<T>::operator=;
+    using Private::FieldCommon<T>::operator==;
     static int staticValueMetaTypeId() {return -1;}
     int valueMetaTypeId() const override {return staticValueMetaTypeId();}
     enum {fieldType = FieldPlain};
@@ -158,6 +165,7 @@ struct SequenceCommon : public Private::FieldCommon<QList<T>> {
     using Private::FieldCommon<QList<T>>::value;
     using Private::FieldCommon<QList<T>>::FieldCommon;
     using Private::FieldCommon<QList<T>>::operator=;
+    using Private::FieldCommon<QList<T>>::operator==;
     typename QList<T>::iterator begin() {
         return value.begin();
     }
@@ -186,6 +194,7 @@ struct PlainSequence : public Private::SequenceCommon<T> {
     using Private::SequenceCommon<T>::value;
     using Private::SequenceCommon<T>::SequenceCommon;
     using Private::SequenceCommon<T>::operator=;
+    using Private::SequenceCommon<T>::operator==;
     static int staticValueMetaTypeId() {return QMetaType::fromType<T>().id();}
     int valueMetaTypeId() const override {return staticValueMetaTypeId();}
     enum {fieldType = FieldSequence};
@@ -236,6 +245,7 @@ struct NestedSequence : public Private::SequenceCommon<T> {
     using Private::SequenceCommon<T>::value;
     using Private::SequenceCommon<T>::SequenceCommon;
     using Private::SequenceCommon<T>::operator=;
+    using Private::SequenceCommon<T>::operator==;
     static int staticValueMetaTypeId() {return -1;}
     int valueMetaTypeId() const override {return staticValueMetaTypeId();}
     enum {fieldType = FieldSequenceOfNested};
@@ -276,7 +286,7 @@ struct NestedSequence : public Private::SequenceCommon<T> {
     }
     bool updateWithVariant(const QVariant &source) override {
         QList<T> temp;
-        auto asList = source.toList();
+        const auto asList = source.toList();
         for (const auto &src : asList) {
             if (!src.canConvert<QVariantMap>()) continue;
             auto current = T();
@@ -304,6 +314,7 @@ struct MappingCommon : public Private::FieldCommon<QMap<QString, T>> {
     using Private::FieldCommon<QMap<QString, T>>::value;
     using Private::FieldCommon<QMap<QString, T>>::FieldCommon;
     using Private::FieldCommon<QMap<QString, T>>::operator=;
+    using Private::FieldCommon<QMap<QString, T>>::operator==;
     typename QMap<QString, T>::iterator begin() {
         return value.begin();
     }
@@ -332,6 +343,7 @@ struct PlainMapping : public Private::MappingCommon<T> {
     using Private::MappingCommon<T>::value;
     using Private::MappingCommon<T>::MappingCommon;
     using Private::MappingCommon<T>::operator=;
+    using Private::MappingCommon<T>::operator==;
     static int staticValueMetaTypeId() {return QMetaType::fromType<T>().id();}
     int valueMetaTypeId() const override {return staticValueMetaTypeId();}
     enum {fieldType = FieldMapping};
@@ -382,6 +394,7 @@ struct NestedMapping : public Private::MappingCommon<T> {
     using Private::MappingCommon<T>::value;
     using Private::MappingCommon<T>::MappingCommon;
     using Private::MappingCommon<T>::operator=;
+    using Private::MappingCommon<T>::operator==;
     static int staticValueMetaTypeId() {return -1;}
     int valueMetaTypeId() const override {return staticValueMetaTypeId();}
     enum {fieldType = FieldMappingOfNested};

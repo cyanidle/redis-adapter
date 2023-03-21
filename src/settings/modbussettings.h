@@ -110,7 +110,6 @@ namespace Settings {
         }
     };
 
-
     struct RADAPTER_API RegisterInfo : SerializableSettings {
         typedef QMap<QString, QModbusDataUnit::RegisterType> tableMap;
         typedef QMap<QString, QMetaType::Type> typeMap;

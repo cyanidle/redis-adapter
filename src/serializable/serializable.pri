@@ -1,6 +1,7 @@
 SOURCES+= \
    $$PWD/serializable.cpp
 HEADERS+= \
+   $$PWD/common_validators.hpp \
    $$PWD/validated.hpp \
    $$PWD/serializable.h \
    $$PWD/bindable.hpp \

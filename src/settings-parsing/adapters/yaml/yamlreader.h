@@ -12,7 +12,7 @@ class RADAPTER_API YamlReader : public DictReader
 {
     Q_OBJECT
 public:
-    YamlReader(const QString &dir, const QString &file, QObject *parent);
+    YamlReader(const QString &dir = "conf", const QString &file = "config", QObject *parent = nullptr);
     QVariant getAll() override;
 };
 

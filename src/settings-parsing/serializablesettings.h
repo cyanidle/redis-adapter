@@ -15,6 +15,8 @@ struct NonRequired : public Target {
     using typename Target::valueRef;
     using Target::Target;
     using Target::operator=;
+    using Target::operator==;
+protected:
     virtual const QStringList &attributes() const override {
         static const QStringList attrs = Target::attributes() + QStringList{"non_required"};
         return attrs;
