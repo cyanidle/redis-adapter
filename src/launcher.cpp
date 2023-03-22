@@ -50,8 +50,7 @@ Launcher::Launcher(QObject *parent) :
     tryInit(&Launcher::initRoutedJsons, "routed_jsons");
     tryInit(&Launcher::initLogging, "logging");
     tryInit(&Launcher::initRedis, "redis");
-    //tryInit(&Launcher::initModbus, "modbus");
-    initModbus();
+    tryInit(&Launcher::initModbus, "modbus");
     tryInit(&Launcher::initWebsockets, "websockets");
     tryInit(&Launcher::initSql, "sql");
     tryInit(&Launcher::initFilters, "filters");
@@ -287,16 +286,16 @@ void Launcher::parseCommandlineArgs()
     m_argsParser.addVersionOption();
     m_argsParser.addOptions({
                   {{"d", "directory"},
-                    "Config will be read from <directory> (default: ./conf)", "directory", "conf"},
-                  {{"f", "format"},
-                    "Config will be read from .<format> files (available: yaml, toml) (default: ./yaml)", "format", "yaml"},
-                  {{"m", "main_file"},
-                    "Allows to read config either from main file with <key.subkey> or from file <key> with <subkey> (default: config)", "main_file", "config"}
+                    "Config will be read from <directory>. (default: ./conf)", "directory", "conf"},
+                  {{"p", "parser"},
+                    "Config will be read from .<parser_format> files. (available: yaml, toml) (default: yaml)", "parser", "yaml"},
+                  {{"f", "file"},
+                    "File to read settings from. (default: config)", "file", "config"}
                   });
     m_argsParser.process(*QCoreApplication::instance());
     m_configsResource = m_argsParser.value("directory");
-    m_configsFormat = m_argsParser.value("format");
-    m_mainPath = m_argsParser.value("main_file");
+    m_configsFormat = m_argsParser.value("parser");
+    m_mainPath = m_argsParser.value("file");
     if (m_configsFormat == "toml") {
         m_reader = new Settings::TomlReader(m_configsResource, m_mainPath, this);
     } else if (m_configsFormat == "yaml") {
