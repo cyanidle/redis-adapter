@@ -2,6 +2,36 @@
 
 using namespace Serializable;
 
+Object::Object(const Object &other)
+{
+    Q_UNUSED(other)
+    m_fields.clear();
+    m_fieldsMap.clear();
+}
+
+Object &Object::operator=(const Object &other)
+{
+    if (this == &other) return *this;
+    m_fields.clear();
+    m_fieldsMap.clear();
+    return *this;
+}
+
+Object::Object(Object &&other)
+{
+    Q_UNUSED(other)
+    m_fields.clear();
+    m_fieldsMap.clear();
+}
+
+Object &Object::operator=(Object &&other)
+{
+    if  (this == &other) return *this;
+    m_fields.clear();
+    m_fieldsMap.clear();
+    return *this;
+}
+
 FieldConcept *Object::field(const QString &fieldName)
 {
     fillFields();
@@ -39,9 +69,9 @@ QVariantMap Object::serialize() const
 {
     fillFields();
     QVariantMap result;
-    auto copy = m_fieldsMap;
-    for (auto iter = copy.cbegin(); iter != copy.cend(); ++iter) {
-        result.insert(iter.key(), iter.value()->readVariant());
+    for (const auto &fieldName: fields()) {
+        auto found = field(fieldName);
+        result.insert(fieldName, found->readVariant());
     }
     return result;
 }

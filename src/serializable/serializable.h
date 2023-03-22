@@ -6,6 +6,11 @@
 namespace Serializable {
 
 struct RADAPTER_API Object {
+    Object() = default;
+    Object(const Object &other);
+    Object &operator=(const Object &other);
+    Object(Object &&other);
+    Object &operator=(Object &&other);
     FieldConcept *field(const QString &fieldName);
     const FieldConcept *field(const QString &fieldName) const;
     const QList<QString> &fields() const;

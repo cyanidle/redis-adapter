@@ -10,7 +10,7 @@ Q_DECLARE_METATYPE(QJsonDocument::JsonFormat)
 namespace Settings {
 
 template<typename Target>
-struct NonRequired : public Target {
+struct MarkNonRequired : public Target {
     using typename Target::valueType;
     using typename Target::valueRef;
     using Target::Target;
@@ -24,9 +24,9 @@ protected:
 };
 
 template<typename T>
-using NonRequiredSeq = NonRequired<Serializable::Sequence<T>>;
+using NonRequiredSeq = MarkNonRequired<Serializable::Sequence<T>>;
 template<typename T>
-using NonRequiredField = NonRequired<Serializable::Field<T>>;
+using NonRequiredField = MarkNonRequired<Serializable::Field<T>>;
 template<typename T>
 using RequiredSeq = Serializable::Sequence<T>;
 template<typename T>

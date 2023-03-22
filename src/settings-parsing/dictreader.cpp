@@ -20,8 +20,7 @@ QVariant DictReader::get(const QString &key) {
     for (const auto &subkey: fullKey) {
         auto asMap = result.toMap();
         if (result.type() != QVariant::Map || !asMap.contains(subkey)) {
-            throw std::runtime_error("[Reader]: Key '" + key.toStdString() + "' was not found! Error in: " +
-                                     (resource() + "/" + path()).toStdString());
+            return {};
         }
         result = asMap[subkey];
     }

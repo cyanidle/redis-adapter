@@ -62,6 +62,9 @@ const QList<T> Launcher::parseArrayOf(const QString &path) {
     if (result.isValid() && !result.canConvert<QVariantList>()) {
         throw std::runtime_error("Expected List from: " + path.toStdString());
     }
+    if (!result.canConvert<QVariantList>()) {
+        settingsParsingWarn() << "Empty list for:"  << "[[" << path << "]]!";
+    }
     try {
         return Serializable::fromQList<T>(result.toList());
     } catch (const std::exception &e) {
@@ -76,8 +79,6 @@ T Launcher::parseObject(const QString &path) {
     auto result = readSetting(path);
     if (result.isValid() && !result.canConvert<QVariantMap>()) {
         throw std::runtime_error("Expected Map from: " + path.toStdString());
-    } else if (!result.isValid() || !result.canConvert<QVariantMap>()) {
-        return {};
     }
     try {
         return Serializable::fromQMap<T>(result.toMap());

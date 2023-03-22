@@ -106,6 +106,7 @@ void CacheConsumer::readSetCallback(redisReply *replyPtr, CtxHandle handle)
 
 void CacheConsumer::requestObjectSimple()
 {
+    if (!isConnected()) return;
     auto command = QStringLiteral("HGETALL ") + m_objectKey;
     auto handle = m_manager.create<SimpleMsgContext>(this);
     if (runAsyncCommand(&CacheConsumer::readObjectCallback, command, handle) != REDIS_OK) {

@@ -11,7 +11,7 @@ Q_DECLARE_METATYPE(QMetaType::Type)
 Q_DECLARE_METATYPE(QDataStream::ByteOrder)
 
 namespace Settings {
-    struct RegValueType {
+    struct ChooseRegValueType {
         static bool validate(QVariant& value) {
             static QMap<QString, QMetaType::Type>
                     map{{"uint16", QMetaType::UShort},
@@ -23,8 +23,7 @@ namespace Settings {
             return map.contains(asStr);
         }
     };
-
-    struct RegTable {
+    struct ChooseRegisterTable {
         static bool validate(QVariant& value) {
             static QMap<QString, QModbusDataUnit::RegisterType>
                 map{{"holding",QModbusDataUnit::HoldingRegisters},
@@ -36,11 +35,13 @@ namespace Settings {
             return map.contains(asStr);
         }
     };
+    using RegisterTable = Serializable::Validate<RequiredField<QModbusDataUnit::RegisterType>, ChooseRegisterTable>;
+    using RegisterValueType = Serializable::Validate<RequiredField<QMetaType::Type>, ChooseRegValueType>;
 
     struct RADAPTER_API ModbusQuery : SerializableSettings {
         Q_GADGET
         FIELDS(type, reg_index, reg_count)
-        Serializable::Validate<RequiredField<QModbusDataUnit::RegisterType>, RegTable> type;
+        RegisterTable type;
         RequiredField<quint16> reg_index;
         RequiredField<quint8> reg_count;
         typedef QMap<QString, QModbusDataUnit::RegisterType> Map;
@@ -115,10 +116,11 @@ namespace Settings {
         typedef QMap<QString, QMetaType::Type> typeMap;
         Q_GADGET
         FIELDS(index, resetting, table, type)
+        RegisterTable table;
         RequiredField<int> index;
+
         NonRequiredField<bool> resetting{false};
-        Serializable::Validate<RequiredField<QModbusDataUnit::RegisterType>, RegValueType> table;
-        Serializable::Validate<NonRequiredField<QMetaType::Type>, RegTable> type{QMetaType::UShort};
+        MarkNonRequired<RegisterValueType> type{QMetaType::UShort};
     };
     typedef QMap<QString /*regName*/, RegisterInfo> Registers;
     typedef QMap<QString /*deviceName*/, Registers> DevicesRegisters;

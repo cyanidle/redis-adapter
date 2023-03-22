@@ -44,13 +44,14 @@ Launcher::Launcher(QObject *parent) :
         try {
             (this->*method)();
         } catch(std::runtime_error &exc) {
-            settingsParsingWarn() << "Could not enable module:" << moduleName << "Details:" << exc.what();
+            settingsParsingWarn().nospace() << "Could not enable module: [" << moduleName.toUpper() << "] Details: " << exc.what();
         }
     };
     tryInit(&Launcher::initRoutedJsons, "routed_jsons");
     tryInit(&Launcher::initLogging, "logging");
     tryInit(&Launcher::initRedis, "redis");
-    tryInit(&Launcher::initModbus, "modbus");
+    //tryInit(&Launcher::initModbus, "modbus");
+    initModbus();
     tryInit(&Launcher::initWebsockets, "websockets");
     tryInit(&Launcher::initSql, "sql");
     tryInit(&Launcher::initFilters, "filters");

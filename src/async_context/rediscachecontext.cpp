@@ -41,7 +41,7 @@ void CacheContext::fail(const QString &reason)
     } else {
         worker = m_prod;
     }
-    workerError(worker) << ": Error! Reason --> "<< checkedReason;
+    workerError(worker) << "Operation Error! Reason --> "<< checkedReason;
     reply(Radapter::ReplyFail(checkedReason));
 }
 
