@@ -6,7 +6,6 @@ SOURCES+= \
 HEADERS+= \
    $$PWD/localstorage.h \
    $$PWD/localization.h \
-   $$PWD/ui_mainwindow.h \
    $$PWD/launcher.h \
    $$PWD/radapterlogging.h
 

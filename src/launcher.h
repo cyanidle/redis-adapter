@@ -20,7 +20,10 @@ signals:
     void started();
 public slots:
     void addWorker(Radapter::Worker *worker, QSet<Radapter::InterceptorBase *> interceptors = {});
+    //! run() starts all configured radapter modules and workers
     void run();
+    //! exec() calls run() and then return with QCoreApplication::exec();
+    int exec();
 private:
     void setLoggingFilters(const QMap<QString, bool> &loggers);
 

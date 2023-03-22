@@ -28,9 +28,17 @@
 #endif
 #ifdef RADAPTER_GUI
 #include "gui/guisettings.h"
-#include "gui/mainwindow.h"
+//#include "gui/radapter_mainwindow.h"
 #endif
 using namespace Radapter;
+
+void tryInit(Launcher* launcher, void(Launcher::*method)(), const QString &moduleName) {
+    try {
+        (launcher->*method)();
+    } catch(std::runtime_error &exc) {
+        settingsParsingWarn().nospace() << "Could not enable module: [" << moduleName.toUpper() << "] --> Details: " << exc.what();
+    }
+};
 
 Launcher::Launcher(QObject *parent) :
     QObject(parent),
@@ -40,23 +48,16 @@ Launcher::Launcher(QObject *parent) :
     qSetMessagePattern(RADAPTER_CUSTOM_MESSAGE_PATTERN);
     m_argsParser.setApplicationDescription("Redis Adapter");
     parseCommandlineArgs();
-    auto tryInit = [&](void(Launcher::*method)(), const QString &moduleName) {
-        try {
-            (this->*method)();
-        } catch(std::runtime_error &exc) {
-            settingsParsingWarn().nospace() << "Could not enable module: [" << moduleName.toUpper() << "] Details: " << exc.what();
-        }
-    };
-    tryInit(&Launcher::initRoutedJsons, "routed_jsons");
-    tryInit(&Launcher::initLogging, "logging");
-    tryInit(&Launcher::initRedis, "redis");
-    tryInit(&Launcher::initModbus, "modbus");
-    tryInit(&Launcher::initWebsockets, "websockets");
-    tryInit(&Launcher::initSql, "sql");
-    tryInit(&Launcher::initFilters, "filters");
-    tryInit(&Launcher::initSockets, "raw-sockets");
-    tryInit(&Launcher::initMocks, "mocks");
-    tryInit(&Launcher::initLocalization, "localization");
+    tryInit(this, &Launcher::initRoutedJsons, "routed_jsons");
+    tryInit(this, &Launcher::initLogging, "logging");
+    tryInit(this, &Launcher::initRedis, "redis");
+    tryInit(this, &Launcher::initModbus, "modbus");
+    tryInit(this, &Launcher::initWebsockets, "websockets");
+    tryInit(this, &Launcher::initSql, "sql");
+    tryInit(this, &Launcher::initFilters, "filters");
+    tryInit(this, &Launcher::initSockets, "raw-sockets");
+    tryInit(this, &Launcher::initMocks, "mocks");
+    tryInit(this, &Launcher::initLocalization, "localization");
     LocalStorage::init(this);
     initProxies();
 }
@@ -167,9 +168,9 @@ void Launcher::initGui()
         return;
     }
     auto guiThread = new QThread(this);
-    auto ui = new Gui::MainWindow();
-    ui->moveToThread(guiThread);
-    connect(this, &Launcher::started, this, [guiThread](){guiThread->start();});
+    //auto ui = new Radapter::MainWindow();
+    //ui->moveToThread(guiThread);
+    //connect(this, &Launcher::started, ui, [guiThread](){guiThread->start();});
 #endif
 }
 
@@ -337,8 +338,14 @@ void Launcher::run()
         (*worker)->run();
     }
     Broker::instance()->runAll();
-    initPipelines();
+    tryInit(this, &Launcher::initPipelines, "pipelines");
     emit started();
+}
+
+int Launcher::exec()
+{
+    run();
+    return QCoreApplication::instance()->exec();
 }
 
 QCommandLineParser &Launcher::commandLineParser()

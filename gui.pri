@@ -2,17 +2,14 @@ contains(QT, gui) {
     INCLUDEPATH += \
         $$PWD
     DEFINES+=RADAPTER_GUI
-    HEADERS += \
-        $$PWD/gui/mainwindow.h
+    HEADERS +=
 
-    SOURCES += \
-        $$PWD/gui/mainwindow.cpp
+    SOURCES +=
 
     QT += widgets
 }
 
-FORMS += \
-    $$PWD/gui/mainwindow.ui
+FORMS +=
 
 HEADERS += \
     $$PWD/gui/guisettings.h
