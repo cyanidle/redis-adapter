@@ -27,8 +27,8 @@
 #include "utils/resourcemonitor.h"
 #endif
 #ifdef RADAPTER_GUI
-#include "gui/settings.h"
-#include "mainwindow.h"
+#include "gui/guisettings.h"
+#include "gui/mainwindow.h"
 #endif
 using namespace Radapter;
 
@@ -58,6 +58,7 @@ Launcher::Launcher(QObject *parent) :
     tryInit(&Launcher::initMocks, "mocks");
     tryInit(&Launcher::initLocalization, "localization");
     LocalStorage::init(this);
+    initProxies();
 }
 
 void Launcher::addWorker(Worker* worker, QSet<InterceptorBase*> interceptors)
@@ -160,7 +161,7 @@ void Launcher::initLogging()
 void Launcher::initGui()
 {
 #ifdef RADAPTER_GUI
-    auto guiSettings = parseObject<GuiSettings>("gui");
+    auto guiSettings = parseObject<Gui::GuiSettings>("gui");
     if (!guiSettings.enabled) {
         reWarn() << "Gui disabled!";
         return;
@@ -315,7 +316,7 @@ QVariant Launcher::readSetting(const QString &path) {
     return m_reader->get(path);
 }
 
-void Launcher::init()
+void Launcher::initProxies()
 {
     for (auto workerIter = m_workers.begin(); workerIter != m_workers.end(); ++workerIter) {
         Broker::instance()->registerProxy(workerIter.key()->createProxy(workerIter.value()));

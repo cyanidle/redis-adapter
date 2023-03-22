@@ -1,0 +1,18 @@
+QT -= gui
+QT += serialbus serialport sql websockets network
+CONFIG += c++11 console lrelease
+CONFIG -= app_bundle
+CONFIG(debug, debug|release) {
+    OBJECTS_DIR = build/debug
+    MOC_DIR = build/debug
+}
+CONFIG(release, debug|release) {
+    OBJECTS_DIR = build/release
+    MOC_DIR = build/release
+}
+CONFIG -= debug_and_release
+DEFINES += QT_DEPRECATED_WARNINGS
+DEFINES += RADAPTER_API=
+INCLUDEPATH += src
+include({src_include})
+TARGET={project}

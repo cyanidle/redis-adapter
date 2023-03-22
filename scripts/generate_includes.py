@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from argparse import ArgumentParser
 from typing import IO, Generator, List, Optional
-from pri_directory import PriDirectory
+from src.pri_directory import PriDirectory
 
 def main():
     """
@@ -17,10 +17,8 @@ def main():
                 epilog='Bereg foreva'
             )
     parser.add_argument(
-        "-d",
-        "--workdir",
+        "workdir",
         default="./src",
-        dest="cwd",
         help="Directory to start recursion from"
         )
     parser.add_argument(
@@ -38,9 +36,8 @@ def main():
         level=logging.NOTSET,
         format='%(levelname)-8s %(name)-12s %(lineno)-5s %(message)s'
         )
-    cwd = args.cwd
     exc = args.excluded.split()
-    workdir = Path(cwd)
+    workdir = Path(args.workdir)
     root = PriDirectory(workdir, exc, is_root=True)
     root.recurse()
 

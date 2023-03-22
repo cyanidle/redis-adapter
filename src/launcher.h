@@ -20,7 +20,6 @@ signals:
     void started();
 public slots:
     void addWorker(Radapter::Worker *worker, QSet<Radapter::InterceptorBase *> interceptors = {});
-    void init();
     void run();
 private:
     void setLoggingFilters(const QMap<QString, bool> &loggers);
@@ -39,6 +38,7 @@ private:
     void initMocks();
     void initLocalization();
     void parseCommandlineArgs();
+    void initProxies();
 
 
     Broker* broker() const;

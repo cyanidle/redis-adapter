@@ -1,6 +1,6 @@
 contains(QT, gui) {
     INCLUDEPATH += \
-        $$PWD/gui
+        $$PWD
     DEFINES+=RADAPTER_GUI
     HEADERS += \
         $$PWD/gui/mainwindow.h
