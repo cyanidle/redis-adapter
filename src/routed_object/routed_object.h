@@ -9,8 +9,8 @@
 
 class RoutedObject : protected Serializable::Object {
 public:
-    RoutedObject(const QString &bindingName, const JsonRoute::KeysFilter &keysFilter);
-    RoutedObject(const JsonRoute &binding, const JsonRoute::KeysFilter &keysFilter);
+    RoutedObject(const QString &bindingName, const JsonRoute::KeysFilter &keysFilter = {});
+    RoutedObject(const JsonRoute &binding, const JsonRoute::KeysFilter &keysFilter = {});
     void routedUpdate(const JsonDict &data);
     const QStringList mappedFields(const QString& separator = ":") const;
     const QStringList mappedFieldsExclude(const QStringList &exclude, const QString& separator = ":") const;
