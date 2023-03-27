@@ -21,21 +21,21 @@ namespace Serializable {
     Q_ENUM_NS(FieldType)
     struct FieldConcept {
         friend Object;
-        virtual QVariant schema(const Object *who) const = 0;
-        virtual QVariant readVariant(const Object *who) const = 0;
-        virtual bool updateWithVariant(Object *who, const QVariant &source) = 0;
-        virtual FieldType type(const Object *who) const = 0;
-        virtual int valueMetaTypeId(const Object *who) const = 0;
-        virtual void *rawValue(Object *who) = 0;
-        virtual const void *rawValue(const Object *who) const = 0;
-        virtual const QStringList &attributes(const Object *who) const = 0;
-        virtual const NestedIntrospection introspectNested(const Object *who) const = 0;
-        virtual NestedIntrospection introspectNested(Object *who) = 0;
-        QString typeName(const Object *who) const {
-            return QMetaEnum::fromType<FieldType>().valueToKey(type(who));
+        virtual QVariant schema(const Object *owner) const = 0;
+        virtual QVariant readVariant(const Object *owner) const = 0;
+        virtual bool updateWithVariant(Object *owner, const QVariant &source) = 0;
+        virtual FieldType type(const Object *owner) const = 0;
+        virtual int valueMetaTypeId(const Object *owner) const = 0;
+        virtual void *rawValue(Object *owner) = 0;
+        virtual const void *rawValue(const Object *owner) const = 0;
+        virtual const QStringList &attributes(const Object *owner) const = 0;
+        virtual const NestedIntrospection introspectNested(const Object *owner) const = 0;
+        virtual NestedIntrospection introspectNested(Object *owner) = 0;
+        QString typeName(const Object *owner) const {
+            return QMetaEnum::fromType<FieldType>().valueToKey(type(owner));
         }
-        bool isNested(const Object *who) const {
-            auto res = type(who);
+        bool isNested(const Object *owner) const {
+            auto res = type(owner);
             return res == FieldNested
                     || res == FieldSequenceOfNested
                     || res == FieldMappingOfNested;
@@ -49,49 +49,49 @@ namespace Private {
 template <typename Class, typename Field>
 
 struct FieldHolder : FieldConcept {
-    FieldHolder(Field* (Class::*fieldGetter) ()) : m_fieldGetter(fieldGetter) {}
-    QVariant schema(const Object *who) const override final {
-        return field(who)->schema();
+    FieldHolder(Field Class::*fieldGetter) : m_fieldGetter(fieldGetter) {}
+    QVariant schema(const Object *owner) const override final {
+        return field(owner)->schema();
     }
-    QVariant readVariant(const Object *who) const override final {
-        return field(who)->readVariant();
+    QVariant readVariant(const Object *owner) const override final {
+        return field(owner)->readVariant();
     }
-    bool updateWithVariant(Object *who, const QVariant &source) override final {
-        return field(who)->updateWithVariant(source);
+    bool updateWithVariant(Object *owner, const QVariant &source) override final {
+        return field(owner)->updateWithVariant(source);
     }
-    FieldType type(const Object *who) const override final {
-        return field(who)->type();
+    FieldType type(const Object *owner) const override final {
+        return field(owner)->type();
     }
-    int valueMetaTypeId(const Object *who) const override final {
-        return field(who)->valueMetaTypeId();
+    int valueMetaTypeId(const Object *owner) const override final {
+        return field(owner)->valueMetaTypeId();
     }
-    void *rawValue(Object *who) override final {
-        return field(who)->rawValue();
+    void *rawValue(Object *owner) override final {
+        return field(owner)->rawValue();
     }
-    const void *rawValue(const Object *who) const override final {
-        return field(who)->rawValue();
+    const void *rawValue(const Object *owner) const override final {
+        return field(owner)->rawValue();
     }
-    const QStringList &attributes(const Object *who) const override final {
-        return field(who)->attributes();
+    const QStringList &attributes(const Object *owner) const override final {
+        return field(owner)->attributes();
     }
-    NestedIntrospection introspectNested(Object *who) override final {
-        return field(who)->introspectNested();
+    NestedIntrospection introspectNested(Object *owner) override final {
+        return field(owner)->introspectNested();
     }
-    const NestedIntrospection introspectNested(const Object *who) const override final {
-        return field(who)->introspectNested();
+    const NestedIntrospection introspectNested(const Object *owner) const override final {
+        return field(owner)->introspectNested();
     }
 protected:
-    const Field *field(const Object *who) const {
-        return const_cast<FieldHolder*>(this)->field(const_cast<Object*>(who));
+    const Field *field(const Object *owner) const {
+        return const_cast<FieldHolder*>(this)->field(const_cast<Object*>(owner));
     }
-    Field *field(Object *who) {
-        return (reinterpret_cast<Class*>(who)->*m_fieldGetter)();
+    Field *field(Object *owner) {
+        return &(reinterpret_cast<Class*>(owner)->*m_fieldGetter);
     }
 private:
-    Field *(Class::*m_fieldGetter)();
+    Field Class::*m_fieldGetter;
 };
 template <typename Class, typename Field>
-FieldConcept* upcastField(Field* (Class::*fieldGetter)()) {
+FieldConcept* upcastField(Field Class::*fieldGetter) {
     return new Private::FieldHolder<Class, Field>(fieldGetter);
 }
 template<typename T, bool isBig = true>

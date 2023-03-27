@@ -54,10 +54,9 @@ QMap<QString, FieldConcept*> fieldsHelper(const Object *who);
 #define FIELD(field_type, name, ...) \
     public: field_type name __VA_ARGS__; \
     private: \
-    decltype(name)* _priv_getPtr_##name () {return &name;} \
     QVariant _priv_getFinalPtr_##name () { \
         _has_Is_Serializable(); \
-        return QVariant::fromValue(::Serializable::Private::upcastField(& THIS_TYPE :: _priv_getPtr_##name)); \
+        return QVariant::fromValue(::Serializable::Private::upcastField(& THIS_TYPE :: name)); \
     } \
     Q_PROPERTY(QVariant __field__ ##name READ _priv_getFinalPtr_##name) \
     public:
