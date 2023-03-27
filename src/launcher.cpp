@@ -190,7 +190,9 @@ void Launcher::initPipelines()
 {
     Settings::Pipelines parsed;
     try {
-        parsed = parseObject<Settings::Pipelines>();
+        auto foundPipelines = readSetting().toMap();
+        foundPipelines = QVariantMap{{"pipelines", foundPipelines.value("pipelines")}};
+        parsed = Serializable::fromQMap<Settings::Pipelines>(foundPipelines);
     } catch (std::runtime_error &exc) {
         settingsParsingWarn() << "Could not read [PIPELINES]! Details:" << exc.what();
         return;
@@ -367,5 +369,10 @@ QCommandLineParser &Launcher::commandLineParser()
 const QString &Launcher::configsDirectory() const
 {
     return m_configsResource;
+}
+
+Settings::Reader *Launcher::reader()
+{
+    return m_reader;
 }
 

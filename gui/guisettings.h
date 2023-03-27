@@ -7,8 +7,8 @@ namespace Gui {
 
 struct GuiSettings : Settings::SerializableSettings {
     Q_GADGET
-    FIELDS(enabled)
-    Settings::NonRequiredField<bool> enabled{false};
+    IS_SERIALIZABLE
+    FIELD(Settings::NonRequired<bool>, enabled, {false})
 };
 
 } // namespace Gui

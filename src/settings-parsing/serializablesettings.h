@@ -16,8 +16,7 @@ struct MarkNonRequired : public Target {
     using Target::Target;
     using Target::operator=;
     using Target::operator==;
-protected:
-    virtual const QStringList &attributes() const override {
+    const QStringList &attributes() const {
         static const QStringList attrs{Target::attributes() + QStringList{"non_required"}};
         return attrs;
     }
@@ -26,13 +25,13 @@ protected:
 template<typename T>
 using NonRequiredSequence = MarkNonRequired<Serializable::Sequence<T>>;
 template<typename T>
-using NonRequiredField = MarkNonRequired<Serializable::Field<T>>;
+using NonRequired = MarkNonRequired<Serializable::Plain<T>>;
 template<typename T>
 using RequiredSequence = Serializable::Sequence<T>;
 template<typename T>
-using RequiredField = Serializable::Field<T>;
+using Required = Serializable::Plain<T>;
 
-struct SerializableSettings : public Serializable::Gadget
+struct SerializableSettings : public Serializable::Object
 {
     Q_GADGET
 public:

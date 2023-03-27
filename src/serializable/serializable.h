@@ -6,11 +6,6 @@
 namespace Serializable {
 
 struct RADAPTER_API Object {
-    Object() = default;
-    Object(const Object &other);
-    Object &operator=(const Object &other);
-    Object(Object &&other);
-    Object &operator=(Object &&other);
     FieldConcept *field(const QString &fieldName);
     const FieldConcept *field(const QString &fieldName) const;
     const QList<QString> &fields() const;
@@ -20,25 +15,13 @@ struct RADAPTER_API Object {
     virtual const QMetaObject *metaObject() const = 0;
     virtual ~Object() = default;
 protected:
-    void fillFields() const;
     virtual void postUpdate(){};
-    template <typename T>
-    FieldConcept *upcastField(T *raw) {
-        static_assert(std::is_base_of<FieldConcept, T>(), "Fields must inherit and implement FieldConcept!");
-        return raw;
-    }
 private:
-    virtual QVariant readProp(const QMetaProperty &prop) const = 0;
-    virtual bool writeProp(const QMetaProperty &prop, const QVariant &val) = 0;
-
-    mutable QMap<QString, FieldConcept*> m_fieldsMap;
-    mutable QList<QString> m_fields;
+    virtual const QMap<QString, FieldConcept*> &_priv_allFields() const = 0;
+    virtual const QList<QString> &_priv_allFieldsNamesCached() const = 0;
 };
 
 #define POST_UPDATE virtual void postUpdate() override
-
-using Gadget = GadgetMixin<Object>;
-using Q_Object = QObjectMixin<Object>;
 
 template <typename T>
 T fromQMap(const QVariantMap &source) {
@@ -58,6 +41,7 @@ QList<T> fromQList(const QVariantList &source) {
     }
     return result;
 }
+
 }
 Q_DECLARE_METATYPE(Serializable::Object*)
 #endif // SERIALIZER_H

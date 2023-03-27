@@ -8,12 +8,6 @@
 
 namespace Radapter {
 
-template<typename T> struct has_QGadget_Macro {
-    template<typename> static std::false_type impl(...);
-    template<typename U> static auto impl(int) ->
-        decltype(std::declval<U>().qt_check_for_QGADGET_macro(), std::true_type());
-    enum { Value = decltype(impl<T>(0))::value};
-};
 
 template<typename T> struct has_QObject_Macro {
     template<typename> static std::false_type impl(...);
@@ -22,6 +16,12 @@ template<typename T> struct has_QObject_Macro {
     enum { Value = decltype(impl<T>(0))::value};
 };
 
+template<typename T> struct has_QGadget_Macro {
+    template<typename> static std::false_type impl(...);
+    template<typename U> static auto impl(int) ->
+        decltype(std::declval<U>().qt_check_for_QGADGET_macro(), std::true_type());
+    enum { Value = decltype(impl<T>(0))::value};
+};
 
 template<typename T> struct has_MetaObject_Func {
     template <typename U>
@@ -38,6 +38,8 @@ struct Gadget_With_MetaObj {
 
 template <typename T>
 using stripped_this = typename std::decay<typename std::remove_pointer<T>::type>::type;
+
+#define THIS_TYPE ::Radapter::stripped_this<decltype(this)>
 
 template<class... T>
 void Unused(T...) noexcept {};

@@ -23,7 +23,7 @@ namespace Radapter {
 
 struct RADAPTER_API LoggingInterceptorSettings : public Settings::SerializableSettings  {
     Q_GADGET
-    FIELDS(filepath, flush_delay, max_size_bytes, rotating)
+    IS_SERIALIZABLE
     enum LogMsgTypes {
         LogNone = 0,
         LogAll = 0x0001,
@@ -33,13 +33,14 @@ struct RADAPTER_API LoggingInterceptorSettings : public Settings::SerializableSe
     };
     Q_DECLARE_FLAGS(LogMsgs, LogMsgTypes)
     Q_ENUM(LogMsgTypes)
-    Settings::RequiredField<QString> filepath;
-    Settings::NonRequiredField<quint32> flush_delay{1000u};
-    Settings::NonRequiredField<quint64> max_size_bytes{100000000UL};
-    Settings::NonRequiredField<quint64> rotating{true};
-    Settings::NonRequiredField<QString> log{"normal"};
+    FIELD(Settings::Required<QString>, filepath)
+    FIELD(Settings::NonRequired<quint32>, flush_delay, {1000u})
+    FIELD(Settings::NonRequired<quint64>, max_size_bytes, {100000000UL})
+    FIELD(Settings::NonRequired<quint64>, rotating, {true})
+    FIELD(Settings::NonRequired<QString>, log, {"normal"})
+
     LogMsgs log_{LogNormal};
-    using JsonField = Serializable::Validated<Settings::NonRequiredField<QJsonDocument::JsonFormat>>::With<Settings::ChooseJsonFormat>;
+    using JsonField = Serializable::Validated<Settings::NonRequired<QJsonDocument::JsonFormat>>::With<Settings::ChooseJsonFormat>;
     JsonField format{QJsonDocument::Indented};
 protected:
     static QMap<QString, QJsonDocument::JsonFormat> &mapping() {

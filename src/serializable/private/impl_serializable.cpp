@@ -2,15 +2,15 @@
 #include "../serializable.h"
 
 Serializable::NestedIntrospection::NestedIntrospection(Object *obj) :
-    m_currentType(TypeObject), m_data(QVariant::fromValue(obj))
+    m_data(QVariant::fromValue(obj)), m_currentType(TypeObject)
 {}
 
 Serializable::NestedIntrospection::NestedIntrospection(const QList<Object *> &obj) :
-    m_currentType(TypeList), m_data(QVariant::fromValue(obj))
+    m_data(QVariant::fromValue(obj)), m_currentType(TypeList)
 {}
 
 Serializable::NestedIntrospection::NestedIntrospection(const QMap<QString, Object *> &obj) :
-    m_currentType(TypeMap), m_data(QVariant::fromValue(obj))
+    m_data(QVariant::fromValue(obj)), m_currentType(TypeMap)
 {}
 
 Serializable::Object *Serializable::NestedIntrospection::asObject() {
@@ -47,4 +47,22 @@ QMap<QString, const Serializable::Object *> Serializable::NestedIntrospection::a
         result.insert(iter.key(), *iter);
     }
     return result;
+}
+
+namespace Serializable {
+QMap<QString, FieldConcept *> Private::fieldsHelper(const Object *who)
+{
+    constexpr QLatin1String start("__field__", 9);
+    auto mobj = who->metaObject();
+    auto props = mobj->propertyCount();
+    QMap<QString, FieldConcept*> result;
+    for (int i = 0; i < props ; i ++) {
+        auto field = mobj->property(i);
+        auto name = QLatin1String(field.name());
+        if (name.startsWith(start)) {
+            result.insert(name.mid(start.size()), field.readOnGadget(who).value<FieldConcept*>());
+        }
+    }
+    return result;
+}
 }

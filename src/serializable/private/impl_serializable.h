@@ -19,43 +19,7 @@
 
 namespace Serializable {
 struct FieldConcept;
-template <class Target>
-struct GadgetMixin : public Target
-{
-public:
-    template <typename...Forward>
-    GadgetMixin(Forward...args) :
-        Target(args...)
-    {}
-protected:
-    QVariant readProp(const QMetaProperty &prop) const override final {
-        return prop.readOnGadget(this);
-    }
-    bool writeProp(const QMetaProperty &prop, const QVariant &val) override final {
-        return prop.writeOnGadget(this, val);
-    }
-};
-
-template <class Target>
-struct QObjectMixin : public QObject, public Target
-{
-public:
-    template <typename...Forward>
-    QObjectMixin(QObject *parent = nullptr, Forward...args) :
-        QObject(parent),
-        Target(args...)
-    {}
-protected:
-    QVariant readProp(const QMetaProperty &prop) const override final {
-        return prop.read(this);
-    }
-    bool writeProp(const QMetaProperty &prop, const QVariant &val) override final {
-        return prop.write(this, val);
-    }
-};
 struct Object;
-}
-namespace Serializable {
 struct NestedIntrospection {
     enum CurrentType {
         TypeInvalid = 0,
@@ -75,40 +39,45 @@ struct NestedIntrospection {
     QList<const Object*> asObjectsList() const;
     QMap<QString, const Object*> asObjectsMap() const;
 private:
-    CurrentType m_currentType;
     QVariant m_data;
+    CurrentType m_currentType;
 };
 namespace Private {
 template <typename T>
 void check_type() {
-    constexpr auto isQObject = Radapter::has_QGadget_Macro<T>::Value;
-    constexpr auto isQGadget = Radapter::has_QObject_Macro<T>::Value && std::is_base_of<QObject, T>::value;
-    static_assert(isQGadget || isQObject, "Please add Q_GADGET or Q_OBJECT macro!");
+    constexpr auto isQGadget = Radapter::has_QGadget_Macro<T>::Value;
+    static_assert(isQGadget, "Must use Q_GADGET macro!");
 }
-inline void check_field(const FieldConcept *field) {Q_UNUSED(field)}
+QMap<QString, FieldConcept*> fieldsHelper(const Object *who);
 }
 
-#define _PROP_NAME(...) BOOST_PP_LIST_CAT(BOOST_PP_VARIADIC_TO_LIST(__fields__, __VA_ARGS__))
-#define _IMPL_FIELD(field) {#field, upcastField(&field)}
-#define _CHECK_FIELD(r, macro, i, elem) Serializable::Private::check_field(upcastField(&elem));
-#define _VARIADIC_MAP(r, macro, i, elem) BOOST_PP_COMMA_IF(i) macro(elem)
-#define _IMPL_FIELDS(...) BOOST_PP_SEQ_FOR_EACH_I(_VARIADIC_MAP, _IMPL_FIELD, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))
-#define _IMPL_CHECK_FIELDS(...) BOOST_PP_SEQ_FOR_EACH_I(_CHECK_FIELD, _, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))
-#define _FIELDS_BASE(...) \
+#define FIELD(field_type, name, ...) \
+    public: field_type name __VA_ARGS__; \
     private: \
-    Q_PROPERTY(QVariant _PROP_NAME(__VA_ARGS__) READ _priv_fields) \
-    QVariant _priv_fields() { \
-        _IMPL_CHECK_FIELDS(__VA_ARGS__); \
-        using this_type = Radapter::stripped_this<decltype(this)>; \
-        Serializable::Private::check_type<this_type>(); \
-        return QVariant::fromValue(QMap<QString, Serializable::FieldConcept*>{_IMPL_FIELDS(__VA_ARGS__)}); \
-    } public:
+    decltype(name)* _priv_getPtr_##name () {return &name;} \
+    QVariant _priv_getFinalPtr_##name () { \
+        _has_Is_Serializable(); \
+        return QVariant::fromValue(::Serializable::Private::upcastField(& THIS_TYPE :: _priv_getPtr_##name)); \
+    } \
+    Q_PROPERTY(QVariant __field__ ##name READ _priv_getFinalPtr_##name) \
+    public:
 
-#define FIELDS(...) _FIELDS_BASE(__VA_ARGS__) \
-    virtual const QMetaObject *metaObject() const override {return &this->staticMetaObject;}
-
-#define FIELDS_QOBJECT(...) _FIELDS_BASE(__VA_ARGS__)
-
+#define IS_SERIALIZABLE \
+    private: \
+    static void _has_Is_Serializable () noexcept {}; \
+    virtual const QList<QString> &_priv_allFieldsNamesCached() const override { \
+        static QStringList fieldsNames{_priv_allFields().keys()}; \
+        return fieldsNames; \
+    } \
+    virtual const QMap<QString, ::Serializable::FieldConcept*> &_priv_allFields() const override { \
+        static QMap<QString, ::Serializable::FieldConcept*> result{::Serializable::Private::fieldsHelper(this)}; \
+        return result; \
+    } \
+    public: \
+    virtual const QMetaObject *metaObject() const override { \
+        ::Serializable::Private::check_type<THIS_TYPE>(); \
+        return &this->staticMetaObject; \
+    };
 
 }
 

@@ -11,15 +11,21 @@ QString SerializableSettings::print() const
 
 bool SerializableSettings::update(const QVariantMap &src)
 {
-    fillFields();
     auto selfName = std::string(metaObject()->className());
+    for (auto key = src.keyBegin(); key != src.keyEnd(); ++key) {
+        if (!fields().contains(*key)) {
+            throw std::runtime_error("Extra field passed to Serializable Setting: "
+                                     + std::string(metaObject()->className())
+                                     + " --> " + key->toStdString());
+        }
+    }
     for (const auto &fieldName : fields()) {
         auto found = field(fieldName);
         auto valueFromSource = src.value(fieldName);
-        auto required = !found->attributes().contains("non_required");
+        auto required = !found->attributes(this).contains("non_required");
         if (!valueFromSource.isValid() && !required) continue;
-        if (!found->updateWithVariant(valueFromSource) && required) {
-            auto fieldTypeName = QStringLiteral("%1<%2>").arg(found->typeName(), QString(QMetaType(found->valueMetaTypeId()).name()));
+        if (!found->updateWithVariant(this, valueFromSource) && required) {
+            auto fieldTypeName = QStringLiteral("%1<%2>").arg(found->typeName(this), QString(QMetaType(found->valueMetaTypeId(this)).name()));
             if (src.contains(fieldName)) {
                 auto msg = QStringLiteral("Wanted: %1; Received: %2").arg(fieldTypeName, src[fieldName].toString());
                 throw std::runtime_error(selfName + ": Value type missmatch: " + msg.toStdString());

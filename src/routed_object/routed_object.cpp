@@ -1,57 +1,28 @@
 #include "routed_object.h"
 #include "routed_object/routesprovider.h"
 
-RoutedBase::RoutedBase(const QString &bindingName, const JsonRoute::KeysFilter &keysFilter) :
-    RoutedBase(JsonRoutesProvider::instance()->getBinding(bindingName), keysFilter)
+RoutedObject::RoutedObject(const QString &bindingName, const JsonRoute::KeysFilter &keysFilter) :
+    RoutedObject(JsonRoutesProvider::instance()->getBinding(bindingName), keysFilter)
 {}
 
-RoutedBase::RoutedBase(const JsonRoute &binding, const JsonRoute::KeysFilter &keysFilter) :
+RoutedObject::RoutedObject(const JsonRoute &binding, const JsonRoute::KeysFilter &keysFilter) :
     m_binding(binding.optimise(keysFilter))
 {
 }
 
-RoutedGadget::RoutedGadget(const JsonRoute &binding, const JsonRoute::KeysFilter &keysFilter) :
-    GadgetMixin(binding, keysFilter)
-{
-
-}
-
-RoutedGadget::RoutedGadget(const QString &bindingName, const JsonRoute::KeysFilter &keysFilter) :
-    GadgetMixin(JsonRoutesProvider::instance()->getBinding(bindingName), keysFilter)
-{
-
-}
-
-RoutedQObject::RoutedQObject(const QString &bindingName, const JsonRoute::KeysFilter &keysFilter, QObject *parent) :
-    RoutedQObject(JsonRoutesProvider::instance()->getBinding(bindingName), keysFilter, parent)
-{
-
-}
-
-RoutedQObject::RoutedQObject(const JsonRoute &binding, const JsonRoute::KeysFilter &keysFilter, QObject *parent) :
-    QObjectMixin(parent, binding, keysFilter)
-{
-
-}
-
-void RoutedQObject::routedUpdate(const JsonDict &data)
-{
-    RoutedBase::routedUpdate(data);
-}
-
-void RoutedBase::routedUpdate(const JsonDict &data)
+void RoutedObject::routedUpdate(const JsonDict &data)
 {
     checkIfOk();
     auto result = m_binding.receive(data);
     if (!result.isEmpty()) update(result.data());
 }
 
-const QStringList RoutedBase::mappedFields(const QString &separator) const
+const QStringList RoutedObject::mappedFields(const QString &separator) const
 {
     return send().flatten(separator).keys();
 }
 
-const QStringList RoutedBase::mappedFieldsExclude(const QStringList &exclude, const QString &separator) const
+const QStringList RoutedObject::mappedFieldsExclude(const QStringList &exclude, const QString &separator) const
 {
     if (exclude.isEmpty()) {
         return send().flatten(separator).keys();
@@ -66,12 +37,12 @@ const QStringList RoutedBase::mappedFieldsExclude(const QStringList &exclude, co
     }
 }
 
-const QString RoutedBase::mappedField(const QString &field, const QString &separator) const
+const QString RoutedObject::mappedField(const QString &field, const QString &separator) const
 {
     return send(field).keys(separator).first();
 }
 
-JsonDict RoutedBase::send(const QString &fieldName) const
+JsonDict RoutedObject::send(const QString &fieldName) const
 {
     checkIfOk();
     if (fieldName.isEmpty()) {
@@ -79,11 +50,11 @@ JsonDict RoutedBase::send(const QString &fieldName) const
     } else {
         auto foundField = field(fieldName);
         if (!foundField) throw std::runtime_error("Field: " + fieldName.toStdString() + ": does not exist!");
-        return m_binding.send({{fieldName, foundField->readVariant()}});
+        return m_binding.send({{fieldName, foundField->readVariant(this)}});
     };
 }
 
-JsonDict RoutedBase::sendGlob(const QString &glob) const
+JsonDict RoutedObject::sendGlob(const QString &glob) const
 {
     auto globre = QRegExp(glob);
     globre.setPatternSyntax(QRegExp::WildcardUnix);
@@ -99,17 +70,17 @@ JsonDict RoutedBase::sendGlob(const QString &glob) const
     return result;
 }
 
-QString RoutedBase::print() const
+QString RoutedObject::print() const
 {
     return JsonDict{serialize()}.printDebug().replace("Json", metaObject()->className());
 }
 
-bool RoutedBase::wasUpdated(const QString &fieldName) const
+bool RoutedObject::wasUpdated(const QString &fieldName) const
 {
     return m_wereUpdated.contains(fieldName);
 }
 
-bool RoutedBase::wasUpdatedGlob(const QString &glob) const
+bool RoutedObject::wasUpdatedGlob(const QString &glob) const
 {
     auto globre = QRegExp(glob);
     globre.setPatternSyntax(QRegExp::WildcardUnix);
@@ -124,12 +95,12 @@ bool RoutedBase::wasUpdatedGlob(const QString &glob) const
     return false;
 }
 
-bool RoutedBase::isIgnored(const QString &fieldName) const
+bool RoutedObject::isIgnored(const QString &fieldName) const
 {
     return m_binding.ignoredFields().contains(fieldName);
 }
 
-void RoutedBase::checkIfOk() const
+void RoutedObject::checkIfOk() const
 {
     if (m_checkPassed) {
         return;
@@ -145,11 +116,11 @@ void RoutedBase::checkIfOk() const
     m_checkPassed = true;
 }
 
-bool RoutedBase::update(const QVariantMap &src)
+bool RoutedObject::update(const QVariantMap &src)
 {
     m_wereUpdated.clear();
     for (const auto &fieldName : fields()) {
-        if(field(fieldName)->updateWithVariant(src.value(fieldName))) {
+        if(field(fieldName)->updateWithVariant(this, src.value(fieldName))) {
             m_wereUpdated.append(fieldName);
         }
     }

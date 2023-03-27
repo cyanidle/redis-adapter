@@ -10,9 +10,9 @@ struct RADAPTER_API MockWorkerSettings;
 
 struct Radapter::MockWorkerSettings : WorkerSettings {
     Q_GADGET
-    FIELDS(mock_timer_delay, json_file_path)
-    Settings::NonRequiredField<quint32> mock_timer_delay;
-    Settings::NonRequiredField<QString> json_file_path;
+    IS_SERIALIZABLE
+    FIELD(Settings::NonRequired<quint32>, mock_timer_delay)
+    FIELD(Settings::NonRequired<QString>, json_file_path)
 };
 
 #endif // MOCKWORKERSETTINGS_H

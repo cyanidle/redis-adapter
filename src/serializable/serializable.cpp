@@ -2,62 +2,28 @@
 
 using namespace Serializable;
 
-Object::Object(const Object &other)
-{
-    Q_UNUSED(other)
-    m_fields.clear();
-    m_fieldsMap.clear();
-}
-
-Object &Object::operator=(const Object &other)
-{
-    if (this == &other) return *this;
-    m_fields.clear();
-    m_fieldsMap.clear();
-    return *this;
-}
-
-Object::Object(Object &&other)
-{
-    Q_UNUSED(other)
-    m_fields.clear();
-    m_fieldsMap.clear();
-}
-
-Object &Object::operator=(Object &&other)
-{
-    if  (this == &other) return *this;
-    m_fields.clear();
-    m_fieldsMap.clear();
-    return *this;
-}
-
 FieldConcept *Object::field(const QString &fieldName)
 {
-    fillFields();
-    return m_fieldsMap.value(fieldName);
+    return _priv_allFields().value(fieldName);
 }
 
 const FieldConcept *Object::field(const QString &fieldName) const
 {
-    fillFields();
-    return m_fieldsMap.value(fieldName);
+    return _priv_allFields().value(fieldName);
 }
 
 const QList<QString> &Object::fields() const
 {
-    fillFields();
-    return m_fields;
+    return _priv_allFieldsNamesCached();
 }
 
 bool Object::update(const QVariantMap &source)
 {
-    fillFields();
     bool wasUpdated = false;
     for (auto iter = source.cbegin(); iter != source.cend(); ++iter) {
-        auto found = m_fieldsMap.value(iter.key());
+        auto found = _priv_allFields().value(iter.key());
         if (found) {
-            wasUpdated = found->updateWithVariant(iter.value()) || wasUpdated; // stays true once set
+            wasUpdated = found->updateWithVariant(this, iter.value()) || wasUpdated; // stays true once set
         } else {
             wasUpdated = wasUpdated || false;
         }
@@ -67,39 +33,20 @@ bool Object::update(const QVariantMap &source)
 
 QVariantMap Object::serialize() const
 {
-    fillFields();
     QVariantMap result;
     for (const auto &fieldName: fields()) {
         auto found = field(fieldName);
-        result.insert(fieldName, found->readVariant());
+        result.insert(fieldName, found->readVariant(this));
     }
     return result;
 }
 
 QVariantMap Object::schema() const
 {
-    fillFields();
     QVariantMap result;
-    auto copy = m_fieldsMap;
-    for (auto iter = copy.cbegin(); iter != copy.cend(); ++iter) {
-        result.insert(iter.key(), iter.value()->schema());
+    for (auto iter = _priv_allFields().cbegin(); iter != _priv_allFields().cend(); ++iter) {
+        result.insert(iter.key(), iter.value()->schema(this));
     }
     return result;
 
-}
-
-void Object::fillFields() const
-{
-    if (!m_fields.isEmpty()) return;
-    auto mobj = metaObject();
-    auto props = mobj->propertyCount();
-    for (auto i = 0; i < props; i++) {
-        auto prop = mobj->property(i);
-        if (!QString(prop.name()).startsWith(QStringLiteral("__fields__"))) continue;
-        auto fields = readProp(prop).value<QMap<QString, FieldConcept*>>();
-        for (auto iter = fields.cbegin(); iter != fields.cend(); ++iter) {
-            m_fieldsMap.insert(iter.key(), iter.value());
-            m_fields.append(iter.key());
-        }
-    }
 }

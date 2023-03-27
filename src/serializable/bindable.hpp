@@ -34,12 +34,11 @@ struct Bindable : protected Private::BindableSignals, public Target {
     QMetaObject::Connection onUpdate(void(*cb)(valueRef)) {
         return connect(this, &Private::BindableSignals::wasUpdated, [&](){cb(this->value);});
     }
-protected:
-    virtual const QStringList &attributes() const override {
+    const QStringList &attributes() const {
         static const QStringList attrs = Target::attributes() + QStringList{"bindable"};
         return attrs;
     }
-    bool updateWithVariant(const QVariant &source) override {
+    bool updateWithVariant(const QVariant &source) {
         auto status = Target::updateWithVariant(source);
         if (status) {
             emit wasUpdated();

@@ -34,15 +34,15 @@ namespace Settings {
             return map.contains(asStr);
         }
     };
-    using RegisterTable = Serializable::Validate<RequiredField<QModbusDataUnit::RegisterType>, ChooseRegisterTable>;
-    using RegisterValueType = Serializable::Validate<RequiredField<QMetaType::Type>, ChooseRegValueType>;
+    using RegisterTable = Serializable::Validate<Required<QModbusDataUnit::RegisterType>, ChooseRegisterTable>;
+    using RegisterValueType = Serializable::Validate<Required<QMetaType::Type>, ChooseRegValueType>;
 
     struct RADAPTER_API ModbusQuery : SerializableSettings {
         Q_GADGET
-        FIELDS(type, reg_index, reg_count)
-        RegisterTable type;
-        RequiredField<quint16> reg_index;
-        RequiredField<quint8> reg_count;
+        IS_SERIALIZABLE
+        FIELD(RegisterTable, type)
+        FIELD(Required<quint16>, reg_index)
+        FIELD(Required<quint8>, reg_count)
         typedef QMap<QString, QModbusDataUnit::RegisterType> Map;
     protected:
         static Map &table() {
@@ -57,16 +57,16 @@ namespace Settings {
     };
     struct RADAPTER_API PackingMode : SerializableSettings {
         Q_GADGET
-        FIELDS(byte_order, word_order)
-        NonRequiredByteOrder byte_order{QDataStream::LittleEndian};
-        NonRequiredByteOrder word_order{QDataStream::LittleEndian};
+        IS_SERIALIZABLE
+        FIELD(NonRequiredByteOrder, byte_order, {QDataStream::LittleEndian})
+        FIELD(NonRequiredByteOrder, word_order, {QDataStream::LittleEndian})
     };
     struct RADAPTER_API ModbusDevice : SerializableSettings {
         typedef QMap<QString, ModbusDevice> Map;
         Q_GADGET
-        FIELDS(tcp, rtu)
-        NonRequiredField<TcpDevice> tcp;
-        NonRequiredField<SerialDevice> rtu;
+        IS_SERIALIZABLE
+        FIELD(NonRequired<TcpDevice>, tcp)
+        FIELD(NonRequired<SerialDevice>, rtu)
 
         QSharedPointer<Radapter::Sync::Channel> channel;
 
@@ -102,12 +102,11 @@ namespace Settings {
         typedef QMap<QString, QModbusDataUnit::RegisterType> tableMap;
         typedef QMap<QString, QMetaType::Type> typeMap;
         Q_GADGET
-        FIELDS(index, resetting, table, type)
-        RegisterTable table;
-        RequiredField<int> index;
-
-        NonRequiredField<bool> resetting{false};
-        MarkNonRequired<RegisterValueType> type{QMetaType::UShort};
+        IS_SERIALIZABLE
+        FIELD(RegisterTable, table)
+        FIELD(Required<int>, index)
+        FIELD(NonRequired<bool>, resetting, {false})
+        FIELD(MarkNonRequired<RegisterValueType>, type, {QMetaType::UShort})
     };
     typedef QMap<QString /*regName*/, RegisterInfo> Registers;
     typedef QMap<QString /*deviceName*/, Registers> DevicesRegisters;
@@ -122,13 +121,13 @@ namespace Settings {
 
     struct RADAPTER_API ModbusSlave : SerializableSettings {
         Q_GADGET
-        FIELDS(worker, device_name, reconnect_timeout_ms, slave_id, endianess, register_names)
-        RequiredField<Radapter::WorkerSettings> worker;
-        RequiredField<QString> device_name;
-        RequiredField<quint16> slave_id;
-        RequiredSequence<QString> register_names;
-        NonRequiredField<quint32> reconnect_timeout_ms{5000};
-        NonRequiredField<PackingMode> endianess;
+        IS_SERIALIZABLE
+        FIELD(Required<Radapter::WorkerSettings>, worker)
+        FIELD(Required<QString>, device_name)
+        FIELD(Required<quint16>, slave_id)
+        FIELD(RequiredSequence<QString>, register_names)
+        FIELD(NonRequired<quint32>, reconnect_timeout_ms, {5000})
+        FIELD(NonRequired<PackingMode>, endianess)
 
         ModbusDevice device{};
         RegisterCounts counts{};
@@ -139,18 +138,19 @@ namespace Settings {
 
     struct RADAPTER_API ModbusMaster : SerializableSettings {
         Q_GADGET
-        FIELDS(worker, device_name, slave_id, queries, register_names)
-        RequiredField<Radapter::WorkerSettings> worker;
-        RequiredField<QString> device_name;
-        RequiredField<quint16> slave_id;
-        RequiredSequence<ModbusQuery> queries;
-        RequiredSequence<QString> register_names;
+        IS_SERIALIZABLE
+        FIELD(Required<Radapter::WorkerSettings>, worker)
+        FIELD(Required<QString>, device_name)
+        FIELD(Required<quint16>, slave_id)
+        FIELD(RequiredSequence<ModbusQuery>, queries)
+        FIELD(RequiredSequence<QString>, register_names)
 
-        NonRequiredField<quint32> poll_rate{500},
-                                  reconnect_timeout_ms{5000},
-                                  responce_time{150},
-                                  retries{3};
-        NonRequiredField<PackingMode> endianess;
+        FIELD(NonRequired<quint32>, poll_rate, {500})
+        FIELD(NonRequired<quint32>, reconnect_timeout_ms, {5000})
+        FIELD(NonRequired<quint32>, responce_time, {150})
+        FIELD(NonRequired<quint32>, retries, {3})
+        FIELD(NonRequired<PackingMode>, endianess)
+
         ModbusDevice device{};
         Registers registers{};
         void postUpdate() override;

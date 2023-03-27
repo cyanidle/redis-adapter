@@ -10,9 +10,9 @@ namespace Udp {
 struct ProducerSettings : Settings::SerializableSettings
 {
     Q_GADGET
-    FIELDS(worker, server)
-    Settings::RequiredField<Radapter::WorkerSettings> worker;
-    Settings::RequiredField<Settings::ServerInfo> server;
+    IS_SERIALIZABLE
+    FIELD(Settings::Required<Radapter::WorkerSettings>, worker)
+    FIELD(Settings::Required<Settings::ServerInfo>, server)
 };
 
 class Producer: public Radapter::Worker

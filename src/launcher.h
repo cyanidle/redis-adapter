@@ -16,6 +16,7 @@ class RADAPTER_API Launcher : public QObject
 public:
     explicit Launcher(QObject *parent = nullptr);
     const QString &configsDirectory() const;
+    Settings::Reader *reader();
     QCommandLineParser &commandLineParser();
     template<typename NewWorker, typename NewWorkerSettings>
     NewWorker* addWorker(const QString &key, QSet<Radapter::InterceptorBase *> interceptors = {});

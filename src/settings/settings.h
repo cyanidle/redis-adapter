@@ -31,27 +31,29 @@ struct ByteOrderValidator {
         return map.contains(asStr);
     }
 };
-using NonRequiredByteOrder = Serializable::Validated<NonRequiredField<QDataStream::ByteOrder>>::With<ByteOrderValidator>;
+using NonRequiredByteOrder = Serializable::Validated<NonRequired<QDataStream::ByteOrder>>::With<ByteOrderValidator>;
 
 struct RADAPTER_API Pipelines : public SerializableSettings {
     Q_GADGET
-    FIELDS(pipelines)
-    NonRequiredSequence<QString> pipelines;
+    IS_SERIALIZABLE
+    FIELD(NonRequiredSequence<QString>, pipelines)
 };
 
 struct RADAPTER_API ServerInfo : public SerializableSettings {
     Q_GADGET
-    FIELDS(host, port)
-    RequiredField<QString> host;
-    RequiredField<quint16> port;
+    IS_SERIALIZABLE
+    FIELD(Required<QString>, host)
+    FIELD(Required<quint16>, port)
 };
 
 struct RADAPTER_API TcpDevice : public ServerInfo {
-    typedef QMap<QString, TcpDevice> Map;
     Q_GADGET
-    FIELDS(name)
+    IS_SERIALIZABLE
+    FIELD(NonRequired<QString>, name)
+
+
     operator bool() const {return port;}
-    NonRequiredField<QString> name;
+    typedef QMap<QString, TcpDevice> Map;
     POST_UPDATE {
         if (!name->isEmpty()) {
             table().insert(name, *this);
@@ -72,17 +74,19 @@ protected:
 };
 
 struct RADAPTER_API SerialDevice : SerializableSettings {
-    typedef QMap<QString, SerialDevice> Map;
     Q_GADGET
-    FIELDS(port_name, name, parity, baud, data_bits, stop_bits, byte_order)
+    IS_SERIALIZABLE
+    FIELD(Required<QString>, port_name)
+    FIELD(NonRequired<QString>, name)
+    FIELD(NonRequired<int>, parity, {QSerialPort::NoParity})
+    FIELD(NonRequired<int>, baud, {QSerialPort::Baud115200})
+    FIELD(NonRequired<int>, data_bits, {QSerialPort::Data8})
+    FIELD(NonRequired<int>, stop_bits, {QSerialPort::OneStop})
+    FIELD(NonRequiredByteOrder, byte_order, {QDataStream::BigEndian})
+
+
     operator bool() const {return !port_name->isEmpty();}
-    RequiredField<QString> port_name;
-    NonRequiredField<QString> name;
-    NonRequiredField<int> parity {QSerialPort::NoParity};
-    NonRequiredField<int> baud {QSerialPort::Baud115200};
-    NonRequiredField<int> data_bits {QSerialPort::Data8};
-    NonRequiredField<int> stop_bits {QSerialPort::OneStop};
-    NonRequiredByteOrder byte_order {QDataStream::BigEndian};
+    typedef QMap<QString, SerialDevice> Map;
     POST_UPDATE {
         if (!name->isEmpty()) {
             table().insert(name, *this);
@@ -103,13 +107,14 @@ protected:
 };
 
 
-struct RADAPTER_API SqlClientInfo : ServerInfo {
+struct RADAPTER_API SqlClientInfo : ServerInfo
+{
     typedef QMap<QString, SqlClientInfo> Map;
     Q_GADGET
-    FIELDS(name, database, username)
-    RequiredField<QString> name;
-    RequiredField<QString> database;
-    RequiredField<QString> username;
+    IS_SERIALIZABLE
+    FIELD(Required<QString>, name)
+    FIELD(Required<QString>, database)
+    FIELD(Required<QString>, username)
     POST_UPDATE {
         table().insert(name, *this);
     }
@@ -124,14 +129,15 @@ protected:
     }
 };
 
-struct RADAPTER_API SqlStorageInfo : SerializableSettings {
+struct RADAPTER_API SqlStorageInfo : SerializableSettings
+{
     Q_GADGET
-    FIELDS(worker, name, client_name, target_table, table_name)
-    RequiredField<Radapter::WorkerSettings> worker;
-    RequiredField<QString> name;
-    RequiredField<QString> client_name;
-    RequiredField<QString> target_table;
-    RequiredField<QString> table_name;
+    IS_SERIALIZABLE
+    FIELD(Required<Radapter::WorkerSettings>, worker)
+    FIELD(Required<QString>, name)
+    FIELD(Required<QString>, client_name)
+    FIELD(Required<QString>, target_table)
+    FIELD(Required<QString>, table_name)
 };
 
 struct RADAPTER_API Filters {
@@ -152,23 +158,24 @@ struct ValidateTimeZone {
 };
 
 struct RADAPTER_API LocalizationInfo : SerializableSettings {
+    using RequiredTimeZone = Serializable::Validated<Required<QTimeZone>>::With<ValidateTimeZone>;
+
     Q_GADGET
-    FIELDS(time_zone)
-    using RequiredTimeZone = Serializable::Validated<RequiredField<QTimeZone>>::With<ValidateTimeZone>;
-    RequiredTimeZone time_zone;
+    IS_SERIALIZABLE
+    FIELD(RequiredTimeZone, time_zone)
 };
 
 struct RADAPTER_API WebsocketServerInfo : SerializableSettings {
     Q_GADGET
-    FIELDS(port, worker)
-    RequiredField<quint16> port{1234};
-    RequiredField<Radapter::WorkerSettings> worker;
+    IS_SERIALIZABLE
+    FIELD(Required<quint16>, port, {1234})
+    FIELD(Required<Radapter::WorkerSettings>, worker)
 };
 
 struct RADAPTER_API WebsocketClientInfo : WebsocketServerInfo {
     Q_GADGET
-    FIELDS(host)
-    RequiredField<QString> host;
+    IS_SERIALIZABLE
+    FIELD(Required<QString>, host)
 };
 
 } // namespace Settings

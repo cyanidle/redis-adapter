@@ -5,13 +5,14 @@
 
 namespace Radapter {
 
-struct RADAPTER_API WorkerSettings : public Settings::SerializableSettings {
+struct RADAPTER_API WorkerSettings : public Settings::SerializableSettings
+{
     Q_GADGET
-    FIELDS(name, producers, consumers, print_msgs)
-    Settings::RequiredField<QString> name;
-    Settings::NonRequiredSequence<QString> producers;
-    Settings::NonRequiredSequence<QString> consumers;
-    Settings::NonRequiredField<bool> print_msgs;
+    IS_SERIALIZABLE
+    FIELD(Settings::Required<QString>, name)
+    FIELD(Settings::NonRequiredSequence<QString>, producers)
+    FIELD(Settings::NonRequiredSequence<QString>, consumers)
+    FIELD(Settings::NonRequired<bool>, print_msgs)
     WorkerSettings(const QString &name = "") : name(name) {}
 };
 
