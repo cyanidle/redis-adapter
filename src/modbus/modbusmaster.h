@@ -40,6 +40,7 @@ private:
     void enqeueRead(const QModbusDataUnit &unit);
     void enqeueWrite(const QModbusDataUnit &unit);
     void executeNext();
+    void initClient();
     void executeRead(const QModbusDataUnit &unit);
     void executeWrite(const QModbusDataUnit &unit);
 

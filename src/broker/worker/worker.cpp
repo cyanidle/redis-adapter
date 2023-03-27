@@ -96,18 +96,6 @@ bool Worker::wasStarted() const
     return m_wasRun;
 }
 
-Worker &Worker::operator>(Worker &other)
-{
-    addConsumers({&other});
-    return *this;
-}
-
-Worker &Worker::operator<(Worker &other)
-{
-    addProducers({&other});
-    return *this;
-}
-
 QString Worker::printSelf() const
 {
     return QStringLiteral("%2 (%1)").arg(metaObject()->className(), workerName());

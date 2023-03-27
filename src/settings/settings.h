@@ -14,13 +14,29 @@
 #include <QJsonDocument>
 
 Q_DECLARE_METATYPE(QTimeZone)
+Q_DECLARE_METATYPE(QDataStream::ByteOrder)
 
 namespace Settings {
+struct ByteOrderValidator {
+    typedef QMap<QString, QDataStream::ByteOrder> Map;
+    static bool validate(QVariant &src) {
+        static Map map{
+            {"little",  QDataStream::LittleEndian},
+            {"big",  QDataStream::BigEndian},
+            {"littleendian",  QDataStream::LittleEndian},
+            {"bigendian", QDataStream::BigEndian}
+        };
+        auto asStr = src.toString().toLower();
+        src.setValue(map.value(asStr));
+        return map.contains(asStr);
+    }
+};
+using NonRequiredByteOrder = Serializable::Validated<NonRequiredField<QDataStream::ByteOrder>>::With<ByteOrderValidator>;
 
 struct RADAPTER_API Pipelines : public SerializableSettings {
     Q_GADGET
     FIELDS(pipelines)
-    NonRequiredSeq<QString> pipelines;
+    NonRequiredSequence<QString> pipelines;
 };
 
 struct RADAPTER_API ServerInfo : public SerializableSettings {
@@ -58,7 +74,7 @@ protected:
 struct RADAPTER_API SerialDevice : SerializableSettings {
     typedef QMap<QString, SerialDevice> Map;
     Q_GADGET
-    FIELDS(port_name, name, parity, baud, data_bits, stop_bits)
+    FIELDS(port_name, name, parity, baud, data_bits, stop_bits, byte_order)
     operator bool() const {return !port_name->isEmpty();}
     RequiredField<QString> port_name;
     NonRequiredField<QString> name;
@@ -66,6 +82,7 @@ struct RADAPTER_API SerialDevice : SerializableSettings {
     NonRequiredField<int> baud {QSerialPort::Baud115200};
     NonRequiredField<int> data_bits {QSerialPort::Data8};
     NonRequiredField<int> stop_bits {QSerialPort::OneStop};
+    NonRequiredByteOrder byte_order {QDataStream::BigEndian};
     POST_UPDATE {
         if (!name->isEmpty()) {
             table().insert(name, *this);

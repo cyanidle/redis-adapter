@@ -41,7 +41,6 @@ public:
     inline explicit JsonDict(const QVariant& src, const QString &separator = ":", bool nest = true);
     inline JsonDict(const QVariantMap& src = {}, const QString &separator = ":", bool nest = true);
     inline JsonDict(std::initializer_list<std::pair<QString, QVariant>> initializer);
-    explicit inline JsonDict(std::initializer_list<std::pair<QString, JsonDict>> initializer);
     explicit inline JsonDict(QVariantMap&& src, const QString &separator = ":", bool nest = true);
     //! \warning Implicitly covertible to QVariant and QVariantMap
     operator const QVariantMap&() const&;
@@ -1000,15 +999,6 @@ JsonDict::JsonDict(const QVariantMap& src, const QString &separator, bool nest) 
 inline JsonDict::JsonDict(std::initializer_list<std::pair<QString, QVariant> > initializer) :
     m_dict(initializer)
 {
-    this->nest(':');
-}
-
-inline JsonDict::JsonDict(std::initializer_list<std::pair<QString, JsonDict> > initializer) :
-    m_dict()
-{
-    for (const auto &pair : initializer) {
-        m_dict.insert(pair.first, static_cast<const QVariantMap&>(pair.second));
-    }
     this->nest(':');
 }
 

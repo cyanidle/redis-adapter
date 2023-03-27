@@ -19,7 +19,7 @@ public:
     JsonRoute(const QString &name, const JsonDict &json);
     JsonRoute optimise(const KeysFilter &keysFilter) const;
     Result receive(const JsonDict &msg, const KeysFilter &keysFilter = {}) const;
-    JsonDict send(const JsonDict &values, const KeysFilter &keysFilter = {}) const;
+    JsonDict send(const QVariantMap &values, const KeysFilter &keysFilter = {}) const;
     void requireValueName(const QString &valueName) const;
     const QString &name() const;
     const QStringList &ignoredFields() const {return m_ignored;}

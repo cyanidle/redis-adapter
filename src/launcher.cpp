@@ -59,7 +59,6 @@ Launcher::Launcher(QObject *parent) :
     tryInit(this, &Launcher::initMocks, "mocks");
     tryInit(this, &Launcher::initLocalization, "localization");
     LocalStorage::init(this);
-    initProxies();
 }
 
 void Launcher::addWorker(Worker* worker, QSet<InterceptorBase*> interceptors)
@@ -189,7 +188,13 @@ void Launcher::initMocks()
 
 void Launcher::initPipelines()
 {
-    const auto parsed = parseObject<Settings::Pipelines>();
+    Settings::Pipelines parsed;
+    try {
+        parsed = parseObject<Settings::Pipelines>();
+    } catch (std::runtime_error &exc) {
+        settingsParsingWarn() << "Could not read [PIPELINES]! Details:" << exc.what();
+        return;
+    }
     static QRegExp splitter("[<>]");
     for (const auto &pipe: parsed.pipelines.value) {
         auto split = pipe.split(splitter);
@@ -326,6 +331,7 @@ void Launcher::initProxies()
 
 void Launcher::run()
 {
+    initProxies();
 #ifdef Q_OS_UNIX
     auto resmonThr = new QThread(this);
     auto resmon = new ResourceMonitor();
@@ -338,7 +344,7 @@ void Launcher::run()
         (*worker)->run();
     }
     Broker::instance()->runAll();
-    tryInit(this, &Launcher::initPipelines, "pipelines");
+    initPipelines();
     emit started();
 }
 
@@ -346,6 +352,11 @@ int Launcher::exec()
 {
     run();
     return QCoreApplication::instance()->exec();
+}
+
+QThread *Launcher::newThread()
+{
+    return new QThread(this);
 }
 
 QCommandLineParser &Launcher::commandLineParser()

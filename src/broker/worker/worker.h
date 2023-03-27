@@ -36,8 +36,6 @@ public:
     template <typename Target> bool is() const;
     template <typename Target> const Target *as() const;
     template <typename Target> Target *as();
-    Worker &operator>(Worker &other);
-    Worker &operator<(Worker &other);
     QString printSelf() const;
     virtual ~Worker() = default;
 signals:

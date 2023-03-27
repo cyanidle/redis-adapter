@@ -2,7 +2,7 @@
 #include "templates/algorithms.hpp"
 #include "utils/wordoperations.h"
 
-using namespace Utils;
+using namespace ByteUtils;
 
 bool mergeDataUnit(QList<QModbusDataUnit> &target, const QModbusDataUnit &unit) {
     for (auto &item : target) {
@@ -87,7 +87,7 @@ QModbusDataUnit Modbus::parseValueToDataUnit(const QVariant &src, const Settings
 QVariant Modbus::parseModbusType(quint16 *words, const Settings::RegisterInfo &regInfo, int sizeWords, const Settings::PackingMode &endianess)
 {
     applyEndianness(words, endianess, sizeWords, true);
-    switch(regInfo.type) {
+    switch(regInfo.type.value) {
     case QMetaType::UShort:
         return bit_cast<quint16>(words);
     case QMetaType::UInt:

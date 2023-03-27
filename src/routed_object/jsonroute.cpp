@@ -40,6 +40,7 @@ JsonRoute JsonRoute::optimise(const KeysFilter &keysFilter) const
     result.m_isOptimised = true;
     checkKeys(keysFilter, "optimise()");
     for (auto &mapping : result.m_mappings) {
+        mapping.optimisedKey = mapping.mappedKey.split(":");
         for (auto iter = keysFilter.constBegin(); iter != keysFilter.constEnd(); ++iter) {
             mapping.optimisedKey = mapping.mappedKey.replace(QStringLiteral("{%1}").arg(iter.key()), iter.value()).split(":");
         }
@@ -101,7 +102,7 @@ JsonRoute::Result JsonRoute::receive(const JsonDict &msg, const KeysFilter &keys
     return {std::move(result), availableValueNames()};
 }
 
-JsonDict JsonRoute::send(const JsonDict &values, const KeysFilter &keysFilter) const
+JsonDict JsonRoute::send(const QVariantMap &values, const KeysFilter &keysFilter) const
 {
     if (!m_isOptimised) {
         checkKeys(keysFilter, Q_FUNC_INFO);

@@ -29,15 +29,15 @@ public:
                             if (user == target) {
                                 (user->*slot)();
                             }
-                       });
+                       }, Qt::QueuedConnection);
     }
     template<typename User>
     QMetaObject::Connection signalJobDone(User *user, void (User::*signal)()) {
-        return connect(user, signal, this, &Channel::onJobDone);
+        return connect(user, signal, this, &Channel::onJobDone, Qt::QueuedConnection);
     }
     template<typename User>
     QMetaObject::Connection askTriggerOn(User *user, void (User::*signal)()) {
-        return connect(user, signal, this, &Channel::askTrigger);
+        return connect(user, signal, this, &Channel::askTrigger, Qt::QueuedConnection);
     }
 signals:
     void trigger(QObject *user, QPrivateSignal);

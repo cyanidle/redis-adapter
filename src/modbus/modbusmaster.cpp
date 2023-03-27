@@ -20,20 +20,6 @@ Master::Master(const Settings::ModbusMaster &settings, QThread *thread) :
     m_reconnectTimer->setSingleShot(true);
     m_readTimer->setInterval(settings.poll_rate);
     m_readTimer->callOnTimeout(this, &Master::doRead);
-    if (settings.device.tcp.value) {
-        m_device = new QModbusTcpClient(this);
-        m_device->setConnectionParameter(QModbusDevice::NetworkAddressParameter, settings.device.tcp->host.value);
-        m_device->setConnectionParameter(QModbusDevice::NetworkPortParameter, settings.device.tcp->port.value);
-    } else {
-        m_device = new QModbusRtuSerialMaster(this);
-        m_device->setConnectionParameter(QModbusDevice::SerialBaudRateParameter, settings.device.rtu->baud);
-        m_device->setConnectionParameter(QModbusDevice::SerialDataBitsParameter, settings.device.rtu->data_bits);
-        m_device->setConnectionParameter(QModbusDevice::SerialParityParameter, settings.device.rtu->parity);
-        m_device->setConnectionParameter(QModbusDevice::SerialPortNameParameter, settings.device.rtu->port_name.value);
-        m_device->setConnectionParameter(QModbusDevice::SerialStopBitsParameter, settings.device.rtu->stop_bits);
-    }
-    m_device->setTimeout(settings.responce_time);
-    m_device->setNumberOfRetries(settings.retries);
     for (auto regIter = settings.registers.cbegin(); regIter != settings.registers.cend(); ++regIter) {
         if (m_reverseRegisters[regIter->table].contains(regIter->index)) {
             throw std::invalid_argument("Register index collission on: " +
@@ -45,14 +31,33 @@ Master::Master(const Settings::ModbusMaster &settings, QThread *thread) :
         }
         m_reverseRegisters[regIter->table][regIter->index] = regIter.key();
     }
-    connect(m_device, &QModbusDevice::stateChanged, this, &Master::onStateChanged);
-    connect(m_device, &QModbusDevice::errorOccurred, this, &Master::onErrorOccurred);
     connect(this, &Master::connected, [this](){m_connected=true;});
     connect(this, &Master::disconnected, [this](){m_connected=false;});
 }
 
+void Master::initClient()
+{
+    if (m_settings.device.tcp.value) {
+        m_device = new QModbusTcpClient(this);
+        m_device->setConnectionParameter(QModbusDevice::NetworkAddressParameter, m_settings.device.tcp->host.value);
+        m_device->setConnectionParameter(QModbusDevice::NetworkPortParameter, m_settings.device.tcp->port.value);
+    } else {
+        m_device = new QModbusRtuSerialMaster(this);
+        m_device->setConnectionParameter(QModbusDevice::SerialBaudRateParameter, m_settings.device.rtu->baud);
+        m_device->setConnectionParameter(QModbusDevice::SerialDataBitsParameter, m_settings.device.rtu->data_bits);
+        m_device->setConnectionParameter(QModbusDevice::SerialParityParameter, m_settings.device.rtu->parity);
+        m_device->setConnectionParameter(QModbusDevice::SerialPortNameParameter, m_settings.device.rtu->port_name.value);
+        m_device->setConnectionParameter(QModbusDevice::SerialStopBitsParameter, m_settings.device.rtu->stop_bits);
+    }
+    m_device->setTimeout(m_settings.responce_time);
+    m_device->setNumberOfRetries(m_settings.retries);
+    connect(m_device, &QModbusDevice::stateChanged, this, &Master::onStateChanged);
+    connect(m_device, &QModbusDevice::errorOccurred, this, &Master::onErrorOccurred);
+}
+
 void Master::onRun()
 {
+    initClient();
     attachToChannel();
     connectDevice();
     if (config().poll_rate) {

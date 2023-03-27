@@ -8,7 +8,6 @@
 #include "broker/interceptors/logginginterceptor.h"
 
 Q_DECLARE_METATYPE(QMetaType::Type)
-Q_DECLARE_METATYPE(QDataStream::ByteOrder)
 
 namespace Settings {
     struct ChooseRegValueType {
@@ -59,21 +58,8 @@ namespace Settings {
     struct RADAPTER_API PackingMode : SerializableSettings {
         Q_GADGET
         FIELDS(byte_order, word_order)
-        using OrderField = Serializable::Validated<NonRequiredField<QDataStream::ByteOrder>>::With<PackingMode>;
-        OrderField byte_order{QDataStream::LittleEndian};
-        OrderField word_order{QDataStream::LittleEndian};
-
-        typedef QMap<QString, QDataStream::ByteOrder> Map;
-
-        static bool validate(QVariant &src) {
-            static Map map{
-                {"littleendian",  QDataStream::LittleEndian},
-                {"bigendian", QDataStream::BigEndian}
-            };
-            auto asStr = src.toString().toLower();
-            src.setValue(map.value(asStr));
-            return map.contains(asStr);
-        }
+        NonRequiredByteOrder byte_order{QDataStream::LittleEndian};
+        NonRequiredByteOrder word_order{QDataStream::LittleEndian};
     };
     struct RADAPTER_API ModbusDevice : SerializableSettings {
         typedef QMap<QString, ModbusDevice> Map;
@@ -83,6 +69,7 @@ namespace Settings {
         NonRequiredField<SerialDevice> rtu;
 
         QSharedPointer<Radapter::Sync::Channel> channel;
+
         static const ModbusDevice &get(const QString &name) {
             if (!table().contains(name)) throw std::invalid_argument("Missing Modbus Device: " + name.toStdString());
             return table()[name];
@@ -105,8 +92,8 @@ namespace Settings {
             static QThread channelsThread;
             if (!channel) channel.reset(new Radapter::Sync::Channel(&channelsThread));
             channelsThread.start();
-            if (tcp.value && rtu.value) throw std::runtime_error("Both tcp and rtu device is prohibited! Use one");
-            if (!tcp.value && !rtu.value) throw std::runtime_error("Tcp or Rtu device not specified or 'source' not found!");
+            if (tcp.value && rtu.value) throw std::runtime_error("[Modbus Device] Both tcp and rtu device is prohibited! Use one");
+            if (!tcp.value && !rtu.value) throw std::runtime_error("[Modbus Device] Tcp or Rtu device not specified!");
             table().insert(tcp.value ? tcp->name : rtu->name, *this);
         }
     };
@@ -139,7 +126,7 @@ namespace Settings {
         RequiredField<Radapter::WorkerSettings> worker;
         RequiredField<QString> device_name;
         RequiredField<quint16> slave_id;
-        RequiredSeq<QString> register_names;
+        RequiredSequence<QString> register_names;
         NonRequiredField<quint32> reconnect_timeout_ms{5000};
         NonRequiredField<PackingMode> endianess;
 
@@ -156,8 +143,8 @@ namespace Settings {
         RequiredField<Radapter::WorkerSettings> worker;
         RequiredField<QString> device_name;
         RequiredField<quint16> slave_id;
-        RequiredSeq<ModbusQuery> queries;
-        RequiredSeq<QString> register_names;
+        RequiredSequence<ModbusQuery> queries;
+        RequiredSequence<QString> register_names;
 
         NonRequiredField<quint32> poll_rate{500},
                                   reconnect_timeout_ms{5000},

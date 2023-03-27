@@ -62,7 +62,7 @@ void ModbusSlave::postUpdate() {
         }
     }
     for (auto &reg : registers) {
-        switch (reg.table) {
+        switch (reg.table.value) {
         case QModbusDataUnit::InputRegisters:
             counts.input_registers++;
             continue;

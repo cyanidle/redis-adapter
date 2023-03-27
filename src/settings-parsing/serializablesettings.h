@@ -18,17 +18,17 @@ struct MarkNonRequired : public Target {
     using Target::operator==;
 protected:
     virtual const QStringList &attributes() const override {
-        static const QStringList attrs = Target::attributes() + QStringList{"non_required"};
+        static const QStringList attrs{Target::attributes() + QStringList{"non_required"}};
         return attrs;
     }
 };
 
 template<typename T>
-using NonRequiredSeq = MarkNonRequired<Serializable::Sequence<T>>;
+using NonRequiredSequence = MarkNonRequired<Serializable::Sequence<T>>;
 template<typename T>
 using NonRequiredField = MarkNonRequired<Serializable::Field<T>>;
 template<typename T>
-using RequiredSeq = Serializable::Sequence<T>;
+using RequiredSequence = Serializable::Sequence<T>;
 template<typename T>
 using RequiredField = Serializable::Field<T>;
 
@@ -38,18 +38,6 @@ struct SerializableSettings : public Serializable::Gadget
 public:
     QString print() const;
     virtual bool update(const QVariantMap &src) override;
-};
-
-struct ChooseJsonFormat {
-    static bool validate(QVariant &src) {
-        static QMap<QString, QJsonDocument::JsonFormat> map {
-            {"compact", QJsonDocument::Compact},
-            {"indented", QJsonDocument::Indented}
-        };
-        auto asStr = src.toString().toLower();
-        src.setValue(map.value(asStr));
-        return map.contains(asStr);
-    }
 };
 
 } // namespace Settings

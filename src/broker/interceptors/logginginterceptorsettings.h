@@ -5,6 +5,20 @@
 #include "settings-parsing/serializablesettings.h"
 #include "private/global.h"
 
+namespace Settings {
+struct ChooseJsonFormat {
+    static bool validate(QVariant &src) {
+        static QMap<QString, QJsonDocument::JsonFormat> map {
+            {"compact", QJsonDocument::Compact},
+            {"indented", QJsonDocument::Indented}
+        };
+        auto asStr = src.toString().toLower();
+        src.setValue(map.value(asStr));
+        return map.contains(asStr);
+    }
+};
+}
+
 namespace Radapter {
 
 struct RADAPTER_API LoggingInterceptorSettings : public Settings::SerializableSettings  {

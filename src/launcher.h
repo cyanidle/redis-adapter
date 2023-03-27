@@ -4,11 +4,12 @@
 #include <QCommandLineParser>
 #include "settings/settings.h"
 #include "settings-parsing/dictreader.h"
-#include "broker/worker/worker.h"
 #include <QObject>
 
 namespace Radapter {
-
+class Worker;
+class InterceptorBase;
+class Broker;
 class RADAPTER_API Launcher : public QObject
 {
     Q_OBJECT
@@ -16,6 +17,8 @@ public:
     explicit Launcher(QObject *parent = nullptr);
     const QString &configsDirectory() const;
     QCommandLineParser &commandLineParser();
+    template<typename NewWorker, typename NewWorkerSettings>
+    NewWorker* addWorker(const QString &key, QSet<Radapter::InterceptorBase *> interceptors = {});
 signals:
     void started();
 public slots:
@@ -25,6 +28,8 @@ public slots:
     //! exec() calls run() and then return with QCoreApplication::exec();
     int exec();
 private:
+    QThread *newThread();
+
     void setLoggingFilters(const QMap<QString, bool> &loggers);
 
     void initLogging();
@@ -58,6 +63,15 @@ private:
     QVariantMap m_allSettings{};
     QCommandLineParser m_argsParser{};
 };
+
+template<typename NewWorker, typename NewWorkerSettings>
+NewWorker* Launcher::addWorker(const QString &key, QSet<InterceptorBase *> interceptors)
+{
+    auto fromConfig = parseObject<NewWorkerSettings>(key);
+    auto newWorker = new NewWorker(fromConfig, newThread());
+    addWorker(newWorker, interceptors);
+    return newWorker;
+}
 
 template <typename T>
 const QList<T> Launcher::parseArrayOf(const QString &path) {

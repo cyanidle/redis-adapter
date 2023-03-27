@@ -99,6 +99,11 @@ JsonDict RoutedBase::sendGlob(const QString &glob) const
     return result;
 }
 
+QString RoutedBase::print() const
+{
+    return JsonDict{serialize()}.printDebug().replace("Json", metaObject()->className());
+}
+
 bool RoutedBase::wasUpdated(const QString &fieldName) const
 {
     return m_wereUpdated.contains(fieldName);

@@ -46,7 +46,7 @@ namespace Settings {
     struct RADAPTER_API RedisKeyEventSubscriber : RedisConnector {
         Q_GADGET
         FIELDS(keyEvents)
-        RequiredSeq<QString> keyEvents;
+        RequiredSequence<QString> keyEvents;
     };
 
     struct RADAPTER_API RedisStreamBase : RedisConnector {
