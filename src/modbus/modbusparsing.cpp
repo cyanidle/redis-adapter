@@ -70,7 +70,7 @@ QList<QModbusDataUnit> Modbus::mergeDataUnits(const QList<QModbusDataUnit> &src)
     return holdingResult += diResult += inputResult += coilsResult;
 }
 
-QModbusDataUnit Modbus::parseValueToDataUnit(const QVariant &src, const Settings::RegisterInfo &regInfo, const Settings::PackingMode &endianess)
+QModbusDataUnit Modbus::parseValueToDataUnit(const QVariant &src, const Settings::RegisterInfo &regInfo)
 {
     if (!src.canConvert(regInfo.type)) {
         reError() << "Error writing data to modbus: "
@@ -80,13 +80,13 @@ QModbusDataUnit Modbus::parseValueToDataUnit(const QVariant &src, const Settings
     const auto sizeWords = QMetaType::sizeOf(regInfo.type)/2;
     auto copy = src;
     auto words = toWords(copy.data(), sizeWords);
-    applyEndianness(words.data(), endianess, sizeWords, false);
+    applyEndianness(words.data(), regInfo.order, sizeWords, false);
     return QModbusDataUnit{regInfo.table, regInfo.index, words};
 }
 
-QVariant Modbus::parseModbusType(quint16 *words, const Settings::RegisterInfo &regInfo, int sizeWords, const Settings::PackingMode &endianess)
+QVariant Modbus::parseModbusType(quint16 *words, const Settings::RegisterInfo &regInfo, int sizeWords)
 {
-    applyEndianness(words, endianess, sizeWords, true);
+    applyEndianness(words, regInfo.order, sizeWords, true);
     switch(regInfo.type.value) {
     case QMetaType::UShort:
         return bit_cast<quint16>(words);

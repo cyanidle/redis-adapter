@@ -13,33 +13,11 @@ constexpr QDataStream::ByteOrder getEndianess() {
 
 template <typename To, typename From>
 typename std::enable_if<std::is_trivially_copyable<To>::value &&
-                        std::is_trivially_copyable<From>::value &&
-                        !std::is_pointer<From>::value,
+                        std::is_trivially_copyable<From>::value,
 To>::type
 bit_cast(const From* src) {
     To result;
     std::memcpy(&result, src, sizeof(To));
-    return result;
-}
-
-
-template <typename To, typename From>
-typename std::enable_if<std::is_trivially_copyable<To>::value &&
-                        std::is_trivially_copyable<From>::value &&
-                        !std::is_pointer<From>::value>::type
-bit_cast(const From* src, To &result) {
-    std::memcpy(&result, src, sizeof(To));
-}
-
-template <typename To, typename From>
-typename std::enable_if<sizeof(To) == sizeof(From) &&
-                        std::is_trivially_copyable<To>::value &&
-                        std::is_trivially_copyable<From>::value &&
-                        !std::is_pointer<From>::value,
-To>::type
-bit_cast(const From& src) {
-    To result;
-    std::memcpy(&result, &src, sizeof(To));
     return result;
 }
 

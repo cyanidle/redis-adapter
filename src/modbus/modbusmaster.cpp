@@ -105,7 +105,7 @@ void Master::onMsg(const Radapter::WorkerMsg &msg)
             auto regInfo = m_settings.registers.value(fullKeyJoined);
             auto value = iter.value();
             if (value.canConvert(regInfo.type)) {
-                results.append(parseValueToDataUnit(value, regInfo, config().endianess));
+                results.append(parseValueToDataUnit(value, regInfo));
             } else {
                 reWarn() << printSelf() << ": Received: " << value << "; Key:" << fullKeyJoined;
             }
@@ -182,7 +182,7 @@ void Master::onReadReady()
         if (i + sizeWords > words.size()) {
             break;
         }
-        auto result = parseModbusType(words.data() + i, regData, sizeWords, config().endianess);
+        auto result = parseModbusType(words.data() + i, regData, sizeWords);
         i += sizeWords;
         resultJson.insert(registersName.split(':'), result);
     }

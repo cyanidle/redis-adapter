@@ -7,6 +7,7 @@
 #include "radapterlogging.h"
 #include "workerproxy.h"
 #include "broker/events/brokerevent.h"
+#include "routed_object/routed_object.h"
 
 using namespace Radapter;
 
@@ -31,6 +32,8 @@ Worker::Worker(const WorkerSettings &settings, QThread *thread) :
         brokerWarn()<< "=== Worker (" << workerName() << "): Running in Debug Mode! ===";
     }
     connect(this, &Worker::sendMsg, &Worker::onSendMsgPriv);
+    connect(this, &Worker::sendBasic, &Worker::onSendBasic);
+    connect(this, &Worker::sendRouted, &Worker::onSendRouted);
     connect(thread, &QThread::started, this, &Worker::onRun);
     connect(thread, &QThread::destroyed, this, &Worker::deleteLater);
     connect(thread, &QThread::finished, thread, &QThread::deleteLater);
@@ -43,6 +46,7 @@ Worker::Worker(const WorkerSettings &settings, QThread *thread) :
 ///     ----->     (Proxy) <--> (Interceptor) <--> (NewInterceptor) <--> (Worker)
 void Worker::addInterceptor(InterceptorBase *interceptor)
 {
+    QMutexLocker locker(&m_mutex);
     if (!m_proxy) {
         m_InterceptorsToAdd.insert(interceptor);
         return;
@@ -103,6 +107,7 @@ QString Worker::printSelf() const
 
 void Worker::run()
 {
+    QMutexLocker locker(&m_mutex);
     if (m_wasRun) throw std::runtime_error("WorkerBase::onRun() called multiple times for: " + printSelf().toStdString());
     moveToThread(workerThread());
     for (auto &producerName : qAsConst(m_producerNames)) {
@@ -126,6 +131,7 @@ void Worker::onRun()
 
 void Worker::addConsumers(const QStringList &consumers)
 {
+    QMutexLocker locker(&m_mutex);
     for (auto &name : consumers) {
         m_consumerNames.insert(name);
         if (wasStarted()) {
@@ -138,6 +144,7 @@ void Worker::addConsumers(const QStringList &consumers)
 
 void Worker::addProducers(const QStringList &producers)
 {
+    QMutexLocker locker(&m_mutex);
     for (auto &name : producers) {
         m_producerNames.insert(name);
         if (wasStarted()) {
@@ -150,6 +157,7 @@ void Worker::addProducers(const QStringList &producers)
 
 void Worker::addConsumers(const Set &consumers)
 {
+    QMutexLocker locker(&m_mutex);
     for (auto &worker : consumers) {
         addConsumer(worker);
     }
@@ -157,6 +165,7 @@ void Worker::addConsumers(const Set &consumers)
 
 void Worker::addProducers(const Set &producers)
 {
+    QMutexLocker locker(&m_mutex);
     for (auto &worker : producers) {
         addProducer(worker);
     }
@@ -164,6 +173,7 @@ void Worker::addProducers(const Set &producers)
 
 void Worker::addConsumer(Worker *consumer)
 {
+    QMutexLocker locker(&m_mutex);
     m_consumers.insert(consumer);
     if (!consumer->producers().contains(this)) {
         consumer->addProducer(this);
@@ -177,6 +187,7 @@ void Worker::addConsumer(Worker *consumer)
 
 void Worker::addProducer(Worker *producer)
 {
+    QMutexLocker locker(&m_mutex);
     m_producers.insert(producer);
     if (!producer->consumers().contains(this)) {
         producer->addConsumer(this);
@@ -192,7 +203,7 @@ void Worker::onEvent(const BrokerEvent &event)
     Q_UNUSED(event);
 }
 
-WorkerMsg Worker::prepareMsgBad(const QString &reason)
+WorkerMsg Worker::prepareMsgBad(const QString &reason) const
 {
     auto msg = m_baseMsg;
     msg.updateId();
@@ -256,6 +267,16 @@ void Worker::onMsg(const Radapter::WorkerMsg &msg)
     workerError(this) << ": received Generic Msg from: " <<
         msg.sender()->printSelf() << "but not handled!";
     throw std::runtime_error("Unhandled msg!");
+}
+
+void Worker::onSendBasic(const JsonDict &msg)
+{
+    emit sendMsg(prepareMsg(msg));
+}
+
+void Worker::onSendRouted(const RoutedObject &obj, const QString &fieldName)
+{
+    emit sendMsg(prepareMsg(obj.send(fieldName)));
 }
 
 void Worker::onWorkerDestroyed(QObject *worker)

@@ -58,9 +58,10 @@ namespace Settings {
     struct RADAPTER_API PackingMode : SerializableSettings {
         Q_GADGET
         IS_SERIALIZABLE
-        FIELD(NonRequiredByteOrder, byte_order, {QDataStream::LittleEndian})
-        FIELD(NonRequiredByteOrder, word_order, {QDataStream::LittleEndian})
+        FIELD(NonRequiredByteOrder, byte, {QDataStream::LittleEndian})
+        FIELD(NonRequiredByteOrder, word, {QDataStream::LittleEndian})
     };
+
     struct RADAPTER_API ModbusDevice : SerializableSettings {
         typedef QMap<QString, ModbusDevice> Map;
         Q_GADGET
@@ -73,15 +74,6 @@ namespace Settings {
         static const ModbusDevice &get(const QString &name) {
             if (!table().contains(name)) throw std::invalid_argument("Missing Modbus Device: " + name.toStdString());
             return table()[name];
-        }
-        QString repr() const {
-            if (tcp->port) {
-                return QStringLiteral("TCP: Host:%1 Port:%2").arg(tcp->host.value).arg(tcp->port.value);
-            } else if (!rtu->port_name->isEmpty()) {
-                return QStringLiteral("RTU: Port:%1 Baud:%2").arg(rtu->port_name.value).arg(rtu->baud.value);
-            } else {
-                return "Invalid";
-            }
         }
     protected:
         static Map &table() {
@@ -98,6 +90,10 @@ namespace Settings {
         }
     };
 
+    struct OrdersValidator {
+        static bool validate(QVariant &value);
+    };
+
     struct RADAPTER_API RegisterInfo : SerializableSettings {
         typedef QMap<QString, QModbusDataUnit::RegisterType> tableMap;
         typedef QMap<QString, QMetaType::Type> typeMap;
@@ -107,6 +103,8 @@ namespace Settings {
         FIELD(Required<int>, index)
         FIELD(NonRequired<bool>, resetting, {false})
         FIELD(MarkNonRequired<RegisterValueType>, type, {QMetaType::UShort})
+        using Orders = Serializable::Validate<MarkNonRequired<PackingMode>, OrdersValidator>;
+        FIELD(Orders, order)
     };
     typedef QMap<QString /*regName*/, RegisterInfo> Registers;
     typedef QMap<QString /*deviceName*/, Registers> DevicesRegisters;
@@ -127,7 +125,6 @@ namespace Settings {
         FIELD(Required<quint16>, slave_id)
         FIELD(RequiredSequence<QString>, register_names)
         FIELD(NonRequired<quint32>, reconnect_timeout_ms, {5000})
-        FIELD(NonRequired<PackingMode>, endianess)
 
         ModbusDevice device{};
         RegisterCounts counts{};
@@ -149,7 +146,6 @@ namespace Settings {
         FIELD(NonRequired<quint32>, reconnect_timeout_ms, {5000})
         FIELD(NonRequired<quint32>, responce_time, {150})
         FIELD(NonRequired<quint32>, retries, {3})
-        FIELD(NonRequired<PackingMode>, endianess)
 
         ModbusDevice device{};
         Registers registers{};

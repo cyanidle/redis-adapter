@@ -7,7 +7,7 @@
 #include <QThread>
 #include "workermsg.h"
 #include "workerdebug.h"
-
+class RoutedObject;
 namespace Radapter {
 class Broker;
 class WorkerProxy;
@@ -41,6 +41,8 @@ public:
 signals:
     void fireEvent(const Radapter::BrokerEvent &event);
     void sendMsg(const Radapter::WorkerMsg &msg);
+    void sendBasic(const JsonDict &msg);
+    void sendRouted(const RoutedObject &obj, const QString &fieldName = {});
 public slots:
     void run();
     void addConsumers(const QStringList &consumers);
@@ -56,6 +58,8 @@ protected slots:
     virtual void onCommand(const Radapter::WorkerMsg &msg);
     virtual void onMsg(const Radapter::WorkerMsg &msg);
 private slots:
+    void onSendBasic(const JsonDict &msg);
+    void onSendRouted(const RoutedObject &obj, const QString &fieldName = {});
     void onWorkerDestroyed(QObject *worker);
     void onSendMsgPriv(const Radapter::WorkerMsg &msg);
     void onMsgFromBroker(const Radapter::WorkerMsg &msg);
@@ -66,11 +70,11 @@ protected:
     BrokerEvent prepareSimpleEvent(quint32 id, qint16 status) const;
     WorkerMsg prepareMsg(const JsonDict &msg = JsonDict()) const;
     WorkerMsg prepareMsg(JsonDict &&msg) const;
-    WorkerMsg prepareMsgBad(const QString &reason);
+    WorkerMsg prepareMsgBad(const QString &reason) const;
     WorkerMsg prepareReply(const WorkerMsg &msg, Reply *reply) const;
     WorkerMsg prepareCommand(Command *command) const;
     template <typename User, typename...Args>
-    WorkerMsg prepareCommand(Command *command, void (User::*cb)(Args...));
+    WorkerMsg prepareCommand(Command *command, void (User::*cb)(Args...)) const;
     void addInterceptor(InterceptorBase *interceptor);
 private:
     template <typename User, typename...Args>
@@ -86,10 +90,10 @@ private:
     QObject *m_closestConnected{nullptr};
     QList<QMetaObject::Connection> m_closestConnections{};
     QSet<InterceptorBase *> m_InterceptorsToAdd{};
-    bool m_wasRun{false};
+    std::atomic<bool> m_wasRun{false};
     bool m_printMsgs{false};
 
-    static QMutex m_mutex;
+    static QRecursiveMutex m_mutex;
     static QStringList m_wereCreated;
     static QList<InterceptorBase*> m_usedInterceptors;
     friend Broker;
@@ -107,7 +111,7 @@ Target *Worker::as() {
 }
 
 template <typename User, typename...Args>
-WorkerMsg Worker::prepareCommand(Command *command, MsgCallback<User, Args...> callback) {
+WorkerMsg Worker::prepareCommand(Command *command, MsgCallback<User, Args...> callback) const {
     auto cmd = prepareCommand(command);
     if(!is<User>()) {
         throw std::invalid_argument("Must use own method as callback!");

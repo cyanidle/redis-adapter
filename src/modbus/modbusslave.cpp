@@ -118,7 +118,7 @@ void Slave::onDataWritten(QModbusDataUnit::RegisterType table, int address, int 
         const auto &regString = m_reverseRegisters[table][address];
         auto regInfo = deviceRegisters().value(regString);
         auto sizeWords = QMetaType::sizeOf(regInfo.type)/2;
-        auto result = parseModbusType(wordsStart + i, regInfo, sizeWords, config().endianess);
+        auto result = parseModbusType(wordsStart + i, regInfo, sizeWords);
         i += sizeWords;
         if (i + sizeWords < size) {
             reWarn() << "Insufficient size of value: " << sizeWords;
@@ -164,7 +164,7 @@ void Slave::onMsg(const Radapter::WorkerMsg &msg)
             auto regInfo = m_settings.registers.value(fullKeyJoined);
             auto value = iter.value();
             if (Q_LIKELY(value.canConvert(regInfo.type))) {
-                results.append(parseValueToDataUnit(value, regInfo, config().endianess));
+                results.append(parseValueToDataUnit(value, regInfo));
             } else {
                 reWarn() << "Incorrect value type for slave: " << printSelf() << "; Received: " << value << "; Key:" << fullKeyJoined;
             }

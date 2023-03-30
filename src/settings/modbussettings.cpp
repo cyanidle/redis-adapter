@@ -103,3 +103,30 @@ void ModbusMaster::postUpdate()
     }
     device = Settings::ModbusDevice::get(device_name);
 }
+
+bool OrdersValidator::validate(QVariant &value)
+{
+    auto asStr = value.toString().toLower();
+    if (asStr.isEmpty()) return;
+    bool wordsBig, bytesBig = false;
+    if (asStr == QStringLiteral("abcd")) {
+        wordsBig = bytesBig = true;
+    } else if (asStr == QStringLiteral("badc")) {
+        bytesBig = true;
+    } else if (asStr == QStringLiteral("cdab")) {
+        wordsBig = true;
+    } else if (asStr == QStringLiteral("dcba")) {
+        wordsBig = bytesBig = false;
+    } else {
+        throw std::runtime_error("Invalid endianess format: " + asStr.toStdString() + "; Available: abcd | badc | cdab | dcba");
+    }
+    value = QVariantMap{
+        {"bytes", bytesBig ? "big" : "little"},
+        {"words", wordsBig ? "big" : "little"},
+    };
+    return true;
+}
+
+
+
+
