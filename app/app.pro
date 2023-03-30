@@ -4,8 +4,8 @@ QT += core \
     serialport \
     sql \
     websockets \
-    network \
-    gui
+    network
+    
 TARGET = redis-adapter
 
 DEFINES += RADAPTER_API=

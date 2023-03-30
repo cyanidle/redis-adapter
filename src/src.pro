@@ -4,8 +4,7 @@ QT += core \
     serialport \
     sql \
     websockets \
-    network \
-    gui
+    network
 
 CONFIG(debug, debug|release){
     TARGET = radapter-sdkd
