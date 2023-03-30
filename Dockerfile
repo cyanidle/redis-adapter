@@ -43,7 +43,7 @@ RUN set -eux; \
         $qt_libs \
         $os_libs \
         ${APP_NAME} \
-    ${APP_DIR}/${APP_NAME}; \
+    ${APP_DIR}/${APP_NAME}; \ 
     cd ${APP_DIR}/${APP_NAME}; \
     mkdir sqldrivers; \
     cp ${QT_BIN_PATH}/plugins/sqldrivers/libqsqlmysql.so sqldrivers/ ; \
