@@ -1,20 +1,20 @@
-#include "logginginterceptor.h"
+#include "loggingworker.h"
 #include "radapterlogging.h"
 #include <QDir>
-#include "broker/worker/worker.h"
+#include "broker/workers/worker.h"
 #include <QDateTime>
 
 using namespace Radapter;
 
-LoggingInterceptor::LoggingInterceptor(const LoggingInterceptorSettings &settings) :
-    Radapter::InterceptorBase(),
+LoggingWorker::LoggingWorker(const LoggingWorkerSettings &settings, QThread *thread) :
+    Radapter::Worker(settings, thread),
     m_file(new QFile(settings.filepath, this)),
     m_flushTimer(new QTimer(this)),
     m_settings(settings),
     m_array(),
     m_error(false)
 {
-    connect(m_flushTimer, &QTimer::timeout, this, &LoggingInterceptor::onFlush);
+    connect(m_flushTimer, &QTimer::timeout, this, &LoggingWorker::onFlush);
     QDir().mkpath(settings.filepath->left(settings.filepath->lastIndexOf("/")));
     m_file->open(QIODevice::ReadOnly | QIODevice::Text);
     QJsonParseError err;
@@ -28,15 +28,25 @@ LoggingInterceptor::LoggingInterceptor(const LoggingInterceptorSettings &setting
     m_flushTimer->start(settings.flush_delay);
 }
 
-bool LoggingInterceptor::isFull() const
+bool LoggingWorker::isFull() const
 {
     return static_cast<quint64>(m_file->size()) > m_settings.max_size_bytes;
 }
 
-void LoggingInterceptor::onFlush()
+void LoggingWorker::onCommand(const WorkerMsg &msg)
+{
+    onMsg(msg);
+}
+
+void LoggingWorker::onReply(const WorkerMsg &msg)
+{
+    onMsg(msg);
+}
+
+void LoggingWorker::onFlush()
 {
     if (m_error) {
-        brokerError() << "Logger flush is impossible!";
+        workerError(this) << "Logger flush is impossible!";
     }
     if (!m_shouldUpdate) {
         return;
@@ -44,7 +54,7 @@ void LoggingInterceptor::onFlush()
     m_shouldUpdate = false;
     if (!m_file->isOpen()) {
         if (!m_file->open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
-            brokerError() << "Could not open file with name: " << m_file->fileName();
+            workerError(this) << "Could not open file with name: " << m_file->fileName();
             m_error = true;
             return;
         }
@@ -54,23 +64,23 @@ void LoggingInterceptor::onFlush()
     m_file->close();
 }
 
-bool LoggingInterceptor::testMsgForLog(const Radapter::WorkerMsg &msg) {
-    if (m_settings.log_.testFlag(LoggingInterceptorSettings::LogAll)) {
+bool LoggingWorker::testMsgForLog(const Radapter::WorkerMsg &msg) {
+    if (m_settings.log_.testFlag(LoggingWorkerSettings::LogAll)) {
         return true;
     }
     if (!msg.isCommand() && !msg.isReply())
         return m_settings.log_.testFlag(
-            LoggingInterceptorSettings::LogNormal);
+            LoggingWorkerSettings::LogNormal);
     if (msg.isReply())
         return m_settings.log_.testFlag(
-            LoggingInterceptorSettings::LogReply);
+            LoggingWorkerSettings::LogReply);
     if (msg.isCommand())
         return m_settings.log_.testFlag(
-            LoggingInterceptorSettings::LogCommand);
+            LoggingWorkerSettings::LogCommand);
     return true;
 }
 
-void LoggingInterceptor::enqueueMsg(const WorkerMsg &msg)
+void LoggingWorker::enqueueMsg(const WorkerMsg &msg)
 {
     auto copy = msg;
     JsonDict metaInfo{QVariantMap{
@@ -87,9 +97,8 @@ void LoggingInterceptor::enqueueMsg(const WorkerMsg &msg)
     m_shouldUpdate = true;
 }
 
-void LoggingInterceptor::onMsgFromWorker(const Radapter::WorkerMsg &msg)
+void LoggingWorker::onMsg(const Radapter::WorkerMsg &msg)
 {
-    emit msgToBroker(msg);
     if (isFull() && m_settings.rotating) {
         if (testMsgForLog(msg)) {
             m_array.removeFirst();
@@ -100,6 +109,6 @@ void LoggingInterceptor::onMsgFromWorker(const Radapter::WorkerMsg &msg)
             enqueueMsg(msg);
         }
     } else {
-        brokerWarn() << this << "File is Full";
+        workerError(this) << "File is Full";
     }
 }

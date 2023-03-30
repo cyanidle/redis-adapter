@@ -4,26 +4,28 @@
 #include <QTimer>
 #include <QFile>
 #include "private/global.h"
-#include "logginginterceptorsettings.h"
-#include "broker/interceptors/interceptor.h"
+#include "loggingworkersettings.h"
+#include "worker.h"
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QMutex>
 
 namespace Radapter {
-class RADAPTER_API LoggingInterceptor;
+class RADAPTER_API LoggingWorker;
 }
 
-class Radapter::LoggingInterceptor : public Radapter::InterceptorBase
+class Radapter::LoggingWorker : public Radapter::Worker
 {
     Q_OBJECT
 public:
-    explicit LoggingInterceptor(const LoggingInterceptorSettings &settings);
+    explicit LoggingWorker(const LoggingWorkerSettings &settings, QThread *thread);
     const QString &baseFilepath() const {return m_settings.filepath;}
     QString currentFilepath() const {return m_file->fileName();}
     bool isFull() const;
 public slots:
-    virtual void onMsgFromWorker(const Radapter::WorkerMsg &msg) override;
+    virtual void onMsg(const Radapter::WorkerMsg &msg) override;
+    virtual void onCommand(const Radapter::WorkerMsg &msg) override;
+    virtual void onReply(const Radapter::WorkerMsg &msg) override;
 private slots:
     void onFlush();
 private:
@@ -32,7 +34,7 @@ private:
 
     QFile *m_file;
     QTimer *m_flushTimer;
-    LoggingInterceptorSettings m_settings;
+    LoggingWorkerSettings m_settings;
     QJsonArray m_array;
     bool m_shouldUpdate{false};
 

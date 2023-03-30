@@ -1,11 +1,12 @@
 #ifndef INTERCEPTORBASE_H
 #define INTERCEPTORBASE_H
 
-#include "broker/worker/workermsg.h"
 #include "private/global.h"
 
 namespace Radapter {
 class RADAPTER_API InterceptorBase;
+class WorkerMsg;
+class Worker;
 typedef QSet<InterceptorBase*> Interceptors;
 }
 

@@ -3,8 +3,9 @@
 
 #include <QObject>
 #include <QQueue>
+#include "broker/workers/private/workermsg.h"
 #include "jsondict/jsondict.hpp"
-#include "broker/interceptors/interceptor.h"
+#include "broker/interceptor/interceptor.h"
 #include "settings/settings.h"
 
 class RADAPTER_API ProducerFilter : public Radapter::InterceptorBase

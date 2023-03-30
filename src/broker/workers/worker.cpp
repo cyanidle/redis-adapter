@@ -2,16 +2,16 @@
 #include "radapterlogging.h"
 #include "broker/broker.h"
 #include <QThread>
-#include "broker/interceptors/interceptor.h"
+#include "broker/interceptor/interceptor.h"
 #include "workersettings.h"
 #include "radapterlogging.h"
-#include "workerproxy.h"
+#include "private/workerproxy.h"
 #include "broker/events/brokerevent.h"
 #include "routed_object/routed_object.h"
 
 using namespace Radapter;
 
-QMutex Worker::m_mutex;
+QRecursiveMutex Worker::m_mutex;
 QStringList Worker::m_wereCreated = QStringList();
 QList<InterceptorBase*> Worker::m_usedInterceptors = {};
 

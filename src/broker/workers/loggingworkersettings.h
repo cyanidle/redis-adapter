@@ -4,24 +4,13 @@
 #include <QJsonDocument>
 #include "settings-parsing/serializablesettings.h"
 #include "private/global.h"
-
-namespace Settings {
-struct ChooseJsonFormat {
-    static bool validate(QVariant &src) {
-        static QMap<QString, QJsonDocument::JsonFormat> map {
-            {"compact", QJsonDocument::Compact},
-            {"indented", QJsonDocument::Indented}
-        };
-        auto asStr = src.toString().toLower();
-        src.setValue(map.value(asStr));
-        return map.contains(asStr);
-    }
-};
-}
+#include "workersettings.h"
+#include "settings-parsing/settings_validators.hpp"
 
 namespace Radapter {
 
-struct RADAPTER_API LoggingInterceptorSettings : public Settings::SerializableSettings  {
+struct RADAPTER_API LoggingWorkerSettings : public WorkerSettings
+{
     Q_GADGET
     IS_SERIALIZABLE
     enum LogMsgTypes {
@@ -35,7 +24,7 @@ struct RADAPTER_API LoggingInterceptorSettings : public Settings::SerializableSe
     Q_ENUM(LogMsgTypes)
     FIELD(Settings::Required<QString>, filepath)
     FIELD(Settings::NonRequired<quint32>, flush_delay, {1000u})
-    FIELD(Settings::NonRequired<quint64>, max_size_bytes, {100000000UL})
+    FIELD(Settings::NonRequiredFileSize, max_size_bytes, {100000000UL})
     FIELD(Settings::NonRequired<quint64>, rotating, {true})
     FIELD(Settings::NonRequired<QString>, log, {"normal"})
 
@@ -68,6 +57,6 @@ protected:
         }
     }
 };
-Q_DECLARE_OPERATORS_FOR_FLAGS(LoggingInterceptorSettings::LogMsgs)
+Q_DECLARE_OPERATORS_FOR_FLAGS(LoggingWorkerSettings::LogMsgs)
 }
 #endif // LOGGINGINTERCEPTORSETTINGS_H

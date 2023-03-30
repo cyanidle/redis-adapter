@@ -3,8 +3,8 @@
 
 #include <QMutex>
 #include <QMutexLocker>
-#include "worker/workerproxy.h"
-#include "worker/worker.h"
+#include "workers/private/workerproxy.h"
+#include "workers/worker.h"
 #include "private/global.h"
 
 namespace Radapter {

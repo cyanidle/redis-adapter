@@ -45,6 +45,7 @@ private:
     void initPipelines();
     void initMocks();
     void initLocalization();
+    void initLoggingWorkers();
     void parseCommandlineArgs();
     void initProxies();
 

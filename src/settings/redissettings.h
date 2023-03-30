@@ -1,7 +1,6 @@
 #ifndef REDISSETTINGS_H
 #define REDISSETTINGS_H
 #include "settings.h"
-#include "broker/interceptors/logginginterceptorsettings.h"
 
 namespace Settings {
     struct RADAPTER_API RedisServer : ServerInfo {

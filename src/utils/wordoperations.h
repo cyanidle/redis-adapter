@@ -7,6 +7,8 @@
 
 namespace ByteUtils {
 
+using Order = QDataStream::ByteOrder;
+
 constexpr QDataStream::ByteOrder getEndianess() {
     return Q_BYTE_ORDER == Q_LITTLE_ENDIAN ? QDataStream::LittleEndian : QDataStream::BigEndian;
 }
@@ -21,15 +23,11 @@ bit_cast(const From* src) {
     return result;
 }
 
-void applyEndianness(quint16 *words,
-                     const Settings::PackingMode endianess,
-                     int sizeWords,
-                     bool receive);
-void applyToWords(quint16 *words, int sizeWords, QDataStream::ByteOrder wordOrder);
-void applyToBytes(quint16 *words, int sizeWords, QDataStream::ByteOrder byteOrder);
+void applyEndianess(quint16 *words, int sizeWords, const Settings::PackingMode endianessWas, const Settings::PackingMode targetEndianess);
 
-QVector<quint16> toWords(const void* src, int sizeWords);
-QByteArray toBytes(const void* src, int sizeBytes);
+QVector<quint16> toWords(const void* src, int sizeWords, Order from = Order::BigEndian, Order to = getEndianess());
+QByteArray toBytes(const void* src, int sizeBytes, Order from = Order::BigEndian, Order to = getEndianess());
+
 template<typename T>
 inline QVector<quint16> toWords(const T& src) {
     static_assert(!(sizeof(T)%2), "Cannot cast to words type with odd length");

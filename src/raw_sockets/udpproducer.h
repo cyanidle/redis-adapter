@@ -1,7 +1,7 @@
 #ifndef UDP_SOCKET_H
 #define UDP_SOCKET_H
 
-#include "broker/worker/worker.h"
+#include "broker/workers/worker.h"
 #include "settings/settings.h"
 #include <QUdpSocket>
 

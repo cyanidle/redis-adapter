@@ -72,6 +72,7 @@ QList<QModbusDataUnit> Modbus::mergeDataUnits(const QList<QModbusDataUnit> &src)
 
 QModbusDataUnit Modbus::parseValueToDataUnit(const QVariant &src, const Settings::RegisterInfo &regInfo)
 {
+    const static Settings::PackingMode thisPack{Order::BigEndian, getEndianess()};
     if (!src.canConvert(regInfo.type)) {
         reError() << "Error writing data to modbus: "
                   << src << "; Index: " << regInfo.index.value;
@@ -79,14 +80,16 @@ QModbusDataUnit Modbus::parseValueToDataUnit(const QVariant &src, const Settings
     }
     const auto sizeWords = QMetaType::sizeOf(regInfo.type)/2;
     auto copy = src;
+    copy.convert(regInfo.type);
     auto words = toWords(copy.data(), sizeWords);
-    applyEndianness(words.data(), regInfo.order, sizeWords, false);
+    applyEndianess(words.data(), sizeWords, thisPack, regInfo.order);
     return QModbusDataUnit{regInfo.table, regInfo.index, words};
 }
 
 QVariant Modbus::parseModbusType(quint16 *words, const Settings::RegisterInfo &regInfo, int sizeWords)
 {
-    applyEndianness(words, regInfo.order, sizeWords, true);
+    const static Settings::PackingMode thisPack{Order::BigEndian, getEndianess()};
+    applyEndianess(words, sizeWords, regInfo.order, thisPack);
     switch(regInfo.type.value) {
     case QMetaType::UShort:
         return bit_cast<quint16>(words);
@@ -99,7 +102,7 @@ QVariant Modbus::parseModbusType(quint16 *words, const Settings::RegisterInfo &r
     }
 }
 
-QString Modbus::tableToString(QModbusDataUnit::RegisterType type)
+QString Modbus::printTable(QModbusDataUnit::RegisterType type)
 {
     switch (type) {
     case QModbusDataUnit::RegisterType::Invalid: return "Invalid";
@@ -113,7 +116,7 @@ QString Modbus::tableToString(QModbusDataUnit::RegisterType type)
 
 QString Modbus::printUnit(const QModbusDataUnit &unit)
 {
-    auto result = "Table: " + tableToString(unit.registerType()) + "; Vals: [";
+    auto result = "Table: " + printTable(unit.registerType()) + "; Vals: [";
     for (auto &val : unit.values()) {
         result.append(QString::number(val, 16)).append(", ");
     }

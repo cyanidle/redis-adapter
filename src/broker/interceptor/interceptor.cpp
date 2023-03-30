@@ -1,5 +1,5 @@
 #include "interceptor.h"
-#include "broker/worker/worker.h"
+#include "broker/workers/worker.h"
 
 using namespace Radapter;
 

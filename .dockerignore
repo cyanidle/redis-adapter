@@ -31,11 +31,6 @@ moc_**
 **/build
 **/bins
 !conf/*
-# Tests Binaries
-*test-results*
-tests/tests-bin/gtest/*
-tests/tests-bin/qtest/*
-tests/tests-bin/results
 # Autosaves from VSCode
 **.autosave
 build_env_file

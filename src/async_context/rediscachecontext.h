@@ -3,7 +3,7 @@
 
 #include "contextmanager.h"
 #include "broker/commands/basiccommands.h"
-#include "broker/worker/workermsg.h"
+#include "broker/workers/private/workermsg.h"
 
 namespace Redis {
 class CacheProducer;

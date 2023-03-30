@@ -72,7 +72,7 @@ bool Slave::isConnected() const
 void Slave::connectDevice()
 {
     if (!modbusDevice->connectDevice()) {
-        workerWarn(this) << ": Failed to connect: Attempt to reconnect to: " << m_settings.device.repr();
+        workerWarn(this) << ": Failed to connect: Attempt to reconnect to: " << m_settings.device.print();
         m_reconnectTimer->start();
     }
 }
@@ -102,10 +102,10 @@ void Slave::onDataWritten(QModbusDataUnit::RegisterType table, int address, int 
             ok = modbusDevice->data(QModbusDataUnit::InputRegisters, quint16(address + i), &(words[i]));
             break;
         default:
-            workerWarn(this) << "Invalid data written: Adress: " << address + i << "; Table: " << tableToString(table);
+            workerWarn(this) << "Invalid data written: Adress: " << address + i << "; Table: " << printTable(table);
         }
         if (!ok) {
-            workerWarn(this) << "Error reading data! Adress:" << address << "; Table:" << tableToString(table);
+            workerWarn(this) << "Error reading data! Adress:" << address << "; Table:" << printTable(table);
             continue;
         }
     }
@@ -140,7 +140,7 @@ void Slave::onDataWritten(QModbusDataUnit::RegisterType table, int address, int 
 
 void Slave::onErrorOccurred(QModbusDevice::Error error)
 {
-    workerWarn(this) << "Error: " << m_settings.device.repr() << "; Reason: " << error;
+    workerWarn(this) << "Error: " << m_settings.device.print() << "; Reason: " << error;
     disconnectDevice();
     m_reconnectTimer->start();
 }

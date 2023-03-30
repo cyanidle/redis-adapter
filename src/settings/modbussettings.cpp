@@ -1,4 +1,5 @@
 #include "modbussettings.h"
+#include "jsondict/jsondict.hpp"
 #include "templates/algorithms.hpp"
 
 using namespace Settings;
@@ -107,8 +108,9 @@ void ModbusMaster::postUpdate()
 bool OrdersValidator::validate(QVariant &value)
 {
     auto asStr = value.toString().toLower();
-    if (asStr.isEmpty()) return;
-    bool wordsBig, bytesBig = false;
+    if (asStr.isEmpty()) return true;
+    bool wordsBig = false;
+    bool bytesBig = false;
     if (asStr == QStringLiteral("abcd")) {
         wordsBig = bytesBig = true;
     } else if (asStr == QStringLiteral("badc")) {
@@ -120,7 +122,7 @@ bool OrdersValidator::validate(QVariant &value)
     } else {
         throw std::runtime_error("Invalid endianess format: " + asStr.toStdString() + "; Available: abcd | badc | cdab | dcba");
     }
-    value = QVariantMap{
+    value = QVariantMap {
         {"bytes", bytesBig ? "big" : "little"},
         {"words", wordsBig ? "big" : "little"},
     };

@@ -1,5 +1,7 @@
 #include "broker/broker.h"
-#include "broker/worker/mockworker.h"
+#include "broker/workers/loggingworker.h"
+#include "broker/workers/loggingworkersettings.h"
+#include "broker/workers/mockworker.h"
 #include "settings-parsing/convertutils.hpp"
 #include "connectors/websocketserverconnector.h"
 #include "launcher.h"
@@ -46,6 +48,7 @@ Launcher::Launcher(QObject *parent) :
     parseCommandlineArgs();
     tryInit(this, &Launcher::initRoutedJsons, "routed_jsons");
     tryInit(this, &Launcher::initLogging, "logging");
+    tryInit(this, &Launcher::initLoggingWorkers, "logging_workers");
     tryInit(this, &Launcher::initRedis, "redis");
     tryInit(this, &Launcher::initModbus, "modbus");
     tryInit(this, &Launcher::initWebsockets, "websockets");
@@ -144,6 +147,13 @@ void Launcher::initFilters()
     auto rawFilters = readSetting("filters").toMap();
     for (auto iter = rawFilters.constBegin(); iter != rawFilters.constEnd(); ++iter) {
         Settings::Filters::table().insert(iter.key(), convertQMap<double>(iter.value().toMap()));
+    }
+}
+
+void Launcher::initLoggingWorkers()
+{
+    for (const auto &logSettings : parseArrayOf<Radapter::LoggingWorkerSettings>("logging_workers")) {
+        addWorker(new Radapter::LoggingWorker(logSettings, new QThread(this)));
     }
 }
 

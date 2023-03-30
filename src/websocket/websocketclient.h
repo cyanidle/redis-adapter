@@ -7,7 +7,7 @@
 #include <QJsonObject>
 #include <QQueue>
 #include <QTimer>
-#include "broker/worker/worker.h"
+#include "broker/workers/worker.h"
 #include "settings/settings.h"
 
 namespace Websocket {

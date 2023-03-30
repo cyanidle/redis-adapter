@@ -5,8 +5,8 @@
 #include <QMutex>
 #include <QHash>
 #include <QThread>
-#include "workermsg.h"
-#include "workerdebug.h"
+#include "private/workermsg.h"
+#include "private/workerdebug.h"
 class RoutedObject;
 namespace Radapter {
 class Broker;

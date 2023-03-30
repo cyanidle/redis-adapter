@@ -1,7 +1,7 @@
 #ifndef UDP_CONSUMER_H
 #define UDP_CONSUMER_H
 
-#include "broker/worker/worker.h"
+#include "broker/workers/worker.h"
 #include "settings-parsing/serializablesettings.h"
 #include "settings/settings.h"
 #include <QUdpSocket>

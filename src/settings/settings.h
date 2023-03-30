@@ -9,7 +9,7 @@
 #include <QTime>
 #include <QModbusDataUnit>
 #include <QTimeZone>
-#include "broker/worker/workersettings.h"
+#include "broker/workers/workersettings.h"
 #include "settings-parsing/serializablesettings.h"
 #include <QJsonDocument>
 

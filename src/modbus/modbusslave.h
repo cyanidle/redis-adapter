@@ -3,7 +3,7 @@
 
 #include <QModbusServer>
 #include <QTimer>
-#include "broker/worker/worker.h"
+#include "broker/workers/worker.h"
 #include "settings/modbussettings.h"
 
 namespace Modbus {

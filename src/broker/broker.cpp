@@ -1,7 +1,6 @@
 #include "broker.h"
 #include "radapterlogging.h"
 #include <QCoreApplication>
-#include "worker/worker.h"
 
 using namespace Radapter;
 

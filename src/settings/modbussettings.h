@@ -2,10 +2,8 @@
 #define MODBUSSETTINGS_H
 
 #include "broker/sync/channel.h"
-#include "qstringbuilder.h"
 #include "qthread.h"
 #include "settings.h"
-#include "broker/interceptors/logginginterceptor.h"
 
 Q_DECLARE_METATYPE(QMetaType::Type)
 
@@ -14,7 +12,9 @@ namespace Settings {
         static bool validate(QVariant& value) {
             static QMap<QString, QMetaType::Type>
                     map{{"uint16", QMetaType::UShort},
+                        {"word", QMetaType::UShort},
                         {"uint32", QMetaType::UInt},
+                        {"dword", QMetaType::UInt},
                         {"float", QMetaType::Float},
                         {"float32", QMetaType::Float}};
             auto asStr = value.toString().toLower();
@@ -28,7 +28,12 @@ namespace Settings {
                 map{{"holding",QModbusDataUnit::HoldingRegisters},
                     {"input",QModbusDataUnit::InputRegisters},
                     {"coils",QModbusDataUnit::Coils},
-                    {"discrete_inputs",QModbusDataUnit::DiscreteInputs}};
+                    {"discrete_inputs",QModbusDataUnit::DiscreteInputs},
+                    {"holding_registers",QModbusDataUnit::HoldingRegisters},
+                    {"input_registers",QModbusDataUnit::InputRegisters},
+                    {"coils",QModbusDataUnit::Coils},
+                    {"di",QModbusDataUnit::DiscreteInputs},
+                    {"do",QModbusDataUnit::Coils},};
             auto asStr = value.toString().toLower();
             value.setValue(map.value(asStr));
             return map.contains(asStr);
@@ -58,8 +63,12 @@ namespace Settings {
     struct RADAPTER_API PackingMode : SerializableSettings {
         Q_GADGET
         IS_SERIALIZABLE
-        FIELD(NonRequiredByteOrder, byte, {QDataStream::LittleEndian})
-        FIELD(NonRequiredByteOrder, word, {QDataStream::LittleEndian})
+        FIELD(NonRequiredByteOrder, bytes, {QDataStream::LittleEndian})
+        FIELD(NonRequiredByteOrder, words, {QDataStream::LittleEndian})
+        PackingMode() = default;
+        PackingMode(QDataStream::ByteOrder words, QDataStream::ByteOrder bytes) :
+            bytes(bytes), words(words)
+        {}
     };
 
     struct RADAPTER_API ModbusDevice : SerializableSettings {
@@ -103,12 +112,12 @@ namespace Settings {
         FIELD(Required<int>, index)
         FIELD(NonRequired<bool>, resetting, {false})
         FIELD(MarkNonRequired<RegisterValueType>, type, {QMetaType::UShort})
-        using Orders = Serializable::Validate<MarkNonRequired<PackingMode>, OrdersValidator>;
+        using Orders = Serializable::Validate<NonRequired<PackingMode>, OrdersValidator>;
         FIELD(Orders, order)
     };
     typedef QMap<QString /*regName*/, RegisterInfo> Registers;
     typedef QMap<QString /*deviceName*/, Registers> DevicesRegisters;
-    void parseRegisters(const QVariant &registersFile);
+    void RADAPTER_API parseRegisters(const QVariant &registersFile);
 
     struct RegisterCounts {
         quint16 coils{};
@@ -117,13 +126,18 @@ namespace Settings {
         quint16 input_registers{};
     };
 
-    struct RADAPTER_API ModbusSlave : SerializableSettings {
+    struct RADAPTER_API ModbusWorker : SerializableSettings {
         Q_GADGET
         IS_SERIALIZABLE
         FIELD(Required<Radapter::WorkerSettings>, worker)
         FIELD(Required<QString>, device_name)
         FIELD(Required<quint16>, slave_id)
         FIELD(RequiredSequence<QString>, register_names)
+    };
+
+    struct RADAPTER_API ModbusSlave : ModbusWorker {
+        Q_GADGET
+        IS_SERIALIZABLE
         FIELD(NonRequired<quint32>, reconnect_timeout_ms, {5000})
 
         ModbusDevice device{};
@@ -133,14 +147,10 @@ namespace Settings {
         void postUpdate() override;
     };
 
-    struct RADAPTER_API ModbusMaster : SerializableSettings {
+    struct RADAPTER_API ModbusMaster : ModbusWorker {
         Q_GADGET
         IS_SERIALIZABLE
-        FIELD(Required<Radapter::WorkerSettings>, worker)
-        FIELD(Required<QString>, device_name)
-        FIELD(Required<quint16>, slave_id)
         FIELD(RequiredSequence<ModbusQuery>, queries)
-        FIELD(RequiredSequence<QString>, register_names)
 
         FIELD(NonRequired<quint32>, poll_rate, {500})
         FIELD(NonRequired<quint32>, reconnect_timeout_ms, {5000})

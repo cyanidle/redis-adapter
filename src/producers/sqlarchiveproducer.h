@@ -3,7 +3,7 @@
 
 #include <QObject>
 #include "settings/settings.h"
-#include "broker/worker/worker.h"
+#include "broker/workers/worker.h"
 #include "consumers/sqlkeyvaultconsumer.h"
 #include "connectors/mysqlconnector.h"
 

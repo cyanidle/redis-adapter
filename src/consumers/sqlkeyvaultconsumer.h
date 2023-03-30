@@ -4,7 +4,7 @@
 #include <QObject>
 #include "connectors/mysqlconnector.h"
 #include "settings/settings.h"
-#include "broker/worker/worker.h"
+#include "broker/workers/worker.h"
 
 namespace MySql {
 class RADAPTER_API KeyVaultConsumer : public Radapter::Worker

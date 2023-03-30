@@ -5,7 +5,7 @@
 #include <QThread>
 #include "jsondict/jsondict.hpp"
 #include "websocket/websocketserver.h"
-#include "broker/worker/worker.h"
+#include "broker/workers/worker.h"
 #include "settings/settings.h"
 
 namespace Websocket {

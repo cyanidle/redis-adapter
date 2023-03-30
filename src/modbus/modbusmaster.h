@@ -1,7 +1,7 @@
 #ifndef MODBUS_MASTER_H
 #define MODBUS_MASTER_H
 
-#include "broker/worker/worker.h"
+#include "broker/workers/worker.h"
 #include "settings/modbussettings.h"
 #include "broker/sync/channel.h"
 #include <QModbusClient>

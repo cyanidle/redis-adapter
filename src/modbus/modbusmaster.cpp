@@ -26,7 +26,7 @@ Master::Master(const Settings::ModbusMaster &settings, QThread *thread) :
                                         regIter.key().toStdString() +
                                         "; With --> " +
                                         m_reverseRegisters[regIter->table][regIter->index].toStdString() +
-                                        " (Table: "+ tableToString(regIter->table).toStdString() +
+                                        " (Table: "+ printTable(regIter->table).toStdString() +
                                         "; Register: " + QString::number(regIter->index.value).toStdString() + ")");
         }
         m_reverseRegisters[regIter->table][regIter->index] = regIter.key();

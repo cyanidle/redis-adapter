@@ -3,7 +3,7 @@
 
 #include <QObject>
 #include <QTimer>
-#include "broker/worker/worker.h"
+#include "broker/workers/worker.h"
 #include "settings/redissettings.h"
 #include "lib/hiredis/adapters/qt.h"
 
