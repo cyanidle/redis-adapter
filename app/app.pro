@@ -5,7 +5,9 @@ QT += core \
     sql \
     websockets \
     network
-    
+
+QT -= gui
+
 TARGET = redis-adapter
 
 DEFINES += RADAPTER_API=

@@ -6,6 +6,8 @@ QT += core \
     websockets \
     network
 
+QT -= gui
+
 CONFIG(debug, debug|release){
     TARGET = radapter-sdkd
     OBJECTS_DIR = build/debug

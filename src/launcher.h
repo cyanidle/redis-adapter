@@ -42,7 +42,6 @@ private:
     void initWebsockets();
     void initSockets();
     void initSql();
-    void initGui();
     void initPipelines();
     void initMocks();
     void initLocalization();

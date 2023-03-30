@@ -99,13 +99,13 @@ struct FieldCommon {
     friend Serializable::Object;
     using valueType = T;
     using valueRef = typename std::conditional<isBig, T, T&>::type;
-    FieldCommon() : value() {}
+    FieldCommon() = default;
     template<typename U>
     FieldCommon(U&&other) : value(std::forward<U>(other)) {}
-    FieldCommon(const FieldCommon &other) : value(other.value) {}
+    FieldCommon(const FieldCommon &other) = default;
     template<typename U>
     FieldCommon &operator=(U&&other){value = std::forward<U>(other); return *this;}
-    FieldCommon &operator=(const FieldCommon &other){value = other.value; return *this;}
+    FieldCommon &operator=(const FieldCommon &other) = default;
     bool operator==(const valueRef other) const {return value == other;}
     bool operator==(const FieldCommon &other) const {return value == other.value;}
     T* operator->() {return &value;}

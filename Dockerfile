@@ -2,30 +2,22 @@
 ARG APP_DIR=/app
 ARG APP_NAME=redis-adapter
 ARG TARGET_DEVICE=rpi4
-ARG TEST_RUNNER=runtests.sh
-ARG TEST_SRC_DIR=tests
-ARG TEST_BIN_DIR=tests-bin
 ARG JOBS=4
 
 FROM rsk39/qt5-env:${TARGET_DEVICE} as builder
 ARG APP_NAME
 ENV APP_NAME=${APP_NAME}
-#
 ARG APP_DIR
-ARG TEST_SRC_DIR
-ARG TEST_RUNNER
-#
 ARG TARGETPLATFORM
 ENV TARGET_PLATFORM=${TARGETPLATFORM}
-#
 ARG JOBS
 ENV JOBS=${JOBS}
 WORKDIR /build
 COPY . .
 RUN set -eux; \
     qmake; \
-    make -j${JOBS}; \
-    mkdir -p ${APP_DIR}/${APP_NAME}; \
+    make -j${JOBS}
+RUN mkdir -p ${APP_DIR}/${APP_NAME}; \
     modules=$(cat .qtmodules); \
 # using $QT_BIN_PATH, $SYSROOT_DIR and $TOOLCHAIN_PATH from rsk39/qt5-env image
     app_src_libs=$(ls | grep libradapter.*so);\
@@ -43,40 +35,9 @@ RUN set -eux; \
     ${APP_DIR}/${APP_NAME}; \
     cd ${APP_DIR}/${APP_NAME}; \
     mkdir sqldrivers; \
-    cp ${QT_BIN_PATH}/plugins/sqldrivers/libqsqlmysql.so sqldrivers/ ; \
-    ###  Qt5Testlib.so copy
-    mkdir -p /${TEST_SRC_DIR}; \
-    cp -dr $(ls -d ${QT_BIN_PATH}/lib/* | grep -i test*.so*) /${TEST_SRC_DIR}; \
-    cd /build; \
-    chmod +x ${TEST_RUNNER};
+    cp ${QT_BIN_PATH}/plugins/sqldrivers/libqsqlmysql.so sqldrivers/ 
 WORKDIR ${APP_DIR}
 CMD ["bash"]
-
-FROM --platform=${TARGETPLATFORM} debian:bullseye-slim as tester
-ARG APP_NAME
-ARG APP_DIR
-ENV APP_DIR=${APP_DIR}
-#
-ARG TEST_SRC_DIR
-ARG TEST_BIN_DIR
-#
-ARG TEST_RUNNER
-ENV TEST_RUNNER=${TEST_RUNNER}
-#
-ARG TARGET_DEVICE
-ENV TARGET_DEVICE=${TARGET_DEVICE}
-#
-ARG TARGETPLATFORM
-ENV TARGET_PLATFORM=${TARGETPLATFORM}
-#
-COPY --from=builder ${APP_DIR}/ ${APP_DIR}/ 
-COPY --from=builder /build/${TEST_SRC_DIR}/${TEST_BIN_DIR} ${APP_DIR}/${APP_NAME}/${TEST_BIN_DIR}
-COPY --from=builder /build/${TEST_RUNNER} ${APP_DIR}/${APP_NAME}
-COPY --from=builder /${TEST_SRC_DIR}/*Test.so* ${APP_DIR}/${APP_NAME}
-#
-WORKDIR ${APP_DIR}/${APP_NAME}
-ENV SHARED_LIBS_DIR=${APP_DIR}/${APP_NAME}
-CMD ./$TEST_RUNNER
 
 FROM --platform=${TARGETPLATFORM} debian:bullseye-slim as runner
 ARG APP_NAME

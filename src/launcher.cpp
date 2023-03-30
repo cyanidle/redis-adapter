@@ -26,10 +26,6 @@
 #ifdef Q_OS_UNIX
 #include "utils/resourcemonitor.h"
 #endif
-#ifdef RADAPTER_GUI
-#include "gui/guisettings.h"
-//#include "gui/radapter_mainwindow.h"
-#endif
 using namespace Radapter;
 
 void tryInit(Launcher* launcher, void(Launcher::*method)(), const QString &moduleName) {
@@ -38,7 +34,7 @@ void tryInit(Launcher* launcher, void(Launcher::*method)(), const QString &modul
     } catch(std::runtime_error &exc) {
         settingsParsingWarn().nospace() << "Could not enable module: [" << moduleName.toUpper() << "] --> Details: " << exc.what();
     }
-};
+}
 
 Launcher::Launcher(QObject *parent) :
     QObject(parent),
@@ -156,21 +152,6 @@ void Launcher::initLogging()
     auto rawMap = readSetting("log_debug").toMap();
     auto flattened = JsonDict{rawMap}.flatten(".");
     setLoggingFilters(convertQMap<bool>(flattened));
-}
-
-void Launcher::initGui()
-{
-#ifdef RADAPTER_GUI
-    auto guiSettings = parseObject<Gui::GuiSettings>("gui");
-    if (!guiSettings.enabled) {
-        reWarn() << "Gui disabled!";
-        return;
-    }
-    auto guiThread = new QThread(this);
-    //auto ui = new Radapter::MainWindow();
-    //ui->moveToThread(guiThread);
-    //connect(this, &Launcher::started, ui, [guiThread](){guiThread->start();});
-#endif
 }
 
 void Launcher::initLocalization()
