@@ -41,3 +41,6 @@ tests/tests-bin/results
 build_env_file
 # Need ini in testfiles
 !**/testfiles/localstorage/*.ini
+scripts/
+project_templates/
+gui/
