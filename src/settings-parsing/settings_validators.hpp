@@ -34,7 +34,7 @@ struct StringToFileSize {
         } else {
             throw std::runtime_error("Invalid size char: " + QString(letter).toStdString() + "; In: " + asStr.toStdString());
         }
-        src.setValue(number);
+        src.setValue(qRound(number));
         return true;
     }
 };

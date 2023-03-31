@@ -8,12 +8,13 @@
 #include "private/global.h"
 
 namespace Radapter {
-
+class BrokerSettings;
 class RADAPTER_API Broker : public QObject
 {
     Q_OBJECT
 public:
     static Broker* instance();
+    void applySettings(const BrokerSettings &newSettings);
     bool exists(const QString &workerName) const;
     Worker* getWorker(const QString &workerName);
     template <class Target>

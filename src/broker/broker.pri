@@ -1,7 +1,8 @@
 SOURCES+= \
    $$PWD/broker.cpp
 HEADERS+= \
-   $$PWD/broker.h
+   $$PWD/broker.h \
+   $$PWD/brokersettings.h
 
 include($$PWD/sync/sync.pri)
 include($$PWD/replies/replies.pri)

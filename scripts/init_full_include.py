@@ -35,10 +35,10 @@ def main():
         dest="template",
         help="Template path"
         )
+    args = parser.parse_args()
     cwd: str = args.cwd
     project: str = args.project
     template: str = args.template
-    args = parser.parse_args()
     logging.basicConfig(
         handlers=[logging.StreamHandler()],
         level=logging.NOTSET,

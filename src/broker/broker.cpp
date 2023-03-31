@@ -1,9 +1,10 @@
 #include "broker.h"
+#include "brokersettings.h"
 #include "radapterlogging.h"
 #include <QCoreApplication>
 
 using namespace Radapter;
-
+Q_GLOBAL_STATIC(BrokerSettings, settings)
 QRecursiveMutex Broker::m_mutex;
 
 Broker::Broker() :
@@ -31,7 +32,9 @@ void Broker::applyWorkerLoggingFilters(const QMap<QString, QMap<QtMsgType, bool>
 void Broker::onMsgFromWorker(const Radapter::WorkerMsg &msg)
 {
     if (msg.receivers().isEmpty()) {
-        brokerWarn() << "Msg with no receivers! Sender:" << msg.sender();
+        if (settings->warn_no_receivers) {
+            brokerWarn() << "Msg with no receivers! Sender:" << msg.sender();
+        }
         return;
     }
     if (msg.isDirect() || msg.isBroadcast()) {
@@ -122,6 +125,11 @@ void Broker::runAll()
 void Broker::publishEvent(const BrokerEvent &event)
 {
     emit fireEvent(event);
+}
+
+void Broker::applySettings(const BrokerSettings &newSettings)
+{
+    *(settings) = newSettings;
 }
 
 bool Broker::exists(const QString &workerName) const

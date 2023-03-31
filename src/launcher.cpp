@@ -1,4 +1,5 @@
 #include "broker/broker.h"
+#include "broker/brokersettings.h"
 #include "broker/workers/loggingworker.h"
 #include "broker/workers/loggingworkersettings.h"
 #include "broker/workers/mockworker.h"
@@ -51,6 +52,7 @@ Launcher::Launcher(QObject *parent) :
     tryInit(this, &Launcher::initLoggingWorkers, "logging_workers");
     tryInit(this, &Launcher::initRedis, "redis");
     tryInit(this, &Launcher::initModbus, "modbus");
+    tryInit(this, &Launcher::initBrokerSettings, "broker-settings");
     tryInit(this, &Launcher::initWebsockets, "websockets");
     tryInit(this, &Launcher::initSql, "sql");
     tryInit(this, &Launcher::initFilters, "filters");
@@ -155,6 +157,11 @@ void Launcher::initLoggingWorkers()
     for (const auto &logSettings : parseArrayOf<Radapter::LoggingWorkerSettings>("logging_workers")) {
         addWorker(new Radapter::LoggingWorker(logSettings, new QThread(this)));
     }
+}
+
+void Launcher::initBrokerSettings()
+{
+    Broker::instance()->applySettings(parseObject<BrokerSettings>("broker"));
 }
 
 void Launcher::initLogging()
