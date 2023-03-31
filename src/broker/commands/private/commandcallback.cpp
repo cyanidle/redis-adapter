@@ -1,5 +1,5 @@
 #include "commandcallback.h"
-#include "broker/worker/workermsg.h"
+#include "broker/workers/private/workermsg.h"
 
 const Radapter::Reply *Radapter::CallbackConcept::replyFromMsg(const WorkerMsg &msg)
 {

@@ -1,7 +1,7 @@
 #ifndef RADAPTER_NAMESPACEFILTER_H
 #define RADAPTER_NAMESPACEFILTER_H
 
-#include "broker/interceptors/interceptor.h"
+#include "broker/interceptor/interceptor.h"
 
 namespace Radapter {
 

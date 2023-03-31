@@ -1,4 +1,5 @@
 #include "namespacefilter.h"
+#include "broker/workers/private/workermsg.h"
 
 namespace Radapter {
 
@@ -16,8 +17,8 @@ void NamespaceFilter::onMsgFromBroker(const Radapter::WorkerMsg &msg)
     copy.clearJson();
     bool hasAny = false;
     for (auto &currNamespace : m_namespaces) {
-        hasAny = true;
         if (msg.contains(currNamespace)) {
+            hasAny = true;
             copy[currNamespace] = msg[currNamespace];
         }
     }
