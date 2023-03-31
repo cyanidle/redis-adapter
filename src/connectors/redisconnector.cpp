@@ -1,5 +1,4 @@
 #include "redisconnector.h"
-#include "broker/interceptors/logginginterceptor.h"
 #include "radapterlogging.h"
 #ifdef _MSC_VER
 #include <WinSock2.h>

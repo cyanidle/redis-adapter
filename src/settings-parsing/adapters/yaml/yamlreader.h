@@ -3,9 +3,11 @@
 
 #include "private/global.h"
 #include "../../dictreader.h"
-#include <QVariantMap>
-#include <yaml-cpp/node/node.h>
 
+namespace YAML {
+class Node;
+}
+class JsonDict;
 namespace Settings {
 
 class RADAPTER_API YamlReader : public DictReader
@@ -14,6 +16,8 @@ class RADAPTER_API YamlReader : public DictReader
 public:
     YamlReader(const QString &dir = "conf", const QString &file = "config", QObject *parent = nullptr);
     QVariant getAll() override;
+private:
+    void recurseMapNode(const QStringList &prefix, const YAML::Node &who, JsonDict &output);
 };
 
 }

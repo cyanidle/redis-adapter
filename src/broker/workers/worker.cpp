@@ -113,12 +113,12 @@ void Worker::run()
     for (auto &producerName : qAsConst(m_producerNames)) {
         auto worker = broker()->getWorker(producerName);
         if (!worker) throw std::runtime_error("Nonexistent required worker: " + producerName.toStdString());
-        addProducers({worker});
+        addProducer(worker);
     }
     for (auto &consumerName : qAsConst(m_consumerNames)) {
         auto worker = broker()->getWorker(consumerName);
         if (!worker) throw std::runtime_error("Nonexistent required worker: " + consumerName.toStdString());
-        addConsumers({worker});
+        addConsumer(worker);
     }
     workerThread()->start();
     m_wasRun = true;

@@ -81,15 +81,15 @@ QModbusDataUnit Modbus::parseValueToDataUnit(const QVariant &src, const Settings
     const auto sizeWords = QMetaType::sizeOf(regInfo.type)/2;
     auto copy = src;
     copy.convert(regInfo.type);
-    auto words = toWords(copy.data(), sizeWords);
-    applyEndianess(words.data(), sizeWords, thisPack, regInfo.order);
+    auto words = toWords(copy.data(), sizeWords, thisPack.words, thisPack.words);
+    applyEndianess(words.data(), sizeWords, thisPack, regInfo.endianess);
     return QModbusDataUnit{regInfo.table, regInfo.index, words};
 }
 
 QVariant Modbus::parseModbusType(quint16 *words, const Settings::RegisterInfo &regInfo, int sizeWords)
 {
     const static Settings::PackingMode thisPack{Order::BigEndian, getEndianess()};
-    applyEndianess(words, sizeWords, regInfo.order, thisPack);
+    applyEndianess(words, sizeWords, regInfo.endianess, thisPack);
     switch(regInfo.type.value) {
     case QMetaType::UShort:
         return bit_cast<quint16>(words);
@@ -98,7 +98,7 @@ QVariant Modbus::parseModbusType(quint16 *words, const Settings::RegisterInfo &r
     case QMetaType::Float:
         return bit_cast<float>(words);
     default:
-        return{};
+        throw std::runtime_error("Unsupported Modbus Value Type!");
     }
 }
 

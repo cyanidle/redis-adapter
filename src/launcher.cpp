@@ -243,7 +243,7 @@ void Launcher::initRedis()
 
 void Launcher::initModbus()
 {
-    Settings::parseRegisters(readSetting("registers"));
+    Settings::parseRegisters(readSetting("modbus.registers").toMap());
     auto mbDevices = parseArrayOf<Settings::ModbusDevice>("modbus.devices");
     reDebug() << "config: Modbus devices count: " << mbDevices.size();
     for (const auto& slaveInfo : parseArrayOf<Settings::ModbusSlave>("modbus.slaves")) {
@@ -333,11 +333,8 @@ void Launcher::run()
     resmonThr->start(QThread::LowPriority);
 #endif
     Broker::instance()->connectProducersAndConsumers();
-    for (auto worker = m_workers.keyBegin(); worker != m_workers.keyEnd(); ++worker) {
-        (*worker)->run();
-    }
-    Broker::instance()->runAll();
     initPipelines();
+    Broker::instance()->runAll();
     emit started();
 }
 

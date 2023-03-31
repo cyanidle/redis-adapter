@@ -45,3 +45,4 @@ redis-adapter
 !*.pro
 
 **/__pycache__
+log/

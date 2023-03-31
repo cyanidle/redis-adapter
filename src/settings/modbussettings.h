@@ -49,25 +49,15 @@ namespace Settings {
         FIELD(Required<quint16>, reg_index)
         FIELD(Required<quint8>, reg_count)
         typedef QMap<QString, QModbusDataUnit::RegisterType> Map;
-    protected:
-        static Map &table() {
-            static Map map{
-                {"holding", QModbusDataUnit::HoldingRegisters},
-                {"input", QModbusDataUnit::InputRegisters},
-                {"coils", QModbusDataUnit::Coils},
-                {"discrete_inputs", QModbusDataUnit::DiscreteInputs}
-            };
-            return map;
-        }
     };
     struct RADAPTER_API PackingMode : SerializableSettings {
         Q_GADGET
         IS_SERIALIZABLE
-        FIELD(NonRequiredByteOrder, bytes, {QDataStream::LittleEndian})
         FIELD(NonRequiredByteOrder, words, {QDataStream::LittleEndian})
+        FIELD(NonRequiredByteOrder, bytes, {QDataStream::LittleEndian})
         PackingMode() = default;
         PackingMode(QDataStream::ByteOrder words, QDataStream::ByteOrder bytes) :
-            bytes(bytes), words(words)
+            words(words), bytes(bytes)
         {}
     };
 
@@ -113,11 +103,11 @@ namespace Settings {
         FIELD(NonRequired<bool>, resetting, {false})
         FIELD(MarkNonRequired<RegisterValueType>, type, {QMetaType::UShort})
         using Orders = Serializable::Validate<NonRequired<PackingMode>, OrdersValidator>;
-        FIELD(Orders, order)
+        FIELD(Orders, endianess)
     };
-    typedef QMap<QString /*regName*/, RegisterInfo> Registers;
+    typedef QMap<QString /*reg:Name*/, RegisterInfo> Registers;
     typedef QMap<QString /*deviceName*/, Registers> DevicesRegisters;
-    void RADAPTER_API parseRegisters(const QVariant &registersFile);
+    void RADAPTER_API parseRegisters(const QVariantMap &registersFile);
 
     struct RegisterCounts {
         quint16 coils{};

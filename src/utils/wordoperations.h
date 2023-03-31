@@ -25,18 +25,18 @@ bit_cast(const From* src) {
 
 void applyEndianess(quint16 *words, int sizeWords, const Settings::PackingMode endianessWas, const Settings::PackingMode targetEndianess);
 
-QVector<quint16> toWords(const void* src, int sizeWords, Order from = Order::BigEndian, Order to = getEndianess());
+QVector<quint16> toWords(const void* src, int sizeWords, Order from = Order::BigEndian, Order to = Order::BigEndian);
 QByteArray toBytes(const void* src, int sizeBytes, Order from = Order::BigEndian, Order to = getEndianess());
 
 template<typename T>
-inline QVector<quint16> toWords(const T& src) {
+inline QVector<quint16> toWords(const T& src, Order from = Order::BigEndian, Order to = Order::BigEndian) {
     static_assert(!(sizeof(T)%2), "Cannot cast to words type with odd length");
-    return toWords(&src, sizeof(T)/2);
+    return toWords(&src, sizeof(T)/2, from, to);
 }
 
 template <typename T>
-QByteArray toBytes(const T &data) {
-    return toBytes(&data, sizeof(T));
+QByteArray toBytes(const T &data, Order from = Order::BigEndian, Order to = getEndianess()) {
+    return toBytes(&data, sizeof(T), from, to);
 }
 
 }

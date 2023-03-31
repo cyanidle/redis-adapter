@@ -39,3 +39,4 @@ build_env_file
 scripts/
 project_templates/
 gui/
+log/

@@ -6,48 +6,28 @@ using namespace Settings;
 using namespace Serializable;
 Q_GLOBAL_STATIC(DevicesRegisters, allRegisters)
 
-void Settings::parseRegisters(const QVariant &registersFile) {
+void Settings::parseRegisters(const QVariantMap &registersFile) {
     if (!allRegisters->isEmpty()) {
         throw std::runtime_error("Register parsing called second time!");
     }
-    auto fileJson = JsonDict{registersFile.toMap()};
-    for (auto &fileIter : fileJson) {
-        if (fileIter.field() != "__table__") continue;
-        auto deviceName = fileIter.domainKey().join(':').replace('.', ':');
-        auto currentFlatJson = fileJson.value(fileIter.domainKey()).toMap();
-        auto table = currentFlatJson.take("__table__");
-        Registers currentDeviceResult;
-        for (auto iter{currentFlatJson.cbegin()}; iter != currentFlatJson.cend(); ++iter) {
-            if (iter.value().canConvert<QVariantList>()) {
-                auto currentRegs = iter.value().toList();
-                for (auto reg : Radapter::enumerate(currentRegs)) {
-                    auto currentReg = reg.value.toMap();
-                    if (currentReg.contains("__table__")) continue;
-                    if (!currentReg.first().toMap().isEmpty()) {
-                        throw std::invalid_argument("Incorrect registers formatting");
-                    }
-                    currentReg.insert("table", table);
-                    currentDeviceResult.insert(deviceName + ':' + iter.key() + ":" + QString::number(reg.count + 1), fromQMap<RegisterInfo>(currentReg));
+    auto parseRegisters = [&](const QVariantMap &src, const QVariant &toInsert) {
+        for (auto iter = src.begin(); iter != src.end(); ++iter) {
+            auto deviceName = iter.key();
+            const auto deviceRegs = JsonDict(iter.value());
+            for (auto &iter : deviceRegs) {
+                if (iter.field() == "index" && iter.value().canConvert<int>()) {
+                    auto regName = iter.domainKey().join(":");
+                    auto regInfo = *iter.domainMap();
+                    regInfo["table"] = toInsert;
+                    (*allRegisters)[deviceName][regName] = fromQMap<RegisterInfo>(regInfo);
                 }
-            } else if (iter.value().canConvert<QVariantMap>()) {
-                auto currentRegs = JsonDict{iter.value().toMap()};
-                if (currentRegs.contains("__table__")) continue;
-                if (currentRegs.depth()) {
-                    for (auto &subiter : currentRegs) {
-                        auto currentReg = currentRegs[subiter.domainKey()].toMap();
-                        currentReg.insert("table", table);
-                        currentDeviceResult.insert(deviceName + ':' + iter.key() + ":" + subiter.domainKey().join(":"), fromQMap<RegisterInfo>(currentReg));
-                    }
-                } else {
-                    currentRegs.insert("table", table);
-                    currentDeviceResult.insert(deviceName + ':' + iter.key(), fromQMap<RegisterInfo>(currentRegs));
-                }
-            } else {
-                throw std::invalid_argument("Incorrect registers formatting");
             }
         }
-        allRegisters->insert(deviceName, currentDeviceResult);
-    }
+    };
+    parseRegisters(registersFile["holding_registers"].toMap(), "holding");
+    parseRegisters(registersFile["input_registers"].toMap(), "input");
+    parseRegisters(registersFile["coils"].toMap(), "coils");
+    parseRegisters(registersFile["discrete_inputs"].toMap(), "discrete_inputs");
 }
 
 void ModbusSlave::postUpdate() {
@@ -63,18 +43,19 @@ void ModbusSlave::postUpdate() {
         }
     }
     for (auto &reg : registers) {
+        auto wordSize = QMetaType::sizeOf(reg.type) / 2;
         switch (reg.table.value) {
         case QModbusDataUnit::InputRegisters:
-            counts.input_registers++;
+            counts.input_registers+=wordSize;
             continue;
         case QModbusDataUnit::Coils:
-            counts.coils++;
+            counts.coils+=wordSize;
             continue;
         case QModbusDataUnit::HoldingRegisters:
-            counts.holding_registers++;
+            counts.holding_registers+=wordSize;
             continue;
         case QModbusDataUnit::DiscreteInputs:
-            counts.di++;
+            counts.di+=wordSize;
             continue;
         default:
             throw std::runtime_error("Unkown registers error");
@@ -90,6 +71,9 @@ void ModbusMaster::postUpdate()
 {
     for (auto &name: register_names) {
         auto &toMerge = (*allRegisters)[name.replace('.', ':')];
+        if (toMerge.isEmpty()) {
+            throw std::runtime_error(worker->name->toStdString() + ": Missing registers with name: " + name.toStdString());
+        }
         for (auto newRegisters = toMerge.begin(); newRegisters != toMerge.end(); ++newRegisters) {
             auto name = newRegisters.key();
             auto &reg = newRegisters.value();
@@ -98,9 +82,6 @@ void ModbusMaster::postUpdate()
             }
             registers[name] = reg;
         }
-    }
-    if (registers.isEmpty()) {
-        throw std::runtime_error("Empty registers for Mb Master!");
     }
     device = Settings::ModbusDevice::get(device_name);
 }

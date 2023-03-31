@@ -17,11 +17,11 @@ struct ChooseJsonFormat {
 };
 struct StringToFileSize {
     static bool validate(QVariant &src) {
-        auto asStr = src.toString().toLower();
+        auto asStr = src.toString().toUpper();
         if (asStr.isEmpty()) return true;
         auto letter = asStr.at(asStr.length() - 1);
         bool ok;
-        auto number = asStr.left(asStr.length() - 2).toLongLong(&ok);
+        auto number = asStr.leftRef(asStr.length() - 1).toDouble(&ok);
         if (!ok) {
             throw std::runtime_error("Could not convert to number: " + asStr.toStdString());
         }

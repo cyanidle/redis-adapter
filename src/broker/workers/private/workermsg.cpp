@@ -1,6 +1,6 @@
 #include "workermsg.h"
 #include "radapterlogging.h"
-#include "worker.h"
+#include "../worker.h"
 #include "broker/broker.h"
 #include "broker/commands/basiccommands.h"
 #include "templates/algorithms.hpp"
@@ -62,7 +62,7 @@ QStringList WorkerMsg::printReceivers() const {
 }
 
 QString WorkerMsg::printFlags() const {
-    QString result("Msg");
+    QString result;
     if (m_flags.testFlag(MsgBad))
         result += "|Bad";
     else

@@ -24,21 +24,14 @@ struct RADAPTER_API LoggingWorkerSettings : public WorkerSettings
     Q_ENUM(LogMsgTypes)
     FIELD(Settings::Required<QString>, filepath)
     FIELD(Settings::NonRequired<quint32>, flush_delay, {1000u})
-    FIELD(Settings::NonRequiredFileSize, max_size_bytes, {100000000UL})
-    FIELD(Settings::NonRequired<quint64>, rotating, {true})
+    FIELD(Settings::NonRequiredFileSize, max_filesize, {100000000UL})
+    FIELD(Settings::NonRequired<bool>, cycle_buffer, {true})
     FIELD(Settings::NonRequired<QString>, log, {"normal"})
+    using NonRequiredJsonFormat = Serializable::Validated<Settings::NonRequired<QJsonDocument::JsonFormat>>::With<Settings::ChooseJsonFormat>;
+    FIELD(NonRequiredJsonFormat, format, {QJsonDocument::Indented})
 
     LogMsgs log_{LogNormal};
-    using JsonField = Serializable::Validated<Settings::NonRequired<QJsonDocument::JsonFormat>>::With<Settings::ChooseJsonFormat>;
-    JsonField format{QJsonDocument::Indented};
 protected:
-    static QMap<QString, QJsonDocument::JsonFormat> &mapping() {
-        static QMap<QString, QJsonDocument::JsonFormat> map {
-            {"compact", QJsonDocument::Compact},
-            {"indented", QJsonDocument::Indented}
-        };
-        return map;
-    }
     POST_UPDATE {
         const auto strRep = log->toLower();
         if (strRep == "all") {

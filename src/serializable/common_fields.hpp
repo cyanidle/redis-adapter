@@ -157,7 +157,7 @@ struct PlainField : public Private::FieldCommon<T>
         if (source.canConvert<T>()) {
             auto temp = source.value<T>();
             if (QVariant::fromValue(temp) != source) {
-                settingsParsingWarn().noquote() << "Types mismatch, while deserializing -->\n Wanted: " <<
+                settingsParsingWarn().noquote() << "Field: Types mismatch, while deserializing -->\n Wanted: " <<
                                                    QMetaType::fromType<T>().name() <<
                                                    "\n Actual: " << source;
                 return false;
@@ -281,7 +281,7 @@ struct PlainSequence : public Private::SequenceCommon<T> {
             if (!src.canConvert<T>()) continue;
             auto tempVal = src.value<T>();
             if (src != tempVal) {
-                settingsParsingWarn().noquote() << "Types mismatch, while deserializing -->\n Wanted: " <<
+                settingsParsingWarn().noquote() << "Sequence: Types mismatch, while deserializing -->\n Wanted: " <<
                                                    QMetaType::fromType<T>().name() <<
                                                    "\n Actual: " << src;
             } else {
@@ -430,7 +430,7 @@ struct PlainMapping : public Private::MappingCommon<T> {
             if (!iter.value().canConvert<T>()) continue;
             auto tempVal = iter->value<T>();
             if (tempVal != iter.value()) {
-                settingsParsingWarn().noquote() << "Types mismatch, while deserializing -->\n Wanted: " <<
+                settingsParsingWarn().noquote() << "Mapping: Types mismatch, while deserializing -->\n Wanted: " <<
                                                    QMetaType::fromType<T>().name() <<
                                                    "\n Actual: " << *iter;
             } else {

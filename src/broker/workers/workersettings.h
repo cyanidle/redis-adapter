@@ -12,7 +12,7 @@ struct RADAPTER_API WorkerSettings : public Settings::SerializableSettings
     FIELD(Settings::Required<QString>, name)
     FIELD(Settings::NonRequiredSequence<QString>, producers)
     FIELD(Settings::NonRequiredSequence<QString>, consumers)
-    FIELD(Settings::NonRequired<bool>, print_msgs)
+    FIELD(Settings::NonRequired<bool>, print_msgs, {false})
     WorkerSettings(const QString &name = "") : name(name) {}
 };
 

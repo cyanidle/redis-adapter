@@ -24,13 +24,18 @@ LoggingWorker::LoggingWorker(const LoggingWorkerSettings &settings, QThread *thr
         throw std::runtime_error(std::string("Will not overwrite contents of file: ") + baseFilepath().toStdString());
     }
     m_array = inDoc.array();
+    auto onOpen = JsonDict{};
+    onOpen["__meta__"] = JsonDict{
+        {"started", QDateTime::currentDateTime().toString()}
+    }.toVariant();
+    m_array.append(onOpen.toJsonObj());
     m_file->close();
     m_flushTimer->start(settings.flush_delay);
 }
 
 bool LoggingWorker::isFull() const
 {
-    return static_cast<quint64>(m_file->size()) > m_settings.max_size_bytes;
+    return static_cast<quint64>(m_file->size()) > m_settings.max_filesize;
 }
 
 void LoggingWorker::onCommand(const WorkerMsg &msg)
@@ -45,6 +50,7 @@ void LoggingWorker::onReply(const WorkerMsg &msg)
 
 void LoggingWorker::onFlush()
 {
+    m_file->close();
     if (m_error) {
         workerError(this) << "Logger flush is impossible!";
     }
@@ -52,12 +58,10 @@ void LoggingWorker::onFlush()
         return;
     }
     m_shouldUpdate = false;
-    if (!m_file->isOpen()) {
-        if (!m_file->open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
-            workerError(this) << "Could not open file with name: " << m_file->fileName();
-            m_error = true;
-            return;
-        }
+    if (!m_file->open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
+        workerError(this) << "Could not open file with name: " << m_file->fileName();
+        m_error = true;
+        return;
     }
     QTextStream out(m_file);
     out << QJsonDocument(m_array).toJson(m_settings.format);
@@ -90,6 +94,7 @@ void LoggingWorker::enqueueMsg(const WorkerMsg &msg)
         {"command", msg.command() ? msg.command()->metaObject()->className() : "None"},
         {"reply", msg.reply() ? msg.reply()->metaObject()->className() : "None"},
         {"serviceInfo", msg.printServiceData().toVariant()},
+        {"timestamp", QDateTime::currentDateTime().toString()},
         {"id", msg.id()}
     }};
     copy["__meta__"] = metaInfo.toVariant();
@@ -99,7 +104,7 @@ void LoggingWorker::enqueueMsg(const WorkerMsg &msg)
 
 void LoggingWorker::onMsg(const Radapter::WorkerMsg &msg)
 {
-    if (isFull() && m_settings.rotating) {
+    if (isFull() && m_settings.cycle_buffer) {
         if (testMsgForLog(msg)) {
             m_array.removeFirst();
             enqueueMsg(msg);

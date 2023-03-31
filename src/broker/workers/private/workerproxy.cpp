@@ -1,7 +1,7 @@
 #include "workerproxy.h"
 #include "workermsg.h"
 #include "radapterlogging.h"
-#include "worker.h"
+#include "../worker.h"
 
 using namespace Radapter;
 

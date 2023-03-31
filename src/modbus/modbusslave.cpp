@@ -43,7 +43,7 @@ Slave::Slave(const Settings::ModbusSlave &settings, QThread *thread) :
                                         regIter.key().toStdString() +
                                         "; With --> " +
                                         m_reverseRegisters[regIter->table][regIter->index].toStdString() +
-                                        " (Table: "+ tableToString(regIter->table).toStdString() +
+                                        " (Table: "+ printTable(regIter->table).toStdString() +
                                         "; Register: " + QString::number(regIter->index).toStdString() + ")");
         }
         m_reverseRegisters[regIter->table][regIter->index] = regIter.key();
@@ -82,9 +82,48 @@ void Slave::disconnectDevice()
     modbusDevice->disconnectDevice();
 }
 
+void Slave::handleNewWords(QVector<quint16> &words, QModbusDataUnit::RegisterType table, int address, int size)
+{
+    JsonDict diff;
+    auto wordsData = words.data();
+    for (int i = 0; i < size;) {
+        if (!m_reverseRegisters[table].contains(address + i)) {
+            ++i;
+            continue;
+        }
+        const auto &regString = m_reverseRegisters[table][address];
+        auto regInfo = deviceRegisters().value(regString);
+        auto sizeWords = QMetaType::sizeOf(regInfo.type)/2;
+        if (i + sizeWords > size) {
+            workerWarn(this) << "Insufficient size of value: " << sizeWords;
+            continue;
+        }
+        auto result = parseModbusType(wordsData + i, regInfo, sizeWords);
+        i += sizeWords;
+        if (result.isValid()) {
+            auto key = regString.split(":");
+            QVariant newValue;
+            if (regInfo.table == QModbusDataUnit::Coils
+                || regInfo.table == QModbusDataUnit::DiscreteInputs) {
+                newValue = result.toUInt() ? true : false;
+            } else {
+                newValue = result;
+            }
+            if (m_state[key] != newValue) {
+                diff[key] = newValue;
+                m_state[key] = newValue;
+            }
+        } else {
+            workerWarn(this) << "Modbus Slave error: Current adress: " << address + i;
+        }
+    }
+    if (!diff.isEmpty()) {
+        emit sendBasic(diff);
+    }
+}
+
 void Slave::onDataWritten(QModbusDataUnit::RegisterType table, int address, int size)
 {
-    auto msg = prepareMsg();
     QVector<quint16> words(size);
     for (int i = 0; i < size; ++i) {
         bool ok = false;
@@ -109,32 +148,7 @@ void Slave::onDataWritten(QModbusDataUnit::RegisterType table, int address, int 
             continue;
         }
     }
-    auto wordsStart = words.data();
-    for (int i = 0; i < size;) {
-        if (!m_reverseRegisters[table].contains(address + i)) {
-            ++i;
-            continue;
-        }
-        const auto &regString = m_reverseRegisters[table][address];
-        auto regInfo = deviceRegisters().value(regString);
-        auto sizeWords = QMetaType::sizeOf(regInfo.type)/2;
-        auto result = parseModbusType(wordsStart + i, regInfo, sizeWords);
-        i += sizeWords;
-        if (i + sizeWords < size) {
-            reWarn() << "Insufficient size of value: " << sizeWords;
-        }
-        if (result.isValid()) {
-            if (regInfo.table == QModbusDataUnit::Coils
-                || regInfo.table == QModbusDataUnit::DiscreteInputs) {
-                msg[regString.split(":")] = result.toUInt() ? true : false;
-            } else {
-                msg[regString.split(":")] = result;
-            }
-        } else {
-            workerWarn(this) << "Modbus Slave error: Current adress: " << address + i;
-        }
-    }
-    emit sendMsg(msg);
+    handleNewWords(words, table, address, size);
 }
 
 
@@ -152,7 +166,7 @@ void Slave::onStateChanged(QModbusDevice::State state)
     } else {
         m_connected = false;
     }
-    workerWarn(this) << "New state for: " << printSelf() <<" --> " << state;
+    workerWarn(this) << "New state --> " << state;
 }
 
 void Slave::onMsg(const Radapter::WorkerMsg &msg)
@@ -161,6 +175,7 @@ void Slave::onMsg(const Radapter::WorkerMsg &msg)
     for (auto& iter : msg) {
         auto fullKeyJoined = iter.key().join(":");
         if (m_settings.registers.contains(fullKeyJoined)) {
+            m_state[fullKeyJoined] = iter.value();
             auto regInfo = m_settings.registers.value(fullKeyJoined);
             auto value = iter.value();
             if (Q_LIKELY(value.canConvert(regInfo.type))) {

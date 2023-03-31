@@ -21,7 +21,7 @@ QVector<quint16> ByteUtils::toWords(const void *src, int sizeWords, Order from, 
 
 QByteArray ByteUtils::toBytes(const void *src, int sizeBytes, Order from, Order to)
 {
-    QByteArray result(sizeBytes, Qt::Initialization::Uninitialized);
+    QByteArray result(sizeBytes, Qt::Uninitialized);
     std::memcpy(result.data(), src, sizeBytes);
     if (from != to) {
         std::reverse(result.begin(), result.end());

@@ -220,7 +220,7 @@ void Master::formatAndSendJson(const JsonDict &json)
     for (auto &newJson : json) {
         auto key = newJson.key();
         auto lastVal = m_lastJson.value(key);
-        if (lastVal != newJson.value()) {
+        if (lastVal != newJson.value() || !m_lastJson.contains(key)) {
             result.insert(key, newJson.value());
             m_lastJson[key] = newJson.value();
         }
