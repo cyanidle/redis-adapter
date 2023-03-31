@@ -15,14 +15,9 @@ LoggingWorker::LoggingWorker(const LoggingWorkerSettings &settings, QThread *thr
 {
     connect(m_flushTimer, &QTimer::timeout, this, &LoggingWorker::onFlush);
     QDir().mkpath(settings.filepath->left(settings.filepath->lastIndexOf("/")));
-    m_file->open(QIODevice::ReadOnly | QIODevice::Text);
-    QJsonParseError err;
-    QTextStream in(m_file);
-    const QJsonDocument inDoc = QJsonDocument::fromJson(in.readAll().toUtf8(), &err);
-    if (err.error != QJsonParseError::NoError && m_file->exists() && m_file->size()) {
-        throw std::runtime_error(std::string("Will not overwrite contents of file: ") + baseFilepath().toStdString());
+    if (!m_file->open(QIODevice::ReadOnly | QIODevice::Text)) {
+        throw std::runtime_error(std::string("Could not open file: ") + baseFilepath().toStdString());
     }
-    m_array = inDoc.array();
     auto onOpen = JsonDict{};
     onOpen["__meta__"] = JsonDict{
         {"started", QDateTime::currentDateTime().toString()}
