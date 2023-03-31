@@ -15,7 +15,7 @@ LoggingWorker::LoggingWorker(const LoggingWorkerSettings &settings, QThread *thr
 {
     connect(m_flushTimer, &QTimer::timeout, this, &LoggingWorker::onFlush);
     QDir().mkpath(settings.filepath->left(settings.filepath->lastIndexOf("/")));
-    if (!m_file->open(QIODevice::ReadOnly | QIODevice::Text)) {
+    if (!m_file->open(QIODevice::WriteOnly | QIODevice::Text)) {
         throw std::runtime_error(std::string("Could not open file: ") + baseFilepath().toStdString());
     }
     auto onOpen = JsonDict{};
