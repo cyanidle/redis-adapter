@@ -37,7 +37,5 @@ private:
     LoggingWorkerSettings m_settings;
     QJsonArray m_array;
     bool m_shouldUpdate{false};
-
-    bool m_error;
 };
 #endif

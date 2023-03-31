@@ -11,8 +11,7 @@ LoggingWorker::LoggingWorker(const LoggingWorkerSettings &settings, QThread *thr
     m_file(new QFile(settings.filepath, this)),
     m_flushTimer(new QTimer(this)),
     m_settings(settings),
-    m_array(),
-    m_error(false)
+    m_array()
 {
     connect(m_flushTimer, &QTimer::timeout, this, &LoggingWorker::onFlush);
     QDir().mkpath(settings.filepath->left(settings.filepath->lastIndexOf("/")));
@@ -50,22 +49,22 @@ void LoggingWorker::onReply(const WorkerMsg &msg)
 
 void LoggingWorker::onFlush()
 {
-    m_file->close();
-    if (m_error) {
-        workerError(this) << "Logger flush is impossible!";
-    }
     if (!m_shouldUpdate) {
         return;
     }
     m_shouldUpdate = false;
-    if (!m_file->open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
-        workerError(this) << "Could not open file with name: " << m_file->fileName();
-        m_error = true;
-        return;
+    if (!m_file->isOpen()) {
+        if (!m_file->open(QIODevice::Append | QIODevice::Text | QIODevice::WriteOnly)) {
+            workerError(this) << "Could not open file with name: " << m_file->fileName();
+            return;
+        }
     }
     QTextStream out(m_file);
-    out << QJsonDocument(m_array).toJson(m_settings.format);
-    m_file->close();
+    for (const auto &item : m_array) {
+        out << QJsonDocument(item.toObject()).toJson(m_settings.format);
+        Qt::endl(out);
+    }
+    m_array = QJsonArray();
 }
 
 bool LoggingWorker::testMsgForLog(const Radapter::WorkerMsg &msg) {
