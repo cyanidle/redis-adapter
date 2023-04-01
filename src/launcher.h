@@ -19,7 +19,7 @@ public:
     Settings::Reader *reader();
     QCommandLineParser &commandLineParser();
     template<typename NewWorker, typename NewWorkerSettings>
-    NewWorker* addWorker(const QString &key, QSet<Radapter::InterceptorBase *> interceptors = {});
+    NewWorker* addWorkerWithConfig(const QString &key, QSet<Radapter::InterceptorBase *> interceptors = {});
 signals:
     void started();
 public slots:
@@ -65,7 +65,7 @@ private:
 };
 
 template<typename NewWorker, typename NewWorkerSettings>
-NewWorker* Launcher::addWorker(const QString &key, QSet<InterceptorBase *> interceptors)
+NewWorker* Launcher::addWorkerWithConfig(const QString &key, QSet<InterceptorBase *> interceptors)
 {
     auto fromConfig = parseObject<NewWorkerSettings>(key);
     auto newWorker = new NewWorker(fromConfig, newThread());
