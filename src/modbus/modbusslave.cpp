@@ -17,7 +17,7 @@ Slave::Slave(const Settings::ModbusSlave &settings, QThread *thread) :
     m_reconnectTimer->setSingleShot(true);
     m_reconnectTimer->callOnTimeout(this, &Slave::connectDevice);
     connect(this->workerThread(), &QThread::started, this, &Slave::connectDevice);
-    if (settings.device.tcp.value) {
+    if (settings.device.tcp->isValid()) {
         modbusDevice = new QModbusTcpServer(this);
         modbusDevice->setConnectionParameter(QModbusDevice::NetworkPortParameter, settings.device.tcp->port);
         modbusDevice->setConnectionParameter(QModbusDevice::NetworkAddressParameter, settings.device.tcp->host);
@@ -72,7 +72,7 @@ bool Slave::isConnected() const
 void Slave::connectDevice()
 {
     if (!modbusDevice->connectDevice()) {
-        workerWarn(this) << ": Failed to connect: Attempt to reconnect to: " << m_settings.device.repr();
+        workerWarn(this) << ": Failed to connect: Attempt to reconnect to: " << m_settings.device.print();
         m_reconnectTimer->start();
     }
 }
@@ -140,7 +140,7 @@ void Slave::onDataWritten(QModbusDataUnit::RegisterType table, int address, int 
 
 void Slave::onErrorOccurred(QModbusDevice::Error error)
 {
-    workerWarn(this) << "Error: " << m_settings.device.repr() << "; Reason: " << error;
+    workerWarn(this) << "Error: " << m_settings.device.print() << "; Reason: " << error;
     disconnectDevice();
     m_reconnectTimer->start();
 }

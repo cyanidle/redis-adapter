@@ -34,10 +34,10 @@ struct RADAPTER_API LoggingInterceptorSettings : public Settings::SerializableSe
     Q_DECLARE_FLAGS(LogMsgs, LogMsgTypes)
     Q_ENUM(LogMsgTypes)
     FIELD(Settings::Required<QString>, filepath)
-    FIELD(Settings::NonRequired<quint32>, flush_delay, {1000u})
-    FIELD(Settings::NonRequired<quint64>, max_size_bytes, {100000000UL})
-    FIELD(Settings::NonRequired<quint64>, rotating, {true})
-    FIELD(Settings::NonRequired<QString>, log, {"normal"})
+    FIELD(Settings::NonRequired<quint32>, flush_delay, 1000u)
+    FIELD(Settings::NonRequired<quint64>, max_size_bytes, 100000000UL)
+    FIELD(Settings::NonRequired<quint64>, rotating, true)
+    FIELD(Settings::NonRequired<QString>, log, "normal")
 
     LogMsgs log_{LogNormal};
     using JsonField = Serializable::Validated<Settings::NonRequired<QJsonDocument::JsonFormat>>::With<Settings::ChooseJsonFormat>;
