@@ -1,5 +1,5 @@
 #include "modbusslave.h"
-#include <QModbusRtuSerialSlave>
+#include <QModbusRtuSerialServer>
 #include <QModbusTcpServer>
 #include "radapterlogging.h"
 #include "modbusparsing.h"
@@ -22,7 +22,7 @@ Slave::Slave(const Settings::ModbusSlave &settings, QThread *thread) :
         modbusDevice->setConnectionParameter(QModbusDevice::NetworkPortParameter, settings.device.tcp->port);
         modbusDevice->setConnectionParameter(QModbusDevice::NetworkAddressParameter, settings.device.tcp->host);
     } else {
-        modbusDevice = new QModbusRtuSerialSlave(this);
+        modbusDevice = new QModbusRtuSerialServer(this);
         modbusDevice->setConnectionParameter(QModbusDevice::SerialPortNameParameter, settings.device.rtu->port_name);
         modbusDevice->setConnectionParameter(QModbusDevice::SerialParityParameter, settings.device.rtu->parity);
         modbusDevice->setConnectionParameter(QModbusDevice::SerialBaudRateParameter, settings.device.rtu->baud);
@@ -93,7 +93,7 @@ void Slave::handleNewWords(QVector<quint16> &words, QModbusDataUnit::RegisterTyp
         }
         const auto &regString = m_reverseRegisters[table][address];
         auto regInfo = deviceRegisters().value(regString);
-        auto sizeWords = QMetaType::sizeOf(regInfo.type)/2;
+        auto sizeWords = QMetaType(regInfo.type).sizeOf()/2;
         if (i + sizeWords > size) {
             workerWarn(this) << "Insufficient size of value: " << sizeWords;
             continue;
@@ -178,7 +178,7 @@ void Slave::onMsg(const Radapter::WorkerMsg &msg)
             m_state[fullKeyJoined] = iter.value();
             auto regInfo = m_settings.registers.value(fullKeyJoined);
             auto value = iter.value();
-            if (Q_LIKELY(value.canConvert(regInfo.type))) {
+            if (Q_LIKELY(value.canConvert(QMetaType(regInfo.type)))) {
                 results.append(parseValueToDataUnit(value, regInfo));
             } else {
                 reWarn() << "Incorrect value type for slave: " << printSelf() << "; Received: " << value << "; Key:" << fullKeyJoined;

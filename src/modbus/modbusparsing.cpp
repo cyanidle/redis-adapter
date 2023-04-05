@@ -73,14 +73,14 @@ QList<QModbusDataUnit> Modbus::mergeDataUnits(const QList<QModbusDataUnit> &src)
 QModbusDataUnit Modbus::parseValueToDataUnit(const QVariant &src, const Settings::RegisterInfo &regInfo)
 {
     const static Settings::PackingMode thisPack{Order::BigEndian, getEndianess()};
-    if (!src.canConvert(regInfo.type)) {
+    if (!src.canConvert(QMetaType(regInfo.type))) {
         reError() << "Error writing data to modbus: "
                   << src << "; Index: " << regInfo.index.value;
         return {};
     }
-    const auto sizeWords = QMetaType::sizeOf(regInfo.type)/2;
+    const auto sizeWords = QMetaType(regInfo.type).sizeOf()/2;
     auto copy = src;
-    copy.convert(regInfo.type);
+    copy.convert(QMetaType(regInfo.type));
     auto words = toWords(copy.data(), sizeWords, thisPack.words, thisPack.words);
     applyEndianess(words.data(), sizeWords, thisPack, regInfo.endianess);
     return QModbusDataUnit{regInfo.table, regInfo.index, words};

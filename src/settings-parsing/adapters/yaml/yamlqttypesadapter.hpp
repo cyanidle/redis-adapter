@@ -165,60 +165,6 @@ struct convert<QVector<T> >
         return true;
     }
 };
-
-// QList
-template<typename T>
-struct convert<QList<T> >
-{
-    static Node encode(const QList<T>& rhs)
-    {
-        Node node(NodeType::Sequence);
-        foreach (T value, rhs) {
-            node.push_back(value);
-        }
-        return node;
-    }
-
-    static bool decode(const Node& node, QList<T>& rhs)
-    {
-        if (!node.IsSequence())
-            return false;
-
-        rhs.clear();
-        const_iterator it = node.begin();
-        while (it != node.end())
-        {
-            rhs.push_back(it->as<T>());
-            ++it;
-        }
-        return true;
-    }
-};
-
-// QPair
-template<typename T, typename U>
-struct convert<QPair<T,U> >
-{
-    static Node encode(const QPair<T,U>& rhs)
-    {
-        Node node(NodeType::Sequence);
-        node.push_back(rhs.first);
-        node.push_back(rhs.second);
-        return node;
-    }
-
-    static bool decode(const Node& node, QPair<T,U>& rhs)
-    {
-        if (!node.IsSequence())
-            return false;
-        if (node.size() != 2)
-            return false;
-
-        rhs.first = node[0].as<T>();
-        rhs.second = node[1].as<U>();
-        return true;
-    }
-};
 // QStringList
 template<>
 struct convert<QStringList>

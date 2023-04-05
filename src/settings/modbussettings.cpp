@@ -32,7 +32,7 @@ void Settings::parseRegisters(const QVariantMap &registersFile) {
 
 void ModbusSlave::postUpdate() {
     for (auto &name: register_names) {
-        auto &toMerge = (*allRegisters).value(name.replace('.', ':'));
+        auto toMerge = (*allRegisters).value(name.replace('.', ':'));
         for (auto newRegisters = toMerge.begin(); newRegisters != toMerge.end(); ++newRegisters) {
             auto name = newRegisters.key();
             auto &reg = newRegisters.value();
@@ -43,7 +43,7 @@ void ModbusSlave::postUpdate() {
         }
     }
     for (auto &reg : registers) {
-        auto wordSize = QMetaType::sizeOf(reg.type) / 2;
+        auto wordSize = QMetaType(reg.type).sizeOf() / 2;
         switch (reg.table.value) {
         case QModbusDataUnit::InputRegisters:
             counts.input_registers+=wordSize;

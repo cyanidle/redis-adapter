@@ -154,7 +154,7 @@ QVariant Connector::parseReply(redisReply *reply) const
     auto array = QVariantList{};
     switch (reply->type) {
     case ReplyString:
-        return reply->str;
+        return QString(reply->str);
     case ReplyArray:
         for (size_t i = 0; i < reply->elements; ++i) {
             array.append(parseReply(reply->element[i]));
@@ -165,7 +165,7 @@ QVariant Connector::parseReply(redisReply *reply) const
     case ReplyNil:
         return {};
     case ReplyStatus:
-        return reply->str;
+        return QString(reply->str);
     case ReplyError:
         workerError(this) << "Received Error Reply:" << reply->str;
         return {};
@@ -185,9 +185,9 @@ QVariant Connector::parseReply(redisReply *reply) const
     case ReplyPush:
         throw std::runtime_error("REDIS_REPLY_PUSH Unsupported");
     case ReplyBignum:
-        return reply->str;
+        return QString(reply->str);
     case ReplyVerb:
-        return reply->str;
+        return QString(reply->str);
     default:
         return {};
     }

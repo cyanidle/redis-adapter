@@ -56,14 +56,13 @@ JsonDict RoutedObject::send(const QString &fieldName) const
 
 JsonDict RoutedObject::sendGlob(const QString &glob) const
 {
-    auto globre = QRegExp(glob);
-    globre.setPatternSyntax(QRegExp::WildcardUnix);
+    auto globre = QRegularExpression(QRegularExpression::wildcardToRegularExpression(glob));
     if (!globre.isValid()) {
         throw std::invalid_argument("Glob syntax error!");
     }
     JsonDict result;
     for (auto &field : fields()) {
-        if (globre.exactMatch(field)) {
+        if (globre.globalMatch(field).isValid()) {
             result.merge(send(field));
         }
     }
@@ -82,13 +81,12 @@ bool RoutedObject::wasUpdated(const QString &fieldName) const
 
 bool RoutedObject::wasUpdatedGlob(const QString &glob) const
 {
-    auto globre = QRegExp(glob);
-    globre.setPatternSyntax(QRegExp::WildcardUnix);
+    auto globre = QRegularExpression(QRegularExpression::wildcardToRegularExpression(glob));
     if (!globre.isValid()) {
         throw std::invalid_argument("Glob syntax error!");
     }
     for (auto &field : fields()) {
-        if (globre.exactMatch(field) && wasUpdated(field)) {
+        if (globre.globalMatch(field).isValid() && wasUpdated(field)) {
             return true;
         }
     }

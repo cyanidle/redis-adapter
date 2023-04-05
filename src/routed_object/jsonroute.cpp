@@ -124,9 +124,9 @@ JsonDict JsonRoute::send(const QVariantMap &values, const KeysFilter &keysFilter
     return result;
 }
 
-const QRegExp &JsonRoute::matcher()
+const QRegularExpression &JsonRoute::matcher()
 {
-    static QRegExp result("^\\{\\w*\\}$");
+    static QRegularExpression result("^\\{\\w*\\}$");
     return result;
 }
 

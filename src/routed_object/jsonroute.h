@@ -39,7 +39,7 @@ public:
         QStringList m_availableFields;
     };
 private:
-    static const QRegExp &matcher();
+    static const QRegularExpression &matcher();
     void checkValues(const JsonDict &values, const QString &funcName) const;
     void checkKeys(const KeysFilter &keysFilter, const QString &funcName) const;
     template<typename T>
@@ -56,7 +56,7 @@ private:
     QStringList m_valueNames{};
     QStringList m_ignored{};
     bool m_isOptimised{false};
-    static QRegExp sm_matcher;
+    static QRegularExpression sm_matcher;
 };
 
 inline void JsonRoute::requireValueName(const QString &valueName) const

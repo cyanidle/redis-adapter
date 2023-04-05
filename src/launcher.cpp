@@ -26,6 +26,7 @@
 #include "settings-parsing/adapters/toml.hpp"
 #include "settings-parsing/adapters/yaml.hpp"
 #include "filters/producerfilter.h"
+#include <QRegularExpression>
 #ifdef Q_OS_UNIX
 #include "utils/resourcemonitor.h"
 #endif
@@ -195,20 +196,20 @@ void Launcher::initPipelines()
         settingsParsingWarn() << "Could not read [PIPELINES]! Details:" << exc.what();
         return;
     }
-    static QRegExp splitter("[<>]");
+    static QRegularExpression splitter("[<>]");
     for (const auto &pipe: parsed.pipelines.value) {
         auto split = pipe.split(splitter);
         if (split.size() < 2) {
             throw std::runtime_error("Pipeline length must be more than 2!");
         }
-        auto currentPos = 0;
+        auto count = 0;
         auto lastWorker = split.takeFirst().simplified();
+        auto match = splitter.match(pipe);
         for (const auto &worker : split) {
-            currentPos = splitter.indexIn(pipe, currentPos);
-            auto op = pipe[currentPos];
-            if (op == "<") {
+            auto op = match.captured(count++);
+            if (op == '<') {
                 broker()->connectTwoProxies(worker.simplified(), lastWorker);
-            } else if (op == ">") {
+            } else if (op == '>') {
                 broker()->connectTwoProxies(lastWorker, worker.simplified());
             }
             lastWorker = worker.simplified();

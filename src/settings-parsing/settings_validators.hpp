@@ -21,7 +21,7 @@ struct StringToFileSize {
         if (asStr.isEmpty()) return true;
         auto letter = asStr.at(asStr.length() - 1);
         bool ok;
-        auto number = asStr.leftRef(asStr.length() - 1).toDouble(&ok);
+        auto number = asStr.left(asStr.length() - 1).toDouble(&ok);
         if (!ok) {
             throw std::runtime_error("Could not convert to number: " + asStr.toStdString());
         }

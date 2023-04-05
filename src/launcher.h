@@ -2,9 +2,10 @@
 #define LAUNCHER_H
 
 #include <QCommandLineParser>
-#include "settings/settings.h"
-#include "settings-parsing/dictreader.h"
 #include <QObject>
+#include "settings-parsing/reader.h"
+#include "serializable/utils.hpp"
+#include "radapterlogging.h"
 
 namespace Radapter {
 class Worker;
@@ -20,10 +21,10 @@ public:
     QCommandLineParser &commandLineParser();
     template<typename NewWorker, typename NewWorkerSettings>
     NewWorker* addWorkerWithConfig(const QString &key, QSet<Radapter::InterceptorBase *> interceptors = {});
+    void addWorker(Radapter::Worker *worker, QSet<Radapter::InterceptorBase *> interceptors = {});
 signals:
     void started();
 public slots:
-    void addWorker(Radapter::Worker *worker, QSet<Radapter::InterceptorBase *> interceptors = {});
     //! run() starts all configured radapter modules and workers
     void run();
     //! exec() calls run() and then return with QCoreApplication::exec();

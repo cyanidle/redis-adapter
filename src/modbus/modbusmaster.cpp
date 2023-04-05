@@ -1,7 +1,7 @@
 #include "modbusmaster.h"
 #include "broker/broker.h"
 #include "templates/algorithms.hpp"
-#include <QModbusRtuSerialMaster>
+#include <QModbusRtuSerialClient>
 #include "modbusparsing.h"
 #include <QModbusReply>
 #include <QModbusTcpClient>
@@ -42,7 +42,7 @@ void Master::initClient()
         m_device->setConnectionParameter(QModbusDevice::NetworkAddressParameter, m_settings.device.tcp->host.value);
         m_device->setConnectionParameter(QModbusDevice::NetworkPortParameter, m_settings.device.tcp->port.value);
     } else {
-        m_device = new QModbusRtuSerialMaster(this);
+        m_device = new QModbusRtuSerialClient(this);
         m_device->setConnectionParameter(QModbusDevice::SerialBaudRateParameter, m_settings.device.rtu->baud);
         m_device->setConnectionParameter(QModbusDevice::SerialDataBitsParameter, m_settings.device.rtu->data_bits);
         m_device->setConnectionParameter(QModbusDevice::SerialParityParameter, m_settings.device.rtu->parity);
@@ -104,7 +104,7 @@ void Master::onMsg(const Radapter::WorkerMsg &msg)
         if (m_settings.registers.contains(fullKeyJoined)) {
             auto regInfo = m_settings.registers.value(fullKeyJoined);
             auto value = iter.value();
-            if (value.canConvert(regInfo.type)) {
+            if (value.canConvert(QMetaType(regInfo.type))) {
                 results.append(parseValueToDataUnit(value, regInfo));
             } else {
                 reWarn() << printSelf() << ": Received: " << value << "; Key:" << fullKeyJoined;
@@ -178,7 +178,7 @@ void Master::onReadReady()
         auto index = reply->result().startAddress() + i;
         const auto &registersName = m_reverseRegisters[table][index];
         const auto &regData = config().registers[registersName];
-        auto sizeWords = QMetaType::sizeOf(regData.type)/2;
+        auto sizeWords = QMetaType(regData.type).sizeOf()/2;
         if (i + sizeWords > words.size()) {
             break;
         }

@@ -87,7 +87,7 @@ inline bool QueryField::isValid() const {
 }
 
 inline QMetaType::Type QueryField::type() const {
-    return static_cast<QMetaType::Type>(value.type());
+    return static_cast<QMetaType::Type>(value.typeId());
 }
 
 inline QString QueryField::toString() const {

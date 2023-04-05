@@ -19,7 +19,7 @@ QVariant DictReader::get(const QString &key) {
     QVariant result = m_config;
     for (const auto &subkey: fullKey) {
         auto asMap = result.toMap();
-        if (result.type() != QVariant::Map || !asMap.contains(subkey)) {
+        if (result.typeId() != QMetaType::Type::QVariantMap || !asMap.contains(subkey)) {
             return {};
         }
         result = asMap[subkey];

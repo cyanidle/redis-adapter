@@ -2,6 +2,7 @@
 #define SERIALIZABLE_H
 
 #include "common_fields.hpp"
+#include "utils.hpp"
 
 namespace Serializable {
 
@@ -22,25 +23,6 @@ private:
 };
 
 #define POST_UPDATE virtual void postUpdate() override
-
-template <typename T>
-T fromQMap(const QVariantMap &source) {
-    T res;
-    res.update(source);
-    return res;
-}
-
-template <typename T>
-QList<T> fromQList(const QVariantList &source) {
-    QList<T> result;
-    for (const auto &subval : source) {
-        auto asMap = subval.toMap();
-        T temp;
-        temp.update(asMap);
-        result.append(temp);
-    }
-    return result;
-}
 
 }
 Q_DECLARE_METATYPE(Serializable::Object*)
