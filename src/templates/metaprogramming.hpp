@@ -100,6 +100,9 @@ struct is_iterator<T, std::void_t<
         typename T::iterator_category
         >> : std::true_type {};
 
+template<class T>
+constexpr bool is_iterator_v = is_iterator<T>::value;
+
 template<typename T, class=void> struct is_container : std::false_type {};
 template<typename T>
 struct is_container<T, std::void_t<typename T::iterator>> : std::true_type {};
@@ -236,6 +239,9 @@ struct is_smart_ptr<Holder, std::void_t<
         typename Holder::Type,
         enable_if_ptr_typedef<Holder>
      >> : std::true_type {};
+
+template<class Holder>
+constexpr bool is_smart_ptr_v = is_smart_ptr<Holder>::value;
 
 template <class Holder, class Ret = void>
 using enable_if_smart_ptr = typename std::enable_if<is_smart_ptr<Holder>::value, Ret>::type;

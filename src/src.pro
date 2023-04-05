@@ -4,7 +4,8 @@ QT += core \
     serialport \
     sql \
     websockets \
-    network
+    network \
+    httpserver
 
 QT -= gui
 
@@ -20,7 +21,7 @@ CONFIG(release, debug|release){
 }
 CONFIG -= debug_and_release
 
-CONFIG += create_prl staticlib
+CONFIG += c++17 create_prl staticlib
 DESTDIR = ..
 DEFINES += RADAPTER_API=
 

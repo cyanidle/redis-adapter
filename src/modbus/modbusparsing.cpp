@@ -16,19 +16,16 @@ bool mergeDataUnit(QList<QModbusDataUnit> &target, const QModbusDataUnit &unit) 
 };
 
 void sortAndMergeDataUnits(QList<QModbusDataUnit> &target) {
-    auto sorter = [](const QModbusDataUnit &lh, const QModbusDataUnit &rh) {
-        return lh.startAddress() < rh.startAddress();
-    };
-    std::sort(target.begin(), target.end(), sorter);
+    Radapter::sort(target, &QModbusDataUnit::startAddress);
     auto copy = target;
     QList<int> toRemove{};
-    for (auto unit : Radapter::enumerate(copy)) {
-        if (mergeDataUnit(target, unit.value)) {
-            toRemove.append(unit.count);
+    for (auto [count, unit] : Radapter::enumerate(copy)) {
+        if (mergeDataUnit(target, unit)) {
+            toRemove.append(count);
         }
     }
-    for (auto index : Radapter::enumerate(toRemove)) {
-        target.removeAt(index.value - index.count);
+    for (auto [count, index] : Radapter::enumerate(toRemove)) {
+        target.removeAt(index - count);
     }
 };
 QList<QModbusDataUnit> Modbus::mergeDataUnits(const QList<QModbusDataUnit> &src)

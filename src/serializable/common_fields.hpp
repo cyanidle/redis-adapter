@@ -328,7 +328,7 @@ struct NestedSequence : public Private::SequenceCommon<T> {
         return NestedIntrospection(result);
     }
     const NestedIntrospection introspectNested() const {
-        QList<Object*> result;
+        QList<Object*> result; // const correctness is preserved by returning const NestedIntrospection
         for (const auto &subval : value) {
             result.append(const_cast<Object*>(static_cast<const Object*>(&subval)));
         }

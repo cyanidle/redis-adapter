@@ -11,34 +11,23 @@
 namespace Radapter{
 
 template <typename Object, typename Method, typename...Args>
-enable_if_not_ptr<Object, typename MethodInfo<Method>::ReturnType> test(const Object &val, Method pred, Args&&...args) {
-    return (val.*pred)(std::forward<Args>(args)...);
-}
-
-template <typename Object, typename Method, typename...Args>
-enable_if_ptr<Object, typename MethodInfo<Method>::ReturnType> test(const Object &val, Method pred, Args&&...args) {
-    return (val->*pred)(std::forward<Args>(args)...);
+decltype(auto) test(const Object &val, Method pred, Args&&...args) {
+    struct Invalid{};
+    if constexpr (!std::is_pointer_v<Object> && !is_smart_ptr_v<Object> && !is_iterator_v<Object>) {
+        return (val.*pred)(std::forward<Args>(args)...);
+    } else if constexpr (std::is_pointer_v<Object> || is_iterator_v<Object>) {
+        return (val->*pred)(std::forward<Args>(args)...);
+    } else if constexpr (is_smart_ptr_v<Object>) {
+        return (val.data()->*pred)(std::forward<Args>(args)...);
+    } else {
+        static_assert(std::is_same_v<Object, Invalid>, "Invalid use of algorithm!");
+    }
 }
 
 template <typename Function, typename...Args>
 typename FuncInfo<Function>::ReturnType test(Function pred, Args&&...args) {
     return pred(std::forward<Args>(args)...);
 }
-
-template <typename Object, typename Method, typename...Args>
-typename std::enable_if<
-is_iterator<Object>::value &&
-!is_smart_ptr<Object>::value &&
-!std::is_pointer<Object>::value,
-typename MethodInfo<Method>::ReturnType>::type test(const Object &val, Method pred, Args&&...args) {
-    return test(val.value(), pred, std::forward<Args>(args)...);
-}
-
-template <typename Object, typename Method, typename...Args>
-enable_if_smart_ptr<Object, typename MethodInfo<Method>::ReturnType> test(const Object &val, Method pred, Args&&...args) {
-    return test(val.data(), pred, std::forward<Args>(args)...);
-}
-
 
 template<typename Predicate>
 struct ContainerTester {
@@ -135,6 +124,12 @@ auto max_element(Container &container, Predicate predicate) -> SearchResult<type
                    ContainerCompTester<Predicate>(predicate));
     return SearchResult<decltype(found)>(found, container.end());
 }
+
+template <typename Container, typename Predicate>
+auto sort(Container &container, Predicate predicate) {
+    std::sort(container.begin(), container.end(), ContainerCompTester<Predicate>(predicate));
+}
+
 
 template <typename Container>
 auto reverse(const Container &cont) -> ConstReverser<Container>

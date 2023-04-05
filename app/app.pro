@@ -4,14 +4,15 @@ QT += core \
     serialport \
     sql \
     websockets \
-    network
+    network \
+    httpserver
 
 QT -= gui
 
 TARGET = redis-adapter
 
 DEFINES += RADAPTER_API=
-CONFIG += c++11 console link_prl
+CONFIG += c++17 console link_prl
 CONFIG -= app_bundle
 
 SOURCES += main.cpp
