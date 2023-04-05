@@ -9,27 +9,27 @@ using namespace Radapter;
 LoggingWorker::LoggingWorker(const LoggingWorkerSettings &settings, QThread *thread) :
     Radapter::Worker(settings, thread),
     m_file(new QFile(settings.filepath, this)),
-    m_flushTimer(new QTimer(this)),
-    m_settings(settings),
-    m_array()
+    m_settings(settings)
 {
-    connect(m_flushTimer, &QTimer::timeout, this, &LoggingWorker::onFlush);
     QDir().mkpath(settings.filepath->left(settings.filepath->lastIndexOf("/")));
-    if (!m_file->open(QIODevice::WriteOnly | QIODevice::Text)) {
+    if (!m_file->open(QIODevice::Append | QIODevice::WriteOnly | QIODevice::Text)) {
         throw std::runtime_error(std::string("Could not open file: ") + baseFilepath().toStdString());
     }
     auto onOpen = JsonDict{};
     onOpen["__meta__"] = JsonDict{
         {"started", QDateTime::currentDateTime().toString()}
     }.toVariant();
-    m_array.append(onOpen.toJsonObj());
-    m_file->close();
-    m_flushTimer->start(settings.flush_delay);
+    appendToFile(onOpen);
 }
 
-bool LoggingWorker::isFull() const
+const QString &LoggingWorker::baseFilepath() const
 {
-    return static_cast<quint64>(m_file->size()) > m_settings.max_filesize;
+    return m_settings.filepath;
+}
+
+QString LoggingWorker::currentFilepath() const
+{
+    return m_file->fileName();
 }
 
 void LoggingWorker::onCommand(const WorkerMsg &msg)
@@ -42,12 +42,8 @@ void LoggingWorker::onReply(const WorkerMsg &msg)
     onMsg(msg);
 }
 
-void LoggingWorker::onFlush()
+void LoggingWorker::appendToFile(const JsonDict &info)
 {
-    if (!m_shouldUpdate) {
-        return;
-    }
-    m_shouldUpdate = false;
     if (!m_file->isOpen()) {
         if (!m_file->open(QIODevice::Append | QIODevice::Text | QIODevice::WriteOnly)) {
             workerError(this) << "Could not open file with name: " << m_file->fileName();
@@ -55,11 +51,8 @@ void LoggingWorker::onFlush()
         }
     }
     QTextStream out(m_file);
-    for (const auto &item : m_array) {
-        out << QJsonDocument(item.toObject()).toJson(m_settings.format);
-        Qt::endl(out);
-    }
-    m_array = QJsonArray();
+    out << info.toBytes(m_settings.format) << ",";
+    Qt::endl(out);
 }
 
 bool LoggingWorker::testMsgForLog(const Radapter::WorkerMsg &msg) {
@@ -78,9 +71,9 @@ bool LoggingWorker::testMsgForLog(const Radapter::WorkerMsg &msg) {
     return true;
 }
 
-void LoggingWorker::enqueueMsg(const WorkerMsg &msg)
+void LoggingWorker::onMsg(const Radapter::WorkerMsg &msg)
 {
-    auto copy = msg;
+    JsonDict copy = msg;
     JsonDict metaInfo{QVariantMap{
         {"sender", msg.sender()->printSelf()},
         {"receivers", msg.printReceivers()},
@@ -92,22 +85,5 @@ void LoggingWorker::enqueueMsg(const WorkerMsg &msg)
         {"id", msg.id()}
     }};
     copy["__meta__"] = metaInfo.toVariant();
-    m_array.append(copy.toJsonObj());
-    m_shouldUpdate = true;
-}
-
-void LoggingWorker::onMsg(const Radapter::WorkerMsg &msg)
-{
-    if (isFull() && m_settings.cycle_buffer) {
-        if (testMsgForLog(msg)) {
-            m_array.removeFirst();
-            enqueueMsg(msg);
-        }
-    } else if (!isFull()) {
-        if (testMsgForLog(msg)) {
-            enqueueMsg(msg);
-        }
-    } else {
-        workerError(this) << "File is Full";
-    }
+    appendToFile(copy);
 }
