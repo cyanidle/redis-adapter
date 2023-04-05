@@ -17,7 +17,7 @@ Slave::Slave(const Settings::ModbusSlave &settings, QThread *thread) :
     m_reconnectTimer->setSingleShot(true);
     m_reconnectTimer->callOnTimeout(this, &Slave::connectDevice);
     connect(this->workerThread(), &QThread::started, this, &Slave::connectDevice);
-    if (settings.device.tcp.value) {
+    if (settings.device.tcp->isValid()) {
         modbusDevice = new QModbusTcpServer(this);
         modbusDevice->setConnectionParameter(QModbusDevice::NetworkPortParameter, settings.device.tcp->port);
         modbusDevice->setConnectionParameter(QModbusDevice::NetworkAddressParameter, settings.device.tcp->host);

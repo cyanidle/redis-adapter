@@ -37,7 +37,7 @@ Master::Master(const Settings::ModbusMaster &settings, QThread *thread) :
 
 void Master::initClient()
 {
-    if (m_settings.device.tcp.value) {
+    if (m_settings.device.tcp->isValid()) {
         m_device = new QModbusTcpClient(this);
         m_device->setConnectionParameter(QModbusDevice::NetworkAddressParameter, m_settings.device.tcp->host.value);
         m_device->setConnectionParameter(QModbusDevice::NetworkPortParameter, m_settings.device.tcp->port.value);

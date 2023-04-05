@@ -50,10 +50,10 @@ struct RADAPTER_API TcpDevice : public ServerInfo {
     Q_GADGET
     IS_SERIALIZABLE
     FIELD(NonRequired<QString>, name)
-
-
-    operator bool() const {return port;}
     typedef QMap<QString, TcpDevice> Map;
+    bool isValid () const {
+        return port > 0;
+    }
     POST_UPDATE {
         if (!name->isEmpty()) {
             table().insert(name, *this);
@@ -78,15 +78,16 @@ struct RADAPTER_API SerialDevice : SerializableSettings {
     IS_SERIALIZABLE
     FIELD(Required<QString>, port_name)
     FIELD(NonRequired<QString>, name)
-    FIELD(NonRequired<int>, parity, {QSerialPort::NoParity})
-    FIELD(NonRequired<int>, baud, {QSerialPort::Baud115200})
-    FIELD(NonRequired<int>, data_bits, {QSerialPort::Data8})
-    FIELD(NonRequired<int>, stop_bits, {QSerialPort::OneStop})
-    FIELD(NonRequiredByteOrder, byte_order, {QDataStream::BigEndian})
+    FIELD(NonRequired<int>, parity, QSerialPort::NoParity)
+    FIELD(NonRequired<int>, baud, QSerialPort::Baud115200)
+    FIELD(NonRequired<int>, data_bits, QSerialPort::Data8)
+    FIELD(NonRequired<int>, stop_bits, QSerialPort::OneStop)
+    FIELD(NonRequiredByteOrder, byte_order, QDataStream::BigEndian)
 
-
-    operator bool() const {return !port_name->isEmpty();}
     typedef QMap<QString, SerialDevice> Map;
+    bool isValid () const {
+        return !port_name->isEmpty();
+    }
     POST_UPDATE {
         if (!name->isEmpty()) {
             table().insert(name, *this);
@@ -168,7 +169,7 @@ struct RADAPTER_API LocalizationInfo : SerializableSettings {
 struct RADAPTER_API WebsocketServerInfo : SerializableSettings {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(Required<quint16>, port, {1234})
+    FIELD(NonRequired<quint16>, port, 1234)
     FIELD(Required<Radapter::WorkerSettings>, worker)
 };
 
