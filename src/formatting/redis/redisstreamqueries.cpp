@@ -1,5 +1,5 @@
 #include "redisstreamqueries.h"
-#include "jsondict/jsondict.hpp"
+#include "jsondict/jsondict.h"
 #include <QStringList>
 
 QString Redis::addToStream(const QString &stream, const JsonDict &data, quint32 size)

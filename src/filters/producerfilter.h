@@ -4,7 +4,7 @@
 #include <QObject>
 #include <QQueue>
 #include "broker/workers/private/workermsg.h"
-#include "jsondict/jsondict.hpp"
+#include "jsondict/jsondict.h"
 #include "broker/interceptor/interceptor.h"
 #include "settings/settings.h"
 

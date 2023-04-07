@@ -72,6 +72,7 @@ Target* Broker::getWorker(const QString &workerName)
     return qobject_cast<Target*>(getWorker(workerName));
 }
 
+
 }
 
 #endif //BROKER_H

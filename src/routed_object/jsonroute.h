@@ -2,7 +2,7 @@
 #define JSONROUTE_H
 
 #include "private/global.h"
-#include "jsondict/jsondict.hpp"
+#include "jsondict/jsondict.h"
 #include <QVariantMap>
 
 class RADAPTER_API JsonRoute

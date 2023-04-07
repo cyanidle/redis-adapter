@@ -3,7 +3,7 @@
 
 #include <QObject>
 #include "connectors/redisconnector.h"
-#include "jsondict/jsondict.hpp"
+#include "jsondict/jsondict.h"
 #include "async_context/rediscachecontext.h"
 
 namespace Redis {

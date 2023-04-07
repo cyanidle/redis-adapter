@@ -2,6 +2,7 @@
 #include <QModbusRtuSerialSlave>
 #include <QModbusTcpServer>
 #include "radapterlogging.h"
+#include <QModbusServer>
 #include "modbusparsing.h"
 
 using namespace Modbus;

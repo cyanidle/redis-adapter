@@ -1,13 +1,12 @@
 #ifndef WORKERBASE_H
 #define WORKERBASE_H
 
-#include <QMutexLocker>
-#include <QMutex>
-#include <QHash>
-#include <QThread>
+#include <QSet>
 #include "private/workermsg.h"
 #include "private/workerdebug.h"
+
 class RoutedObject;
+class QThread;
 namespace Radapter {
 class Broker;
 class WorkerProxy;
@@ -74,11 +73,11 @@ protected:
     WorkerMsg prepareReply(const WorkerMsg &msg, Reply *reply) const;
     WorkerMsg prepareCommand(Command *command) const;
     template <typename User, typename...Args>
-    WorkerMsg prepareCommand(Command *command, void (User::*cb)(Args...)) const;
+    using MsgCallback = void (User::*)(Args...);
+    template <typename User, typename...Args>
+    WorkerMsg prepareCommand(Command *command, MsgCallback<User, Args...> callback) const;
     void addInterceptor(InterceptorBase *interceptor);
 private:
-    template <typename User, typename...Args>
-    using MsgCallback = void (User::*)(Args...);
     Set m_consumers;
     Set m_producers;
     QSet<QString> m_consumerNames;
@@ -92,10 +91,6 @@ private:
     QSet<InterceptorBase *> m_InterceptorsToAdd{};
     std::atomic<bool> m_wasRun{false};
     bool m_printMsgs{false};
-
-    static QRecursiveMutex m_mutex;
-    static QStringList m_wereCreated;
-    static QList<InterceptorBase*> m_usedInterceptors;
     friend Broker;
 };
 

@@ -1,11 +1,12 @@
 #ifndef MODBUS_SLAVEWORKER_H
 #define MODBUS_SLAVEWORKER_H
 
-#include <QModbusServer>
+#include <QModbusDevice>
 #include <QTimer>
 #include "broker/workers/worker.h"
 #include "settings/modbussettings.h"
 
+class QModbusServer;
 namespace Modbus {
 
 class RADAPTER_API Slave : public Radapter::Worker

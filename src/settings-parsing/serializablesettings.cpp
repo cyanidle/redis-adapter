@@ -1,5 +1,5 @@
 #include "serializablesettings.h"
-#include "jsondict/jsondict.hpp"
+#include "jsondict/jsondict.h"
 #include "templates/algorithms.hpp"
 
 namespace Settings {

@@ -84,6 +84,7 @@ struct CallbackReply : CallbackConcept {
     Callback m_cb;
     User* m_user;
 };
+
 }
 
 

@@ -2,7 +2,7 @@
 #define WORKERMSG_H
 
 #include <QObject>
-#include "jsondict/jsondict.hpp"
+#include "jsondict/jsondict.h"
 #include "broker/commands/basiccommands.h"
 #include "broker/replies/private/reply.h"
 
@@ -80,11 +80,11 @@ public:
     QVariant &privateData();
     QVariant privateData() const;
     template <class User, class...Args>
-    void setCallback(User *user, void (User::*cb)(Args...)) {
+    void setCallback(User *user, Args&&...args) {
         if (!command()) {
             throw std::runtime_error("Attempt to set callback for non-command Msg!");
         }
-        command()->setCallback(user, cb);
+        command()->setCallback(user, std::forward<Args>(args)...);
     }
 private:
     friend class Radapter::Worker;

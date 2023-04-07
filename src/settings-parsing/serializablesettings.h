@@ -4,7 +4,7 @@
 #include <QJsonDocument>
 #include "serializable/serializable.h"
 #include "serializable/validated.hpp"
-
+#define NON_REQUIRED_ATTR "non_required"
 Q_DECLARE_METATYPE(QJsonDocument::JsonFormat)
 
 namespace Settings {
@@ -17,7 +17,7 @@ struct MarkNonRequired : public Target {
     using Target::operator=;
     using Target::operator==;
     const QStringList &attributes() const {
-        static const QStringList attrs{Target::attributes() + QStringList{"non_required"}};
+        static const QStringList attrs{Target::attributes() + QStringList{NON_REQUIRED_ATTR}};
         return attrs;
     }
 };

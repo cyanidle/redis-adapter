@@ -1,5 +1,5 @@
 #include "rediscachequeries.h"
-#include "jsondict/jsondict.hpp"
+#include "jsondict/jsondict.h"
 #include <QStringList>
 
 QString Redis::subscribeTo(const QStringList &events)

@@ -1,5 +1,5 @@
 #include "modbussettings.h"
-#include "jsondict/jsondict.hpp"
+#include "jsondict/jsondict.h"
 #include "templates/algorithms.hpp"
 
 using namespace Settings;
@@ -69,6 +69,11 @@ void ModbusSlave::postUpdate() {
 
 void ModbusMaster::postUpdate()
 {
+    if (reliable_mode) {
+        if (!state_reader || !state_writer) {
+            throw std::runtime_error("[ModbusMaster: RELIABLE_MODE] Missing 'state_writer' or 'state_reader");
+        }
+    }
     for (auto &name: register_names) {
         auto &toMerge = (*allRegisters)[name.replace('.', ':')];
         if (toMerge.isEmpty()) {

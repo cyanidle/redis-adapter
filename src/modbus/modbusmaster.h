@@ -3,11 +3,14 @@
 
 #include "broker/workers/worker.h"
 #include "settings/modbussettings.h"
-#include "broker/sync/channel.h"
-#include <QModbusClient>
+#include "modbusparsing.h"
+#include <QModbusReply>
+#include <QModbusDevice>
 #include <QQueue>
 #include <QObject>
 
+class QTimer;
+class QModbusClient;
 namespace Modbus {
 
 class Master : public Radapter::Worker
@@ -25,6 +28,7 @@ signals:
     void allQueriesDone();
     void connected();
     void disconnected();
+    void stateError();
 public slots:
     void onMsg(const Radapter::WorkerMsg &msg) override;
     void connectDevice();
@@ -42,19 +46,24 @@ private:
     void executeNext();
     void initClient();
     void executeRead(const QModbusDataUnit &unit);
-    void executeWrite(const QModbusDataUnit &unit);
-
+    void executeWrite(const QModbusDataUnit &state);
+    void stateFetched(const Radapter::ReplyJson *reply);
+    void saveState();
+    void fetchState();
+    void write(const JsonDict &data);
+    void stateErrorHandler();
     void attachToChannel();
 
     Settings::ModbusMaster m_settings;
     QTimer *m_reconnectTimer;
     QTimer *m_readTimer;
-    QHash<QModbusDataUnit::RegisterType, QHash<int, QString>> m_reverseRegisters{};
+    QTimer *m_rewriteTimer;
+    QHash<QModbusDataUnit::RegisterType, QHash<int, QString>> m_reverseRegisters;
     QModbusClient *m_device = nullptr;
     std::atomic<bool> m_connected{false};
-    QQueue<QModbusDataUnit> m_readQueue{};
-    QQueue<QModbusDataUnit> m_writeQueue{};
-    JsonDict m_lastJson{};
+    QQueue<QModbusDataUnit> m_readQueue;
+    QQueue<QModbusDataUnit> m_writeQueue;
+    JsonDict m_state;
 };
 
 } // namespace Modbus

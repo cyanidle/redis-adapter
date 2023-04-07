@@ -1,7 +1,7 @@
 #include "yamlreader.h"
 #include <yaml-cpp/node/node.h>
 #include <yaml-cpp/yaml.h>
-#include "jsondict/jsondict.hpp"
+#include "jsondict/jsondict.h"
 #include "yamlqttypesadapter.hpp"
 
 using namespace YAML;

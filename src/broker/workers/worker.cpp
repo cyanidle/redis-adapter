@@ -2,6 +2,7 @@
 #include "radapterlogging.h"
 #include "broker/broker.h"
 #include <QThread>
+#include <QMutex>
 #include "broker/interceptor/interceptor.h"
 #include "workersettings.h"
 #include "radapterlogging.h"
@@ -10,10 +11,9 @@
 #include "routed_object/routed_object.h"
 
 using namespace Radapter;
-
-QRecursiveMutex Worker::m_mutex;
-QStringList Worker::m_wereCreated = QStringList();
-QList<InterceptorBase*> Worker::m_usedInterceptors = {};
+Q_GLOBAL_STATIC(QRecursiveMutex, staticMutex);
+Q_GLOBAL_STATIC(QStringList, staticWereCreated);
+Q_GLOBAL_STATIC(QList<InterceptorBase*>, staticUsedInterceptors);
 
 Worker::Worker(const WorkerSettings &settings, QThread *thread) :
     QObject(),
@@ -46,7 +46,7 @@ Worker::Worker(const WorkerSettings &settings, QThread *thread) :
 ///     ----->     (Proxy) <--> (Interceptor) <--> (NewInterceptor) <--> (Worker)
 void Worker::addInterceptor(InterceptorBase *interceptor)
 {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(staticMutex);
     if (!m_proxy) {
         m_InterceptorsToAdd.insert(interceptor);
         return;
@@ -54,7 +54,7 @@ void Worker::addInterceptor(InterceptorBase *interceptor)
     if (wasStarted()) {
         throw std::runtime_error("Cannot add interceptor during runtime!");
     }
-    if (m_usedInterceptors.contains(interceptor)) {
+    if (staticUsedInterceptors->contains(interceptor)) {
         throw std::runtime_error("Used Interceptor not allowed!");
     }
     auto closestProxy = qobject_cast<WorkerProxy*>(m_closestConnected);
@@ -107,7 +107,7 @@ QString Worker::printSelf() const
 
 void Worker::run()
 {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(staticMutex);
     if (m_wasRun) throw std::runtime_error("WorkerBase::onRun() called multiple times for: " + printSelf().toStdString());
     moveToThread(workerThread());
     for (auto &producerName : qAsConst(m_producerNames)) {
@@ -131,7 +131,7 @@ void Worker::onRun()
 
 void Worker::addConsumers(const QStringList &consumers)
 {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(staticMutex);
     for (auto &name : consumers) {
         m_consumerNames.insert(name);
         if (wasStarted()) {
@@ -144,7 +144,7 @@ void Worker::addConsumers(const QStringList &consumers)
 
 void Worker::addProducers(const QStringList &producers)
 {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(staticMutex);
     for (auto &name : producers) {
         m_producerNames.insert(name);
         if (wasStarted()) {
@@ -157,7 +157,7 @@ void Worker::addProducers(const QStringList &producers)
 
 void Worker::addConsumers(const Set &consumers)
 {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(staticMutex);
     for (auto &worker : consumers) {
         addConsumer(worker);
     }
@@ -165,7 +165,7 @@ void Worker::addConsumers(const Set &consumers)
 
 void Worker::addProducers(const Set &producers)
 {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(staticMutex);
     for (auto &worker : producers) {
         addProducer(worker);
     }
@@ -173,7 +173,7 @@ void Worker::addProducers(const Set &producers)
 
 void Worker::addConsumer(Worker *consumer)
 {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(staticMutex);
     m_consumers.insert(consumer);
     if (!consumer->producers().contains(this)) {
         consumer->addProducer(this);
@@ -187,7 +187,7 @@ void Worker::addConsumer(Worker *consumer)
 
 void Worker::addProducer(Worker *producer)
 {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(staticMutex);
     m_producers.insert(producer);
     if (!producer->consumers().contains(this)) {
         producer->addConsumer(this);
@@ -344,17 +344,17 @@ void Worker::onSendMsgPriv(const Radapter::WorkerMsg &msg)
 
 WorkerProxy* Worker::createProxy(const QSet<InterceptorBase*> &interceptors)
 {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(staticMutex);
     if (m_proxy == nullptr) {
         m_proxy = new WorkerProxy();
         m_proxy->setObjectName(workerName());
         m_proxy->setParent(this);
         auto filtered = QList<InterceptorBase*>();
         for (auto &interceptor : interceptors) {
-            if (!filtered.contains(interceptor) || !m_usedInterceptors.contains(interceptor)) {
+            if (!filtered.contains(interceptor) || !staticUsedInterceptors->contains(interceptor)) {
                 interceptor->setParent(this);
                 filtered.append(interceptor);
-                m_usedInterceptors.append(interceptor);
+                staticUsedInterceptors->append(interceptor);
             } else {
                 brokerError() << "=======================================================================================";
                 brokerError() << "WorkerBase::CreateProxy(): Interceptors list contains copies or already used ones!";

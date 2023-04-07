@@ -3,7 +3,7 @@
 
 #include "private/command.h"
 #include "broker/replies/basicreplies.h"
-#include "jsondict/jsondict.hpp"
+#include "jsondict/jsondict.h"
 
 namespace Radapter {
 

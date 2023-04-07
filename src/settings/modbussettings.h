@@ -2,8 +2,11 @@
 #define MODBUSSETTINGS_H
 
 #include "broker/sync/channel.h"
+#include "consumers/rediscacheconsumer.h"
+#include "producers/rediscacheproducer.h"
 #include "qthread.h"
 #include "settings.h"
+#include "broker/workers/worker_field.hpp"
 
 Q_DECLARE_METATYPE(QMetaType::Type)
 
@@ -150,6 +153,11 @@ namespace Settings {
         FIELD(NonRequired<quint32>, reconnect_timeout_ms, 5000)
         FIELD(NonRequired<quint32>, responce_time, 150)
         FIELD(NonRequired<quint32>, retries, 3)
+
+        FIELD(NonRequired<bool>, reliable_mode, false)
+        FIELD(NonRequired<quint32>, rewrite_timeout_ms, 3000)
+        FIELD(WorkerByNameNonRequired<Redis::CacheProducer*>, state_writer)
+        FIELD(WorkerByNameNonRequired<Redis::CacheConsumer*>, state_reader)
 
         ModbusDevice device{};
         Registers registers{};

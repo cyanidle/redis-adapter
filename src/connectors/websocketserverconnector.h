@@ -3,7 +3,7 @@
 
 #include <QObject>
 #include <QThread>
-#include "jsondict/jsondict.hpp"
+#include "jsondict/jsondict.h"
 #include "websocket/websocketserver.h"
 #include "broker/workers/worker.h"
 #include "settings/settings.h"
