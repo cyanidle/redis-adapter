@@ -4,6 +4,7 @@
 
 using namespace Settings;
 using namespace Serializable;
+typedef QMap<QString /*deviceName*/, Registers> DevicesRegisters;
 Q_GLOBAL_STATIC(DevicesRegisters, allRegisters)
 
 void Settings::parseRegisters(const QVariantMap &registersFile) {
@@ -70,7 +71,7 @@ void ModbusSlave::postUpdate() {
 void ModbusMaster::postUpdate()
 {
     if (reliable_mode) {
-        if (!state_reader || !state_writer) {
+        if (state_reader->isEmpty() || state_writer->isEmpty()) {
             throw std::runtime_error("[ModbusMaster: RELIABLE_MODE] Missing 'state_writer' or 'state_reader");
         }
     }
@@ -115,6 +116,38 @@ bool OrdersValidator::validate(QVariant &value)
     return true;
 }
 
+void RegisterInfo::postUpdate()
+{
+    if (table == QModbusDataUnit::InputRegisters || table == QModbusDataUnit::DiscreteInputs) {
+        writable = false;
+    }
+}
 
+bool ChooseRegValueType::validate(QVariant &value) {
+    static QMap<QString, QMetaType::Type>
+        map{{"uint16", QMetaType::UShort},
+            {"word", QMetaType::UShort},
+            {"uint32", QMetaType::UInt},
+            {"dword", QMetaType::UInt},
+            {"float", QMetaType::Float},
+            {"float32", QMetaType::Float}};
+    auto asStr = value.toString().toLower();
+    value.setValue(map.value(asStr));
+    return map.contains(asStr);
+}
 
-
+bool ChooseRegisterTable::validate(QVariant &value) {
+    static QMap<QString, QModbusDataUnit::RegisterType>
+        map{{"holding",QModbusDataUnit::HoldingRegisters},
+            {"input",QModbusDataUnit::InputRegisters},
+            {"coils",QModbusDataUnit::Coils},
+            {"discrete_inputs",QModbusDataUnit::DiscreteInputs},
+            {"holding_registers",QModbusDataUnit::HoldingRegisters},
+            {"input_registers",QModbusDataUnit::InputRegisters},
+            {"coils",QModbusDataUnit::Coils},
+            {"di",QModbusDataUnit::DiscreteInputs},
+            {"do",QModbusDataUnit::Coils},};
+    auto asStr = value.toString().toLower();
+    value.setValue(map.value(asStr));
+    return map.contains(asStr);
+}

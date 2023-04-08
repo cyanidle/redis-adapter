@@ -11,6 +11,10 @@
 
 class QTimer;
 class QModbusClient;
+namespace Redis {
+class CacheProducer;
+class CacheConsumer;
+}
 namespace Modbus {
 
 class Master : public Radapter::Worker
@@ -64,6 +68,8 @@ private:
     QQueue<QModbusDataUnit> m_readQueue;
     QQueue<QModbusDataUnit> m_writeQueue;
     JsonDict m_state;
+    Redis::CacheProducer *m_stateWriter;
+    Redis::CacheConsumer *m_stateReader;
 };
 
 } // namespace Modbus

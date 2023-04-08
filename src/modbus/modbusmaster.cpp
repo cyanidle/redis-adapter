@@ -1,8 +1,11 @@
 #include "modbusmaster.h"
+#include "broker/broker.h"
 #include "broker/sync/channel.h"
 #include <QModbusRtuSerialMaster>
 #include "commands/rediscommands.h"
 #include "templates/algorithms.hpp"
+#include "consumers/rediscacheconsumer.h"
+#include "producers/rediscacheproducer.h"
 #include <QModbusReply>
 #include <QModbusClient>
 #include <QModbusTcpClient>
@@ -40,6 +43,18 @@ Master::Master(const Settings::ModbusMaster &settings, QThread *thread) :
         m_rewriteTimer->callOnTimeout(this, [&](){
             write(m_state);
         });
+    }
+    if (!m_settings.state_reader->isEmpty()) {
+        m_stateReader = broker()->getWorker<Redis::CacheConsumer>(m_settings.state_reader);
+        if (!m_stateReader) {
+            throw std::runtime_error(printSelf().toStdString() + ": Could not fetch RedisCacheConsumer: " + m_settings.state_reader->toStdString());
+        }
+    }
+    if (!m_settings.state_writer->isEmpty()) {
+        m_stateWriter = broker()->getWorker<Redis::CacheProducer>(m_settings.state_writer);
+        if (!m_stateWriter) {
+            throw std::runtime_error(printSelf().toStdString() + ": Could not fetch RedisCacheProducer: " + m_settings.state_writer->toStdString());
+        }
     }
 }
 
@@ -104,19 +119,19 @@ const Settings::ModbusMaster &Master::config() const
 
 void Master::saveState()
 {
-    if (m_settings.state_writer) {
+    if (m_stateWriter) {
         auto command = prepareCommand(new Redis::Cache::WriteObject(workerName(), m_state));
-        command.receivers() = {m_settings.state_writer};
+        command.receivers() = {m_stateWriter};
         emit sendMsg(command);
     }
 }
 
 void Master::fetchState()
 {
-    if (m_settings.state_reader) {
+    if (m_stateReader) {
         auto command = prepareCommand(new Redis::Cache::ReadObject(workerName()));
         command.setCallback(this, &Master::stateFetched);
-        command.receivers() = {m_settings.state_reader};
+        command.receivers() = {m_stateReader};
         emit sendMsg(command);
     }
 }

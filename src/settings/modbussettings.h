@@ -2,45 +2,17 @@
 #define MODBUSSETTINGS_H
 
 #include "broker/sync/channel.h"
-#include "consumers/rediscacheconsumer.h"
-#include "producers/rediscacheproducer.h"
 #include "qthread.h"
 #include "settings.h"
-#include "broker/workers/worker_field.hpp"
 
 Q_DECLARE_METATYPE(QMetaType::Type)
 
 namespace Settings {
     struct ChooseRegValueType {
-        static bool validate(QVariant& value) {
-            static QMap<QString, QMetaType::Type>
-                    map{{"uint16", QMetaType::UShort},
-                        {"word", QMetaType::UShort},
-                        {"uint32", QMetaType::UInt},
-                        {"dword", QMetaType::UInt},
-                        {"float", QMetaType::Float},
-                        {"float32", QMetaType::Float}};
-            auto asStr = value.toString().toLower();
-            value.setValue(map.value(asStr));
-            return map.contains(asStr);
-        }
+        static bool validate(QVariant& value);
     };
     struct ChooseRegisterTable {
-        static bool validate(QVariant& value) {
-            static QMap<QString, QModbusDataUnit::RegisterType>
-                map{{"holding",QModbusDataUnit::HoldingRegisters},
-                    {"input",QModbusDataUnit::InputRegisters},
-                    {"coils",QModbusDataUnit::Coils},
-                    {"discrete_inputs",QModbusDataUnit::DiscreteInputs},
-                    {"holding_registers",QModbusDataUnit::HoldingRegisters},
-                    {"input_registers",QModbusDataUnit::InputRegisters},
-                    {"coils",QModbusDataUnit::Coils},
-                    {"di",QModbusDataUnit::DiscreteInputs},
-                    {"do",QModbusDataUnit::Coils},};
-            auto asStr = value.toString().toLower();
-            value.setValue(map.value(asStr));
-            return map.contains(asStr);
-        }
+        static bool validate(QVariant& value);
     };
     using RegisterTable = Serializable::Validate<Required<QModbusDataUnit::RegisterType>, ChooseRegisterTable>;
     using RegisterValueType = Serializable::Validate<Required<QMetaType::Type>, ChooseRegValueType>;
@@ -101,19 +73,18 @@ namespace Settings {
     };
 
     struct RADAPTER_API RegisterInfo : SerializableSettings {
-        typedef QMap<QString, QModbusDataUnit::RegisterType> tableMap;
-        typedef QMap<QString, QMetaType::Type> typeMap;
         Q_GADGET
         IS_SERIALIZABLE
         FIELD(RegisterTable, table)
         FIELD(Required<int>, index)
-        FIELD(NonRequired<bool>, resetting, false)
+        FIELD(NonRequired<bool>, resetting, false) // not implemented yet
+        FIELD(NonRequired<bool>, writable, true)
         FIELD(MarkNonRequired<RegisterValueType>, type, QMetaType::UShort)
         using Orders = Serializable::Validate<NonRequired<PackingMode>, OrdersValidator>;
         FIELD(Orders, endianess)
+        void postUpdate() override;
     };
     typedef QMap<QString /*reg:Name*/, RegisterInfo> Registers;
-    typedef QMap<QString /*deviceName*/, Registers> DevicesRegisters;
     void RADAPTER_API parseRegisters(const QVariantMap &registersFile);
 
     struct RegisterCounts {
@@ -156,8 +127,8 @@ namespace Settings {
 
         FIELD(NonRequired<bool>, reliable_mode, false)
         FIELD(NonRequired<quint32>, rewrite_timeout_ms, 3000)
-        FIELD(WorkerByNameNonRequired<Redis::CacheProducer*>, state_writer)
-        FIELD(WorkerByNameNonRequired<Redis::CacheConsumer*>, state_reader)
+        FIELD(NonRequired<QString>, state_writer)
+        FIELD(NonRequired<QString>, state_reader)
 
         ModbusDevice device{};
         Registers registers{};

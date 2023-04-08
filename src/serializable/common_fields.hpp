@@ -94,8 +94,9 @@ template <typename Class, typename Field>
 FieldConcept* upcastField(Field Class::*fieldGetter) {
     return new Private::FieldHolder<Class, Field>(fieldGetter);
 }
+struct IsFieldCheck {};
 template<typename T, bool isBig = true>
-struct FieldCommon {
+struct FieldCommon : IsFieldCheck {
     friend Serializable::Object;
     using valueType = T;
     using valueRef = typename std::conditional<isBig, T, T&>::type;
