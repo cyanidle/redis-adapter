@@ -1,4 +1,5 @@
 #include "redisconnector.h"
+#include <QThread>
 #include "radapterlogging.h"
 #ifdef _MSC_VER
 #include <WinSock2.h>
@@ -205,6 +206,15 @@ void Connector::disconnectCallback(const redisAsyncContext *context, int status)
 bool Connector::isConnected() const
 {
     return m_isConnected;
+}
+
+void Connector::waitConnected(Radapter::Worker *who) const
+{
+    auto name = who ? who->printSelf() : QStringLiteral("Unknown");
+    workerInfo(this) << name << " is waiting for connection...";
+    while (!isConnected()) {
+        QThread::usleep(50);
+    }
 }
 
 int Connector::runAsyncCommand(const QString &command)

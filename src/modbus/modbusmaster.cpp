@@ -74,12 +74,11 @@ void Master::onRun()
         if (!m_stateReader) {
             throw std::runtime_error(printSelf().toStdString() + ": Could not fetch RedisCacheConsumer: " + m_settings.state_reader->toStdString());
         }
+        m_stateReader->waitConnected(this);
     }
     if (!m_settings.state_writer->isEmpty()) {
         m_stateWriter = broker()->getWorker<Redis::CacheProducer>(m_settings.state_writer);
-        if (!m_stateWriter) {
-            throw std::runtime_error(printSelf().toStdString() + ": Could not fetch RedisCacheProducer: " + m_settings.state_writer->toStdString());
-        }
+        m_stateWriter->waitConnected(this);
     }
     initClient();
     attachToChannel();
