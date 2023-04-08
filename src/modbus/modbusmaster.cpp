@@ -44,18 +44,6 @@ Master::Master(const Settings::ModbusMaster &settings, QThread *thread) :
             write(m_state);
         });
     }
-    if (!m_settings.state_reader->isEmpty()) {
-        m_stateReader = broker()->getWorker<Redis::CacheConsumer>(m_settings.state_reader);
-        if (!m_stateReader) {
-            throw std::runtime_error(printSelf().toStdString() + ": Could not fetch RedisCacheConsumer: " + m_settings.state_reader->toStdString());
-        }
-    }
-    if (!m_settings.state_writer->isEmpty()) {
-        m_stateWriter = broker()->getWorker<Redis::CacheProducer>(m_settings.state_writer);
-        if (!m_stateWriter) {
-            throw std::runtime_error(printSelf().toStdString() + ": Could not fetch RedisCacheProducer: " + m_settings.state_writer->toStdString());
-        }
-    }
 }
 
 void Master::initClient()
@@ -81,6 +69,18 @@ void Master::initClient()
 
 void Master::onRun()
 {
+    if (!m_settings.state_reader->isEmpty()) {
+        m_stateReader = broker()->getWorker<Redis::CacheConsumer>(m_settings.state_reader);
+        if (!m_stateReader) {
+            throw std::runtime_error(printSelf().toStdString() + ": Could not fetch RedisCacheConsumer: " + m_settings.state_reader->toStdString());
+        }
+    }
+    if (!m_settings.state_writer->isEmpty()) {
+        m_stateWriter = broker()->getWorker<Redis::CacheProducer>(m_settings.state_writer);
+        if (!m_stateWriter) {
+            throw std::runtime_error(printSelf().toStdString() + ": Could not fetch RedisCacheProducer: " + m_settings.state_writer->toStdString());
+        }
+    }
     initClient();
     attachToChannel();
     connectDevice();
