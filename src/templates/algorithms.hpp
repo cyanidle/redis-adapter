@@ -202,17 +202,5 @@ auto filter(const Container &container, Filter filter) -> FilterConstHolder<Cont
     return FilterConstHolder<Container, Filter>(container, filter);
 }
 
-template<typename Func>
-auto as_function(Func&&func) -> typename std::enable_if<FuncInfo<Func>::IsFunction, std::function<typename FuncInfo<Func>::Signature>>::type
-{
-    return std::function<typename FuncInfo<Func>::Signature>(std::forward<Func>(func));
-}
-
-template<typename Lambda>
-auto as_function(Lambda&& lambda) -> typename std::enable_if<!FuncInfo<Lambda>::IsFunction, typename LambdaInfo<Lambda>::AsFunction>::type
-{
-    return typename LambdaInfo<Lambda>::AsFunction(lambda);
-}
-
 }
 #endif

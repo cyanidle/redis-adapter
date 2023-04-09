@@ -1,5 +1,6 @@
 SOURCES+=
 HEADERS+= \
+   $$PWD/callable_info.hpp \
    $$PWD/containerfilter.hpp \
    $$PWD/zipiterator.hpp \
    $$PWD/metaprogramming.hpp \

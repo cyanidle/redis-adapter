@@ -79,12 +79,19 @@ public:
     QStringList printReceivers() const;
     QVariant &privateData();
     QVariant privateData() const;
-    template <class User, class...Args>
-    void setCallback(User *user, Args&&...args) {
+    template <class User, class Slot>
+    void setCallback(User *user, Slot slot) {
         if (!command()) {
             throw std::runtime_error("Attempt to set callback for non-command Msg!");
         }
-        command()->setCallback(user, std::forward<Args>(args)...);
+        command()->setCallback(user, slot);
+    }
+    template <class User, class Slot>
+    void setFailCallback(User *user, Slot slot) {
+        if (!command()) {
+            throw std::runtime_error("Attempt to set fail-callback for non-command Msg!");
+        }
+        command()->setFailCallback(user, slot);
     }
 private:
     friend class Radapter::Worker;

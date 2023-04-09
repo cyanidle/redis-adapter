@@ -27,17 +27,15 @@ public:
         User = 500,
         MaxUser = std::numeric_limits<std::underlying_type<Type>::type>::max(),
     };
-    bool isUser() const {return User < type();}
-    Type type() const {return static_cast<Type>(m_type);}
-    virtual const QMetaObject *metaObject() const {return &this->staticMetaObject;}
+    bool isUser() const;
+    Type type() const;
+    virtual const QMetaObject *metaObject() const;
     using WantedReply = Reply;
     template <typename Target> bool is() const;
     template <typename Target> Target *as();
     template <typename Target> const Target *as() const;
     template <typename Target> bool inherits() const;
     bool isWantedReply(const Reply *reply) const;
-    void expectReply(bool expect);
-    bool isReplyExpected() const;
     virtual bool replyOk(const Radapter::Reply* reply) const;
     static quint32 generateUserType();
     virtual Command* newCopy() const = 0;
@@ -46,28 +44,27 @@ public:
     virtual ~Command() = default;
     void *voidCast(const QMetaObject* meta);
     const void *voidCast(const QMetaObject* meta) const;
-    void setCallback(CallbackConcept *cb);
-    template <class User, class CommandT>
-    void setCallback(User *user, void (User::*cb)(const CommandT*, const typename CommandT::WantedReply *)) {
-        setCallback(new CallbackCmdReply<User, CommandT>(user, cb));
+    void setCallback(const CommandCallback &cb);
+    void setFailCallback(const CommandCallback &cb);
+    template <class User, class Slot>
+    void setCallback(User *user, Slot slot) {
+        setCallback(CommandCallback::fromAny(user, slot));
     }
-    template <class User>
-    void setCallback(User *user, void (User::*cb)(const WorkerMsg&)) {
-        setCallback(new CallbackMsg<User>(user, cb));
+    template <class User, class Slot>
+    void setFailCallback(User *user, Slot slot) {
+        setFailCallback(CommandCallback::fromAny(user, slot));
     }
-    template <class User, class ReplyT>
-    void setCallback(User *user, void (User::*cb)(const ReplyT*)) {
-        setCallback(new CallbackReply<User, ReplyT>(user, cb));
-    }
-    const CallbackConcept *callback() const;
-    CallbackConcept *callback();
+    const CommandCallback &callback() const;
+    CommandCallback &callback();
+    const CommandCallback &failCallback() const;
+    CommandCallback &failCallback();
 protected:
     Command(quint32 type);
     template <typename Target> static Type typeInConstructor(const Target* thisPtr);
 private:
+    CommandCallback m_cb;
+    CommandCallback m_failCb;
     quint32 m_type;
-    bool m_replyNeeded{true};
-    QSharedPointer<CallbackConcept> m_cb{};
 };
 
 template <typename Target>

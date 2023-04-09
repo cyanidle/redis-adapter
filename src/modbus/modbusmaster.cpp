@@ -129,15 +129,12 @@ void Master::fetchState()
 {
     if (m_stateReader) {
         auto command = prepareCommand(new Redis::Cache::ReadObject(workerName()));
-        command.setCallback(this, &Master::stateFetched);
+        command.setCallback(this, [this](const ReplyJson *reply){
+            m_state.merge(reply->json());
+        });
         command.receivers() = {m_stateReader};
         emit sendMsg(command);
     }
-}
-
-void Master::stateFetched(const ReplyJson *reply)
-{
-    m_state.merge(reply->json());
 }
 
 void Master::onMsg(const Radapter::WorkerMsg &msg)

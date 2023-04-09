@@ -51,7 +51,6 @@ private:
     void initClient();
     void executeRead(const QModbusDataUnit &unit);
     void executeWrite(const QModbusDataUnit &state);
-    void stateFetched(const Radapter::ReplyJson *reply);
     void saveState();
     void fetchState();
     void write(const JsonDict &data);

@@ -11,8 +11,8 @@
 #include "routed_object/routed_object.h"
 
 using namespace Radapter;
+
 Q_GLOBAL_STATIC(QRecursiveMutex, staticMutex);
-Q_GLOBAL_STATIC(QStringList, staticWereCreated);
 Q_GLOBAL_STATIC(QList<InterceptorBase*>, staticUsedInterceptors);
 
 Worker::Worker(const WorkerSettings &settings, QThread *thread) :
@@ -248,11 +248,9 @@ WorkerMsg Worker::prepareCommand(Command *command) const
 
 void Worker::onReply(const Radapter::WorkerMsg &msg)
 {
-    if (msg.command()->isReplyExpected()) {
-        workerError(this) << ": received Reply from: " <<
-            msg.sender()->printSelf() << "but not handled!";
-        throw std::runtime_error("Unhandled reply!");
-    }
+    workerError(this) << ": received Reply from: " <<
+        msg.sender()->printSelf() << "but not handled!";
+    throw std::runtime_error("Unhandled reply!");
 }
 
 void Worker::onCommand(const Radapter::WorkerMsg &msg)
@@ -295,20 +293,28 @@ void Worker::onMsgFromBroker(const Radapter::WorkerMsg &msg)
             workerError(this) << "Null Reply, while flagged as reply! Sender: " << msg.sender();
             return;
         }
-        if (msg.command() && msg.command()->callback() && msg.command()->callback()->worker() == this) {
-            msg.command()->callback()->execute(msg);
-        } else {
-            onReply(msg);
+        if (msg.command() && msg.command()->callback().worker() == this) {
+            if (msg.command()->replyOk(msg.reply())) {
+                if (msg.command()->callback()) {
+                    msg.command()->callback().execute(msg);
+                    return;
+                }
+            } else if (msg.command()->failCallback()) {
+                msg.command()->failCallback().execute(msg);
+                return;
+            }
         }
-    }
-    else if (msg.isCommand()) {
+        onReply(msg);
+        return;
+    } else if (msg.isCommand()) {
         if (!msg.command()) {
             workerError(this) << "Null Command, while flagged as command! Sender: " << msg.sender();
             return;
         }
         onCommand(msg);
+    } else {
+        onMsg(msg);
     }
-    else onMsg(msg);
 }
 
 void Worker::childDeleted(QObject *who)

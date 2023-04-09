@@ -8,6 +8,15 @@
 
 namespace Radapter {
 
+template<class, class = void>
+struct has_call_operator
+    : std::false_type
+{};
+
+template<class T>
+struct has_call_operator<T, decltype(&T::operator(), void())>
+    : std::true_type
+{};
 
 template<typename T> struct has_QObject_Macro {
     template<typename> static std::false_type impl(...);
@@ -65,6 +74,7 @@ struct MethodInfo<R(C::*)(A...)> //method pointer
     using ReturnType = R;
     using ArgsTuple = std::tuple<A...>;
     using Signature = R(C::*)(A...);
+    using SignatureNoClass = R(*)(A...);
 };
 template<class C, class R, class... A>
 struct MethodInfo<R(C::*)(A...) const> : MethodInfo<R(C::*)(A...)> {}; //const method pointer
@@ -194,18 +204,33 @@ struct ContainerInfo : public ContainerInfoImpl<Container, is_container<Containe
     };
 };
 
+template <typename T, typename = void>
+struct LambdaInfo
+{
+    enum {
+        ArgumentCount = -1,
+        IsLambda = false,
+    };
+};
 
 template <typename T>
-struct LambdaInfo
+struct LambdaInfo<T, typename std::enable_if<has_call_operator<T>::value>::type>
     : public LambdaInfo<decltype(&T::operator())>
-{};
+{
+    using typename LambdaInfo<decltype(&T::operator())>::Signature;
+    using typename LambdaInfo<decltype(&T::operator())>::AsStdFunction;
+    enum {
+        ArgumentCount = LambdaInfo<decltype(&T::operator())>::ArgumentCount,
+        IsLambda = true,
+    };
+};
 
 // for pointers to member function
 template <typename ClassType, typename ReturnType, typename... Args>
 struct LambdaInfo<ReturnType(ClassType::*)(Args...) const> {
     enum { ArgumentCount = sizeof...(Args) };
     using Signature = ReturnType(ClassType::*)(Args...) const;
-    typedef std::function<ReturnType (Args...)> AsFunction;
+    typedef std::function<ReturnType (Args...)> AsStdFunction;
 };
 
 // for pointers to member function
@@ -213,7 +238,7 @@ template <typename ClassType, typename ReturnType, typename... Args>
 struct LambdaInfo<ReturnType(ClassType::*)(Args...) > {
     enum { ArgumentCount = sizeof...(Args) };
     using Signature = ReturnType(ClassType::*)(Args...);
-    typedef std::function<ReturnType (Args...)> AsFunction;
+    typedef std::function<ReturnType (Args...)> AsStdFunction;
 };
 
 // for function pointers
@@ -221,8 +246,20 @@ template <typename ReturnType, typename... Args>
 struct LambdaInfo<ReturnType (*)(Args...)>  {
     enum { ArgumentCount = sizeof...(Args) };
     using Signature = ReturnType (*)(Args...);
-    typedef std::function<ReturnType (Args...)> AsFunction;
+    typedef std::function<ReturnType (Args...)> AsStdFunction;
 };
+
+template<typename Func>
+auto as_function(Func&&func) -> typename std::enable_if<FuncInfo<Func>::IsFunction, std::function<typename FuncInfo<Func>::Signature>>::type
+{
+    return std::function<typename FuncInfo<Func>::Signature>(std::forward<Func>(func));
+}
+
+template<typename Lambda>
+auto as_function(Lambda&& lambda) -> typename std::enable_if<!FuncInfo<Lambda>::IsFunction, typename LambdaInfo<Lambda>::AsStdFunction>::type
+{
+    return typename LambdaInfo<Lambda>::AsStdFunction(lambda);
+}
 
 template<class Holder, typename = void>
 struct is_smart_ptr : std::false_type {};
