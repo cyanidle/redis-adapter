@@ -4,7 +4,7 @@ ARG APP_NAME=redis-adapter
 ARG TARGET_DEVICE=rpi4
 ARG JOBS=4
 
-FROM rsk39/qt5-env:${TARGET_DEVICE} as builder
+FROM rsk39.tech/qt5-env:${TARGET_DEVICE} as builder
 ARG APP_NAME
 ENV APP_NAME=${APP_NAME}
 ARG APP_DIR

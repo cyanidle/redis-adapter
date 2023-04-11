@@ -45,7 +45,7 @@ namespace Settings {
         Q_GADGET
         IS_SERIALIZABLE
         FIELD(Required<QString>, stream_key)
-        FIELD(Required<quint32>, stream_size, 1000000u)
+        FIELD(NonRequired<quint32>, stream_size, 1000000u)
     };
 
     struct RADAPTER_API RedisStreamConsumer : RedisStreamBase {
