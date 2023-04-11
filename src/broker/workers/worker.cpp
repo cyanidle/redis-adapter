@@ -302,10 +302,12 @@ void Worker::onMsgFromBroker(const Radapter::WorkerMsg &msg)
             } else if (msg.command()->failCallback()) {
                 msg.command()->failCallback().execute(msg);
                 return;
+            } else {
+                onReply(msg);
             }
+        } else {
+            onReply(msg);
         }
-        onReply(msg);
-        return;
     } else if (msg.isCommand()) {
         if (!msg.command()) {
             workerError(this) << "Null Command, while flagged as command! Sender: " << msg.sender();

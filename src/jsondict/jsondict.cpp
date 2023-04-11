@@ -289,10 +289,20 @@ JsonDict JsonDict::nest(const QString &separator) const
     return result.nest(separator);
 }
 
-JsonDict JsonDict::merge(const JsonDict &src, bool overwrite) const
+JsonDict JsonDict::merge(const JsonDict &src) const
 {
     JsonDict result;
-    return result.merge(src, overwrite);
+    return result.merge(src, true);
+}
+
+QVariant &JsonDict::operator[](const iterator &akey)
+{
+    return (*this)[akey.key()];
+}
+
+QVariant &JsonDict::operator[](const const_iterator &akey)
+{
+    return (*this)[akey.key()];
 }
 
 QVariant &JsonDict::operator[](const QStringList &akey)
@@ -301,8 +311,8 @@ QVariant &JsonDict::operator[](const QStringList &akey)
         throw std::invalid_argument("Cannot access JsonDict with empty QStringList as key!");
     }
     QVariant* currentVal = &m_dict[akey.constFirst()];
-    for (int index = 1; index < (akey.size()); ++index) {
-        auto &nextKey =  akey.at(index);
+    for (int index = 1; index < akey.size(); ++index) {
+        auto &nextKey = akey[index];
         auto nextIndex = toIndex(nextKey);
         auto indexValid = nextIndex != -1;
         if (currentVal->isValid()) {
@@ -402,6 +412,24 @@ QVariant JsonDict::take(const QString &akey)
 bool JsonDict::isEmpty() const
 {
     return m_dict.isEmpty();
+}
+
+JsonDict JsonDict::diff(const JsonDict &other) const
+{
+    JsonDict result;
+    for (auto &iter : other) {
+        auto key = iter.key();
+        if (!contains(key)) {
+            result.insert(key, iter.value());
+        }
+    }
+    for (auto &iter : *this) {
+        auto key = iter.key();
+        if (!other.contains(key)) {
+            result.insert(key, iter.value());
+        }
+    }
+    return result;
 }
 
 JsonDict &JsonDict::nest(QChar separator)

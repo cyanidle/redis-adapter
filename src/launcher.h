@@ -46,6 +46,7 @@ private:
     void initMocks();
     void initLocalization();
     void initLoggingWorkers();
+    void preInit();
     void initBrokerSettings();
     void parseCommandlineArgs();
     void initProxies();

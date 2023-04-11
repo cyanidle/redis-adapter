@@ -3,8 +3,9 @@
 #include "broker/workers/loggingworker.h"
 #include "broker/workers/loggingworkersettings.h"
 #include "broker/workers/mockworker.h"
+#include "serializable/common_validators.h"
 #include "settings-parsing/convertutils.hpp"
-#include "connectors/websocketserverconnector.h"
+#include "websocket/websocketserver.h"
 #include "launcher.h"
 #include "radapterlogging.h"
 #include "localstorage.h"
@@ -47,16 +48,17 @@ Launcher::Launcher(QObject *parent) :
     qSetMessagePattern(RADAPTER_CUSTOM_MESSAGE_PATTERN);
     m_argsParser.setApplicationDescription("Redis Adapter");
     parseCommandlineArgs();
+    tryInit(this, &Launcher::preInit, "preInit"); // should be first
     tryInit(this, &Launcher::initRoutedJsons, "routed_jsons");
     tryInit(this, &Launcher::initLogging, "logging");
     tryInit(this, &Launcher::initLoggingWorkers, "logging_workers");
     tryInit(this, &Launcher::initRedis, "redis");
     tryInit(this, &Launcher::initModbus, "modbus");
-    tryInit(this, &Launcher::initBrokerSettings, "broker-settings");
+    tryInit(this, &Launcher::initBrokerSettings, "broker_settings");
     tryInit(this, &Launcher::initWebsockets, "websockets");
     tryInit(this, &Launcher::initSql, "sql");
     tryInit(this, &Launcher::initFilters, "filters");
-    tryInit(this, &Launcher::initSockets, "raw-sockets");
+    tryInit(this, &Launcher::initSockets, "raw_sockets");
     tryInit(this, &Launcher::initMocks, "mocks");
     tryInit(this, &Launcher::initLocalization, "localization");
     LocalStorage::init(this);
@@ -76,6 +78,10 @@ void Launcher::initRoutedJsons()
     reDebug() << "config: Json Routes count: " << jsonBindings.size();
 }
 
+void Launcher::preInit()
+{
+    Validator::registerAllCommon();
+}
 
 void Launcher::setLoggingFilters(const QMap<QString, bool> &loggers)
 {
@@ -263,12 +269,11 @@ void Launcher::initModbus()
 
 void Launcher::initWebsockets()
 {
-    for (auto &wsClient : parseArrayOf<Settings::WebsocketClientInfo>("websocket.clients")) {
+    for (auto &wsClient : parseArrayOf<Settings::WebsocketClient>("websocket.clients")) {
         addWorker(new Websocket::Client(wsClient, new QThread(this)));
     }
-    auto websocketServer = parseObject<Settings::WebsocketServerInfo>("websocket.server");
-    if (websocketServer.port) {
-        addWorker(new Websocket::ServerConnector(websocketServer, new QThread(this)));
+    for (auto &wsServer : parseArrayOf<Settings::WebsocketServer>("websocket.servers")) {
+        addWorker(new Websocket::Server(wsServer, new QThread(this)));
     }
 }
 

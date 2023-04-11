@@ -1,8 +1,9 @@
-#ifndef COMMON_VALIDATORS_HPP
-#define COMMON_VALIDATORS_HPP
+#ifndef COMMON_VALIDATORS_H
+#define COMMON_VALIDATORS_H
 
 #include <QVariant>
-namespace Validate {
+
+namespace Validator {
 
 template<int min, int max>
 struct IntMinMax {
@@ -17,8 +18,10 @@ struct IntMinMax {
 using Minutes = IntMinMax<0, 60>;
 using Hours24 = IntMinMax<0, 24>;
 using Hours12 = IntMinMax<0, 12>;
-using DayOfWeekInt = IntMinMax<1, 7>;
+using DayOfWeek = IntMinMax<1, 7>;
+
+void registerAllCommon();
 
 }
 
-#endif // COMMON_VALIDATORS_HPP
+#endif // COMMON_VALIDATORS_H

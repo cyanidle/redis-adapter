@@ -70,13 +70,8 @@ void ModbusSlave::postUpdate() {
 
 void ModbusMaster::postUpdate()
 {
-    if (reliable_mode) {
-        if (state_reader->isEmpty() || state_writer->isEmpty()) {
-            throw std::runtime_error("[ModbusMaster: RELIABLE_MODE] Missing 'state_writer' or 'state_reader");
-        }
-    }
     for (auto &name: register_names) {
-        auto &toMerge = (*allRegisters)[name.replace('.', ':')];
+        auto &toMerge = (*allRegisters).value(name.replace('.', ':'));
         if (toMerge.isEmpty()) {
             throw std::runtime_error(worker->name->toStdString() + ": Missing registers with name: " + name.toStdString());
         }

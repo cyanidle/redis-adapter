@@ -175,6 +175,9 @@ void Broker::connectTwoProxies(const QString &producer, const QString &consumer)
 void Broker::connectTwoProxies(WorkerProxy* producer, WorkerProxy* consumer)
 {
     QMutexLocker locker(&m_mutex);
+    if (producer == consumer && !settings->allow_self_connect) {
+        throw std::runtime_error("Attempt to connect worker to itself! Can be enabled by broker option: 'allow_self_connect'");
+    }
     auto pair = QPair<WorkerProxy*, WorkerProxy*>{producer, consumer};
     if (m_connected.contains(pair)) {
         return;

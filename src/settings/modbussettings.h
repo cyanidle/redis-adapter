@@ -75,13 +75,14 @@ namespace Settings {
     struct RADAPTER_API RegisterInfo : SerializableSettings {
         Q_GADGET
         IS_SERIALIZABLE
+        using Orders = Serializable::Validate<NonRequired<PackingMode>, OrdersValidator>;
+        FIELD(Orders, endianess)
         FIELD(RegisterTable, table)
+        FIELD(MarkNonRequired<RegisterValueType>, type, QMetaType::UShort)
         FIELD(Required<int>, index)
         FIELD(NonRequired<bool>, resetting, false) // not implemented yet
         FIELD(NonRequired<bool>, writable, true)
-        FIELD(MarkNonRequired<RegisterValueType>, type, QMetaType::UShort)
-        using Orders = Serializable::Validate<NonRequired<PackingMode>, OrdersValidator>;
-        FIELD(Orders, endianess)
+        FIELD(NonRequiredValidator, validator)
         void postUpdate() override;
     };
     typedef QMap<QString /*reg:Name*/, RegisterInfo> Registers;
@@ -101,12 +102,12 @@ namespace Settings {
         FIELD(Required<QString>, device_name)
         FIELD(Required<quint16>, slave_id)
         FIELD(RequiredSequence<QString>, register_names)
+        FIELD(NonRequired<quint32>, reconnect_timeout_ms, 3000)
     };
 
     struct RADAPTER_API ModbusSlave : ModbusWorker {
         Q_GADGET
         IS_SERIALIZABLE
-        FIELD(NonRequired<quint32>, reconnect_timeout_ms, 5000)
 
         ModbusDevice device{};
         RegisterCounts counts{};
@@ -121,12 +122,9 @@ namespace Settings {
         FIELD(RequiredSequence<ModbusQuery>, queries)
 
         FIELD(NonRequired<quint32>, poll_rate, 500)
-        FIELD(NonRequired<quint32>, reconnect_timeout_ms, 5000)
         FIELD(NonRequired<quint32>, responce_time, 150)
         FIELD(NonRequired<quint32>, retries, 3)
 
-        FIELD(NonRequired<bool>, reliable_mode, false)
-        FIELD(NonRequired<quint32>, rewrite_timeout_ms, 3000)
         FIELD(NonRequired<QString>, state_writer)
         FIELD(NonRequired<QString>, state_reader)
 

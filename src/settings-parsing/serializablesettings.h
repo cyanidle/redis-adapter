@@ -4,6 +4,7 @@
 #include <QJsonDocument>
 #include "serializable/serializable.h"
 #include "serializable/validated.hpp"
+#include "serializable/validator_fetch.h"
 #define NON_REQUIRED_ATTR "non_required"
 Q_DECLARE_METATYPE(QJsonDocument::JsonFormat)
 
@@ -30,6 +31,8 @@ template<typename T>
 using RequiredSequence = Serializable::Sequence<T>;
 template<typename T>
 using Required = Serializable::Plain<T>;
+using RequiredValidator = Serializable::Validator;
+using NonRequiredValidator = MarkNonRequired<Serializable::Validator>;
 
 struct SerializableSettings : public Serializable::Object
 {

@@ -1,71 +1,38 @@
 #ifndef WEBSOCKETSERVER_H
 #define WEBSOCKETSERVER_H
 
-#include <QObject>
-#include <QWebSocketServer>
-#include <QWebSocket>
-#include <QJsonObject>
-#include <QTimer>
+#include "broker/workers/worker.h"
+#include "settings/settings.h"
 
+class QTimer;
+class QWebSocketServer;
+class QWebSocket;
 namespace Websocket {
-    class RADAPTER_API Server;
-}
 
-class Websocket::Server : public QObject
+class RADAPTER_API Server : public Radapter::Worker
 {
     Q_OBJECT
 public:
-    explicit Server(quint16 port, QObject *parent);
-    ~Server() override; 
-
-    void start();
-    void close();
-
-    quint8 clientsCounter() const;
-
-signals:
-    void deviceDataReceived(const QVariant &formattedData);
-    void requestReceived(const QVariant &formattedData);
-    void clientsAmountChanged(const quint8 counter);
-    void dataInitRequested();
-    void persistentDataRequested();
-
-public slots:
-    void reconnect();
-    void connectClient();
-    void disconnectClient();
-    void publishClientsCounter();
-    void publishNewData(const QVariant &formattedData);
-    void receiveClientData(const QString &message);
-    void publishFullData();
-
+    explicit Server(const Settings::WebsocketServer &settings, QThread *thread);
+    bool isConnected() const;
+    ~Server() override;
 private slots:
-
+    void onRun() override;
+    void onMsg(const Radapter::WorkerMsg& msg) override;
+    void onNewConnection();
+    void onTextMsg(const QString &data);
+    void checkClients();
 private:
-    void initData();
-    void doRun();
+    void reconnect();
 
-    void initClient(QWebSocket *client);
-    void addClient(QWebSocket *client);
-    void removeClient(QWebSocket *client);
-
-    void publishJson(const QJsonDocument &document);
-    void publishText(const QString &text);
-    void sendTextMessage(QWebSocket *client, const QString &text);
-    QString toJson(const QJsonDocument &document) const;
-
-    void updateLocalData(const QJsonObject &newData);
-    void mergeJsonObjects(QJsonObject &destObject, const QJsonObject &srcObject);
-
-    QJsonDocument getFullData(bool &ok) const;
-
-    quint16 m_port;
-    QTimer* m_reconnectTimer{};
-    QTimer* m_fullDataSender{};
+    QTimer *m_pingTimer;
     QWebSocketServer* m_websocketServer;
     QSet<QWebSocket*> m_clients;
-    QJsonObject m_localData;
-    bool m_persistentDataInited;
+    QHash<QWebSocket*, int> m_ttls;
+    Settings::WebsocketServer m_settings;
+    std::atomic<bool> m_isConnected;
 };
+
+}
 
 #endif // LOTOSGATESERVER_H

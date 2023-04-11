@@ -166,14 +166,26 @@ struct RADAPTER_API LocalizationInfo : SerializableSettings {
     FIELD(RequiredTimeZone, time_zone)
 };
 
-struct RADAPTER_API WebsocketServerInfo : SerializableSettings {
+struct RADAPTER_API WebsocketServer : SerializableSettings {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(NonRequired<quint16>, port, 1234)
     FIELD(Required<Radapter::WorkerSettings>, worker)
+
+    FIELD(NonRequired<quint16>, port, 1234)
+    FIELD(NonRequired<quint16>, heartbeat_ms, 10000)
+    FIELD(NonRequired<quint16>, keepalive_time, 20000)
+    FIELD(NonRequired<QString>, bind_to, "0.0.0.0")
+    FIELD(NonRequired<QString>, name, "redis-adapter")
+    FIELD(NonRequired<bool>, secure, false)
+
+    POST_UPDATE {
+        if (heartbeat_ms >= keepalive_time) {
+            throw std::runtime_error("Cannot have 'heartbeat_ms' bigger than 'keepalive_time'");
+        }
+    }
 };
 
-struct RADAPTER_API WebsocketClientInfo : WebsocketServerInfo {
+struct RADAPTER_API WebsocketClient : WebsocketServer {
     Q_GADGET
     IS_SERIALIZABLE
     FIELD(Required<QString>, host)

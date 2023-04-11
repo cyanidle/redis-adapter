@@ -32,7 +32,6 @@ signals:
     void allQueriesDone();
     void connected();
     void disconnected();
-    void stateError();
 public slots:
     void onMsg(const Radapter::WorkerMsg &msg) override;
     void connectDevice();
@@ -54,19 +53,19 @@ private:
     void saveState();
     void fetchState();
     void write(const JsonDict &data);
-    void stateErrorHandler();
     void attachToChannel();
 
     Settings::ModbusMaster m_settings;
     QTimer *m_reconnectTimer;
     QTimer *m_readTimer;
-    QTimer *m_rewriteTimer;
     QHash<QModbusDataUnit::RegisterType, QHash<int, QString>> m_reverseRegisters;
     QModbusClient *m_device = nullptr;
     std::atomic<bool> m_connected{false};
     QQueue<QModbusDataUnit> m_readQueue;
     QQueue<QModbusDataUnit> m_writeQueue;
     JsonDict m_state;
+    JsonDict m_wantedState;
+    QMap<QString, quint8> m_rewriteAttempts;
     Redis::CacheProducer *m_stateWriter;
     Redis::CacheConsumer *m_stateReader;
 };

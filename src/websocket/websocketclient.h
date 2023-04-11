@@ -18,7 +18,7 @@ class Websocket::Client : public Radapter::Worker
 {
     Q_OBJECT
 public:
-    explicit Client(const Settings::WebsocketClientInfo &config, QThread *thread);
+    explicit Client(const Settings::WebsocketClient &config, QThread *thread);
     ~Client() override;
     bool isRunning() const;
 

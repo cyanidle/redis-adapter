@@ -10,7 +10,7 @@ using namespace Websocket;
 #define HEARTBEAT_PERIOD_MS         1000
 #define HEARTBEAT_REPLY_TIMEOUT_MS  10000
 
-Client::Client(const Settings::WebsocketClientInfo &config, QThread *thread)
+Client::Client(const Settings::WebsocketClient &config, QThread *thread)
     : Worker(config.worker, thread),
       m_serverHost(config.host),
       m_serverPort(config.port),

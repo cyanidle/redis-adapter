@@ -53,6 +53,10 @@ public:
     //! Функция доступа к вложенным элементам.
     /// \warning Попытка доступа к несуществующему ключу создает пустое значение в нем,
     /// не повлияет на данные, но стоит быть внимательным (возвращает QVariant& доступный для модификации)
+    struct iterator;
+    struct const_iterator;
+    QVariant& operator[](const iterator& akey);
+    QVariant& operator[](const const_iterator& akey);
     QVariant& operator[](const QStringList& akey);
     QVariant& operator[](const QString& akey);
     void insert(const QStringList& akey, const JsonDict &value);
@@ -101,14 +105,13 @@ public:
     QVariant take(const QStringList &akey);
     QVariant take(const QString &akey);
     bool isEmpty() const;
+    JsonDict diff(const JsonDict &other) const;
     JsonDict &nest(QChar separator = ':');
     JsonDict &nest(const QString &separator);
     JsonDict &merge(const JsonDict &src, bool overwrite = true);
     JsonDict nest(const QString &separator) const;
-    JsonDict merge(const JsonDict &src, bool overwrite = true) const;
+    JsonDict merge(const JsonDict &src) const;
     QVariantMap flatten(const QString &separator = ":") const;
-    struct iterator;
-    struct const_iterator;
     template <typename MapT>
     struct iterator_base;
     JsonDict::iterator begin();
@@ -234,6 +237,7 @@ private:
         NestedIter end;
     };
     QStack<TraverseState> m_traverseHistory;
+    friend JsonDict;
 };
 
 struct JsonDict::const_iterator : public iterator_base<const QVariantMap> {
@@ -252,6 +256,8 @@ struct JsonDict::const_iterator : public iterator_base<const QVariantMap> {
     using iterator_base::isDomainList;
     using iterator_base::domainMap;
     using iterator_base::domainList;
+private:
+    friend JsonDict;
 };
 
 
@@ -271,6 +277,8 @@ struct JsonDict::iterator : public iterator_base<QVariantMap> {
     using iterator_base::isDomainList;
     using iterator_base::domainMap;
     using iterator_base::domainList;
+private:
+    friend JsonDict;
 };
 
 
