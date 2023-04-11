@@ -108,8 +108,12 @@ public:
     JsonDict diff(const JsonDict &other) const;
     JsonDict &nest(QChar separator = ':');
     JsonDict &nest(const QString &separator);
-    JsonDict &merge(const JsonDict &src, bool overwrite = true);
     JsonDict nest(const QString &separator) const;
+    JsonDict &operator+=(const JsonDict &src);
+    JsonDict operator+(const JsonDict &src) const;
+    JsonDict operator-(const JsonDict &src) const;
+    JsonDict &operator-=(const JsonDict &src);
+    JsonDict &merge(const JsonDict &src, bool overwrite = true);
     JsonDict merge(const JsonDict &src) const;
     QVariantMap flatten(const QString &separator = ":") const;
     template <typename MapT>

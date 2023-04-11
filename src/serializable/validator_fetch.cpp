@@ -16,18 +16,28 @@ bool Validator::Executor::validate(QVariant &target) const
     return m_func(target);
 }
 
+QString Validator::Executor::name() const
+{
+    return allValidators->key(this);
+}
+
+QStringList Validator::Executor::aliases() const
+{
+    return allValidators->keys(this);
+}
+
 const Validator::Executor *Validator::fetch(const QLatin1String &name)
 {
     return allValidators->value(QString(name).toLower());
 }
 
-int Validator::Private::add(Function func, const char *name)
+int Validator::Private::add(Function func, const char *alias)
 {
-    if (!qstrlen(name)) return 0;
-    if (allValidators->contains(QLatin1String(name))) {
-        throw std::runtime_error(std::string("Duplicate validator with name: ") + name);
+    if (!qstrlen(alias)) return 0;
+    if (allValidators->contains(QLatin1String(alias))) {
+        throw std::runtime_error(std::string("Duplicate validator with name: ") + alias);
     }
-    allValidators->insert(QLatin1String(name), new Executor(func));
+    allValidators->insert(QLatin1String(alias), new Executor(func));
     return 0;
 }
 
@@ -59,10 +69,10 @@ QVariant Serializable::Validator::readVariant() const {
     return QVariant::fromValue(::Validator::nameOf(this->value));
 }
 
-int Validator::Private::add(Function func, const char **names, int count)
+int Validator::Private::add(Function func, const char **aliases, int count)
 {
     for (int i = 0; i < count; ++i) {
-        add(func, names[i]);
+        add(func, aliases[i]);
     }
     return 0;
 }

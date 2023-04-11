@@ -48,6 +48,8 @@ public:
     void setFlag(MsgFlag flag, bool value = true) noexcept;
     void clearFlags() noexcept;
     void clearJson();
+    void ignoreReply();
+    bool replyIgnored() const;
     Broker *broker();
     const QSet<Worker *> &receivers() const;
     QSet<Worker *> &receivers() noexcept;

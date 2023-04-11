@@ -48,6 +48,22 @@ WorkerMsg::WorkerMsg(Worker *sender,
 {
 }
 
+void WorkerMsg::ignoreReply()
+{
+    if (command()) {
+        command()->ignoreReply();
+    }
+}
+
+bool WorkerMsg::replyIgnored() const
+{
+    if (command()) {
+        return command()->replyIgnored();
+    } else {
+        return false;
+    }
+}
+
 Broker *WorkerMsg::broker()
 {
     return Broker::instance();
@@ -121,15 +137,16 @@ QString WorkerMsg::printFullDebug() const
         brokerError() << "Msg ID: " << m_id << " --> sender is not a workerBase!";
         return "Sender Error!";
     }
-    auto result = QStringLiteral("\n ### Msg Id: ");
-    result.reserve(100);
-    return result + QString::number(id()) + QStringLiteral(" Debug Info ###\n") +
-           QStringLiteral("# Sender: ") + senderWorker->printSelf()  + "\n" +
-           QStringLiteral("# Targets: [") + printReceivers().join(", ") + "]\n" +
-           QStringLiteral("# Flags: ") + printFlags() + "\n" +
-           QStringLiteral("# Flat Msg: \n") + printFlatData() + "\n\n" +
-           QStringLiteral("# Command: ") + (command() ? command()->metaObject()->className() : "None") + "\n" +
-           QStringLiteral("# Reply: ") + (reply() ? reply()->metaObject()->className() : "None") + "\n" +
-           QStringLiteral("### Msg Id: ") + QString::number(id()) + QStringLiteral(" Debug End  ###");
+    auto result = QStringLiteral("\n### Msg Id: ");
+    result.reserve(150);
+    auto flatData = QStringLiteral("# Flat Msg: \n") + printFlatData() + "\n\n";
+    return result.append(QString::number(id())).append(QStringLiteral(" Debug Info ###\n"))
+           .append(QStringLiteral("# Sender: ")).append(senderWorker->printSelf()).append("\n")
+           .append(QStringLiteral("# Targets: [")).append(printReceivers().join(", ")).append("]\n")
+           .append(QStringLiteral("# Flags: ")).append(printFlags()).append("\n")
+           .append(json().isEmpty() ? "\n" : flatData)
+           .append(QStringLiteral("# Command: ")).append(command() ? command()->metaObject()->className() : "None").append("\n")
+           .append(QStringLiteral("# Reply: ")).append(reply() ? reply()->metaObject()->className() : "None").append("\n\n")
+           .append(QStringLiteral("### Msg Id: ")).append(QString::number(id())).append(QStringLiteral(" Debug End  ###"));
 }
 

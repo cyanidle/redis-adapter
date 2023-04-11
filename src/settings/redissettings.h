@@ -21,7 +21,7 @@ namespace Settings {
         Q_GADGET
         IS_SERIALIZABLE
         FIELD(Required<Radapter::WorkerSettings>, worker)
-        FIELD(NonRequired<QString>, server_name)
+        FIELD(Required<QString>, server_name)
         FIELD(NonRequired<quint16>, db_index, 0)
         FIELD(NonRequired<quint16>, ping_delay, 10000)
         FIELD(NonRequired<quint16>, reconnect_delay, 1500)
@@ -95,7 +95,7 @@ namespace Settings {
     struct RADAPTER_API RedisCacheProducer : RedisConnector {
         Q_GADGET
         IS_SERIALIZABLE
-        FIELD(Required<QString>, object_hash_key)
+        FIELD(NonRequired<QString>, object_hash_key)
     };
 }
 

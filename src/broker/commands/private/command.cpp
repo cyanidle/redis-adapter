@@ -3,7 +3,8 @@
 namespace Radapter {
 
 Command::Command(quint32 type) :
-    m_type(type)
+    m_type(type),
+    m_ignoreReply(true)
 {
 }
 
@@ -42,6 +43,16 @@ void *Command::voidCast(const QMetaObject *meta)
 const void *Command::voidCast(const QMetaObject *meta) const
 {
     return const_cast<Command*>(this)->voidCast(meta);
+}
+
+void Command::ignoreReply()
+{
+    m_ignoreReply = true;
+}
+
+bool Command::replyIgnored() const
+{
+    return m_ignoreReply;
 }
 
 void Command::setCallback(const CommandCallback &cb)

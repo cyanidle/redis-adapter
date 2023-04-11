@@ -50,7 +50,7 @@ private:
     void initClient();
     void executeRead(const QModbusDataUnit &unit);
     void executeWrite(const QModbusDataUnit &state);
-    void saveState();
+    void saveState(const JsonDict &state);
     void fetchState();
     void write(const JsonDict &data);
     void attachToChannel();

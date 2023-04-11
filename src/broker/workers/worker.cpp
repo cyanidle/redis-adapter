@@ -250,21 +250,18 @@ void Worker::onReply(const Radapter::WorkerMsg &msg)
 {
     workerError(this) << ": received Reply from: " <<
         msg.sender()->printSelf() << "but not handled!";
-    throw std::runtime_error("Unhandled reply!");
 }
 
 void Worker::onCommand(const Radapter::WorkerMsg &msg)
 {
     workerError(this) << ": received Command from: " <<
         msg.sender()->printSelf() << "but not handled!";
-    throw std::runtime_error("Unhandled command!");
 }
 
 void Worker::onMsg(const Radapter::WorkerMsg &msg)
 {
     workerError(this) << ": received Generic Msg from: " <<
         msg.sender()->printSelf() << "but not handled!";
-    throw std::runtime_error("Unhandled msg!");
 }
 
 void Worker::onSendBasic(const JsonDict &msg)
@@ -305,6 +302,8 @@ void Worker::onMsgFromBroker(const Radapter::WorkerMsg &msg)
             } else {
                 onReply(msg);
             }
+        } else if (msg.command() && msg.command()->replyIgnored()) {
+            return;
         } else {
             onReply(msg);
         }

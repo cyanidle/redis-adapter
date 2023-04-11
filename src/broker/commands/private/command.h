@@ -44,6 +44,8 @@ public:
     virtual ~Command() = default;
     void *voidCast(const QMetaObject* meta);
     const void *voidCast(const QMetaObject* meta) const;
+    void ignoreReply();
+    bool replyIgnored() const;
     void setCallback(const CommandCallback &cb);
     void setFailCallback(const CommandCallback &cb);
     template <class User, class Slot>
@@ -65,6 +67,7 @@ private:
     CommandCallback m_cb;
     CommandCallback m_failCb;
     quint32 m_type;
+    bool m_ignoreReply;
 };
 
 template <typename Target>

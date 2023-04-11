@@ -113,11 +113,12 @@ const Settings::ModbusMaster &Master::config() const
     return m_settings;
 }
 
-void Master::saveState()
+void Master::saveState(const JsonDict &state)
 {
     if (m_stateWriter) {
-        auto command = prepareCommand(new Redis::Cache::WriteObject(workerName(), m_state));
+        auto command = prepareCommand(new Redis::Cache::WriteObject(workerName(), state));
         command.receivers() = {m_stateWriter};
+        command.ignoreReply();
         emit sendMsg(command);
     }
 }
@@ -128,6 +129,7 @@ void Master::fetchState()
         auto command = prepareCommand(new Redis::Cache::ReadObject(workerName()));
         command.setCallback(this, [this](const ReplyJson *reply){
             m_state.merge(reply->json());
+            m_wantedState.merge(m_state);
             emit sendBasic(m_state);
         });
         command.receivers() = {m_stateReader};
@@ -148,23 +150,30 @@ void Master::write(const JsonDict &data)
     }
     QList<QModbusDataUnit> results;
     for (auto& iter : data) {
+        if (!iter.value().isValid()) continue;
         auto fullKeyJoined = iter.key().join(":");
-        if (m_settings.registers.contains(fullKeyJoined)) {
-            auto regInfo = m_settings.registers.value(fullKeyJoined);
-            if (!regInfo.writable) {
-                workerInfo(this) << "Attempt to write to protected register: " << regInfo.print();
+        if (!m_settings.registers.contains(fullKeyJoined)) continue;
+        auto regInfo = m_settings.registers.value(fullKeyJoined);
+        if (!regInfo.writable) {
+            workerInfo(this) << "Attempt to write to protected register: " << regInfo.print();
+            continue;
+        }
+        auto value = iter.value();
+        if (!regInfo.validator.value->validate(value)) {
+            workerWarn(this, .nospace())
+                << "Property: '" << fullKeyJoined
+                << "' was invalidated by Validator[" << regInfo.validator.value->name()
+                << "] --> value: " << value;
+            continue;
+        }
+        if (value.canConvert(regInfo.type)) {
+            m_wantedState[iter.key()] = value;
+            if (m_state[iter.key()] == value) {
                 continue;
             }
-            auto &value = iter.value();
-            if (value.canConvert(regInfo.type)) {
-                m_wantedState[iter.key()] = value;
-                if (m_state[iter.key()] == value) {
-                    continue;
-                }
-                results.append(parseValueToDataUnit(value, regInfo));
-            } else {
-                workerError(this) << "Incompatible value under:" << fullKeyJoined << " --> " << value << "; Wanted: " << regInfo.type.value;
-            }
+            results.append(parseValueToDataUnit(value, regInfo));
+        } else {
+            workerError(this) << "Incompatible value under:" << fullKeyJoined << " --> " << value << "; Wanted: " << regInfo.type.value;
         }
     }
     for (const auto &state : mergeDataUnits(results)) {
@@ -302,7 +311,7 @@ void Master::formatAndSendJson(const JsonDict &json)
         }
     }
     if (!result.isEmpty()) {
-        saveState();
+        saveState(result);
         emit sendBasic(result);
     }
     if (!toRewrite.isEmpty()) {

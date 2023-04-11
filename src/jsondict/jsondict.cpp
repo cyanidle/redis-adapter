@@ -289,6 +289,26 @@ JsonDict JsonDict::nest(const QString &separator) const
     return result.nest(separator);
 }
 
+JsonDict &JsonDict::operator+=(const JsonDict &src)
+{
+    return merge(src);
+}
+
+JsonDict JsonDict::operator+(const JsonDict &src) const
+{
+    return merge(src);
+}
+
+JsonDict JsonDict::operator-(const JsonDict &src) const
+{
+    return diff(src);
+}
+
+JsonDict &JsonDict::operator-=(const JsonDict &src)
+{
+    return (*this) = diff(src);
+}
+
 JsonDict JsonDict::merge(const JsonDict &src) const
 {
     JsonDict result;

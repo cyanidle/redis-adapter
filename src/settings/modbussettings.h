@@ -77,12 +77,12 @@ namespace Settings {
         IS_SERIALIZABLE
         using Orders = Serializable::Validate<NonRequired<PackingMode>, OrdersValidator>;
         FIELD(Orders, endianess)
+        FIELD(NonRequiredValidator, validator)
         FIELD(RegisterTable, table)
         FIELD(MarkNonRequired<RegisterValueType>, type, QMetaType::UShort)
         FIELD(Required<int>, index)
         FIELD(NonRequired<bool>, resetting, false) // not implemented yet
         FIELD(NonRequired<bool>, writable, true)
-        FIELD(NonRequiredValidator, validator)
         void postUpdate() override;
     };
     typedef QMap<QString /*reg:Name*/, RegisterInfo> Registers;
