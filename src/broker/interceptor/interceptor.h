@@ -4,18 +4,18 @@
 #include "private/global.h"
 
 namespace Radapter {
-class RADAPTER_API InterceptorBase;
+class RADAPTER_API Interceptor;
 class WorkerMsg;
 class Worker;
-typedef QSet<InterceptorBase*> Interceptors;
+typedef QSet<Interceptor*> Interceptors;
 }
 
 //! Класс, перехватывающий трафик
-class Radapter::InterceptorBase : public QObject
+class Radapter::Interceptor : public QObject
 {
     Q_OBJECT
 public:
-    explicit InterceptorBase();
+    explicit Interceptor();
     const Worker* worker() const;
     QThread *thread();
 signals:

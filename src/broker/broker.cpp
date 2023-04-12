@@ -1,17 +1,20 @@
 #include "broker.h"
 #include "brokersettings.h"
 #include "radapterlogging.h"
+#include <QMutex>
+#include <QMutexLocker>
+#include "workers/worker.h"
+#include "workers/private/workerproxy.h"
 #include <QCoreApplication>
 
 using namespace Radapter;
 Q_GLOBAL_STATIC(BrokerSettings, settings)
-QRecursiveMutex Broker::m_mutex;
+Q_GLOBAL_STATIC(QRecursiveMutex, staticMutex)
 
 Broker::Broker() :
     QObject(),
     m_proxies(),
     m_connected(),
-    m_wasMassConnectCalled(false),
     m_debugTable()
 {
 }
@@ -23,6 +26,7 @@ bool Broker::isDebugEnabled(const QString &workerName, QtMsgType type)
 
 void Broker::applyWorkerLoggingFilters(const QMap<QString, QMap<QtMsgType, bool>> &table)
 {
+    QMutexLocker locker(staticMutex);
     for (auto iter{table.begin()}; iter != table.end(); ++iter) {
         m_debugTable[iter.key()] = {iter.value().cbegin(), iter.value().cend()};
     }
@@ -58,7 +62,7 @@ void Broker::proxyDestroyed(QObject *proxy)
 
 void Broker::registerProxy(WorkerProxy* proxy)
 {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(staticMutex);
     if (!proxy) {
         throw std::runtime_error("Nullptr passed to broker.registerProxy()!");
     }
@@ -91,7 +95,7 @@ void Broker::registerProxy(WorkerProxy* proxy)
 
 void Broker::connectProducersAndConsumers()
 {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(staticMutex);
     if (m_wasMassConnectCalled) {
         brokerError() << "Broker: connectProducersAndConsumers() was already called!";
         throw std::runtime_error("Broker: connectProducersAndConsumers() was already called!");
@@ -99,17 +103,17 @@ void Broker::connectProducersAndConsumers()
     m_wasMassConnectCalled = true;
     for (auto proxyIter = m_proxies.constBegin(); proxyIter != m_proxies.constEnd(); ++proxyIter) {
         for (auto &consumer : proxyIter.value()->consumersNames()) {
-            connectTwoProxies(proxyIter.key(), consumer);
+            connectTwo(proxyIter.key(), consumer);
         }
         for (auto &producer : proxyIter.value()->producersNames()) {
-            connectTwoProxies(producer, proxyIter.key());
+            connectTwo(producer, proxyIter.key());
         }
     }
 }
 
 void Broker::runAll()
 {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(staticMutex);
     for (auto &proxy : m_proxies) {
         auto worker = proxy->worker();
         if (!worker->wasStarted()) worker->run();
@@ -129,18 +133,19 @@ void Broker::publishEvent(const BrokerEvent &event)
 
 void Broker::applySettings(const BrokerSettings &newSettings)
 {
+    QMutexLocker locker(staticMutex);
     *(settings) = newSettings;
 }
 
 bool Broker::exists(const QString &workerName) const
 {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(staticMutex);
     return m_proxies.contains(workerName);
 }
 
 Worker* Broker::getWorker(const QString &workerName)
 {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(staticMutex);
     if (m_proxies.contains(workerName)) {
         return m_proxies[workerName]->worker();
     } else {
@@ -150,13 +155,23 @@ Worker* Broker::getWorker(const QString &workerName)
 
 bool Broker::wasStarted()
 {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(staticMutex);
     return m_wasMassConnectCalled;
 }
 
-void Broker::connectTwoProxies(const QString &producer, const QString &consumer)
+void Broker::registerInterceptor(const QString &name, Interceptor *interceptor)
 {
-    QMutexLocker locker(&m_mutex);
+    m_interceptors.insert(name, interceptor);
+}
+
+Interceptor *Broker::getInterceptor(const QString &name) const
+{
+    return m_interceptors.value(name);
+}
+
+void Broker::connectTwo(const QString &producer, const QString &consumer)
+{
+    QMutexLocker locker(staticMutex);
     if (!m_proxies.value(producer)) {
         brokerWarn() << "Broker: connectProxies: No proxy (producer) with name: " << producer;
         brokerWarn() << "^ Wanted by: " << consumer;
@@ -174,7 +189,7 @@ void Broker::connectTwoProxies(const QString &producer, const QString &consumer)
 
 void Broker::connectTwoProxies(WorkerProxy* producer, WorkerProxy* consumer)
 {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(staticMutex);
     if (producer == consumer && !settings->allow_self_connect) {
         throw std::runtime_error("Attempt to connect worker to itself! Can be enabled by broker option: 'allow_self_connect'");
     }
@@ -201,4 +216,9 @@ void Broker::connectTwoProxies(WorkerProxy* producer, WorkerProxy* consumer)
 void Broker::onEvent(const BrokerEvent &event)
 {
     emit fireEvent(event);
+}
+
+Broker *Radapter::Broker::instance() {
+    static Broker* broker {new Broker()};
+    return broker;
 }

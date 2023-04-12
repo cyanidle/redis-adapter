@@ -5,7 +5,7 @@
 #include "serializable/serializable.h"
 #include "serializable/bindable.hpp"
 #include "serializable/validated.hpp"
-#include "serializable/common_validators.h"
+#include "validators/common_validators.h"
 
 class RoutedObject : protected Serializable::Object {
 public:

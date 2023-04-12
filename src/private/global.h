@@ -2,7 +2,6 @@
 #define RADAPTER_BROKER_GLOBAL_H
 
 #include <QObject>
-#include <QMetaMethod>
 
 #define RADAPTER_VERSION "0.3"
 

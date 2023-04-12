@@ -3,6 +3,6 @@ SOURCES+= \
    $$PWD/modbusparsing.cpp \
    $$PWD/modbusslave.cpp
 HEADERS+= \
-   $$PWD/modbusslave.h \
    $$PWD/modbusmaster.h \
-   $$PWD/modbusparsing.h
+   $$PWD/modbusparsing.h \
+   $$PWD/modbusslave.h

@@ -20,7 +20,7 @@ void Settings::parseRegisters(const QVariantMap &registersFile) {
                     auto regName = iter.domainKey().join(":");
                     auto regInfo = *iter.domainMap();
                     regInfo["table"] = toInsert;
-                    (*allRegisters)[deviceName][regName] = fromQMap<RegisterInfo>(regInfo);
+                    (*allRegisters)[deviceName][regName] = parseObject<RegisterInfo>(regInfo);
                 }
             }
         }

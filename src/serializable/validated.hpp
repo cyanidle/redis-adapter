@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QVariant>
 #include <QSet>
+#include "field_super.h"
 
 namespace Serializable {
 
@@ -25,11 +26,7 @@ void validate(QVariant &target, typename std::enable_if<sizeof...(Validators)>::
 
 template <typename Target, typename Validator, typename...Validators>
 struct PreValidator : public Target {
-    using typename Target::valueType;
-    using typename Target::valueRef;
-    using Target::Target;
-    using Target::operator=;
-    using Target::operator==;
+    FIELD_SUPER(Target)
     bool updateWithVariant(const QVariant &source) {
         auto copy = source;
         validate<Validator, Validators...>(copy);

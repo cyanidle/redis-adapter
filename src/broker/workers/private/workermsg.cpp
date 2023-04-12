@@ -1,4 +1,5 @@
 #include "workermsg.h"
+#include <QMetaEnum>
 #include "radapterlogging.h"
 #include "../worker.h"
 #include "broker/broker.h"

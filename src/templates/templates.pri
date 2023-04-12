@@ -1,10 +1,10 @@
 SOURCES+=
 HEADERS+= \
+   $$PWD/algorithms.hpp \
    $$PWD/callable_info.hpp \
    $$PWD/containerfilter.hpp \
-   $$PWD/zipiterator.hpp \
+   $$PWD/enumerator.hpp \
    $$PWD/metaprogramming.hpp \
    $$PWD/metatypes.h \
    $$PWD/reverser.hpp \
-   $$PWD/algorithms.hpp \
-   $$PWD/enumerator.hpp
+   $$PWD/zipiterator.hpp

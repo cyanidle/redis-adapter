@@ -24,24 +24,38 @@ private:
 #define POST_UPDATE virtual void postUpdate() override
 
 template <typename T>
-T fromQMap(const QVariantMap &source) {
+T parseObject(const QVariantMap &source) {
     T res;
     res.update(source);
     return res;
 }
 
 template <typename T>
-QList<T> fromQList(const QVariantList &source) {
+QList<T> parseListOf(const QVariantList &source) {
     QList<T> result;
     for (const auto &subval : source) {
         auto asMap = subval.toMap();
         T temp;
-        temp.update(asMap);
-        result.append(temp);
+        if (temp.update(asMap)) {
+            result.append(temp);
+        }
     }
     return result;
 }
 
+template <typename T>
+QMap<QString, T> parseMapOf(const QVariantMap &source) {
+    QMap<QString, T> result;
+    for (auto iter = source.constBegin(); iter != source.constEnd(); ++iter) {
+        auto asMap = iter->toMap();
+        T temp;
+        if (temp.update(asMap)) {
+            result.insert(iter.key(), temp);
+        }
+    }
+    return result;
 }
+
+} //namespace Serializable
 Q_DECLARE_METATYPE(Serializable::Object*)
 #endif // SERIALIZER_H

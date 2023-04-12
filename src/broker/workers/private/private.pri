@@ -3,5 +3,5 @@ SOURCES+= \
    $$PWD/workerproxy.cpp
 HEADERS+= \
    $$PWD/workerdebug.h \
-   $$PWD/workerproxy.h \
-   $$PWD/workermsg.h
+   $$PWD/workermsg.h \
+   $$PWD/workerproxy.h

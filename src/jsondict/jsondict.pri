@@ -1,4 +1,4 @@
 SOURCES+= \
-    $$PWD/jsondict.cpp
+   $$PWD/jsondict.cpp
 HEADERS+= \
-    $$PWD/jsondict.h
+   $$PWD/jsondict.h

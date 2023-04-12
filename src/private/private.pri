@@ -1,4 +1,4 @@
 SOURCES+=
 HEADERS+= \
-   $$PWD/global.h \
-   $$PWD/commandreplymacros.h
+   $$PWD/commandreplymacros.h \
+   $$PWD/global.h

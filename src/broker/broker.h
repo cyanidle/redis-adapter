@@ -1,14 +1,17 @@
 #ifndef BROKER_H
 #define BROKER_H
 
-#include <QMutex>
-#include <QMutexLocker>
-#include "workers/private/workerproxy.h"
-#include "workers/worker.h"
 #include "private/global.h"
+#include <QMap>
+#include <QHash>
 
 namespace Radapter {
 class BrokerSettings;
+class Worker;
+class WorkerProxy;
+class Interceptor;
+class BrokerEvent;
+class WorkerMsg;
 class RADAPTER_API Broker : public QObject
 {
     Q_OBJECT
@@ -20,13 +23,15 @@ public:
     template <class Target>
     Target* getWorker(const QString &workerName);
     bool wasStarted();
+    void registerInterceptor(const QString &name, Interceptor *interceptor);
+    Interceptor *getInterceptor(const QString &name) const;
     void registerProxy(WorkerProxy* proxy);
     void connectProducersAndConsumers();
     template <typename Target>
     QList<Target*> getAll();
     void runAll();
     void publishEvent(const Radapter::BrokerEvent &event);
-    void connectTwoProxies(const QString &producer,
+    void connectTwo(const QString &producer,
                            const QString &consumer);
     bool isDebugEnabled(const QString &workerName, QtMsgType type);
     //! \warning Not Thread-Safe
@@ -42,28 +47,21 @@ private slots:
     void proxyDestroyed(QObject *proxy);
 private:
     explicit Broker();
+    QMap<QString, Interceptor*> m_interceptors;
     QMap<QString, WorkerProxy*> m_proxies;
+    QHash<QString, QHash<QtMsgType, bool>> m_debugTable;
     QList<QPair<WorkerProxy*, WorkerProxy*>> m_connected;
     bool m_wasMassConnectCalled;
-    QHash<QString, QHash<QtMsgType, bool>> m_debugTable;
-    static QRecursiveMutex m_mutex;
 };
 
 template<typename Target>
 QList<Target*> Broker::getAll()
 {
     QList<Target*> result;
-    for (auto &proxy : m_proxies) {
-        if (proxy->worker()->is<Target>()) {
-            result.append(proxy->worker()->as<Target>());
-        }
+    for (auto worker = m_proxies.keyBegin(); worker != m_proxies.keyEnd(); ++worker) {
+        result.append(qobject_cast<Target>(getWorker(*worker)));
     }
     return result;
-}
-
-inline Broker *Broker::instance() {
-    static Broker* broker {new Broker()};
-    return broker;
 }
 
 template <class Target>

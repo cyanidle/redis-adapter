@@ -4,6 +4,7 @@
 #include "private/global.h"
 #include "private/impl_serializable.h"
 #include "radapterlogging.h"
+#include "field_super.h"
 
 namespace Serializable {
     struct FieldConcept;
@@ -419,8 +420,8 @@ struct PlainMapping : public Private::MappingCommon<T> {
     }
     QVariant readVariant() const {
         QVariantMap values;
-        for (auto iter = this->value.begin(); iter != this->value.cend(); +iter) {
-            values.insert(iter().key(), iter().value().serialize());
+        for (auto iter = this->value.begin(); iter != this->value.cend(); ++iter) {
+            values.insert(iter.key(), QVariant::fromValue(iter.value()));
         }
         return values;
     }

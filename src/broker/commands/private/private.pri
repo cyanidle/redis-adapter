@@ -1,6 +1,6 @@
 SOURCES+= \
-   $$PWD/commandcallback.cpp \
-   $$PWD/command.cpp
+   $$PWD/command.cpp \
+   $$PWD/commandcallback.cpp
 HEADERS+= \
-   $$PWD/commandcallback.h \
-   $$PWD/command.h
+   $$PWD/command.h \
+   $$PWD/commandcallback.h

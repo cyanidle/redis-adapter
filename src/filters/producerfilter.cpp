@@ -1,7 +1,7 @@
 #include "producerfilter.h"
 
 ProducerFilter::ProducerFilter(const Settings::Filters::Table &filters)
-    : InterceptorBase(),
+    : Interceptor(),
       m_strategy(StrategyStrict),
       m_filters(filters),
       m_last()

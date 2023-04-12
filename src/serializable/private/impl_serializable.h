@@ -79,7 +79,6 @@ static_assert(is_wrapped, "Dont use raw types in FIELD() macro"); \
         ::Serializable::Private::check_type<THIS_TYPE>(); \
         return &this->staticMetaObject; \
     };
-
 }
 
 #endif // SERIALIZER_H

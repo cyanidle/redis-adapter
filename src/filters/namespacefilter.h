@@ -5,7 +5,7 @@
 
 namespace Radapter {
 
-class NamespaceFilter : public Radapter::InterceptorBase
+class NamespaceFilter : public Radapter::Interceptor
 {
     Q_OBJECT
 public:

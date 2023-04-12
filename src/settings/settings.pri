@@ -1,6 +1,6 @@
 SOURCES+= \
    $$PWD/modbussettings.cpp
 HEADERS+= \
+   $$PWD/modbussettings.h \
    $$PWD/redissettings.h \
-   $$PWD/settings.h \
-   $$PWD/modbussettings.h
+   $$PWD/settings.h

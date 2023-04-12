@@ -8,7 +8,7 @@
 #include "broker/interceptor/interceptor.h"
 #include "settings/settings.h"
 
-class RADAPTER_API ProducerFilter : public Radapter::InterceptorBase
+class RADAPTER_API ProducerFilter : public Radapter::Interceptor
 {
     Q_OBJECT
 public:

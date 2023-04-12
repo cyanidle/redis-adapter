@@ -1,5 +1,7 @@
 TEMPLATE = subdirs
 SUBDIRS += src \
-           app 
+           app \
+           plugins
            
 app.depends = src
+plugins.depends = src

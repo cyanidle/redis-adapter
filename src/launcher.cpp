@@ -3,7 +3,10 @@
 #include "broker/workers/loggingworker.h"
 #include "broker/workers/loggingworkersettings.h"
 #include "broker/workers/mockworker.h"
-#include "serializable/common_validators.h"
+#include "interceptors/validating_interceptor.h"
+#include "interceptors/validating_interceptor_settings.h"
+#include "initialization.h"
+#include "validators/common_validators.h"
 #include "settings-parsing/convertutils.hpp"
 #include "websocket/websocketserver.h"
 #include "launcher.h"
@@ -40,6 +43,60 @@ void tryInit(Launcher* launcher, void(Launcher::*method)(), const QString &modul
     }
 }
 
+template<typename T>
+const QMap<QString, T> Launcher::parseMapOf(const QString &path)
+{
+    auto result = readSetting(path);
+    if (result.isValid() && !result.canConvert<QVariantMap>()) {
+        throw std::runtime_error("Expected Map from: " + path.toStdString());
+    }
+    if (!result.canConvert<QVariantMap>()) {
+        settingsParsingWarn() << "Empty Map for:"  << "[" << path << "]!";
+    }
+    try {
+        return Serializable::parseMapOf<T>(result.toMap());
+    } catch (const std::exception &e) {
+        throw std::runtime_error(QString(e.what()).toStdString() +
+                                 std::string("; While Parsing Map --> [") +
+                                 path.toStdString() + "]; In --> " +
+                                 m_reader->path().toStdString());
+    }
+}
+
+template <typename T>
+const QList<T> Launcher::parseArrayOf(const QString &path) {
+    auto result = readSetting(path);
+    if (result.isValid() && !result.canConvert<QVariantList>()) {
+        throw std::runtime_error("Expected List from: " + path.toStdString());
+    }
+    if (!result.canConvert<QVariantList>()) {
+        settingsParsingWarn() << "Empty List for:"  << "[[" << path << "]]!";
+    }
+    try {
+        return Serializable::parseListOf<T>(result.toList());
+    } catch (const std::exception &e) {
+        throw std::runtime_error(QString(e.what()).toStdString() +
+                                 std::string("; While Parsing List --> [[") +
+                                 path.toStdString() + "]]; In --> " +
+                                 m_reader->path().toStdString());
+    }
+}
+template <typename T>
+T Launcher::parseObject(const QString &path) {
+    auto result = readSetting(path);
+    if (result.isValid() && !result.canConvert<QVariantMap>()) {
+        throw std::runtime_error("Expected Map from: " + path.toStdString());
+    }
+    try {
+        return Serializable::parseObject<T>(result.toMap());
+    } catch (const std::exception &e) {
+        throw std::runtime_error(QString(e.what()).toStdString() +
+                                 std::string("; While Parsing Object --> [") +
+                                 path.toStdString() + "]; In --> " +
+                                 m_reader->path().toStdString());
+    }
+}
+
 Launcher::Launcher(QObject *parent) :
     QObject(parent),
     m_workers(),
@@ -49,8 +106,10 @@ Launcher::Launcher(QObject *parent) :
     m_argsParser.setApplicationDescription("Redis Adapter");
     parseCommandlineArgs();
     tryInit(this, &Launcher::preInit, "preInit"); // should be first
+    tryInit(this, &Launcher::initLogging, "logging"); // second
+    tryInit(this, &Launcher::initPlugins, "plugins");
+    tryInit(this, &Launcher::initValidators, "validating_interceptors");
     tryInit(this, &Launcher::initRoutedJsons, "routed_jsons");
-    tryInit(this, &Launcher::initLogging, "logging");
     tryInit(this, &Launcher::initLoggingWorkers, "logging_workers");
     tryInit(this, &Launcher::initRedis, "redis");
     tryInit(this, &Launcher::initModbus, "modbus");
@@ -64,7 +123,38 @@ Launcher::Launcher(QObject *parent) :
     LocalStorage::init(this);
 }
 
-void Launcher::addWorker(Worker* worker, QSet<InterceptorBase*> interceptors)
+void Launcher::initPlugins()
+{
+    QDir dir(m_pluginsPath);
+    if (!dir.exists()) {
+        settingsParsingWarn() << "No plugins dir: " << dir.absolutePath();
+        return;
+    }
+    QList<QLibrary*> plugins;
+    for (const auto &file: dir.entryList(QDir::Filter::Files)) {
+        auto path = dir.filePath(file);
+        if (!QLibrary::isLibrary(path)) {
+            settingsParsingWarn() << path << "is not a library. Skipping";
+            continue;
+        }
+        auto wasInit = [&]() {
+            for (auto lib: plugins) {
+                if (path.contains(lib->fileName())) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        if (wasInit()) {
+            continue;
+        }
+        auto lib = new QLibrary(path, this);
+        plugins.append(lib);
+    }
+    Radapter::initPlugins(plugins);
+}
+
+void Launcher::addWorker(Worker* worker, QSet<Interceptor*> interceptors)
 {
     m_workers.insert(worker, interceptors);
 }
@@ -158,6 +248,14 @@ void Launcher::initFilters()
     }
 }
 
+void Launcher::initValidators()
+{
+    auto validatingInterceptors = parseMapOf<Settings::ValidatingInterceptor>("interceptors.validating");
+    for (auto iter = validatingInterceptors.cbegin(); iter != validatingInterceptors.cend(); ++iter) {
+        broker()->registerInterceptor(iter.key(), new ValidatingInterceptor(iter.value()));
+    }
+}
+
 void Launcher::initLoggingWorkers()
 {
     for (const auto &logSettings : parseArrayOf<Radapter::LoggingWorkerSettings>("logging_workers")) {
@@ -196,30 +294,12 @@ void Launcher::initPipelines()
     try {
         auto foundPipelines = readSetting().toMap();
         foundPipelines = QVariantMap{{"pipelines", foundPipelines.value("pipelines")}};
-        parsed = Serializable::fromQMap<Settings::Pipelines>(foundPipelines);
+        parsed = Serializable::parseObject<Settings::Pipelines>(foundPipelines);
     } catch (std::runtime_error &exc) {
         settingsParsingWarn() << "Could not read [PIPELINES]! Details:" << exc.what();
         return;
     }
-    static QRegExp splitter("[<>]");
-    for (const auto &pipe: parsed.pipelines.value) {
-        auto split = pipe.split(splitter);
-        if (split.size() < 2) {
-            throw std::runtime_error("Pipeline length must be more than 2!");
-        }
-        auto currentPos = 0;
-        auto lastWorker = split.takeFirst().simplified();
-        for (const auto &worker : split) {
-            currentPos = splitter.indexIn(pipe, currentPos);
-            auto op = pipe[currentPos];
-            if (op == "<") {
-                broker()->connectTwoProxies(worker.simplified(), lastWorker);
-            } else if (op == ">") {
-                broker()->connectTwoProxies(lastWorker, worker.simplified());
-            }
-            lastWorker = worker.simplified();
-        }
-    }
+    Radapter::initPipelines(parsed.pipelines.value);
 }
 
 void Launcher::initSockets()
@@ -302,16 +382,19 @@ void Launcher::parseCommandlineArgs()
                   {{"p", "parser"},
                     "Config will be read from .<parser_format> files. (available: yaml, toml) (default: yaml)", "parser", "yaml"},
                   {{"f", "file"},
-                    "File to read settings from. (default: config)", "file", "config"}
+                    "File to read settings from. (default: <directory>/config.<parser-extension>)", "file", "config"},
+                  {{QString("plugins-dir")},
+                    "Directory with plugins. (default: ./plugins)", "plugins-dir", "plugins"},
                   });
     m_argsParser.process(*QCoreApplication::instance());
     m_configsResource = m_argsParser.value("directory");
     m_configsFormat = m_argsParser.value("parser");
-    m_mainPath = m_argsParser.value("file");
+    m_pluginsPath = m_argsParser.value("plugins-dir");
+    m_file = m_argsParser.value("file");
     if (m_configsFormat == "toml") {
-        m_reader = new Settings::TomlReader(m_configsResource, m_mainPath, this);
+        m_reader = new Settings::TomlReader(m_configsResource, m_file, this);
     } else if (m_configsFormat == "yaml") {
-        m_reader = new Settings::YamlReader(m_configsResource, m_mainPath, this);
+        m_reader = new Settings::YamlReader(m_configsResource, m_file, this);
     } else {
         throw std::runtime_error("Invalid configs format: " + m_configsFormat.toStdString() + "; Can be (toml/yaml)");
     }

@@ -3,33 +3,33 @@
 
 using namespace Radapter;
 
-void InterceptorBase::onMsgFromWorker(const Radapter::WorkerMsg &msg)
+void Interceptor::onMsgFromWorker(const Radapter::WorkerMsg &msg)
 {
     emit msgToBroker(msg);
 }
 
-void InterceptorBase::onMsgFromBroker(const Radapter::WorkerMsg &msg)
+void Interceptor::onMsgFromBroker(const Radapter::WorkerMsg &msg)
 {
     emit msgToWorker(msg);
 }
 
-InterceptorBase::InterceptorBase() :
+Interceptor::Interceptor() :
     QObject()
 {
     setObjectName("Interceptor");
 }
 
-const Worker *InterceptorBase::worker() const
+const Worker *Interceptor::worker() const
 {
     return qobject_cast<const Worker*>(parent());
 }
 
-QThread *InterceptorBase::thread()
+QThread *Interceptor::thread()
 {
     return parent()->thread();
 }
 
-Worker *InterceptorBase::workerNonConst() const
+Worker *Interceptor::workerNonConst() const
 {
     return qobject_cast<Worker*>(parent());
 }

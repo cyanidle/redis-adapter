@@ -13,7 +13,7 @@
 using namespace Radapter;
 
 Q_GLOBAL_STATIC(QRecursiveMutex, staticMutex);
-Q_GLOBAL_STATIC(QList<InterceptorBase*>, staticUsedInterceptors);
+Q_GLOBAL_STATIC(QList<Interceptor*>, staticUsedInterceptors);
 
 Worker::Worker(const WorkerSettings &settings, QThread *thread) :
     QObject(),
@@ -44,7 +44,7 @@ Worker::Worker(const WorkerSettings &settings, QThread *thread) :
 ///     ----->     (Proxy) <--> (NewInterceptor) <--> (Worker)
 /// 2) (If interceptor(s) exist) (Proxy) <--> (Interceptor) <--> (Worker)
 ///     ----->     (Proxy) <--> (Interceptor) <--> (NewInterceptor) <--> (Worker)
-void Worker::addInterceptor(InterceptorBase *interceptor)
+void Worker::addInterceptor(Interceptor *interceptor)
 {
     QMutexLocker locker(staticMutex);
     if (!m_proxy) {
@@ -58,7 +58,7 @@ void Worker::addInterceptor(InterceptorBase *interceptor)
         throw std::runtime_error("Used Interceptor not allowed!");
     }
     auto closestProxy = qobject_cast<WorkerProxy*>(m_closestConnected);
-    auto closestInterceptor = qobject_cast<InterceptorBase*>(m_closestConnected);
+    auto closestInterceptor = qobject_cast<Interceptor*>(m_closestConnected);
     if (!closestProxy && !closestInterceptor){
         throw std::runtime_error("Closest connected objecy unknown!");
     }
@@ -66,15 +66,15 @@ void Worker::addInterceptor(InterceptorBase *interceptor)
         disconnect(conn);
     }
     m_closestConnections.clear();
-    m_closestConnections.append(connect(interceptor, &InterceptorBase::msgToWorker, this, &Worker::onMsgFromBroker));
-    m_closestConnections.append(connect(this, &Worker::sendMsg, interceptor, &InterceptorBase::onMsgFromWorker));
-    connect(interceptor, &InterceptorBase::destroyed, this, &Worker::childDeleted);
+    m_closestConnections.append(connect(interceptor, &Interceptor::msgToWorker, this, &Worker::onMsgFromBroker));
+    m_closestConnections.append(connect(this, &Worker::sendMsg, interceptor, &Interceptor::onMsgFromWorker));
+    connect(interceptor, &Interceptor::destroyed, this, &Worker::childDeleted);
     if (closestProxy) {
-        connect(interceptor, &InterceptorBase::msgToBroker, closestProxy, &WorkerProxy::onMsgFromWorker);
-        connect(closestProxy, &WorkerProxy::msgToWorker, interceptor, &InterceptorBase::onMsgFromBroker);
+        connect(interceptor, &Interceptor::msgToBroker, closestProxy, &WorkerProxy::onMsgFromWorker);
+        connect(closestProxy, &WorkerProxy::msgToWorker, interceptor, &Interceptor::onMsgFromBroker);
     } else if (closestInterceptor) {
-        connect(interceptor, &InterceptorBase::msgToBroker, closestInterceptor, &InterceptorBase::onMsgFromWorker);
-        connect(closestInterceptor, &InterceptorBase::msgToWorker, interceptor, &InterceptorBase::onMsgFromBroker);
+        connect(interceptor, &Interceptor::msgToBroker, closestInterceptor, &Interceptor::onMsgFromWorker);
+        connect(closestInterceptor, &Interceptor::msgToWorker, interceptor, &Interceptor::onMsgFromBroker);
     } else {
         throw std::runtime_error("Unknown Error while adding interceptor!");
     }
@@ -98,6 +98,11 @@ Broker *Worker::broker() const
 bool Worker::wasStarted() const
 {
     return m_wasRun;
+}
+
+bool Worker::is(const QMetaObject *mobj) const
+{
+    return metaObject()->inherits(mobj);
 }
 
 QString Worker::printSelf() const
@@ -349,14 +354,14 @@ void Worker::onSendMsgPriv(const Radapter::WorkerMsg &msg)
     }
 }
 
-WorkerProxy* Worker::createProxy(const QSet<InterceptorBase*> &interceptors)
+WorkerProxy* Worker::createProxy(const QSet<Interceptor*> &interceptors)
 {
     QMutexLocker locker(staticMutex);
     if (m_proxy == nullptr) {
         m_proxy = new WorkerProxy();
         m_proxy->setObjectName(workerName());
         m_proxy->setParent(this);
-        auto filtered = QList<InterceptorBase*>();
+        auto filtered = QList<Interceptor*>();
         for (auto &interceptor : interceptors) {
             if (!filtered.contains(interceptor) || !staticUsedInterceptors->contains(interceptor)) {
                 interceptor->setParent(this);
@@ -388,41 +393,41 @@ WorkerProxy* Worker::createProxy(const QSet<InterceptorBase*> &interceptors)
             m_closestConnected = m_proxy;
             m_closestConnections = {outConn, inConn};
         } else {
-            connect(filtered[0], &InterceptorBase::destroyed,
+            connect(filtered[0], &Interceptor::destroyed,
                     this, &Worker::childDeleted,
                     Qt::DirectConnection);
             // Подключение К перехватчику (первому/ближнему к воркеру)
             auto outConn = connect(this, &Worker::sendMsg,
-                    filtered[0], &InterceptorBase::onMsgFromWorker,
+                    filtered[0], &Interceptor::onMsgFromWorker,
                     Qt::DirectConnection);
             // Подключение ОТ перехватчика (первого)
-            auto inConn = connect(filtered[0], &InterceptorBase::msgToWorker,
+            auto inConn = connect(filtered[0], &Interceptor::msgToWorker,
                     this, &Worker::onMsgFromBroker,
                     Qt::DirectConnection);
             m_closestConnected = filtered[0];
             m_closestConnections = {outConn, inConn};
             for (int i = 0; i < filtered.length() - 1; ++i) {
-                connect(filtered[i], &InterceptorBase::destroyed,
+                connect(filtered[i], &Interceptor::destroyed,
                         this, &Worker::childDeleted,
                         Qt::DirectConnection);
                 // Если перехватчиков более одного, то соединяем их друг с другом
-                connect(filtered[i], &InterceptorBase::msgToBroker,
-                        filtered[i + 1], &InterceptorBase::onMsgFromWorker,
+                connect(filtered[i], &Interceptor::msgToBroker,
+                        filtered[i + 1], &Interceptor::onMsgFromWorker,
                         Qt::DirectConnection);
-                connect(filtered[i + 1], &InterceptorBase::msgToWorker,
-                        filtered[i], &InterceptorBase::onMsgFromBroker,
+                connect(filtered[i + 1], &Interceptor::msgToWorker,
+                        filtered[i], &Interceptor::onMsgFromBroker,
                         Qt::DirectConnection);
             }
-            connect(filtered.last(), &InterceptorBase::destroyed,
+            connect(filtered.last(), &Interceptor::destroyed,
                     this, &Worker::childDeleted,
                     Qt::DirectConnection);
             // Подключение (последний/дальний от воркера) перехватчик --> прокси
-            connect(filtered.last(), &InterceptorBase::msgToBroker,
+            connect(filtered.last(), &Interceptor::msgToBroker,
                     m_proxy, &WorkerProxy::onMsgFromWorker,
                     Qt::DirectConnection);
             // Подключение прокси --> (последний) перехватчик
             connect(m_proxy, &WorkerProxy::msgToWorker,
-                    filtered.last(), &InterceptorBase::onMsgFromBroker,
+                    filtered.last(), &Interceptor::onMsgFromBroker,
                     Qt::DirectConnection);
         }
     }

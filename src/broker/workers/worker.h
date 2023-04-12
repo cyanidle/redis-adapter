@@ -10,7 +10,7 @@ class QThread;
 namespace Radapter {
 class Broker;
 class WorkerProxy;
-class InterceptorBase;
+class Interceptor;
 class BrokerEvent;
 class WorkerSettings;
 //! You can override onCommand(cosnt WorkerMsg &) / onReply(cosnt WorkerMsg &) / onMsg(cosnt WorkerMsg &)
@@ -23,7 +23,7 @@ public:
     explicit Worker(const WorkerSettings &settings, QThread *thread);
     //! Фабричный метод, соединяющий объекты в цепь вплоть до прокси, которая является интерфейсом объекта
     /// Interceptor - объект, который находится между прокси и объектом, выполняя некоторую работу над проходящими данными
-    WorkerProxy* createProxy(const QSet<InterceptorBase *> &interceptors = {});
+    WorkerProxy* createProxy(const QSet<Interceptor *> &interceptors = {});
     const QString &workerName() const;
     const Set &consumers() const;
     const Set &producers() const;
@@ -32,10 +32,12 @@ public:
     QThread *workerThread() const;
     Broker *broker() const;
     bool wasStarted() const;
+    bool is(const QMetaObject * mobj) const;
     template <typename Target> bool is() const;
     template <typename Target> const Target *as() const;
     template <typename Target> Target *as();
     QString printSelf() const;
+    void addInterceptor(Interceptor *interceptor);
     virtual ~Worker() = default;
 signals:
     void fireEvent(const Radapter::BrokerEvent &event);
@@ -76,7 +78,6 @@ protected:
     using MsgCallback = void (User::*)(Args...);
     template <typename User, typename...Args>
     WorkerMsg prepareCommand(Command *command, MsgCallback<User, Args...> callback) const;
-    void addInterceptor(InterceptorBase *interceptor);
 private:
     Set m_consumers;
     Set m_producers;
@@ -88,7 +89,7 @@ private:
     QThread *m_thread;
     QObject *m_closestConnected{nullptr};
     QList<QMetaObject::Connection> m_closestConnections{};
-    QSet<InterceptorBase *> m_InterceptorsToAdd{};
+    QSet<Interceptor *> m_InterceptorsToAdd{};
     std::atomic<bool> m_wasRun{false};
     bool m_printMsgs{false};
     friend Broker;
