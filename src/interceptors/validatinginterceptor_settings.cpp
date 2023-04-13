@@ -10,18 +10,14 @@ void Settings::ValidatingInterceptor::postUpdate() {
         temp[iter.value()].append(iter.key());
     }
     for (auto iter = temp.cbegin(); iter != temp.cend(); ++iter) {
-        QList<QRegularExpression> regs;
         auto validator = Serializable::Validator(iter.key());
         for (const auto &field: iter.value()) {
-            if (field.contains('*') || field.contains('!')) {
-                regs.append(QRegularExpression{QRegularExpression::wildcardToRegularExpression(field)});
-                regs.last().optimize();
-            } else {
-                final_by_validator[validator].append(field);
-            }
+            final_by_validator[validator].append(field);
         }
-        if (!regs.isEmpty()) {
-            final_by_validator_globs.insert({iter.key()}, regs);
-        }
+    }
+    for (auto iter = by_glob.cbegin(); iter != by_glob.cend(); ++iter) {
+        auto validator = Serializable::Validator(iter.key());
+        auto asRegex = QRegularExpression::wildcardToRegularExpression(iter.value());
+        final_by_validator_glob.insert(validator, QRegularExpression{asRegex});
     }
 }

@@ -20,7 +20,7 @@ public slots:
 private:
     void validate(WorkerMsg &msg);
 
-    ValidatingInterceptorPrivate *d;
+    const ValidatingInterceptorPrivate *d;
 };
 
 } //namespace Radapter

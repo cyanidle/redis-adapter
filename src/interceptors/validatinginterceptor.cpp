@@ -32,14 +32,13 @@ void ValidatingInterceptor::validate(WorkerMsg &msg)
             validator.validate(msg[field]);
         }
     }
-    for (auto iter = d->settings.final_by_validator_globs.cbegin(); iter != d->settings.final_by_validator_globs.cend(); ++iter) {
+    for (auto iter = d->settings.final_by_validator_glob.cbegin(); iter != d->settings.final_by_validator_glob.cend(); ++iter) {
         auto validator = iter.key();
-        for (const auto &glob: iter.value()) {
-            for (auto &iter: msg) {
-                auto keyJoined = iter.key().join(':');
-                if (glob.match(keyJoined).hasMatch()) {
-                    validator.validate(msg[keyJoined]);
-                }
+        for (auto &msgiter: msg) {
+            auto keyJoined = msgiter.key().join(':');
+            auto shouldValidate = iter.value().match(keyJoined).hasMatch();
+            if (shouldValidate) {
+                validator.validate(msg[keyJoined]);
             }
         }
     }

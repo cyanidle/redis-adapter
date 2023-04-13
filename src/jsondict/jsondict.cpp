@@ -395,7 +395,7 @@ QByteArray JsonDict::toBytes(QJsonDocument::JsonFormat format) const
 
 JsonDict JsonDict::fromJsonObj(const QJsonObject &json)
 {
-    return JsonDict(json.toVariantMap());
+    return JsonDict(json.toVariantMap(), ':', false);
 }
 
 JsonDict JsonDict::fromJson(const QByteArray &json, QJsonParseError *err)

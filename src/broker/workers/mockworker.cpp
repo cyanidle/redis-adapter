@@ -35,10 +35,7 @@ MockWorker::MockWorker(const Settings::MockWorker &settings, QThread* thread) :
         brokerError() << "Full reason: " << err.errorString();
     }
     for (const auto &item : jsonArray) {
-        const auto &current = item.toObject().toVariantMap();
-        if(!current.isEmpty()) {
-            m_jsons.append(current);
-        }
+        m_jsons.append(JsonDict::fromJsonObj(item.toObject()));
     }
     m_file->close();
 }

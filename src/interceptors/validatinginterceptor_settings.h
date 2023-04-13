@@ -10,9 +10,10 @@ struct ValidatingInterceptor : public SerializableSettings {
     IS_SERIALIZABLE
     FIELD(NonRequiredMapping<QString>, by_field)
     FIELD(NonRequiredMapping<QStringList>, by_validator)
+    FIELD(NonRequiredMapping<QString>, by_glob)
 
-    QMap<Serializable::Validator, QList<QRegularExpression>> final_by_validator_globs;
     QMap<Serializable::Validator, QStringList> final_by_validator;
+    QMap<Serializable::Validator, QRegularExpression> final_by_validator_glob;
     void postUpdate() override;
 };
 }
