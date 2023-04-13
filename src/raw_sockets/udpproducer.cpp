@@ -1,4 +1,5 @@
 #include "udpproducer.h"
+#include "broker/workers/private/workermsg.h"
 #include <QNetworkDatagram>
 using namespace Radapter;
 using namespace Udp;

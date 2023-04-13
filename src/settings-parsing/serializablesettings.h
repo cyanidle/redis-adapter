@@ -4,6 +4,7 @@
 #include <QJsonDocument>
 #include "serializable/serializable.h"
 #include "serializable/validated.hpp"
+#include "validators/common_validators.h"
 #include "validators/validator_fetch.h"
 #define NON_REQUIRED_ATTR "non_required"
 Q_DECLARE_METATYPE(QJsonDocument::JsonFormat)
@@ -36,12 +37,19 @@ using NonRequiredMapping = MarkNonRequired<Serializable::Mapping<T>>;
 using RequiredValidator = Serializable::Plain<Serializable::Validator>;
 using NonRequiredValidator = MarkNonRequired<RequiredValidator>;
 
+using RequiredLogLevel = Serializable::Validated<Required<QtMsgType>>::With<Validator::LogLevel>;
+using NonRequiredLogLevel = MarkNonRequired<RequiredLogLevel>;
+
 struct SerializableSettings : public Serializable::Object
 {
     Q_GADGET
 public:
     QString print() const;
     virtual bool update(const QVariantMap &src) override;
+    void allowExtra(bool state = true);
+    SerializableSettings();
+protected:
+    bool m_allowExtra;
 };
 
 } // namespace Settings

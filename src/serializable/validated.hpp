@@ -5,7 +5,7 @@
 #include <QVariant>
 #include <QSet>
 #include "field_super.h"
-
+#define PRE_VALIDATER_ATTR "pre_validated"
 namespace Serializable {
 
 template <typename Validator>
@@ -33,7 +33,7 @@ struct PreValidator : public Target {
         return Target::updateWithVariant(copy);
     }
     const QStringList &attributes() const {
-        static const QStringList attrs = Target::attributes() + QStringList{"pre_validated"};
+        static const QStringList attrs = Target::attributes() + QStringList{PRE_VALIDATER_ATTR};
         return attrs;
     }
 };
@@ -43,9 +43,6 @@ struct Validated {
     template <typename...Validators>
     using With = PreValidator<Target, Validators...>;
 };
-
-template <typename Target, typename...Validators>
-using Validate = typename Validated<Target>::template With<Validators...>;
 
 }
 

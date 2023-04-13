@@ -2,7 +2,7 @@
 #define COMMON_VALIDATORS_H
 
 #include <QVariant>
-
+Q_DECLARE_METATYPE(QtMsgType)
 namespace Validator {
 
 template<int min, int max>
@@ -19,6 +19,9 @@ using Minutes = IntMinMax<0, 60>;
 using Hours24 = IntMinMax<0, 24>;
 using Hours12 = IntMinMax<0, 12>;
 using DayOfWeek = IntMinMax<1, 7>;
+struct LogLevel {
+    static bool validate(QVariant &target);
+};
 
 void registerAllCommon();
 

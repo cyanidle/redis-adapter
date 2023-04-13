@@ -3,7 +3,7 @@
 
 #include <QObject>
 
-#define RADAPTER_VERSION "0.3"
+#define RADAPTER_VERSION "0.6"
 
 #ifndef RADAPTER_API
 #define RADAPTER_API

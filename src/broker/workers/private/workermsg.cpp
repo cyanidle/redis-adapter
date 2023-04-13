@@ -3,8 +3,6 @@
 #include "radapterlogging.h"
 #include "../worker.h"
 #include "broker/broker.h"
-#include "broker/commands/basiccommands.h"
-#include "templates/algorithms.hpp"
 #include "broker/replies/private/reply.h"
 
 using namespace Radapter;
@@ -13,13 +11,11 @@ std::atomic<quint64> WorkerMsg::m_currentMsgId{0u};
 
 Radapter::WorkerMsg::WorkerMsg() :
     JsonDict(),
-    m_flags(MsgBad),
     m_sender(),
     m_id(newMsgId()),
     m_receivers(),
     m_serviceData()
 {
-    serviceData(ServiceBadReasonField) = "Sender not set";
 }
 
 Radapter::WorkerMsg::WorkerMsg(Worker *sender,
@@ -80,12 +76,6 @@ QStringList WorkerMsg::printReceivers() const {
 
 QString WorkerMsg::printFlags() const {
     QString result;
-    if (m_flags.testFlag(MsgBad))
-        result += "|Bad";
-    else
-        result += "|Ok";
-    if (m_flags.testFlag(MsgDirect))
-        result += "|Direct";
     if (m_flags.testFlag(MsgBroadcast))
         result += "|Broadcast";
     if (isCommand())
@@ -151,3 +141,112 @@ QString WorkerMsg::printFullDebug() const
            .append(QStringLiteral("### Msg Id: ")).append(QString::number(id())).append(QStringLiteral(" Debug End  ###"));
 }
 
+
+const QSet<Worker *> &Radapter::WorkerMsg::receivers() const
+{
+    return m_receivers;
+}
+
+QVariant &Radapter::WorkerMsg::serviceData(ServiceData key)
+{
+    return m_serviceData[key];
+}
+
+QVariant Radapter::WorkerMsg::serviceData(ServiceData key) const
+{
+    return m_serviceData.value(key);
+}
+
+QVariant &Radapter::WorkerMsg::userData()
+{
+    return serviceData(ServiceUserData);
+}
+
+QVariant Radapter::WorkerMsg::userData() const
+{
+    return serviceData(ServiceUserData);
+}
+
+bool Radapter::WorkerMsg::testFlags(Flags flags) const noexcept
+{
+    return m_flags & flags;
+}
+
+void Radapter::WorkerMsg::setFlag(MsgFlag flag, bool value) noexcept
+{
+    m_flags.setFlag(flag, value);
+}
+
+void Radapter::WorkerMsg::clearFlags() noexcept
+{
+    m_flags = Flags(MsgOk);
+}
+
+void Radapter::WorkerMsg::clearJson()
+{
+    m_dict.clear();
+}
+
+QSet<Worker *> &Radapter::WorkerMsg::receivers() noexcept
+{
+    return m_receivers;
+}
+
+Worker *Radapter::WorkerMsg::sender() const
+{
+    return m_sender;
+}
+
+const JsonDict &Radapter::WorkerMsg::json() const
+{
+    return *this;
+}
+
+JsonDict &Radapter::WorkerMsg::json() {
+    return *this;
+}
+
+const Command *Radapter::WorkerMsg::command() const
+{
+    return m_serviceData[ServiceCommand].value<QSharedPointer<Command>>().data();
+}
+
+Command *Radapter::WorkerMsg::command()
+{
+    return m_serviceData[ServiceCommand].value<QSharedPointer<Command>>().data();
+}
+
+const Reply *Radapter::WorkerMsg::reply() const
+{
+    return m_serviceData[ServiceReply].value<QSharedPointer<Reply>>().data();
+}
+
+Reply *Radapter::WorkerMsg::reply()
+{
+    return m_serviceData[ServiceReply].value<QSharedPointer<Reply>>().data();
+}
+
+QVariant &Radapter::WorkerMsg::privateData()
+{
+    return m_serviceData[ServicePrivate];
+}
+
+QVariant Radapter::WorkerMsg::privateData() const
+{
+    return m_serviceData[ServicePrivate];
+}
+
+void Radapter::WorkerMsg::updateId()
+{
+    m_id = newMsgId();
+}
+
+quint64 Radapter::WorkerMsg::newMsgId()
+{
+    return m_currentMsgId.fetch_add(1, std::memory_order_relaxed);
+}
+
+QDebug operator<<(QDebug dbg, const WorkerMsg &msg){
+    dbg.nospace().noquote() << msg.printFullDebug();
+    return dbg.maybeQuote().maybeSpace();
+}

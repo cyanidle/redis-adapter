@@ -2,6 +2,7 @@
 #define MODBUS_MASTER_H
 
 #include "broker/workers/worker.h"
+#include "jsondict/jsondict.h"
 #include "settings/modbussettings.h"
 #include "modbusparsing.h"
 #include <QModbusReply>

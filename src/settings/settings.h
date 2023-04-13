@@ -134,7 +134,7 @@ struct RADAPTER_API SqlStorageInfo : SerializableSettings
 {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(Required<Radapter::WorkerSettings>, worker)
+    FIELD(Required<Worker>, worker)
     FIELD(Required<QString>, name)
     FIELD(Required<QString>, client_name)
     FIELD(Required<QString>, target_table)
@@ -169,7 +169,7 @@ struct RADAPTER_API LocalizationInfo : SerializableSettings {
 struct RADAPTER_API WebsocketServer : SerializableSettings {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(Required<Radapter::WorkerSettings>, worker)
+    FIELD(Required<Worker>, worker)
 
     FIELD(NonRequired<quint16>, port, 1234)
     FIELD(NonRequired<quint16>, heartbeat_ms, 10000)

@@ -17,15 +17,10 @@ public:
         StrategyByWildcard = 1
     };
     explicit ProducerFilter(const Settings::Filters::Table &filters);
-
-signals:
-    void requestCacheRead();
-
 public slots:
-    void onMsgFromWorker(const Radapter::WorkerMsg &msg) override;
-
+    void onMsgFromWorker(Radapter::WorkerMsg &msg) override;
 private:
-    void filterStrictByName(const Radapter::WorkerMsg &msg);
+    void filterStrictByName(Radapter::WorkerMsg &msg);
     void addFiltersByWildcard(const JsonDict &cachedJson);
 
     Strategy m_strategy;

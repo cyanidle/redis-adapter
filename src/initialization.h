@@ -12,10 +12,10 @@ namespace Radapter {
 void initPipelines(const QStringList &pipelines);
 void initPlugins(const QList<QLibrary*> plugins);
 
-template <typename Callable>
-void tryInit(Callable callable, const QString &moduleName) {
+template <typename Callable, typename...Args>
+void tryInit(Callable callable, const QString &moduleName, Args&&...args) {
     try {
-        callable();
+        callable(std::forward<Args>(args)...);
     } catch(std::runtime_error &exc) {
         settingsParsingWarn().nospace() << "Could not enable module: [" << moduleName.toUpper() << "] --> Details: " << exc.what();
     }

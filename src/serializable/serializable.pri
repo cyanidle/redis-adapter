@@ -1,10 +1,14 @@
 SOURCES+= \
-   $$PWD/serializable.cpp
+   $$PWD/serializable.cpp \
+   $$PWD/common_validators.cpp \
+   $$PWD/validator_fetch.cpp
 HEADERS+= \
-   $$PWD/bindable.hpp \
-   $$PWD/common_fields.hpp \
+   $$PWD/validated.hpp \
    $$PWD/field_super.h \
    $$PWD/serializable.h \
-   $$PWD/validated.hpp
+   $$PWD/validator_fetch.h \
+   $$PWD/common_validators.h \
+   $$PWD/bindable.hpp \
+   $$PWD/common_fields.hpp
 
 include($$PWD/private/private.pri)

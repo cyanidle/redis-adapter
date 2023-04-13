@@ -1,10 +1,10 @@
 SOURCES+= \
-   $$PWD/mathutils.cpp \
-   $$PWD/resourcemonitor.cpp \
    $$PWD/timeutils.cpp \
-   $$PWD/wordoperations.cpp
+   $$PWD/wordoperations.cpp \
+   $$PWD/resourcemonitor.cpp \
+   $$PWD/mathutils.cpp
 HEADERS+= \
+   $$PWD/wordoperations.h \
    $$PWD/mathutils.h \
-   $$PWD/resourcemonitor.h \
    $$PWD/timeutils.h \
-   $$PWD/wordoperations.h
+   $$PWD/resourcemonitor.h

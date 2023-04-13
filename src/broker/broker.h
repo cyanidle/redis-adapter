@@ -4,62 +4,54 @@
 #include "private/global.h"
 #include <QMap>
 #include <QHash>
-
+namespace Settings {
+struct Broker;
+}
 namespace Radapter {
-class BrokerSettings;
 class Worker;
 class WorkerProxy;
 class Interceptor;
-class BrokerEvent;
 class WorkerMsg;
+struct BrokerPrivate;
 class RADAPTER_API Broker : public QObject
 {
     Q_OBJECT
 public:
     static Broker* instance();
-    void applySettings(const BrokerSettings &newSettings);
+    template <class Target> Target* getWorker(const QString &workerName);
+    template <typename Target> QSet<Target*> getAll();
+    QSet<Worker*> getAll(const QMetaObject *mobj);
     bool exists(const QString &workerName) const;
+    void registerWorker(Worker *worker);
     Worker* getWorker(const QString &workerName);
-    template <class Target>
-    Target* getWorker(const QString &workerName);
-    bool wasStarted();
     void registerInterceptor(const QString &name, Interceptor *interceptor);
     Interceptor *getInterceptor(const QString &name) const;
-    void registerProxy(WorkerProxy* proxy);
-    void connectProducersAndConsumers();
-    template <typename Target>
-    QList<Target*> getAll();
+    void connectTwo(const QString &producer, const QString &consumer, const QStringList &interceptorNames = {});
+    void connectTwo(Worker *producer, Worker *consumer, const QList<Interceptor*> interceptors = {});
+    bool areConnected(Worker *producer, Worker *consumer);
+    void disconnect(Worker *producer, Worker *consumer);
+    void applySettings(const Settings::Broker &newSettings);
     void runAll();
-    void publishEvent(const Radapter::BrokerEvent &event);
-    void connectTwo(const QString &producer,
-                           const QString &consumer);
-    bool isDebugEnabled(const QString &workerName, QtMsgType type);
-    //! \warning Not Thread-Safe
-    void applyWorkerLoggingFilters(const QMap<QString, QMap<QtMsgType, bool>> &table);
+    ~Broker();
 signals:
-    void fireEvent(const Radapter::BrokerEvent &event);
     void broadcastToAll(const Radapter::WorkerMsg &msg);
 protected:
-    void connectTwoProxies(WorkerProxy *producer, WorkerProxy *consumer);
+    void connectProxyToWorker(WorkerProxy *producer, Worker *consumer);
 private slots:
-    void onEvent(const Radapter::BrokerEvent &event);
     void onMsgFromWorker(const Radapter::WorkerMsg &msg);
     void proxyDestroyed(QObject *proxy);
 private:
     explicit Broker();
-    QMap<QString, Interceptor*> m_interceptors;
-    QMap<QString, WorkerProxy*> m_proxies;
-    QHash<QString, QHash<QtMsgType, bool>> m_debugTable;
-    QList<QPair<WorkerProxy*, WorkerProxy*>> m_connected;
-    bool m_wasMassConnectCalled;
+    BrokerPrivate *d;
 };
 
 template<typename Target>
-QList<Target*> Broker::getAll()
+QSet<Target*> Broker::getAll()
 {
-    QList<Target*> result;
-    for (auto worker = m_proxies.keyBegin(); worker != m_proxies.keyEnd(); ++worker) {
-        result.append(qobject_cast<Target>(getWorker(*worker)));
+    QSet<Target*> result;
+    auto found = getAll(&Target::staticMetaObject);
+    for (auto worker: found) {
+        result.append(qobject_cast<Target*>(worker));
     }
     return result;
 }
@@ -69,7 +61,6 @@ Target* Broker::getWorker(const QString &workerName)
 {
     return qobject_cast<Target*>(getWorker(workerName));
 }
-
 
 }
 

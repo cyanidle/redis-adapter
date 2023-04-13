@@ -1,8 +1,10 @@
 #include "redisstreamconsumer.h"
 #include <QDateTime>
+#include "broker/workers/private/workermsg.h"
 #include "formatting/redis/redisstreamentry.h"
 #include "formatting/redis/redisstreamqueries.h"
 #include "localstorage.h"
+#include "jsondict/jsondict.h"
 #include "radapterlogging.h"
 
 #define ENTRIES_PER_READ            1000
@@ -58,7 +60,7 @@ void StreamConsumer::readCallback(redisReply *reply)
     auto replies = parsed.first().toList().last().toList();
     for (const auto &entry: replies) {
         auto parsedEntry = StreamEntry(entry.toList());
-        emit sendMsg(prepareMsg(parsedEntry.values));
+        emit sendBasic(parsedEntry.values);
         setLastReadId(parsedEntry.streamId());
     }
 }

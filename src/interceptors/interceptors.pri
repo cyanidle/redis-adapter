@@ -1,5 +1,9 @@
 SOURCES+= \
-   $$PWD/validating_interceptor.cpp
+   $$PWD/validatinginterceptor.cpp \
+   $$PWD/validatinginterceptor_settings.cpp \
+   $$PWD/duplicatinginterceptor.cpp
 HEADERS+= \
-   $$PWD/validating_interceptor.h \
-   $$PWD/validating_interceptor_settings.h
+   $$PWD/validatinginterceptor_settings.h \
+   $$PWD/validatinginterceptor.h \
+   $$PWD/duplicatinginterceptor.h \
+   $$PWD/duplicatinginterseptor_settings.h

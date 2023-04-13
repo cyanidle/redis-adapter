@@ -15,8 +15,8 @@ struct NestedIntrospection {
     enum CurrentType {
         TypeInvalid = 0,
         TypeObject,
-        TypeList,
-        TypeMap,
+        TypeSequence,
+        TypeMapping,
     };
     NestedIntrospection() : m_currentType(TypeInvalid) {}
     NestedIntrospection(Object* obj);
@@ -39,6 +39,7 @@ void check_type() {
     constexpr auto isQGadget = Radapter::has_QGadget_Macro<T>::Value;
     static_assert(isQGadget, "Must use Q_GADGET macro!");
 }
+QStringList fieldNamesHelper(const Object *who);
 QMap<QString, FieldConcept*> fieldsHelper(const Object *who);
 }
 
@@ -67,7 +68,7 @@ static_assert(is_wrapped, "Dont use raw types in FIELD() macro"); \
     private: \
     static void _has_Is_Serializable () noexcept {}; \
     virtual const QList<QString> &_priv_allFieldsNamesCached() const override { \
-        static QStringList fieldsNames{_priv_allFields().keys()}; \
+        static QStringList fieldsNames{::Serializable::Private::fieldNamesHelper(this)}; \
         return fieldsNames; \
     } \
     virtual const QMap<QString, ::Serializable::FieldConcept*> &_priv_allFields() const override { \

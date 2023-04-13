@@ -20,7 +20,7 @@ namespace Settings {
     struct RADAPTER_API RedisConnector : Settings::SerializableSettings {
         Q_GADGET
         IS_SERIALIZABLE
-        FIELD(Required<Radapter::WorkerSettings>, worker)
+        FIELD(Required<Worker>, worker)
         FIELD(Required<QString>, server_name)
         FIELD(NonRequired<quint16>, db_index, 0)
         FIELD(NonRequired<quint16>, ping_delay, 10000)

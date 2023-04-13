@@ -510,7 +510,7 @@ const QVariant &JsonDict::first() const
 
 QVariant &JsonDict::operator[](const QString &akey)
 {
-    return m_dict[akey];
+    return (*this)[akey.split(':')];
 }
 
 void JsonDict::insert(const QStringList &akey, const QVariant &value)

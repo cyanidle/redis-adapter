@@ -2,34 +2,40 @@
 #define WORKERBASE_H
 
 #include <QSet>
-#include "private/workermsg.h"
 #include "private/workerdebug.h"
+#include "private/workermsg.h"
 
 class RoutedObject;
 class QThread;
+class JsonDict;
+namespace Settings {
+class Worker;
+}
 namespace Radapter {
 class Broker;
 class WorkerProxy;
 class Interceptor;
-class BrokerEvent;
-class WorkerSettings;
+class WorkerMsg;
+class Command;
+class Reply;
+struct WorkerPrivate;
 //! You can override onCommand(cosnt WorkerMsg &) / onReply(cosnt WorkerMsg &) / onMsg(cosnt WorkerMsg &)
 class RADAPTER_API Worker : public QObject {
     Q_OBJECT
 public:
-    using Set = QSet<Worker*>;
+    using WorkerSet = QSet<Worker*>;
     bool isPrintMsgsEnabled() const;
     bool printEnabled(QtMsgType type) const;
-    explicit Worker(const WorkerSettings &settings, QThread *thread);
-    //! Фабричный метод, соединяющий объекты в цепь вплоть до прокси, которая является интерфейсом объекта
-    /// Interceptor - объект, который находится между прокси и объектом, выполняя некоторую работу над проходящими данными
-    WorkerProxy* createProxy(const QSet<Interceptor *> &interceptors = {});
+    explicit Worker(const Settings::Worker &settings, QThread *thread);
+    WorkerProxy* createPipe(const QList<Interceptor *> &interceptors = {});
     const QString &workerName() const;
-    const Set &consumers() const;
-    const Set &producers() const;
+    const WorkerSet &consumers() const;
+    const WorkerSet &producers() const;
     QStringList consumersNames() const;
     QStringList producersNames() const;
     QThread *workerThread() const;
+    QList<WorkerProxy *> proxies() const;
+    QList<Interceptor*> pipe(WorkerProxy *proxy);
     Broker *broker() const;
     bool wasStarted() const;
     bool is(const QMetaObject * mobj) const;
@@ -37,10 +43,8 @@ public:
     template <typename Target> const Target *as() const;
     template <typename Target> Target *as();
     QString printSelf() const;
-    void addInterceptor(Interceptor *interceptor);
-    virtual ~Worker() = default;
+    virtual ~Worker();
 signals:
-    void fireEvent(const Radapter::BrokerEvent &event);
     void sendMsg(const Radapter::WorkerMsg &msg);
     void sendBasic(const JsonDict &msg);
     void sendRouted(const RoutedObject &obj, const QString &fieldName = {});
@@ -50,48 +54,27 @@ public slots:
     void addProducers(const QStringList &producers);
     void addConsumers(const QSet<Radapter::Worker*> &consumers);
     void addProducers(const QSet<Radapter::Worker*> &producers);
-    void addConsumer(Radapter::Worker* consumer);
-    void addProducer(Radapter::Worker* producer);
+    void addConsumer(Radapter::Worker* consumer, QList<Radapter::Interceptor*> interceptors = {});
+    void addProducer(Radapter::Worker* producer, QList<Radapter::Interceptor*> interceptors = {});
 protected slots:
-    virtual void onEvent(const Radapter::BrokerEvent &event);
     virtual void onRun();
     virtual void onReply(const Radapter::WorkerMsg &msg);
     virtual void onCommand(const Radapter::WorkerMsg &msg);
     virtual void onMsg(const Radapter::WorkerMsg &msg);
+    virtual void onBroadcast(const Radapter::WorkerMsg &msg);
 private slots:
     void onSendBasic(const JsonDict &msg);
     void onSendRouted(const RoutedObject &obj, const QString &fieldName = {});
     void onWorkerDestroyed(QObject *worker);
     void onSendMsgPriv(const Radapter::WorkerMsg &msg);
     void onMsgFromBroker(const Radapter::WorkerMsg &msg);
-    void childDeleted(QObject *who);
 protected:
-    BrokerEvent prepareEvent(quint32 id, qint16 status, qint16 type, const QVariant &data) const;
-    BrokerEvent prepareEvent(quint32 id, qint16 status, qint16 type, QVariant &&data) const;
-    BrokerEvent prepareSimpleEvent(quint32 id, qint16 status) const;
-    WorkerMsg prepareMsg(const JsonDict &msg = JsonDict()) const;
+    WorkerMsg prepareMsg(const JsonDict &msg = {}) const;
     WorkerMsg prepareMsg(JsonDict &&msg) const;
-    WorkerMsg prepareMsgBad(const QString &reason) const;
     WorkerMsg prepareReply(const WorkerMsg &msg, Reply *reply) const;
     WorkerMsg prepareCommand(Command *command) const;
-    template <typename User, typename...Args>
-    using MsgCallback = void (User::*)(Args...);
-    template <typename User, typename...Args>
-    WorkerMsg prepareCommand(Command *command, MsgCallback<User, Args...> callback) const;
 private:
-    Set m_consumers;
-    Set m_producers;
-    QSet<QString> m_consumerNames;
-    QSet<QString> m_producerNames;
-    WorkerMsg m_baseMsg;
-    WorkerProxy* m_proxy;
-    QString m_name;
-    QThread *m_thread;
-    QObject *m_closestConnected{nullptr};
-    QList<QMetaObject::Connection> m_closestConnections{};
-    QSet<Interceptor *> m_InterceptorsToAdd{};
-    std::atomic<bool> m_wasRun{false};
-    bool m_printMsgs{false};
+    WorkerPrivate *d;
     friend Broker;
 };
 
@@ -106,32 +89,11 @@ Target *Worker::as() {
     return qobject_cast<Target*>(this);
 }
 
-template <typename User, typename...Args>
-WorkerMsg Worker::prepareCommand(Command *command, MsgCallback<User, Args...> callback) const {
-    auto cmd = prepareCommand(command);
-    if(!is<User>()) {
-        throw std::invalid_argument("Must use own method as callback!");
-    }
-    cmd.setCallback(as<User>(), callback);
-    return cmd;
-}
-
 template<typename Target>
 const Target *Worker::as() const {
     return qobject_cast<const Target*>(this);
 }
 
-inline const QString &Worker::workerName() const {
-    return m_name;
-}
-
-inline const Worker::Set &Worker::consumers() const {
-    return m_consumers;
-}
-
-inline const Worker::Set &Worker::producers() const {
-    return m_producers;
-}
 }
 
 #endif //WORKERBASE_H

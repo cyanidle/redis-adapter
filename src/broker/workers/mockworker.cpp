@@ -1,12 +1,14 @@
 #include "mockworker.h"
 #include <QJsonArray>
 #include <QJsonObject>
+#include "broker/workers/private/workermsg.h"
 #include "private/global.h"
 #include "radapterlogging.h"
+#include "mockworkersettings.h"
 
 using namespace Radapter;
 
-MockWorker::MockWorker(const MockWorkerSettings &settings, QThread* thread) :
+MockWorker::MockWorker(const Settings::MockWorker &settings, QThread* thread) :
     Worker(settings, thread),
     m_file(new QFile(settings.json_file_path)),
     m_mockTimer(),

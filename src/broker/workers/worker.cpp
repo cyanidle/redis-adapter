@@ -1,4 +1,5 @@
 #include "worker.h"
+#include "broker/workers/private/pipestart.h"
 #include "radapterlogging.h"
 #include "broker/broker.h"
 #include <QThread>
@@ -7,26 +8,49 @@
 #include "workersettings.h"
 #include "radapterlogging.h"
 #include "private/workerproxy.h"
-#include "broker/events/brokerevent.h"
 #include "routed_object/routed_object.h"
 
 using namespace Radapter;
 
-Q_GLOBAL_STATIC(QRecursiveMutex, staticMutex);
-Q_GLOBAL_STATIC(QList<Interceptor*>, staticUsedInterceptors);
+struct WorkerPipe {
+    PipeStart *start;
+    QList<Interceptor*> interceptors;
+    WorkerProxy* proxy;
+};
 
-Worker::Worker(const WorkerSettings &settings, QThread *thread) :
-    QObject(),
-    m_consumers(),
-    m_producers(),
-    m_consumerNames({settings.consumers->begin(), settings.consumers->end()}),
-    m_producerNames({settings.producers->begin(), settings.producers->end()}),
-    m_baseMsg(this),
-    m_proxy(nullptr),
-    m_name(settings.name),
-    m_thread(thread),
-    m_printMsgs(settings.print_msgs)
+struct Radapter::WorkerPrivate {
+    Settings::Worker config;
+    QThread *thread;
+    QSet<Worker*> consumers;
+    WorkerMsg baseMsg;
+    QSet<Worker*> producers;
+    QHash<WorkerProxy*, WorkerPipe> pipes;
+    std::atomic<bool> wasRun;
+};
+
+Q_GLOBAL_STATIC(QRecursiveMutex, staticMutex);
+Q_GLOBAL_STATIC(QSet<Interceptor*>, staticUsedInterceptors);
+
+bool isLogAllowed(QtMsgType base, QtMsgType target)
 {
+    switch(base) {
+    case QtDebugMsg: return true;
+    case QtInfoMsg: return target != QtDebugMsg;
+    case QtWarningMsg: return target != QtInfoMsg && target != QtDebugMsg;
+    case QtFatalMsg: return target != QtInfoMsg && target != QtDebugMsg && target != QtWarningMsg;
+    case QtCriticalMsg: return target != QtInfoMsg && target != QtDebugMsg && target != QtFatalMsg && target != QtWarningMsg;
+    default: return true;
+    }
+}
+
+Worker::Worker(const Settings::Worker &settings, QThread *thread) :
+    QObject(),
+    d(new WorkerPrivate)
+{
+    d->thread = thread;
+    d->wasRun = false;
+    d->baseMsg = {this};
+    d->config = settings;
     setObjectName(settings.name);
     if (isPrintMsgsEnabled()) {
         brokerWarn()<< "=== Worker (" << workerName() << "): Running in Debug Mode! ===";
@@ -39,55 +63,14 @@ Worker::Worker(const WorkerSettings &settings, QThread *thread) :
     connect(thread, &QThread::finished, thread, &QThread::deleteLater);
 }
 
-/// \brief Insert interceptor
-/// 1) (If only proxy exists, no interceptors) (Proxy) <--> (Worker)
-///     ----->     (Proxy) <--> (NewInterceptor) <--> (Worker)
-/// 2) (If interceptor(s) exist) (Proxy) <--> (Interceptor) <--> (Worker)
-///     ----->     (Proxy) <--> (Interceptor) <--> (NewInterceptor) <--> (Worker)
-void Worker::addInterceptor(Interceptor *interceptor)
-{
-    QMutexLocker locker(staticMutex);
-    if (!m_proxy) {
-        m_InterceptorsToAdd.insert(interceptor);
-        return;
-    }
-    if (wasStarted()) {
-        throw std::runtime_error("Cannot add interceptor during runtime!");
-    }
-    if (staticUsedInterceptors->contains(interceptor)) {
-        throw std::runtime_error("Used Interceptor not allowed!");
-    }
-    auto closestProxy = qobject_cast<WorkerProxy*>(m_closestConnected);
-    auto closestInterceptor = qobject_cast<Interceptor*>(m_closestConnected);
-    if (!closestProxy && !closestInterceptor){
-        throw std::runtime_error("Closest connected objecy unknown!");
-    }
-    for (auto &conn : m_closestConnections) {
-        disconnect(conn);
-    }
-    m_closestConnections.clear();
-    m_closestConnections.append(connect(interceptor, &Interceptor::msgToWorker, this, &Worker::onMsgFromBroker));
-    m_closestConnections.append(connect(this, &Worker::sendMsg, interceptor, &Interceptor::onMsgFromWorker));
-    connect(interceptor, &Interceptor::destroyed, this, &Worker::childDeleted);
-    if (closestProxy) {
-        connect(interceptor, &Interceptor::msgToBroker, closestProxy, &WorkerProxy::onMsgFromWorker);
-        connect(closestProxy, &WorkerProxy::msgToWorker, interceptor, &Interceptor::onMsgFromBroker);
-    } else if (closestInterceptor) {
-        connect(interceptor, &Interceptor::msgToBroker, closestInterceptor, &Interceptor::onMsgFromWorker);
-        connect(closestInterceptor, &Interceptor::msgToWorker, interceptor, &Interceptor::onMsgFromBroker);
-    } else {
-        throw std::runtime_error("Unknown Error while adding interceptor!");
-    }
-}
-
 bool Worker::isPrintMsgsEnabled() const
 {
-    return m_printMsgs;
+    return d->config.print_msgs;
 }
 
 bool Worker::printEnabled(QtMsgType type) const
 {
-    return broker()->isDebugEnabled(workerName(), type);
+    return isLogAllowed(d->config.log_level.value, type);
 }
 
 Broker *Worker::broker() const
@@ -97,7 +80,7 @@ Broker *Worker::broker() const
 
 bool Worker::wasStarted() const
 {
-    return m_wasRun;
+    return d->wasRun;
 }
 
 bool Worker::is(const QMetaObject *mobj) const
@@ -110,23 +93,18 @@ QString Worker::printSelf() const
     return QStringLiteral("%2 (%1)").arg(metaObject()->className(), workerName());
 }
 
+Worker::~Worker()
+{
+    delete d;
+}
+
 void Worker::run()
 {
     QMutexLocker locker(staticMutex);
-    if (m_wasRun) throw std::runtime_error("WorkerBase::onRun() called multiple times for: " + printSelf().toStdString());
+    if (d->wasRun) throw std::runtime_error("WorkerBase::onRun() called multiple times for: " + printSelf().toStdString());
     moveToThread(workerThread());
-    for (auto &producerName : qAsConst(m_producerNames)) {
-        auto worker = broker()->getWorker(producerName);
-        if (!worker) throw std::runtime_error("Nonexistent required worker: " + producerName.toStdString());
-        addProducer(worker);
-    }
-    for (auto &consumerName : qAsConst(m_consumerNames)) {
-        auto worker = broker()->getWorker(consumerName);
-        if (!worker) throw std::runtime_error("Nonexistent required worker: " + consumerName.toStdString());
-        addConsumer(worker);
-    }
     workerThread()->start();
-    m_wasRun = true;
+    d->wasRun = true;
 }
 
 void Worker::onRun()
@@ -138,7 +116,6 @@ void Worker::addConsumers(const QStringList &consumers)
 {
     QMutexLocker locker(staticMutex);
     for (auto &name : consumers) {
-        m_consumerNames.insert(name);
         if (wasStarted()) {
             auto worker = broker()->getWorker(name);
             if (!worker) throw std::runtime_error("Nonexistent worker: " + name.toStdString());
@@ -151,7 +128,6 @@ void Worker::addProducers(const QStringList &producers)
 {
     QMutexLocker locker(staticMutex);
     for (auto &name : producers) {
-        m_producerNames.insert(name);
         if (wasStarted()) {
             auto worker = broker()->getWorker(name);
             if (!worker) throw std::runtime_error("Nonexistent worker: " + name.toStdString());
@@ -160,7 +136,7 @@ void Worker::addProducers(const QStringList &producers)
     }
 }
 
-void Worker::addConsumers(const Set &consumers)
+void Worker::addConsumers(const WorkerSet &consumers)
 {
     QMutexLocker locker(staticMutex);
     for (auto &worker : consumers) {
@@ -168,7 +144,7 @@ void Worker::addConsumers(const Set &consumers)
     }
 }
 
-void Worker::addProducers(const Set &producers)
+void Worker::addProducers(const WorkerSet &producers)
 {
     QMutexLocker locker(staticMutex);
     for (auto &worker : producers) {
@@ -176,50 +152,36 @@ void Worker::addProducers(const Set &producers)
     }
 }
 
-void Worker::addConsumer(Worker *consumer)
+void Worker::addConsumer(Worker *consumer, QList<Radapter::Interceptor*> interceptors)
 {
     QMutexLocker locker(staticMutex);
-    m_consumers.insert(consumer);
+    d->consumers.insert(consumer);
     if (!consumer->producers().contains(this)) {
         consumer->addProducer(this);
     }
     connect(consumer, &QObject::destroyed, this, &Worker::onWorkerDestroyed);
-    if (!m_consumerNames.contains(consumer->workerName())) {
-        m_consumerNames.insert(consumer->workerName());
+    d->baseMsg.m_receivers.insert(consumer);
+    if (wasStarted()) {
+        broker()->connectTwo(this, consumer, interceptors);
     }
-    m_baseMsg.m_receivers.insert(consumer);
 }
 
-void Worker::addProducer(Worker *producer)
+void Worker::addProducer(Worker *producer, QList<Radapter::Interceptor*> interceptors)
 {
     QMutexLocker locker(staticMutex);
-    m_producers.insert(producer);
+    d->producers.insert(producer);
     if (!producer->consumers().contains(this)) {
         producer->addConsumer(this);
     }
     connect(producer, &QObject::destroyed, this, &Worker::onWorkerDestroyed);
-    if (!m_producerNames.contains(producer->workerName())) {
-        m_producerNames.insert(producer->workerName());
+    if (wasStarted()) {
+        broker()->connectTwo(producer, this, interceptors);
     }
-}
-
-void Worker::onEvent(const BrokerEvent &event)
-{
-    Q_UNUSED(event);
-}
-
-WorkerMsg Worker::prepareMsgBad(const QString &reason) const
-{
-    auto msg = m_baseMsg;
-    msg.updateId();
-    msg.serviceData(WorkerMsg::ServiceBadReasonField) = reason.isEmpty() ? "Not given" : reason;
-    msg.setFlag(WorkerMsg::MsgBad);
-    return msg;
 }
 
 WorkerMsg Worker::prepareMsg(const JsonDict &msg) const
 {
-    auto wrapped = m_baseMsg;
+    auto wrapped = d->baseMsg;
     wrapped.updateId();
     wrapped.setJson(msg);
     return wrapped;
@@ -227,7 +189,7 @@ WorkerMsg Worker::prepareMsg(const JsonDict &msg) const
 
 WorkerMsg Worker::prepareMsg(JsonDict &&msg) const
 {
-    auto wrapped = m_baseMsg;
+    auto wrapped = d->baseMsg;
     wrapped.updateId();
     wrapped.setJson(std::move(msg));
     return wrapped;
@@ -245,7 +207,7 @@ WorkerMsg Worker::prepareReply(const WorkerMsg &msg, Reply *reply) const
 
 WorkerMsg Worker::prepareCommand(Command *command) const
 {
-    auto wrapped = m_baseMsg;
+    auto wrapped = d->baseMsg;
     wrapped.setCommand(command);
     wrapped.updateId();
     return wrapped;
@@ -269,6 +231,11 @@ void Worker::onMsg(const Radapter::WorkerMsg &msg)
         msg.sender()->printSelf() << "but not handled!";
 }
 
+void Worker::onBroadcast(const WorkerMsg &msg)
+{
+    Q_UNUSED(msg);
+}
+
 void Worker::onSendBasic(const JsonDict &msg)
 {
     emit sendMsg(prepareMsg(msg));
@@ -281,12 +248,17 @@ void Worker::onSendRouted(const RoutedObject &obj, const QString &fieldName)
 
 void Worker::onWorkerDestroyed(QObject *worker)
 {
-    m_consumers.remove(qobject_cast<Worker*>(worker));
-    m_producers.remove(qobject_cast<Worker*>(worker));
+    d->consumers.remove(qobject_cast<Worker*>(worker));
+    d->producers.remove(qobject_cast<Worker*>(worker));
 }
 
 void Worker::onMsgFromBroker(const Radapter::WorkerMsg &msg)
 {
+    if (msg.isBroadcast()) {
+        onBroadcast(msg);
+        return;
+    }
+    if (!msg.receivers().contains(this)) return;
     if (isPrintMsgsEnabled()) {
         workerInfo(this, .noquote()) << "<--- TO ###" << msg.printFullDebug();
     }
@@ -323,30 +295,9 @@ void Worker::onMsgFromBroker(const Radapter::WorkerMsg &msg)
     }
 }
 
-void Worker::childDeleted(QObject *who)
-{
-    workerWarn(this) << "Deleting...; Reason --> Important Child died: " << who;
-    deleteLater();
-}
-
-BrokerEvent Worker::prepareEvent(quint32 id, qint16 status, qint16 type, const QVariant &data) const
-{
-    return {const_cast<Worker*>(this), id, status, type, data};
-}
-
-BrokerEvent Worker::prepareEvent(quint32 id, qint16 status, qint16 type, QVariant &&data) const
-{
-    return {const_cast<Worker*>(this), id, status, type, std::move(data)};
-}
-
-BrokerEvent Worker::prepareSimpleEvent(quint32 id, qint16 status) const
-{
-    return {const_cast<Worker*>(this), id, status, 0, {}};
-}
-
 void Worker::onSendMsgPriv(const Radapter::WorkerMsg &msg)
 {
-    if (!m_wasRun) {
+    if (!d->wasRun) {
         throw std::runtime_error("Worker sent msg before being run!");
     }
     if (isPrintMsgsEnabled()) {
@@ -354,102 +305,114 @@ void Worker::onSendMsgPriv(const Radapter::WorkerMsg &msg)
     }
 }
 
-WorkerProxy* Worker::createProxy(const QSet<Interceptor*> &interceptors)
+WorkerProxy* Worker::createPipe(const QList<Interceptor*> &interceptors)
 {
     QMutexLocker locker(staticMutex);
-    if (m_proxy == nullptr) {
-        m_proxy = new WorkerProxy();
-        m_proxy->setObjectName(workerName());
-        m_proxy->setParent(this);
-        auto filtered = QList<Interceptor*>();
-        for (auto &interceptor : interceptors) {
-            if (!filtered.contains(interceptor) || !staticUsedInterceptors->contains(interceptor)) {
-                interceptor->setParent(this);
-                filtered.append(interceptor);
-                staticUsedInterceptors->append(interceptor);
-            } else {
-                brokerError() << "=======================================================================================";
-                brokerError() << "WorkerBase::CreateProxy(): Interceptors list contains copies or already used ones!";
-                brokerError() << "WorkerBase::CreateProxy(): This will result in msg loops! Aborting!";
-                brokerError() << "=======================================================================================";
-                delete m_proxy;
-                m_proxy = nullptr;
-                throw std::runtime_error("Interceptors list contains copies! Will result in msg loops!");
-            }
+    auto proxy = new WorkerProxy(this);
+    auto start = new PipeStart(proxy);
+    connect(this, &Worker::sendMsg, start, &PipeStart::onSendMsg);
+    proxy->setObjectName(workerName());
+    d->pipes[proxy].proxy = proxy;
+    d->pipes[proxy].start = start;
+    for (auto &interceptor : interceptors) {
+        if (staticUsedInterceptors->contains(interceptor)) {
+            brokerError() << "=======================================================================================";
+            brokerError() << "WorkerBase::CreateProxy(): Interceptors list contains copies or already used ones!";
+            brokerError() << "WorkerBase::CreateProxy(): This will result in msg loops! Aborting!";
+            brokerError() << "=======================================================================================";
+            delete proxy;
+            throw std::runtime_error("Interceptors list contains copies! Will result in msg loops!");
         }
-        if (filtered.isEmpty()) {
-            // Если удаляется любой из перехватчиков или прокси, воркер следует за ними
-            connect(m_proxy, &WorkerProxy::destroyed,
-                    this, &Worker::childDeleted,
-                    Qt::DirectConnection);
-            // Подключение ОТ брокера (ОТ прок
-            auto outConn = connect(this, &Worker::sendMsg,
-                    m_proxy, &WorkerProxy::onMsgFromWorker,
-                    Qt::DirectConnection);
-            // Подключение ОТ брокера (ОТ прокси)
-            auto inConn = connect(m_proxy, &WorkerProxy::msgToWorker,
-                    this, &Worker::onMsgFromBroker,
-                    Qt::DirectConnection);
-            m_closestConnected = m_proxy;
-            m_closestConnections = {outConn, inConn};
-        } else {
-            connect(filtered[0], &Interceptor::destroyed,
-                    this, &Worker::childDeleted,
-                    Qt::DirectConnection);
-            // Подключение К перехватчику (первому/ближнему к воркеру)
-            auto outConn = connect(this, &Worker::sendMsg,
-                    filtered[0], &Interceptor::onMsgFromWorker,
-                    Qt::DirectConnection);
-            // Подключение ОТ перехватчика (первого)
-            auto inConn = connect(filtered[0], &Interceptor::msgToWorker,
-                    this, &Worker::onMsgFromBroker,
-                    Qt::DirectConnection);
-            m_closestConnected = filtered[0];
-            m_closestConnections = {outConn, inConn};
-            for (int i = 0; i < filtered.length() - 1; ++i) {
-                connect(filtered[i], &Interceptor::destroyed,
-                        this, &Worker::childDeleted,
-                        Qt::DirectConnection);
-                // Если перехватчиков более одного, то соединяем их друг с другом
-                connect(filtered[i], &Interceptor::msgToBroker,
-                        filtered[i + 1], &Interceptor::onMsgFromWorker,
-                        Qt::DirectConnection);
-                connect(filtered[i + 1], &Interceptor::msgToWorker,
-                        filtered[i], &Interceptor::onMsgFromBroker,
-                        Qt::DirectConnection);
-            }
-            connect(filtered.last(), &Interceptor::destroyed,
-                    this, &Worker::childDeleted,
-                    Qt::DirectConnection);
-            // Подключение (последний/дальний от воркера) перехватчик --> прокси
-            connect(filtered.last(), &Interceptor::msgToBroker,
-                    m_proxy, &WorkerProxy::onMsgFromWorker,
-                    Qt::DirectConnection);
-            // Подключение прокси --> (последний) перехватчик
-            connect(m_proxy, &WorkerProxy::msgToWorker,
-                    filtered.last(), &Interceptor::onMsgFromBroker,
-                    Qt::DirectConnection);
-        }
+        interceptor->setParent(nullptr);
+        interceptor->moveToThread(proxy->thread());
+        interceptor->setParent(proxy);
+        staticUsedInterceptors->insert(interceptor);
+        connect(interceptor, &QObject::destroyed, [&]() {
+            staticUsedInterceptors->remove(interceptor);
+        });
     }
-    for (auto &inter : qAsConst(m_InterceptorsToAdd)) {
-        addInterceptor(inter);
+    if (interceptors.isEmpty()) {
+        // Подключение ОТ брокера (ОТ прок
+        connect(start, &PipeStart::msgFromWorker,
+                proxy, &WorkerProxy::onMsgFromWorker,
+                Qt::DirectConnection);
+        return proxy;
     }
-    return m_proxy;
+    // Подключение К перехватчику (первому/ближнему к воркеру)
+    connect(start, &PipeStart::msgFromWorker,
+            interceptors[0], &Interceptor::onMsgFromWorker,
+            Qt::DirectConnection);
+    for (int i = 0; i < interceptors.length() - 1; ++i) {
+        // Если перехватчиков более одного, то соединяем их друг с другом
+        connect(interceptors[i], &Interceptor::msgFromWorker,
+                interceptors[i + 1], &Interceptor::onMsgFromWorker,
+                Qt::DirectConnection);
+        d->pipes[proxy].interceptors.append(interceptors[i]);
+    }
+    // Подключение (последний/дальний от воркера) перехватчик --> прокси
+    connect(interceptors.last(), &Interceptor::msgFromWorker,
+            proxy, &WorkerProxy::onMsgFromWorker,
+            Qt::DirectConnection);
+    d->pipes[proxy].interceptors.append(interceptors.last());
+    connect(proxy, &QObject::destroyed, this, [this, proxy](){
+        d->pipes.remove(proxy);
+    });
+    return proxy;
+}
+
+const QString &Worker::workerName() const
+{
+    return d->config.name;
+}
+
+const Worker::WorkerSet &Worker::consumers() const
+{
+    return d->consumers;
+}
+
+const Worker::WorkerSet &Worker::producers() const
+{
+    return d->producers;
 }
 
 QStringList Worker::consumersNames() const
 {
-    return {m_consumerNames.begin(), m_consumerNames.end()};
+    QStringList result;
+    for (auto consumer: d->consumers) {
+        result.append(consumer->workerName());
+    }
+    return result;
 }
 
 QStringList Worker::producersNames() const
 {
-    return {m_producerNames.begin(), m_producerNames.end()};
+    QStringList result;
+    for (auto producer: d->producers) {
+        result.append(producer->workerName());
+    }
+    return result;
 }
 
 QThread *Worker::workerThread() const
 {
-    return m_thread;
+    return d->thread;
+}
+
+QList<WorkerProxy *> Worker::proxies() const
+{
+    QList<WorkerProxy *> result;
+    for (auto &pipe: d->pipes) {
+        result.append(pipe.proxy);
+    }
+    return result;
+}
+
+QList<Interceptor*> Worker::pipe(WorkerProxy *proxy)
+{
+    if (d->pipes.contains(proxy)) {
+        return d->pipes[proxy].interceptors;
+    }
+    return {};
 }
 
 

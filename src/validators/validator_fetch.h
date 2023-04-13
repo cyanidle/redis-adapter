@@ -3,7 +3,6 @@
 
 #include "private/global.h"
 #include <QSharedPointer>
-
 namespace Validator {
 using Function = bool (*)(QVariant&);
 namespace Private {
@@ -29,7 +28,7 @@ const Executor *fetch(const char *name);
 const Executor *fetch(const QLatin1String &name);
 const Executor *fetch(const QString &name);
 QString nameOf(const Executor *validator);
-
+const QStringList available();
 
 template <typename T>
 void makeFetchable() {
@@ -57,15 +56,15 @@ struct Validator {
     Validator();
     Validator(const QString &name);
     static void initialize();
-    const ::Validator::Executor* operator->() const;
+    bool validate(QVariant &target) const;
+    const QString &name() const;
     operator bool() const;
-    operator const ::Validator::Executor*() const;
     bool operator<(const Validator &other) const;
     bool operator==(const QVariant &variant) const;
     bool operator!=(const QVariant &variant) const;
 private:
     QString m_name;
-    QSharedPointer<const ::Validator::Executor> m_executor;
+    const ::Validator::Executor *m_executor;
 };
 } //namespace Serializable
 Q_DECLARE_METATYPE(Serializable::Validator)

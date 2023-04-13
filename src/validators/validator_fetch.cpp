@@ -1,12 +1,15 @@
 #include "validator_fetch.h"
 #include "qmutex.h"
+#include "radapterlogging.h"
 #include <QMetaProperty>
 #include <QString>
 
 template <typename T>
 using QStringMap = QMap<QString, T>;
+
 Q_GLOBAL_STATIC(QStringMap<const Validator::Executor*>, allValidators)
 Q_GLOBAL_STATIC(QRecursiveMutex, staticMutex)
+
 Validator::Executor::Executor(Function func) :
     m_func(func)
 {
@@ -67,7 +70,6 @@ QString Validator::nameOf(const Executor *validator)
 Serializable::Validator::Validator() :
     m_executor(nullptr)
 {
-
 }
 
 Serializable::Validator::Validator(const QString &name) :
@@ -77,7 +79,7 @@ Serializable::Validator::Validator(const QString &name) :
     if (name.isEmpty()) return;
     auto fetched = ::Validator::fetch(name);
     if (!fetched) throw std::runtime_error("Unavailable validator: " + name.toStdString());
-    m_executor.reset(fetched);
+    m_executor = fetched;
 }
 
 void Serializable::Validator::initialize()
@@ -96,14 +98,17 @@ void Serializable::Validator::initialize()
     }
 }
 
-const Validator::Executor *Serializable::Validator::operator->() const
+bool Serializable::Validator::validate(QVariant &target) const
 {
-    return m_executor.data();
+    if (!m_executor) {
+        throw std::runtime_error("Attempt to validate with nonexistent validator. Name: " + m_name.toStdString());
+    }
+    return m_executor->validate(target);
 }
 
-Serializable::Validator::operator const::Validator::Executor *() const
+const QString &Serializable::Validator::name() const
 {
-    return m_executor.data();
+    return m_name;
 }
 
 bool Serializable::Validator::operator<(const Validator &other) const
@@ -145,4 +150,9 @@ int Validator::Private::add(Function func, const QStringList &aliases)
         add(func, alias.toStdString().c_str());
     }
     return 0;
+}
+
+const QStringList Validator::available()
+{
+    return allValidators->keys();
 }

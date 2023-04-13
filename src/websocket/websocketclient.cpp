@@ -2,6 +2,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include "jsondict/jsondict.h"
 #include "radapterlogging.h"
 
 using namespace Websocket;
@@ -135,7 +136,7 @@ void Client::onSocketReceived(const QString &message)
         wsockClientDebug() << "empty json received";
         return;
     }
-    emit sendMsg(prepareMsg(jsonMessage));
+    emit sendBasic(jsonMessage);
 }
 
 void Client::onConnectionLost()

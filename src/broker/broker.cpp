@@ -1,48 +1,61 @@
 #include "broker.h"
-#include "brokersettings.h"
+#include "broker/brokersettings.h"
+#include "broker/interceptor/interceptor.h"
+#include "broker/workers/private/workermsg.h"
 #include "radapterlogging.h"
 #include <QMutex>
 #include <QMutexLocker>
 #include "workers/worker.h"
 #include "workers/private/workerproxy.h"
 #include <QCoreApplication>
-
 using namespace Radapter;
-Q_GLOBAL_STATIC(BrokerSettings, settings)
-Q_GLOBAL_STATIC(QRecursiveMutex, staticMutex)
+
+struct WorkerConnection {
+    Worker *producer;
+    WorkerProxy *producerProxy;
+    Worker *consumer;
+    void kill() {
+        producerProxy->deleteLater();
+    }
+    bool matches(const Worker *producer, const Worker *consumer) const {
+        return this->producer==producer && this->consumer==consumer;
+    }
+};
+
+struct Radapter::BrokerPrivate {
+    QMap<QString, Worker*> workers;
+    QMap<QString, Interceptor*> interceptors;
+    QList<WorkerConnection> connections;
+    Settings::Broker settings;
+    QRecursiveMutex mutex;
+    bool wereConnected(const Worker *producer, const Worker *consumer) const {
+        for (const auto &conn: connections) {
+            if (conn.matches(producer, consumer)) {
+                return true;
+            }
+        }
+        return false;
+    }
+};
 
 Broker::Broker() :
     QObject(),
-    m_proxies(),
-    m_connected(),
-    m_debugTable()
+    d(new BrokerPrivate)
 {
-}
-
-bool Broker::isDebugEnabled(const QString &workerName, QtMsgType type)
-{
-    return m_debugTable.value(workerName).value(type, true);
-}
-
-void Broker::applyWorkerLoggingFilters(const QMap<QString, QMap<QtMsgType, bool>> &table)
-{
-    QMutexLocker locker(staticMutex);
-    for (auto iter{table.begin()}; iter != table.end(); ++iter) {
-        m_debugTable[iter.key()] = {iter.value().cbegin(), iter.value().cend()};
-    }
 }
 
 // Doesnt need mutex, bc is always connected via Qt::QueuedConnection
 void Broker::onMsgFromWorker(const Radapter::WorkerMsg &msg)
 {
+    if (msg.isBroadcast()) {
+        emit broadcastToAll(msg);
+        return;
+    }
     if (msg.receivers().isEmpty()) {
-        if (settings->warn_no_receivers) {
+        if (d->settings.warn_no_receivers) {
             brokerWarn() << "Msg with no receivers! Sender:" << msg.sender();
         }
         return;
-    }
-    if (msg.isDirect() || msg.isBroadcast()) {
-        emit broadcastToAll(msg);
     }
 }
 
@@ -53,172 +66,182 @@ void Broker::proxyDestroyed(QObject *proxy)
         brokerError() << "Invalid proxy: " << proxy;
         return;
     }
-    if (m_proxies.contains(casted->proxyName())) {
-        m_proxies.remove(casted->proxyName());
-    } else {
-        brokerError() << "Proxy already removed: " << proxy;
-    }
+
 }
 
-void Broker::registerProxy(WorkerProxy* proxy)
+void Broker::registerWorker(Worker* worker)
 {
-    QMutexLocker locker(staticMutex);
-    if (!proxy) {
+    QMutexLocker locker(&d->mutex);
+    if (!worker) {
         throw std::runtime_error("Nullptr passed to broker.registerProxy()!");
     }
-    if (proxy->proxyName().isEmpty()) {
-        throw std::runtime_error(std::string("Proxy (Worker) name cannot be empty! Source: ") + proxy->parent()->metaObject()->className());
+    if (worker->workerName().isEmpty()) {
+        throw std::runtime_error(std::string("Worker name cannot be empty! Source: ") + worker->parent()->metaObject()->className());
     }
     connect(this, &Broker::broadcastToAll,
-            proxy, &WorkerProxy::onMsgFromBroker,
-            thread() == proxy->workerThread() ? Qt::DirectConnection : Qt::QueuedConnection);
-    connect(proxy, &WorkerProxy::msgToBroker,
-            this, &Broker::onMsgFromWorker,
-            thread() == proxy->workerThread() ? Qt::DirectConnection : Qt::QueuedConnection);
-    connect(proxy->worker(), &Worker::fireEvent,
-            this, &Broker::onEvent,
-            thread() == proxy->workerThread() ? Qt::DirectConnection : Qt::QueuedConnection);
-    connect(this, &Broker::fireEvent,
-            proxy->worker(), &Worker::onEvent,
-            thread() == proxy->workerThread() ? Qt::DirectConnection : Qt::QueuedConnection);
-    connect(proxy, &WorkerProxy::destroyed, this, &Broker::proxyDestroyed,
-            thread() == proxy->workerThread() ? Qt::DirectConnection : Qt::QueuedConnection);
-    if (m_proxies.contains(proxy->proxyName())) {
-        brokerError() << "Broker: Proxy with duplicate name: " << proxy->proxyName();
-        throw std::runtime_error(std::string("Broker: Proxy with duplicate name: ") +
-                                 std::string(proxy->proxyName().toStdString()));
-    } else {
-        brokerInfo() << "Broker: Registering proxy with name: " << proxy->proxyName();
-        m_proxies.insert(proxy->proxyName(), proxy);
-    }
-}
+            worker, &Worker::onMsgFromBroker,
+            thread() == worker->workerThread() ? Qt::DirectConnection : Qt::QueuedConnection);
 
-void Broker::connectProducersAndConsumers()
-{
-    QMutexLocker locker(staticMutex);
-    if (m_wasMassConnectCalled) {
-        brokerError() << "Broker: connectProducersAndConsumers() was already called!";
-        throw std::runtime_error("Broker: connectProducersAndConsumers() was already called!");
-    }
-    m_wasMassConnectCalled = true;
-    for (auto proxyIter = m_proxies.constBegin(); proxyIter != m_proxies.constEnd(); ++proxyIter) {
-        for (auto &consumer : proxyIter.value()->consumersNames()) {
-            connectTwo(proxyIter.key(), consumer);
-        }
-        for (auto &producer : proxyIter.value()->producersNames()) {
-            connectTwo(producer, proxyIter.key());
-        }
-    }
+    brokerInfo() << "Registering worker:" << worker->printSelf();
+    d->workers.insert(worker->workerName(), worker);
 }
 
 void Broker::runAll()
 {
-    QMutexLocker locker(staticMutex);
-    for (auto &proxy : m_proxies) {
-        auto worker = proxy->worker();
+    QMutexLocker locker(&d->mutex);
+    for (auto worker : d->workers) {
         if (!worker->wasStarted()) worker->run();
     }
-    for (auto &proxy : m_proxies) {
-        auto worker = proxy->worker();
+    for (auto &worker : d->workers) {
         if (!worker->wasStarted()) throw std::runtime_error(std::string("WorkerBase::onRun() not called for: ") +
                                                             worker->metaObject()->className() +
                                                             ": (" + worker->objectName().toStdString() + ")");
     }
 }
 
-void Broker::publishEvent(const BrokerEvent &event)
+Broker::~Broker()
 {
-    emit fireEvent(event);
+    delete d;
 }
 
-void Broker::applySettings(const BrokerSettings &newSettings)
+void Broker::applySettings(const Settings::Broker &newSettings)
 {
-    QMutexLocker locker(staticMutex);
-    *(settings) = newSettings;
+    QMutexLocker locker(&d->mutex);
+    d->settings = newSettings;
 }
 
 bool Broker::exists(const QString &workerName) const
 {
-    QMutexLocker locker(staticMutex);
-    return m_proxies.contains(workerName);
+    QMutexLocker locker(&d->mutex);
+    return d->workers.contains(workerName);
 }
 
 Worker* Broker::getWorker(const QString &workerName)
 {
-    QMutexLocker locker(staticMutex);
-    if (m_proxies.contains(workerName)) {
-        return m_proxies[workerName]->worker();
+    QMutexLocker locker(&d->mutex);
+    if (d->workers.contains(workerName)) {
+        return d->workers[workerName];
     } else {
         return nullptr;
     }
 }
 
-bool Broker::wasStarted()
-{
-    QMutexLocker locker(staticMutex);
-    return m_wasMassConnectCalled;
-}
-
 void Broker::registerInterceptor(const QString &name, Interceptor *interceptor)
 {
-    m_interceptors.insert(name, interceptor);
+    interceptor->setObjectName(name);
+    brokerInfo() << "Registering interceptor:" << name
+                 << QStringLiteral("(%1)").arg(interceptor->metaObject()->className());
+    d->interceptors.insert(name, interceptor);
 }
 
 Interceptor *Broker::getInterceptor(const QString &name) const
 {
-    return m_interceptors.value(name);
+    return d->interceptors.value(name);
 }
 
-void Broker::connectTwo(const QString &producer, const QString &consumer)
+void Broker::connectTwo(const QString &producer, const QString &consumer, const QStringList &interceptorNames)
 {
-    QMutexLocker locker(staticMutex);
-    if (!m_proxies.value(producer)) {
-        brokerWarn() << "Broker: connectProxies: No proxy (producer) with name: " << producer;
+    QMutexLocker locker(&d->mutex);
+    if (!d->workers.value(producer)) {
+        brokerWarn() << "Broker: connectTwo: No producer with name: " << producer;
         brokerWarn() << "^ Wanted by: " << consumer;
-        throw std::runtime_error("Broker: connectProxies(): missing producer --> " + producer.toStdString());
+        throw std::runtime_error("Broker: connectTwo(): missing producer --> " + producer.toStdString());
     }
-    if (!m_proxies.value(consumer)) {
-        brokerWarn() << "Broker: connectProxies: No proxy (consumer) with name: " << consumer;
+    if (!d->workers.value(consumer)) {
+        brokerWarn() << "Broker: connectTwo: No consumer with name: " << consumer;
         brokerWarn() << "^ Wanted by: " << producer;
-        throw std::runtime_error("Broker: connectProxies(): missing consumer --> " + consumer.toStdString());
+        throw std::runtime_error("Broker: connectTwo(): missing consumer --> " + consumer.toStdString());
     }
-    auto producerPtr = m_proxies.value(producer);
-    auto consumerPtr = m_proxies.value(consumer);
-    connectTwoProxies(producerPtr, consumerPtr);
+    auto producerPtr = d->workers.value(producer);
+    auto consumerPtr = d->workers.value(consumer);
+    QList<Interceptor*> interceptors;
+    for (const auto &name : interceptorNames) {
+        auto current = getInterceptor(name);
+        if (!current) {
+            brokerWarn() << "Broker: connectTwo: No interceptor with name: " << name;
+            brokerWarn() << "^ Wanted by: " << producer << "-->" << consumer;
+            throw std::runtime_error("Broker: connectTwo(): missing interceptor --> " + name.toStdString());
+        }
+        interceptors.append(current);
+    }
+    connectProxyToWorker(producerPtr->createPipe(interceptors), consumerPtr);
 }
 
-void Broker::connectTwoProxies(WorkerProxy* producer, WorkerProxy* consumer)
+void Broker::connectTwo(Worker *producer, Worker *consumer, const QList<Interceptor *> interceptors)
 {
-    QMutexLocker locker(staticMutex);
-    if (producer == consumer && !settings->allow_self_connect) {
+    connectProxyToWorker(producer->createPipe(interceptors), consumer);
+}
+
+bool Broker::areConnected(Worker *producer, Worker *consumer)
+{
+    return d->wereConnected(producer, consumer);
+}
+
+void Broker::disconnect(Worker *producer, Worker *consumer)
+{
+    for (auto &conn: d->connections) {
+        if (conn.producer == producer && conn.consumer == consumer) {
+            conn.kill();
+            return;
+        }
+    }
+    throw std::runtime_error("Cannot disconnect unconnected workers!");
+}
+
+void Broker::connectProxyToWorker(WorkerProxy* producerProxy, Worker *consumer)
+{
+    QMutexLocker locker(&d->mutex);
+    if (producerProxy->worker() == consumer && !d->settings.allow_self_connect) {
         throw std::runtime_error("Attempt to connect worker to itself! Can be enabled by broker option: 'allow_self_connect'");
     }
-    auto pair = QPair<WorkerProxy*, WorkerProxy*>{producer, consumer};
-    if (m_connected.contains(pair)) {
-        return;
+    const auto conn = WorkerConnection{producerProxy->worker(), producerProxy, consumer};
+    if (d->wereConnected(conn.producer, conn.consumer)) {
+        throw std::runtime_error("Duplicate connection between '"
+                                 + conn.producer->printSelf().toStdString()
+                                 + "' and '"
+                                 + conn.consumer->printSelf().toStdString() + "'");
     }
-    brokerInfo() << "\nConnecting:\n == Producer(" << producer->worker()->printSelf()
-                 << ") -->\n == Consumer(" << consumer->worker()->printSelf() << ")";
-    connect(producer, &WorkerProxy::msgToBroker,
-            consumer, &WorkerProxy::onMsgFromBroker,
-            consumer->workerThread() == producer->workerThread()
+    QStringList interceptors;
+    for (auto inter: conn.producer->pipe(producerProxy)) {
+        interceptors.append(inter->objectName());
+    }
+    auto interceptorsMsg = '|' + interceptors.join("| --> |") + '|';
+    brokerInfo() << "\nConnecting:\n == Producer(" << conn.producer->printSelf()
+                 << ") -->\n"
+                 << "== Pipe(" << interceptorsMsg
+                 << ") -->\n"
+                 << "== Consumer(" << conn.consumer->printSelf() << ")";
+    connect(producerProxy, &WorkerProxy::msgToConsumers,
+            consumer, &Worker::onMsgFromBroker,
+            consumer->workerThread() == producerProxy->workerThread()
                 ? Qt::DirectConnection
                 : Qt::QueuedConnection);
-    m_connected.append(pair);
-    if (!producer->consumers().contains(consumer->worker())) {
-        producer->addConsumer(consumer->worker());
+    connect(producerProxy, &WorkerProxy::msgToBroker,
+            this, &Broker::onMsgFromWorker,
+            producerProxy->workerThread() == thread()
+                ? Qt::DirectConnection
+                : Qt::QueuedConnection);
+    d->connections.append(conn);
+    if (!producerProxy->consumers().contains(consumer)) {
+        producerProxy->addConsumer(consumer);
     }
-    if (!consumer->producers().contains(producer->worker())) {
-        consumer->addProducer(producer->worker());
+    if (!consumer->producers().contains(producerProxy->worker())) {
+        consumer->addProducer(producerProxy->worker());
     }
-}
-
-void Broker::onEvent(const BrokerEvent &event)
-{
-    emit fireEvent(event);
 }
 
 Broker *Radapter::Broker::instance() {
     static Broker* broker {new Broker()};
     return broker;
+}
+
+QSet<Worker *> Broker::getAll(const QMetaObject *mobj)
+{
+    QSet<Worker *> result;
+    for (auto worker: d->workers) {
+        if (worker->metaObject()->inherits(mobj)){
+            result.insert(worker);
+        }
+    }
+    return result;
 }

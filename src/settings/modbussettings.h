@@ -14,8 +14,8 @@ namespace Settings {
     struct ChooseRegisterTable {
         static bool validate(QVariant& value);
     };
-    using RegisterTable = Serializable::Validate<Required<QModbusDataUnit::RegisterType>, ChooseRegisterTable>;
-    using RegisterValueType = Serializable::Validate<Required<QMetaType::Type>, ChooseRegValueType>;
+    using RegisterTable = Serializable::Validated<Required<QModbusDataUnit::RegisterType>>::With<ChooseRegisterTable>;
+    using RegisterValueType = Serializable::Validated<Required<QMetaType::Type>>::With<ChooseRegValueType>;
 
     struct RADAPTER_API ModbusQuery : SerializableSettings {
         Q_GADGET
@@ -75,7 +75,7 @@ namespace Settings {
     struct RADAPTER_API RegisterInfo : SerializableSettings {
         Q_GADGET
         IS_SERIALIZABLE
-        using Orders = Serializable::Validate<NonRequired<PackingMode>, OrdersValidator>;
+        using Orders = Serializable::Validated<NonRequired<PackingMode>>::With<OrdersValidator>;
         FIELD(Orders, endianess)
         FIELD(NonRequiredValidator, validator)
         FIELD(RegisterTable, table)
@@ -98,7 +98,7 @@ namespace Settings {
     struct RADAPTER_API ModbusWorker : SerializableSettings {
         Q_GADGET
         IS_SERIALIZABLE
-        FIELD(Required<Radapter::WorkerSettings>, worker)
+        FIELD(Required<Worker>, worker)
         FIELD(Required<QString>, device_name)
         FIELD(Required<quint16>, slave_id)
         FIELD(RequiredSequence<QString>, register_names)

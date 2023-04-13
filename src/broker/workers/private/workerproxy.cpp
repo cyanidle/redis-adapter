@@ -5,8 +5,8 @@
 
 using namespace Radapter;
 
-WorkerProxy::WorkerProxy() :
-    QObject()
+WorkerProxy::WorkerProxy(Worker *parent) :
+    QObject(parent)
 {
 }
 
@@ -36,54 +36,28 @@ QThread *WorkerProxy::workerThread() const
 
 Worker *WorkerProxy::worker() const
 {
-    return qobject_cast<Worker *>(parent());
+    return reinterpret_cast<Worker *>(parent());
 }
 
-void WorkerProxy::onMsgFromWorker(const Radapter::WorkerMsg &msg)
+void WorkerProxy::onMsgFromWorker(Radapter::WorkerMsg &msg)
 {
-    // If proxies are already connected, do not forward with broker
-    if (msg.isDirect()) {
-        auto consumers = worker()->consumers();
-        auto receivers = msg.receivers();
-        auto direct = consumers.intersect(receivers);
-        auto forwarded = receivers.subtract(consumers);
-        if (!direct.isEmpty()) {
-            auto directMsg = msg;
-            directMsg.setFlag(WorkerMsg::MsgDirect, false);
-            directMsg.receivers().swap(direct);
-            emit msgToBroker(directMsg);
-        }
-        if (!forwarded.isEmpty()) {
-            auto forwardedMsg = msg;
-            forwardedMsg.receivers().swap(forwarded);
-            emit msgToBroker(forwardedMsg);
-        }
-    } else {
-        emit msgToBroker(msg);
+    if (msg.isBroadcast()) {
+        emit msgToBroker(msg); //! on broadcast just send to broker
+        return;
     }
+    auto receivers = msg.receivers();
+    auto forwarded = receivers.subtract(worker()->consumers());
+    if (!forwarded.isEmpty() ) {
+        auto copy = msg;
+        copy.receivers() = forwarded;
+        emit msgToBroker(copy); //! everyone except direct consumers
+    }
+    emit msgToConsumers(msg);
 }
 
 const QString WorkerProxy::proxyName() const
 {
     return worker()->workerName();
-}
-
-void WorkerProxy::onMsgFromBroker(const Radapter::WorkerMsg &msg)
-{
-    if (!msg.isValid()) {
-        return;
-    }
-    if (msg.isBroadcast()) {
-        emit msgToWorker(msg);
-        return;
-    }
-    if (msg.isDirect()) {
-        if (msg.receivers().contains(worker())) {
-            emit msgToWorker(msg);
-        }
-        return;
-    }
-    emit msgToWorker(msg);
 }
 
 void WorkerProxy::addProducers(const QStringList &producers)

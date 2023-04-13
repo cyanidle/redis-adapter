@@ -3,6 +3,8 @@
 #include <QJsonDocument>
 #include <QWebSocketServer>
 #include <QWebSocket>
+#include "broker/workers/private/workermsg.h"
+#include "jsondict/jsondict.h"
 #include "radapterlogging.h"
 
 #define PING_PAYLOAD "PING"

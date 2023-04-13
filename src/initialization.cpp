@@ -5,49 +5,54 @@
 #include "plugins/radapter_plugin.h"
 #include "validators/validator_fetch.h"
 #include <QDir>
+#include "templates/algorithms.hpp"
 #include <QLibrary>
 
-void Radapter::initPipelines(const QStringList &pipelines)
+void initPipe(const QString& pipe)
 {
     static auto isInterceptor = [](const QString &worker) {
         return worker.startsWith('|') && worker.endsWith('|');
     };
-    static QRegExp splitter("[\\<\\>]");
-    auto broker = Broker::instance();
+    auto broker = Radapter::Broker::instance();
+    auto split = pipe.split('>');
+    if (split.size() < 2) {
+        throw std::runtime_error("Pipeline length must be more than 2!");
+    }
+    auto prevWorker = split.takeFirst().simplified();
+    auto lastWorker = split.constLast().simplified();
+    if (isInterceptor(prevWorker)) {
+        throw std::runtime_error("Pipeline cannot begin with an interceptor: " + prevWorker.toStdString());
+    }
+    if (isInterceptor(lastWorker)) {
+        throw std::runtime_error("Pipeline cannot end with an interceptor: " + lastWorker.toStdString());
+    }
+    QList<QPair<QString, QString>> workers;
+    QList<QStringList> interceptors;
+    QStringList currentInterceptors;
+    for (const auto &point : split) {
+        auto current = point.simplified();
+        if (isInterceptor(current)) {
+            currentInterceptors.append(current.replace('|', "").simplified());
+            continue;
+        }
+        workers.append({prevWorker, current});
+        interceptors.append(currentInterceptors);
+        currentInterceptors.clear();
+        prevWorker = point.simplified();
+    }
+    for (auto pair: Radapter::zip(workers, interceptors)) {
+        auto sourceName = pair.first.first;
+        auto targetName = pair.first.second;
+        auto interceptorNames = pair.second;
+        broker->connectTwo(sourceName, targetName, interceptorNames);
+    }
+}
+
+void Radapter::initPipelines(const QStringList &pipelines)
+{
     for (const auto &pipe: pipelines) {
-        auto split = pipe.split(splitter);
-        if (split.size() < 2) {
-            throw std::runtime_error("Pipeline length must be more than 2!");
-        }
-        auto currentPos = 0;
-        auto lastWorker = split.takeFirst().simplified();
-        if (isInterceptor(lastWorker)) {
-            throw std::runtime_error("Pipeline cannot begin with interceptor: " + lastWorker.toStdString());
-        }
-        for (const auto &worker : split) {
-            currentPos = splitter.indexIn(pipe, currentPos);
-            auto simplified = worker.simplified();
-            if (isInterceptor(simplified)) {
-                auto workerPtr = broker->getWorker(lastWorker);
-                if (!workerPtr) {
-                    throw std::runtime_error("Could not fetch worker with name: " + lastWorker.toStdString());
-                }
-                auto interName = simplified.replace('|', "").simplified();
-                auto interceptor = broker->getInterceptor(interName);
-                if (!interceptor) {
-                    throw std::runtime_error("Could not fetch interceptor with name: " + interName.toStdString());
-                }
-                workerPtr->addInterceptor(interceptor);
-                continue;
-            }
-            auto op = pipe[currentPos];
-            if (op == "<") {
-                broker->connectTwo(simplified, lastWorker);
-            } else if (op == ">") {
-                broker->connectTwo(lastWorker, simplified);
-            }
-            lastWorker = worker.simplified();
-        }
+        settingsParsingWarn() << "Initializing pipeline:" << pipe;
+        initPipe(pipe);
     }
 }
 

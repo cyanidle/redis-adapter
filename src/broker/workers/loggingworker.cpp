@@ -1,18 +1,34 @@
 #include "loggingworker.h"
+#include "broker/workers/loggingworkersettings.h"
+#include "broker/workers/private/workermsg.h"
+#include "jsondict/jsondict.h"
 #include "radapterlogging.h"
 #include <QDir>
 #include "broker/workers/worker.h"
 #include <QDateTime>
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <QMutex>
+#include <QFile>
+#include <QTimer>
 
 using namespace Radapter;
 
-LoggingWorker::LoggingWorker(const LoggingWorkerSettings &settings, QThread *thread) :
+struct Radapter::LoggingWorkerPrivate
+{
+    QFile *file;
+    Settings::LoggingWorker settings;
+};
+
+LoggingWorker::LoggingWorker(const Settings::LoggingWorker &settings, QThread *thread) :
     Radapter::Worker(settings, thread),
-    m_file(new QFile(settings.filepath, this)),
-    m_settings(settings)
+    d(new LoggingWorkerPrivate{
+        new QFile(this),
+        settings
+    })
 {
     QDir().mkpath(settings.filepath->left(settings.filepath->lastIndexOf("/")));
-    if (!m_file->open(QIODevice::Append | QIODevice::WriteOnly | QIODevice::Text)) {
+    if (!d->file->open(QIODevice::Append | QIODevice::WriteOnly | QIODevice::Text)) {
         throw std::runtime_error(std::string("Could not open file: ") + baseFilepath().toStdString());
     }
     auto onOpen = JsonDict{};
@@ -24,12 +40,17 @@ LoggingWorker::LoggingWorker(const LoggingWorkerSettings &settings, QThread *thr
 
 const QString &LoggingWorker::baseFilepath() const
 {
-    return m_settings.filepath;
+    return d->settings.filepath;
 }
 
 QString LoggingWorker::currentFilepath() const
 {
-    return m_file->fileName();
+    return d->file->fileName();
+}
+
+LoggingWorker::~LoggingWorker()
+{
+    delete d;
 }
 
 void LoggingWorker::onCommand(const WorkerMsg &msg)
@@ -44,30 +65,30 @@ void LoggingWorker::onReply(const WorkerMsg &msg)
 
 void LoggingWorker::appendToFile(const JsonDict &info)
 {
-    if (!m_file->isOpen()) {
-        if (!m_file->open(QIODevice::Append | QIODevice::Text | QIODevice::WriteOnly)) {
-            workerError(this) << "Could not open file with name: " << m_file->fileName();
+    if (!d->file->isOpen()) {
+        if (!d->file->open(QIODevice::Append | QIODevice::Text | QIODevice::WriteOnly)) {
+            workerError(this) << "Could not open file with name: " << d->file->fileName();
             return;
         }
     }
-    QTextStream out(m_file);
-    out << info.toBytes(m_settings.format) << ",";
+    QTextStream out(d->file);
+    out << info.toBytes(d->settings.format) << ",";
     Qt::endl(out);
 }
 
 bool LoggingWorker::testMsgForLog(const Radapter::WorkerMsg &msg) {
-    if (m_settings.log_.testFlag(LoggingWorkerSettings::LogAll)) {
+    if (d->settings.log_.testFlag(Settings::LoggingWorker::LogAll)) {
         return true;
     }
     if (!msg.isCommand() && !msg.isReply())
-        return m_settings.log_.testFlag(
-            LoggingWorkerSettings::LogNormal);
+        return d->settings.log_.testFlag(
+            Settings::LoggingWorker::LogNormal);
     if (msg.isReply())
-        return m_settings.log_.testFlag(
-            LoggingWorkerSettings::LogReply);
+        return d->settings.log_.testFlag(
+            Settings::LoggingWorker::LogReply);
     if (msg.isCommand())
-        return m_settings.log_.testFlag(
-            LoggingWorkerSettings::LogCommand);
+        return d->settings.log_.testFlag(
+            Settings::LoggingWorker::LogCommand);
     return true;
 }
 

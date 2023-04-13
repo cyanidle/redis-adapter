@@ -1,6 +1,6 @@
 SOURCES+= \
-   $$PWD/udpconsumer.cpp \
-   $$PWD/udpproducer.cpp
+   $$PWD/udpproducer.cpp \
+   $$PWD/udpconsumer.cpp
 HEADERS+= \
    $$PWD/udpconsumer.h \
    $$PWD/udpproducer.h

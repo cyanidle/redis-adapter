@@ -3,14 +3,9 @@
 
 using namespace Radapter;
 
-void Interceptor::onMsgFromWorker(const Radapter::WorkerMsg &msg)
+void Interceptor::onMsgFromWorker(WorkerMsg &msg)
 {
-    emit msgToBroker(msg);
-}
-
-void Interceptor::onMsgFromBroker(const Radapter::WorkerMsg &msg)
-{
-    emit msgToWorker(msg);
+    emit msgFromWorker(msg);
 }
 
 Interceptor::Interceptor() :

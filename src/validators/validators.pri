@@ -2,5 +2,5 @@ SOURCES+= \
    $$PWD/common_validators.cpp \
    $$PWD/validator_fetch.cpp
 HEADERS+= \
-   $$PWD/common_validators.h \
-   $$PWD/validator_fetch.h
+   $$PWD/validator_fetch.h \
+   $$PWD/common_validators.h

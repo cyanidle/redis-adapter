@@ -1,8 +1,8 @@
 SOURCES+= \
-   $$PWD/jsonroute.cpp \
+   $$PWD/routesprovider.cpp \
    $$PWD/routed_object.cpp \
-   $$PWD/routesprovider.cpp
+   $$PWD/jsonroute.cpp
 HEADERS+= \
-   $$PWD/jsonroute.h \
    $$PWD/routed_object.h \
+   $$PWD/jsonroute.h \
    $$PWD/routesprovider.h

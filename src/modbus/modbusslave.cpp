@@ -1,6 +1,7 @@
 #include "modbusslave.h"
 #include <QModbusRtuSerialSlave>
 #include <QModbusTcpServer>
+#include "broker/workers/private/workermsg.h"
 #include "radapterlogging.h"
 #include <QModbusServer>
 #include "modbusparsing.h"

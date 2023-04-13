@@ -14,6 +14,7 @@ class Plugin {
 public:
     virtual QString name() const = 0;
     virtual QMap<Validator::Function, QStringList/*aliases*/> validators() const = 0;
+    virtual ~Plugin() = default;
 };
 typedef ::Radapter::Plugin* (*PluginLoaderFunction)();
 }
