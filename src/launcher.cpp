@@ -106,27 +106,18 @@ void Launcher::initPlugins()
         settingsParsingWarn() << "No plugins dir: " << dir.absolutePath();
         return;
     }
+    settingsParsingWarn() << "Seaching dir for plugins:" << dir.absolutePath();
     QList<QLibrary*> plugins;
-    for (const auto &file: dir.entryList(QDir::Filter::Files)) {
+    for (const auto &file: dir.entryList(QDir::Filter::Files | QDir::Filter::NoSymLinks)) {
         auto path = dir.filePath(file);
         if (!QLibrary::isLibrary(path)) {
             settingsParsingWarn() << path << "is not a library. Skipping";
             continue;
         }
-        auto wasInit = [&]() {
-            for (auto lib: plugins) {
-                if (path.contains(lib->fileName())) {
-                    return true;
-                }
-            }
-            return false;
-        };
-        if (wasInit()) {
-            continue;
-        }
         auto lib = new QLibrary(path, this);
         plugins.append(lib);
     }
+    settingsParsingWarn() << "Found" << plugins.size() << "plugins!";
     Radapter::initPlugins(plugins);
 }
 
