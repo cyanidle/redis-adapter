@@ -31,6 +31,7 @@ RUN mkdir -p ${APP_DIR}/${APP_NAME}; \
         $app_src_libs \
         $qt_libs \
         $os_libs \
+        plugins \
         ${APP_NAME} \
     ${APP_DIR}/${APP_NAME}; \
     cd ${APP_DIR}/${APP_NAME}; \
