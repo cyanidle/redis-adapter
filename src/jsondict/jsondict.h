@@ -8,7 +8,6 @@
 #include <QDebug>
 #include <QVariantMap>
 #include <QString>
-#include <QRegExp>
 #include <QJsonObject>
 #include <QList>
 #include <stdexcept>
@@ -374,14 +373,14 @@ JsonDict::iterator_base<MapT> &JsonDict::iterator_base<MapT>::operator++()
         return ++*this;
     }
     auto *val = &m_current.value();
-    if (val->type() == QVariant::Map) {
+    if (val->typeId() == QMetaType::QVariantMap) {
         m_traverseHistory.push(TraverseState{m_current, m_end});
         auto *asDict = reinterpret_cast<MapT*>(val->data());
         m_current = asDict->begin();
         m_end = asDict->end();
         startRecurse();
         return ++*this;
-    } else if (val->type() == QVariant::List) {
+    } else if (val->typeId() == QMetaType::QVariantList) {
         m_traverseHistory.push(TraverseState{m_current, m_end});
         auto *asList = reinterpret_cast<ListT*>(val->data());
         m_current = asList->begin();

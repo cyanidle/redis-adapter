@@ -5,6 +5,7 @@
 #include "radapterlogging.h"
 #include <QMutex>
 #include <QMutexLocker>
+#include "templates/algorithms.hpp"
 #include "workers/worker.h"
 #include "workers/private/workerproxy.h"
 #include <QCoreApplication>
@@ -66,7 +67,9 @@ void Broker::proxyDestroyed(QObject *proxy)
         brokerError() << "Invalid proxy: " << proxy;
         return;
     }
-
+    d->connections.removeIf([&](const WorkerConnection &conn) {
+        return conn.producerProxy == casted;
+    });
 }
 
 void Broker::registerWorker(Worker* worker)

@@ -4,6 +4,7 @@
 #include "broker/workers/loggingworkersettings.h"
 #include "broker/brokersettings.h"
 #include "broker/workers/mockworkersettings.h"
+#include "httpserver/radapterapisettings.h"
 #include "interceptors/duplicatinginterseptor_settings.h"
 #include "interceptors/validatinginterceptor_settings.h"
 #include "raw_sockets/udpconsumer.h"
@@ -100,6 +101,7 @@ struct AppConfig : public SerializableSettings {
     FIELD(NonRequired<Redis>, redis)
     FIELD(NonRequired<Sockets>, sockets)
     FIELD(NonRequiredSequence<QString>, pipelines)
+    FIELD(NonRequired<RadapterApi>, api)
 };
 }
 

@@ -11,6 +11,9 @@ struct RADAPTER_API Worker : public Settings::SerializableSettings
     FIELD(NonRequiredLogLevel, log_level, QtMsgType::QtDebugMsg)
     FIELD(NonRequired<bool>, print_msgs, false)
     Worker(const QString &name = "") : name(name) {}
+    bool isValid() const {
+        return !name->isEmpty();
+    }
 };
 
 }

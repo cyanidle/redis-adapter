@@ -4,6 +4,7 @@
 #include "consumers/rediscacheconsumer.h"
 #include "consumers/rediskeyeventsconsumer.h"
 #include "consumers/redisstreamconsumer.h"
+#include "httpserver/radapterapi.h"
 #include "initialization.h"
 #include "interceptors/duplicatinginterceptor.h"
 #include "interceptors/validatinginterceptor.h"
@@ -95,6 +96,9 @@ void Launcher::initConfig()
     }
     if (d->config.localization.value.time_zone->isValid()) {
         Localization::instance()->applyInfo(d->config.localization);
+    }
+    if (d->config.api->enable) {
+        addWorker(new ApiServer(d->config.api, newThread(), this));
     }
     LocalStorage::init(this);
 }
@@ -211,6 +215,11 @@ Launcher::~Launcher()
 const QString &Launcher::configsDirectory() const
 {
     return d->configsResource;
+}
+
+const Settings::AppConfig &Launcher::config() const
+{
+    return d->config;
 }
 
 Settings::Reader *Launcher::reader()

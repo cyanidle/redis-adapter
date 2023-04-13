@@ -67,7 +67,7 @@ qint64 JsonDict::toIndex(const QString &key)
 {
     bool isBounded = key.size() >= 3 && key.front() == '[' && key.back() == ']';
     bool ok;
-    auto result = key.midRef(1, key.length() - 2).toLong(&ok);
+    auto result = key.mid(1, key.length() - 2).toLong(&ok);
     return ok && isBounded ? result : -1;
 }
 
@@ -88,10 +88,10 @@ const QVariant *JsonDict::recurseTo(const QStringList &fullKey, int ignoreLastKe
             current = find(currentList, toIndex(key));
         }
         if (!current) return nullptr;
-        if (current->type() == QVariant::Map) {
+        if (current->typeId() == QMetaType::QVariantMap) {
             recursingDict = true;
             currentDict = reinterpret_cast<const QVariantMap *>(current->data());
-        } else if (current->type() == QVariant::List) {
+        } else if (current->typeId() == QMetaType::QVariantList) {
             recursingDict = false;
             currentList = reinterpret_cast<const QVariantList *>(current->data());
         } else if (i < fullKey.size() - ignoreLastKeys - 1){
@@ -118,10 +118,10 @@ QVariant *JsonDict::recurseTo(const QStringList &fullKey, int ignoreLastKeys)
             current = find(currentList, toIndex(key));
         }
         if (!current) return nullptr;
-        if (current->type() == QVariant::Map) {
+        if (current->typeId() == QMetaType::QVariantMap) {
             recursingDict = true;
             currentDict = reinterpret_cast<QVariantMap *>(current->data());
-        } else if (current->type() == QVariant::List) {
+        } else if (current->typeId() == QMetaType::QVariantList) {
             recursingDict = false;
             currentList = reinterpret_cast<QVariantList *>(current->data());
         } else if (i < fullKey.size() - ignoreLastKeys - 1){
@@ -223,14 +223,14 @@ const QVariant JsonDict::value(const QStringList &akey, const QVariant &adefault
 int JsonDict::remove(const QStringList &akey)
 {
     auto val = recurseTo(akey, 1);
-    if (!val || val->type() != QVariant::Map) return 0;
+    if (!val || val->typeId() != QMetaType::QVariantMap) return 0;
     return reinterpret_cast<QVariantMap*>(val->data())->remove(akey.constLast());
 }
 
 QVariant JsonDict::take(const QStringList &akey)
 {
     auto val = recurseTo(akey, 1);
-    if (!val || val->type() != QVariant::Map) return {};
+    if (!val || val->typeId() != QMetaType::QVariantMap) return {};
     return reinterpret_cast<QVariantMap*>(val->data())->take(akey.constLast());
 }
 
@@ -251,17 +251,17 @@ JsonDict &JsonDict::nest(const QString &separator)
     for (auto iter = m_dict.constBegin(); iter != m_dict.constEnd(); ++iter) {
         const auto &val = iter.value();
         QVariant toInsert;
-        if (val.type() == QVariant::List) {
+        if (val.typeId() == QMetaType::QVariantList) {
             auto actual = QVariantList{};
             for (const auto &subval : *reinterpret_cast<const QVariantList*>(val.data())) {
-                if (subval.type() == QVariant::Map) {
+                if (subval.typeId() == QMetaType::QVariantMap) {
                     actual.append(JsonDict(subval, separator).toVariant());
                 } else {
                     actual.append(subval);
                 }
             }
             toInsert = actual;
-        } else if (val.type() == QVariant::Map) {
+        } else if (val.typeId() == QMetaType::QVariantMap) {
             toInsert = JsonDict(val, separator).toVariant();
         } else {
             toInsert = val;
@@ -336,13 +336,13 @@ QVariant &JsonDict::operator[](const QStringList &akey)
         auto nextIndex = toIndex(nextKey);
         auto indexValid = nextIndex != -1;
         if (currentVal->isValid()) {
-            if (currentVal->type() == QVariant::Map) {
+            if (currentVal->typeId() == QMetaType::QVariantMap) {
                 if (indexValid) {
                     throw std::invalid_argument("Access to nested Dict as to List");
                 }
                 auto asDict = reinterpret_cast<QVariantMap*>(currentVal->data());
                 currentVal = &(asDict->operator[](nextKey));
-            } else if (currentVal->type() == QVariant::List) {
+            } else if (currentVal->typeId() == QMetaType::QVariantList) {
                 if (!indexValid) {
                     throw std::invalid_argument("Access to nested List as to Dict");
                 }
@@ -458,17 +458,17 @@ JsonDict &JsonDict::nest(QChar separator)
     for (auto iter = m_dict.constBegin(); iter != m_dict.constEnd(); ++iter) {
         const auto &val = iter.value();
         QVariant toInsert;
-        if (val.type() == QVariant::List) {
+        if (val.typeId() == QMetaType::QVariantList) {
             auto actual = QVariantList{};
             for (const auto &subval : *reinterpret_cast<const QVariantList*>(val.data())) {
-                if (subval.type() == QVariant::Map) {
+                if (subval.typeId() == QMetaType::QVariantMap) {
                     actual.append(JsonDict(subval, separator).toVariant());
                 } else {
                     actual.append(subval);
                 }
             }
             toInsert = actual;
-        } else if (val.type() == QVariant::Map) {
+        } else if (val.typeId() == QMetaType::QVariantMap) {
             toInsert = JsonDict(val, separator).toVariant();
         } else {
             toInsert = val;

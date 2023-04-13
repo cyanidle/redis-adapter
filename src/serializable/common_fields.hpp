@@ -154,16 +154,8 @@ struct PlainField : public Private::FieldCommon<T>
     }
     bool updateWithVariant(const QVariant &source) {
         if (source.canConvert<T>()) {
-            auto temp = source.value<T>();
-            if (QVariant::fromValue(temp) != source) {
-                settingsParsingWarn().noquote() << "Field: Types mismatch, while deserializing -->\n Wanted: " <<
-                                                   QMetaType::fromType<T>().name() <<
-                                                   "\n Actual: " << source;
-                return false;
-            } else {
-                this->value = temp;
-                return true;
-            }
+            this->value = source.value<T>();
+            return true;
         }
         return false;
     }
@@ -278,14 +270,7 @@ struct PlainSequence : public Private::SequenceCommon<T> {
         auto asList = source.toList();
         for (auto &src : asList) {
             if (!src.canConvert<T>()) continue;
-            auto tempVal = src.value<T>();
-            if (src != tempVal) {
-                settingsParsingWarn().noquote() << "Sequence: Types mismatch, while deserializing -->\n Wanted: " <<
-                                                   QMetaType::fromType<T>().name() <<
-                                                   "\n Actual: " << src;
-            } else {
-                temp.append(tempVal);
-            }
+            temp.append(src.value<T>());
         }
         if (!temp.empty()) {
             this->value = temp;
@@ -428,13 +413,7 @@ struct PlainMapping : public Private::MappingCommon<T> {
         for (auto iter = asMap.cbegin(); iter != asMap.cend(); ++iter) {
             if (!iter.value().canConvert<T>()) continue;
             auto tempVal = iter->value<T>();
-            if (tempVal != iter.value()) {
-                settingsParsingWarn().noquote() << "Mapping: Types mismatch, while deserializing -->\n Wanted: " <<
-                                                   QMetaType::fromType<T>().name() <<
-                                                   "\n Actual: " << *iter;
-            } else {
-                temp.insert(iter.key(), tempVal);
-            }
+            temp.insert(iter.key(), iter->value<T>());
         }
         if (!temp.empty()) {
             this->value = temp;

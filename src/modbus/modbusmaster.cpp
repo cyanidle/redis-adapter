@@ -1,7 +1,7 @@
 #include "modbusmaster.h"
 #include "broker/broker.h"
 #include "broker/sync/channel.h"
-#include <QModbusRtuSerialMaster>
+#include <QModbusRtuSerialClient>
 #include "commands/rediscommands.h"
 #include "templates/algorithms.hpp"
 #include "consumers/rediscacheconsumer.h"
@@ -166,7 +166,7 @@ void Master::write(const JsonDict &data)
                 << "] --> value: " << value;
             continue;
         }
-        if (value.canConvert(regInfo.type)) {
+        if (value.canConvert(QMetaType(regInfo.type))) {
             m_wantedState[iter.key()] = value;
             if (m_state[iter.key()] == value) {
                 continue;

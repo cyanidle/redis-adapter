@@ -22,6 +22,7 @@ class RADAPTER_API Launcher : public QObject
 public:
     explicit Launcher(QObject *parent = nullptr);
     const QString &configsDirectory() const;
+    const Settings::AppConfig &config() const;
     Settings::Reader *reader();
     QCommandLineParser &commandLineParser();
     //! run() starts all configured radapter modules and workers

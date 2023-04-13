@@ -11,6 +11,7 @@ ArchiveProducer::ArchiveProducer(const Settings::SqlStorageInfo &archiveInfo, QT
 
 void ArchiveProducer::onMsg(const Radapter::WorkerMsg &msg)
 {
-
+    Q_UNUSED(msg)
+    throw std::runtime_error("Not implemented!");
 }
 

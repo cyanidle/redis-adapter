@@ -42,6 +42,8 @@ public:
     template <typename Target> bool is() const;
     template <typename Target> const Target *as() const;
     template <typename Target> Target *as();
+    void addConsumer(Radapter::Worker* consumer, QList<Radapter::Interceptor*> interceptors = {});
+    void addProducer(Radapter::Worker* producer, QList<Radapter::Interceptor*> interceptors = {});
     QString printSelf() const;
     virtual ~Worker();
 signals:
@@ -54,8 +56,6 @@ public slots:
     void addProducers(const QStringList &producers);
     void addConsumers(const QSet<Radapter::Worker*> &consumers);
     void addProducers(const QSet<Radapter::Worker*> &producers);
-    void addConsumer(Radapter::Worker* consumer, QList<Radapter::Interceptor*> interceptors = {});
-    void addProducer(Radapter::Worker* producer, QList<Radapter::Interceptor*> interceptors = {});
 protected slots:
     virtual void onRun();
     virtual void onReply(const Radapter::WorkerMsg &msg);

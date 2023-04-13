@@ -71,7 +71,7 @@ void ModbusSlave::postUpdate() {
 void ModbusMaster::postUpdate()
 {
     for (auto &name: register_names) {
-        auto &toMerge = (*allRegisters).value(name.replace('.', ':'));
+        auto toMerge = (*allRegisters).value(name.replace('.', ':'));
         if (toMerge.isEmpty()) {
             throw std::runtime_error(worker->name->toStdString() + ": Missing registers with name: " + name.toStdString());
         }

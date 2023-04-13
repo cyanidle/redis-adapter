@@ -5,7 +5,6 @@
 #include "radapterlogging.h"
 
 class QLibrary;
-class QStringList;
 
 namespace Radapter {
 

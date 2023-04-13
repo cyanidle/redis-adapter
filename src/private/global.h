@@ -3,13 +3,12 @@
 
 #include <QObject>
 
-#define RADAPTER_VERSION "0.6"
+#define RADAPTER_VERSION "0.7"
 
 #ifndef RADAPTER_API
 #define RADAPTER_API
 #endif
 
-typedef QMap<QString /*encoded string*/, QString /*decoded value*/> ParsingMap;
 template<class T>
 using QStringMap = QMap<QString, T>;
 

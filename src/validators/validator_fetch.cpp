@@ -22,25 +22,25 @@ bool Validator::Executor::validate(QVariant &target) const
 
 QString Validator::Executor::name() const
 {
-    QMutexLocker lock(staticMutex);
+    QMutexLocker lock(&(*staticMutex));
     return allValidators->key(this);
 }
 
 QStringList Validator::Executor::aliases() const
 {
-    QMutexLocker lock(staticMutex);
+    QMutexLocker lock(&(*staticMutex));
     return allValidators->keys(this);
 }
 
 const Validator::Executor *Validator::fetch(const QLatin1String &name)
 {
-    QMutexLocker lock(staticMutex);
+    QMutexLocker lock(&(*staticMutex));
     return allValidators->value(QString(name).toLower());
 }
 
 int Validator::Private::add(Function func, const char *alias)
 {
-    QMutexLocker lock(staticMutex);
+    QMutexLocker lock(&(*staticMutex));
     if (!qstrlen(alias)) return 0;
     if (allValidators->contains(QLatin1String(alias))) {
         throw std::runtime_error(std::string("Duplicate validator with name: ") + alias);
@@ -51,19 +51,19 @@ int Validator::Private::add(Function func, const char *alias)
 
 const Validator::Executor *Validator::fetch(const char *name)
 {
-    QMutexLocker lock(staticMutex);
+    QMutexLocker lock(&(*staticMutex));
     return fetch(QLatin1String(name));
 }
 
 const Validator::Executor *Validator::fetch(const QString &name)
 {
-    QMutexLocker lock(staticMutex);
+    QMutexLocker lock(&(*staticMutex));
     return allValidators->value(name.toLower());
 }
 
 QString Validator::nameOf(const Executor *validator)
 {
-    QMutexLocker lock(staticMutex);
+    QMutexLocker lock(&(*staticMutex));
     return allValidators->key(validator);
 }
 

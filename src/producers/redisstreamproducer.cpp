@@ -71,11 +71,11 @@ void StreamProducer::tryTrim()
 
 void StreamProducer::writeCallback(redisReply *reply)
 {
-
+    parseReply(reply);
 }
 
 void StreamProducer::trimCallback(redisReply *reply)
 {
-
+    parseReply(reply);
 }
 

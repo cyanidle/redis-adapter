@@ -4,7 +4,7 @@ ARG APP_NAME=redis-adapter
 ARG TARGET_DEVICE=rpi4
 ARG JOBS=4
 
-FROM rsk39.tech/qt5-env:${TARGET_DEVICE} as builder
+FROM rsk39.tech/qt6-env:${TARGET_DEVICE} as builder
 ARG APP_NAME
 ENV APP_NAME=${APP_NAME}
 ARG APP_DIR
@@ -14,6 +14,7 @@ ARG JOBS
 ENV JOBS=${JOBS}
 WORKDIR /build
 COPY . .
+RUN /env/setup-cross
 RUN set -eux; \
     qmake; \
     make -j${JOBS}

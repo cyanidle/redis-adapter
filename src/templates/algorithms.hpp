@@ -70,18 +70,29 @@ bool any_of(const Container &container, Predicate predicate) {
                        ContainerTester<Predicate>(predicate));
 }
 
+template<typename IterT>
+struct SearchResult {
+    SearchResult(IterT found, IterT end) : result(found), endIter(end) {}
+    IterT result;
+    bool wasFound() const {
+        return result != endIter;
+    }
+private:
+    IterT endIter;
+};
+
 template <typename Container, typename Predicate>
-auto find_if(const Container &container, Predicate predicate) -> typename Container::const_iterator {
-    return std::find_if(container.begin(),
+auto find_if(const Container &container, Predicate predicate) -> SearchResult<typename Container::const_iterator> {
+    return {std::find_if(container.begin(),
                         container.end(),
-                        ContainerTester<Predicate>(predicate));
+                         ContainerTester<Predicate>(predicate)), container.end()};
 }
 
 template <typename Container, typename Predicate>
-auto find_if(Container &container, Predicate predicate) -> typename Container::iterator {
-    return std::find_if(container.begin(),
+auto find_if(Container &container, Predicate predicate) -> SearchResult<typename Container::iterator> {
+    return {std::find_if(container.begin(),
                         container.end(),
-                        ContainerTester<Predicate>(predicate));
+                         ContainerTester<Predicate>(predicate)),container.end()};
 }
 
 template <typename Container, typename Predicate>
@@ -98,16 +109,6 @@ auto for_each(const Container &container, Predicate predicate) -> typename Conta
                         ContainerTester<Predicate>(predicate));
 }
 
-template<typename IterT>
-struct SearchResult {
-    SearchResult(IterT found, IterT end) : result(found), endIter(end) {}
-    IterT result;
-    bool wasFound() const {
-        return result != endIter;
-    }
-private:
-    IterT endIter;
-};
 
 template <typename Container, typename Predicate>
 auto max_element(const Container &container, Predicate predicate) -> SearchResult<typename Container::const_iterator> {

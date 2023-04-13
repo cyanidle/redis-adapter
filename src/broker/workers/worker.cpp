@@ -100,7 +100,7 @@ Worker::~Worker()
 
 void Worker::run()
 {
-    QMutexLocker locker(staticMutex);
+    QMutexLocker locker(&(*staticMutex));
     if (d->wasRun) throw std::runtime_error("WorkerBase::onRun() called multiple times for: " + printSelf().toStdString());
     moveToThread(workerThread());
     workerThread()->start();
@@ -114,7 +114,7 @@ void Worker::onRun()
 
 void Worker::addConsumers(const QStringList &consumers)
 {
-    QMutexLocker locker(staticMutex);
+    QMutexLocker locker(&(*staticMutex));
     for (auto &name : consumers) {
         if (wasStarted()) {
             auto worker = broker()->getWorker(name);
@@ -126,7 +126,7 @@ void Worker::addConsumers(const QStringList &consumers)
 
 void Worker::addProducers(const QStringList &producers)
 {
-    QMutexLocker locker(staticMutex);
+    QMutexLocker locker(&(*staticMutex));
     for (auto &name : producers) {
         if (wasStarted()) {
             auto worker = broker()->getWorker(name);
@@ -138,7 +138,7 @@ void Worker::addProducers(const QStringList &producers)
 
 void Worker::addConsumers(const WorkerSet &consumers)
 {
-    QMutexLocker locker(staticMutex);
+    QMutexLocker locker(&(*staticMutex));
     for (auto &worker : consumers) {
         addConsumer(worker);
     }
@@ -146,7 +146,7 @@ void Worker::addConsumers(const WorkerSet &consumers)
 
 void Worker::addProducers(const WorkerSet &producers)
 {
-    QMutexLocker locker(staticMutex);
+    QMutexLocker locker(&(*staticMutex));
     for (auto &worker : producers) {
         addProducer(worker);
     }
@@ -154,7 +154,7 @@ void Worker::addProducers(const WorkerSet &producers)
 
 void Worker::addConsumer(Worker *consumer, QList<Radapter::Interceptor*> interceptors)
 {
-    QMutexLocker locker(staticMutex);
+    QMutexLocker locker(&(*staticMutex));
     d->consumers.insert(consumer);
     if (!consumer->producers().contains(this)) {
         consumer->addProducer(this);
@@ -168,7 +168,7 @@ void Worker::addConsumer(Worker *consumer, QList<Radapter::Interceptor*> interce
 
 void Worker::addProducer(Worker *producer, QList<Radapter::Interceptor*> interceptors)
 {
-    QMutexLocker locker(staticMutex);
+    QMutexLocker locker(&(*staticMutex));
     d->producers.insert(producer);
     if (!producer->consumers().contains(this)) {
         producer->addConsumer(this);
@@ -307,7 +307,7 @@ void Worker::onSendMsgPriv(const Radapter::WorkerMsg &msg)
 
 WorkerProxy* Worker::createPipe(const QList<Interceptor*> &interceptors)
 {
-    QMutexLocker locker(staticMutex);
+    QMutexLocker locker(&(*staticMutex));
     auto proxy = new WorkerProxy(this);
     auto start = new PipeStart(proxy);
     connect(this, &Worker::sendMsg, start, &PipeStart::onSendMsg);
