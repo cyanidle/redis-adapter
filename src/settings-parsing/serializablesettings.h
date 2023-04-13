@@ -4,32 +4,41 @@
 #include <QJsonDocument>
 #include "serializable/serializable.h"
 #include "serializable/validated.hpp"
-
+#include "validators/common_validators.h"
+#include "validators/validator_fetch.h"
+#define NON_REQUIRED_ATTR "non_required"
 Q_DECLARE_METATYPE(QJsonDocument::JsonFormat)
 
 namespace Settings {
 
 template<typename Target>
 struct MarkNonRequired : public Target {
-    using typename Target::valueType;
-    using typename Target::valueRef;
-    using Target::Target;
-    using Target::operator=;
-    using Target::operator==;
+    FIELD_SUPER(Target)
     const QStringList &attributes() const {
-        static const QStringList attrs{Target::attributes() + QStringList{"non_required"}};
+        static const QStringList attrs{Target::attributes() + QStringList{NON_REQUIRED_ATTR}};
         return attrs;
     }
 };
 
 template<typename T>
-using NonRequiredSequence = MarkNonRequired<Serializable::Sequence<T>>;
+using Required = Serializable::Plain<T>;
 template<typename T>
 using NonRequired = MarkNonRequired<Serializable::Plain<T>>;
 template<typename T>
 using RequiredSequence = Serializable::Sequence<T>;
 template<typename T>
-using Required = Serializable::Plain<T>;
+using NonRequiredSequence = MarkNonRequired<Serializable::Sequence<T>>;
+template<typename T>
+using RequiredMapping = Serializable::Mapping<T>;
+template<typename T>
+using NonRequiredMapping = MarkNonRequired<Serializable::Mapping<T>>;
+
+
+using RequiredValidator = Serializable::Plain<Serializable::Validator>;
+using NonRequiredValidator = MarkNonRequired<RequiredValidator>;
+
+using RequiredLogLevel = Serializable::Validated<Required<QtMsgType>>::With<Validator::LogLevel>;
+using NonRequiredLogLevel = MarkNonRequired<RequiredLogLevel>;
 
 struct SerializableSettings : public Serializable::Object
 {
@@ -37,8 +46,11 @@ struct SerializableSettings : public Serializable::Object
 public:
     QString print() const;
     virtual bool update(const QVariantMap &src) override;
+    void allowExtra(bool state = true);
+    SerializableSettings();
+protected:
+    bool m_allowExtra;
 };
 
 } // namespace Settings
-
 #endif // SETTINGS_SERIALIZABLESETTINGS_H

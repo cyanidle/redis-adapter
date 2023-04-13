@@ -4,11 +4,11 @@
 #include <QObject>
 #include <QQueue>
 #include "broker/workers/private/workermsg.h"
-#include "jsondict/jsondict.hpp"
+#include "jsondict/jsondict.h"
 #include "broker/interceptor/interceptor.h"
 #include "settings/settings.h"
 
-class RADAPTER_API ProducerFilter : public Radapter::InterceptorBase
+class RADAPTER_API ProducerFilter : public Radapter::Interceptor
 {
     Q_OBJECT
 public:
@@ -17,15 +17,10 @@ public:
         StrategyByWildcard = 1
     };
     explicit ProducerFilter(const Settings::Filters::Table &filters);
-
-signals:
-    void requestCacheRead();
-
 public slots:
-    void onMsgFromWorker(const Radapter::WorkerMsg &msg) override;
-
+    void onMsgFromWorker(Radapter::WorkerMsg &msg) override;
 private:
-    void filterStrictByName(const Radapter::WorkerMsg &msg);
+    void filterStrictByName(Radapter::WorkerMsg &msg);
     void addFiltersByWildcard(const JsonDict &cachedJson);
 
     Strategy m_strategy;

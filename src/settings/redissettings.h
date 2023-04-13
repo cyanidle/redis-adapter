@@ -20,8 +20,8 @@ namespace Settings {
     struct RADAPTER_API RedisConnector : Settings::SerializableSettings {
         Q_GADGET
         IS_SERIALIZABLE
-        FIELD(Required<Radapter::WorkerSettings>, worker)
-        FIELD(NonRequired<QString>, server_name)
+        FIELD(Required<Worker>, worker)
+        FIELD(Required<QString>, server_name)
         FIELD(NonRequired<quint16>, db_index, 0)
         FIELD(NonRequired<quint16>, ping_delay, 10000)
         FIELD(NonRequired<quint16>, reconnect_delay, 1500)
@@ -45,7 +45,7 @@ namespace Settings {
         Q_GADGET
         IS_SERIALIZABLE
         FIELD(Required<QString>, stream_key)
-        FIELD(Required<quint32>, stream_size, 1000000u)
+        FIELD(NonRequired<quint32>, stream_size, 1000000u)
     };
 
     struct RADAPTER_API RedisStreamConsumer : RedisStreamBase {
@@ -95,7 +95,7 @@ namespace Settings {
     struct RADAPTER_API RedisCacheProducer : RedisConnector {
         Q_GADGET
         IS_SERIALIZABLE
-        FIELD(Required<QString>, object_hash_key)
+        FIELD(NonRequired<QString>, object_hash_key)
     };
 }
 

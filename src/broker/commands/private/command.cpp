@@ -3,25 +3,22 @@
 namespace Radapter {
 
 Command::Command(quint32 type) :
-    m_type(type)
+    m_type(type),
+    m_ignoreReply(true)
 {
 }
+
+bool Command::isUser() const {return User < type();}
+
+Command::Type Command::type() const {return static_cast<Type>(m_type);}
+
+const QMetaObject *Command::metaObject() const {return &this->staticMetaObject;}
 
 bool Command::isWantedReply(const Reply *reply) const
 {
     return reply &&
            (wantedReplyType() == reply->type() ||
             reply->metaObject()->inherits(wantedReplyMetaObject()));
-}
-
-void Command::expectReply(bool expect)
-{
-    m_replyNeeded = expect;
-}
-
-bool Command::isReplyExpected() const
-{
-    return m_replyNeeded;
 }
 
 bool Command::replyOk(const Reply *reply) const {
@@ -48,19 +45,39 @@ const void *Command::voidCast(const QMetaObject *meta) const
     return const_cast<Command*>(this)->voidCast(meta);
 }
 
-void Command::setCallback(CallbackConcept *cb)
+void Command::ignoreReply()
 {
-    m_cb.reset(cb);
+    m_ignoreReply = true;
 }
 
-CallbackConcept *Command::callback()
+bool Command::replyIgnored() const
 {
-    return m_cb.data();
+    return m_ignoreReply;
 }
 
-const CallbackConcept *Command::callback() const
+void Command::setCallback(const CommandCallback &cb)
 {
-    return m_cb.data();
+    m_cb = cb;
+}
+
+CommandCallback &Command::callback()
+{
+    return m_cb;
+}
+
+const CommandCallback &Command::failCallback() const
+{
+    return m_failCb;
+}
+
+CommandCallback &Command::failCallback()
+{
+    return m_failCb;
+}
+
+const CommandCallback &Command::callback() const
+{
+    return m_cb;
 }
 
 

@@ -9,38 +9,13 @@ Q_DECLARE_METATYPE(QMetaType::Type)
 
 namespace Settings {
     struct ChooseRegValueType {
-        static bool validate(QVariant& value) {
-            static QMap<QString, QMetaType::Type>
-                    map{{"uint16", QMetaType::UShort},
-                        {"word", QMetaType::UShort},
-                        {"uint32", QMetaType::UInt},
-                        {"dword", QMetaType::UInt},
-                        {"float", QMetaType::Float},
-                        {"float32", QMetaType::Float}};
-            auto asStr = value.toString().toLower();
-            value.setValue(map.value(asStr));
-            return map.contains(asStr);
-        }
+        static bool validate(QVariant& value);
     };
     struct ChooseRegisterTable {
-        static bool validate(QVariant& value) {
-            static QMap<QString, QModbusDataUnit::RegisterType>
-                map{{"holding",QModbusDataUnit::HoldingRegisters},
-                    {"input",QModbusDataUnit::InputRegisters},
-                    {"coils",QModbusDataUnit::Coils},
-                    {"discrete_inputs",QModbusDataUnit::DiscreteInputs},
-                    {"holding_registers",QModbusDataUnit::HoldingRegisters},
-                    {"input_registers",QModbusDataUnit::InputRegisters},
-                    {"coils",QModbusDataUnit::Coils},
-                    {"di",QModbusDataUnit::DiscreteInputs},
-                    {"do",QModbusDataUnit::Coils},};
-            auto asStr = value.toString().toLower();
-            value.setValue(map.value(asStr));
-            return map.contains(asStr);
-        }
+        static bool validate(QVariant& value);
     };
-    using RegisterTable = Serializable::Validate<Required<QModbusDataUnit::RegisterType>, ChooseRegisterTable>;
-    using RegisterValueType = Serializable::Validate<Required<QMetaType::Type>, ChooseRegValueType>;
+    using RegisterTable = Serializable::Validated<Required<QModbusDataUnit::RegisterType>>::With<ChooseRegisterTable>;
+    using RegisterValueType = Serializable::Validated<Required<QMetaType::Type>>::With<ChooseRegValueType>;
 
     struct RADAPTER_API ModbusQuery : SerializableSettings {
         Q_GADGET
@@ -98,19 +73,19 @@ namespace Settings {
     };
 
     struct RADAPTER_API RegisterInfo : SerializableSettings {
-        typedef QMap<QString, QModbusDataUnit::RegisterType> tableMap;
-        typedef QMap<QString, QMetaType::Type> typeMap;
         Q_GADGET
         IS_SERIALIZABLE
-        FIELD(RegisterTable, table)
-        FIELD(Required<int>, index)
-        FIELD(NonRequired<bool>, resetting, false)
-        FIELD(MarkNonRequired<RegisterValueType>, type, QMetaType::UShort)
-        using Orders = Serializable::Validate<NonRequired<PackingMode>, OrdersValidator>;
+        using Orders = Serializable::Validated<NonRequired<PackingMode>>::With<OrdersValidator>;
         FIELD(Orders, endianess)
+        FIELD(NonRequiredValidator, validator)
+        FIELD(RegisterTable, table)
+        FIELD(MarkNonRequired<RegisterValueType>, type, QMetaType::UShort)
+        FIELD(Required<int>, index)
+        FIELD(NonRequired<bool>, resetting, false) // not implemented yet
+        FIELD(NonRequired<bool>, writable, true)
+        void postUpdate() override;
     };
     typedef QMap<QString /*reg:Name*/, RegisterInfo> Registers;
-    typedef QMap<QString /*deviceName*/, Registers> DevicesRegisters;
     void RADAPTER_API parseRegisters(const QVariantMap &registersFile);
 
     struct RegisterCounts {
@@ -123,16 +98,16 @@ namespace Settings {
     struct RADAPTER_API ModbusWorker : SerializableSettings {
         Q_GADGET
         IS_SERIALIZABLE
-        FIELD(Required<Radapter::WorkerSettings>, worker)
+        FIELD(Required<Worker>, worker)
         FIELD(Required<QString>, device_name)
         FIELD(Required<quint16>, slave_id)
         FIELD(RequiredSequence<QString>, register_names)
+        FIELD(NonRequired<quint32>, reconnect_timeout_ms, 3000)
     };
 
     struct RADAPTER_API ModbusSlave : ModbusWorker {
         Q_GADGET
         IS_SERIALIZABLE
-        FIELD(NonRequired<quint32>, reconnect_timeout_ms, 5000)
 
         ModbusDevice device{};
         RegisterCounts counts{};
@@ -147,9 +122,11 @@ namespace Settings {
         FIELD(RequiredSequence<ModbusQuery>, queries)
 
         FIELD(NonRequired<quint32>, poll_rate, 500)
-        FIELD(NonRequired<quint32>, reconnect_timeout_ms, 5000)
         FIELD(NonRequired<quint32>, responce_time, 150)
         FIELD(NonRequired<quint32>, retries, 3)
+
+        FIELD(NonRequired<QString>, state_writer)
+        FIELD(NonRequired<QString>, state_reader)
 
         ModbusDevice device{};
         Registers registers{};

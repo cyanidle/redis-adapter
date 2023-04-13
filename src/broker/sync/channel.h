@@ -55,9 +55,9 @@ private:
         bool isWaiting() const {return waitingForTrigger;}
         Priority whatPrio() const {return priority;}
     };
-    QHash<QObject*, UserState> m_userStates{};
-    std::atomic<QObject*> m_busy{nullptr};
-    QTimer *m_debug{nullptr};
+    QHash<QObject*, UserState> m_userStates;
+    std::atomic<QObject*> m_busy;
+    QTimer *m_debug;
     QMutex m_mutex;
 };
 }

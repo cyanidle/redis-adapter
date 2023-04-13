@@ -5,9 +5,10 @@
 #include <QSet>
 using namespace Radapter::Sync;
 
-
 Channel::Channel(QThread *thread) :
-    m_debug(new QTimer(this))
+    m_busy(nullptr),
+    m_debug(new QTimer(this)),
+    m_mutex()
 {
     m_debug->setInterval(1000);
     m_debug->callOnTimeout([this](){reDebug() << this << "Busy on:" << m_busy;});

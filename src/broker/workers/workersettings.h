@@ -2,18 +2,15 @@
 #define WORKERBASESETTINGS_H
 
 #include "settings-parsing/serializablesettings.h"
-
-namespace Radapter {
-
-struct RADAPTER_API WorkerSettings : public Settings::SerializableSettings
+namespace Settings {
+struct RADAPTER_API Worker : public Settings::SerializableSettings
 {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(Settings::Required<QString>, name)
-    FIELD(Settings::NonRequiredSequence<QString>, producers)
-    FIELD(Settings::NonRequiredSequence<QString>, consumers)
-    FIELD(Settings::NonRequired<bool>, print_msgs, false)
-    WorkerSettings(const QString &name = "") : name(name) {}
+    FIELD(Required<QString>, name)
+    FIELD(NonRequiredLogLevel, log_level, QtMsgType::QtDebugMsg)
+    FIELD(NonRequired<bool>, print_msgs, false)
+    Worker(const QString &name = "") : name(name) {}
 };
 
 }

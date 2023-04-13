@@ -1,11 +1,13 @@
 #ifndef MODBUS_SLAVEWORKER_H
 #define MODBUS_SLAVEWORKER_H
 
-#include <QModbusServer>
+#include <QModbusDevice>
 #include <QTimer>
 #include "broker/workers/worker.h"
+#include "jsondict/jsondict.h"
 #include "settings/modbussettings.h"
 
+class QModbusServer;
 namespace Modbus {
 
 class RADAPTER_API Slave : public Radapter::Worker
@@ -32,8 +34,8 @@ private:
     QTimer *m_reconnectTimer = nullptr;
     QHash<QModbusDataUnit::RegisterType, QHash<int /*index*/, QString>> m_reverseRegisters;
     QModbusServer *modbusDevice = nullptr;
+    JsonDict m_state;
     std::atomic<bool> m_connected{false};
-    JsonDict m_state{};
 };
 
 } // namespace Modbus

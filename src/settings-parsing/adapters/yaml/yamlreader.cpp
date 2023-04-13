@@ -1,7 +1,7 @@
 #include "yamlreader.h"
 #include <yaml-cpp/node/node.h>
 #include <yaml-cpp/yaml.h>
-#include "jsondict/jsondict.hpp"
+#include "jsondict/jsondict.h"
 #include "yamlqttypesadapter.hpp"
 
 using namespace YAML;
@@ -34,7 +34,7 @@ QVariant YamlReader::getAll()
     auto wantedPath = resource() + "/" + path();
     auto actualPath = wantedPath.endsWith(extension) ? wantedPath : wantedPath + extension;
     auto config = LoadFile(actualPath.toStdString());
-    auto result = JsonDict(config.as<QVariantMap>());
+    auto result = JsonDict(config.as<QVariantMap>(), ':', false);
     recurseMapNode({}, config, result);
     setPath(pathWas);
     return result.toVariant();

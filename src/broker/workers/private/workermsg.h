@@ -2,7 +2,7 @@
 #define WORKERMSG_H
 
 #include <QObject>
-#include "jsondict/jsondict.hpp"
+#include "jsondict/jsondict.h"
 #include "broker/commands/basiccommands.h"
 #include "broker/replies/private/reply.h"
 
@@ -13,18 +13,15 @@ class WorkerProxy;
 class RADAPTER_API WorkerMsg : public JsonDict {
     Q_GADGET
 public:
-    using Scoped = QScopedPointer<WorkerMsg>;
     WorkerMsg();
     WorkerMsg(Worker *sender, const QStringList &receivers = {});
     WorkerMsg(Worker *sender, const QSet<Worker *> &receivers);
     //! Msg Flags
     enum MsgFlag : quint32 {
-        MsgBad = 0, //! Invalid Msg Marker
-        MsgOk = 1 << 1, //! Valid Msg Marker
-        MsgDirect = 1 << 2, //! Forward to receivers, disregarding producer/consumer status
-        MsgBroadcast = 1 << 3, //! Broadcast to every worker
-        MsgCommand = 1 << 4,
-        MsgReply = 1 << 5
+        MsgOk = 1 << 0, //! Valid Msg Marker
+        MsgBroadcast = 1 << 1, //! Broadcast to every worker
+        MsgCommand = 1 << 2,
+        MsgReply = 1 << 3
     };
     Q_DECLARE_FLAGS(Flags, MsgFlag);
     Q_ENUM(MsgFlag)
@@ -32,7 +29,6 @@ public:
     enum ServiceData : qint32 {
         ServiceUserData = -2, //! Field for user data
         ServiceUserDataDescription = -1, //! Field for user data description
-        ServiceBadReasonField, //! Contains invalidation reason
         ServiceCommand,
         ServiceReply,
         ServicePrivate,
@@ -48,6 +44,8 @@ public:
     void setFlag(MsgFlag flag, bool value = true) noexcept;
     void clearFlags() noexcept;
     void clearJson();
+    void ignoreReply();
+    bool replyIgnored() const;
     Broker *broker();
     const QSet<Worker *> &receivers() const;
     QSet<Worker *> &receivers() noexcept;
@@ -56,10 +54,7 @@ public:
     Worker *sender() const;
     const JsonDict &json() const;
     JsonDict &json();
-    bool constexpr isValid() const noexcept {return !m_flags.testFlag(MsgBad) && m_flags.testFlag(MsgOk);}
     bool constexpr isBroadcast() const noexcept {return m_flags.testFlag(MsgBroadcast);}
-    bool constexpr isDirect() const noexcept {return m_flags.testFlag(MsgDirect);}
-
     bool constexpr isCommand() const noexcept {return m_flags.testFlag(MsgCommand);}
     const Command *command() const;
     Command *command();
@@ -79,12 +74,19 @@ public:
     QStringList printReceivers() const;
     QVariant &privateData();
     QVariant privateData() const;
-    template <class User, class...Args>
-    void setCallback(User *user, void (User::*cb)(Args...)) {
+    template <class User, class Slot>
+    void setCallback(User *user, Slot slot) {
         if (!command()) {
             throw std::runtime_error("Attempt to set callback for non-command Msg!");
         }
-        command()->setCallback(user, cb);
+        command()->setCallback(user, slot);
+    }
+    template <class User, class Slot>
+    void setFailCallback(User *user, Slot slot) {
+        if (!command()) {
+            throw std::runtime_error("Attempt to set fail-callback for non-command Msg!");
+        }
+        command()->setFailCallback(user, slot);
     }
 private:
     friend class Radapter::Worker;
@@ -119,119 +121,10 @@ inline bool Radapter::WorkerMsg::isFrom() const {
     return qobject_cast<const T*>(m_sender) != nullptr;
 }
 
-inline const QSet<Radapter::Worker*> &Radapter::WorkerMsg::receivers() const
-{
-    return m_receivers;
-}
-
-inline QVariant &WorkerMsg::serviceData(ServiceData key)
-{
-    return m_serviceData[key];
-}
-
-inline QVariant WorkerMsg::serviceData(ServiceData key) const
-{
-    return m_serviceData.value(key);
-}
-
-inline QVariant &WorkerMsg::userData()
-{
-    return serviceData(ServiceUserData);
-}
-
-inline QVariant WorkerMsg::userData() const
-{
-    return serviceData(ServiceUserData);
-}
-
-inline bool WorkerMsg::testFlags(Flags flags) const noexcept
-{
-    return m_flags & flags;
-}
-
 template <typename Json>
 void WorkerMsg::setJson(Json &&src)
 {
     static_cast<JsonDict&>(*this) = std::forward<Json>(src);
-}
-
-inline void WorkerMsg::setFlag(MsgFlag flag, bool value) noexcept
-{
-    m_flags.setFlag(flag, value);
-}
-
-inline void WorkerMsg::clearFlags() noexcept
-{
-    m_flags = Flags(MsgOk);
-}
-
-inline void WorkerMsg::clearJson()
-{
-    m_dict.clear();
-}
-
-inline QSet<Worker *> &WorkerMsg::receivers() noexcept
-{
-    return m_receivers;
-}
-
-inline Worker *WorkerMsg::sender() const
-{
-    return m_sender;
-}
-
-inline const JsonDict &WorkerMsg::json() const
-{
-    return *this;
-}
-
-inline JsonDict &WorkerMsg::json() {
-    return *this;
-}
-
-inline const Command *WorkerMsg::command() const
-{
-    return m_serviceData[ServiceCommand].value<QSharedPointer<Command>>().data();
-}
-
-inline Command *WorkerMsg::command()
-{
-    return m_serviceData[ServiceCommand].value<QSharedPointer<Command>>().data();
-}
-
-inline const Reply *WorkerMsg::reply() const
-{
-    return m_serviceData[ServiceReply].value<QSharedPointer<Reply>>().data();
-}
-
-inline Reply *WorkerMsg::reply()
-{
-    return m_serviceData[ServiceReply].value<QSharedPointer<Reply>>().data();
-}
-
-inline QVariant &WorkerMsg::privateData()
-{
-    return m_serviceData[ServicePrivate];
-}
-
-inline QVariant WorkerMsg::privateData() const
-{
-    return m_serviceData[ServicePrivate];
-}
-
-inline void WorkerMsg::updateId()
-{
-    m_id = newMsgId();
-}
-
-inline quint64 WorkerMsg::newMsgId()
-{
-    return m_currentMsgId.fetch_add(1, std::memory_order_relaxed);
-}
-
-inline QDebug operator<<(QDebug dbg, const Radapter::WorkerMsg &msg){
-    dbg.nospace().noquote() << msg.printFullDebug();
-    return dbg.maybeQuote().maybeSpace();
 }
 
 template<class CommandT>
@@ -239,7 +132,6 @@ void WorkerMsg::setCommand(CommandT *command)
 {
     static_assert(CommandInfo<CommandT>::Defined, "Command must be registered with RADAPTER_DECLARE_COMMAND()");
     static_assert(std::is_base_of<Command, CommandT>(), "Command must inherit Radapter::Command");
-    m_flags |= MsgDirect;
     m_flags |= MsgCommand;
     m_serviceData[ServiceCommand].setValue(QSharedPointer<Command>(command));
 }
@@ -249,7 +141,6 @@ void WorkerMsg::setReply(ReplyT *reply)
 {
     static_assert(ReplyInfo<ReplyT>::Defined, "Reply must be registered with RADAPTER_DECLARE_REPLY()");
     static_assert(std::is_base_of<Reply, ReplyT>(), "Reply must inherit Radapter::Reply");
-    m_flags |= MsgDirect;
     m_flags |= MsgReply;
     if (!command()) {
         setCommand(new CommandDummy);

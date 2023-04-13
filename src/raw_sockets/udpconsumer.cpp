@@ -1,4 +1,5 @@
 #include "udpconsumer.h"
+#include "jsondict/jsondict.h"
 #include <QNetworkDatagram>
 using namespace Udp;
 using namespace Radapter;
@@ -28,7 +29,7 @@ void Consumer::readReady()
             workerError(this) << "Json Parse error!";
             return;
         }
-        emit sendMsg(prepareMsg(asJson));
+        emit sendBasic(asJson);
     }
 }
 

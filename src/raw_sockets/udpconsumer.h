@@ -13,7 +13,7 @@ struct ConsumerSettings : Settings::SerializableSettings
 {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(Settings::Required<Radapter::WorkerSettings>, worker)
+    FIELD(Settings::Required<Settings::Worker>, worker)
     FIELD(Settings::Required<quint16>, port)
 };
 

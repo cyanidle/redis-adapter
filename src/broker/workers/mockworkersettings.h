@@ -4,15 +4,16 @@
 #include "workersettings.h"
 #include "private/global.h"
 
-namespace Radapter {
-struct RADAPTER_API MockWorkerSettings;
-}
+namespace Settings {
 
-struct Radapter::MockWorkerSettings : WorkerSettings {
+struct RADAPTER_API MockWorker : Worker
+{
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(Settings::NonRequired<quint32>, mock_timer_delay)
+    FIELD(Settings::NonRequired<quint32>, mock_timer_delay, 3000)
     FIELD(Settings::NonRequired<QString>, json_file_path)
 };
+
+}
 
 #endif // MOCKWORKERSETTINGS_H

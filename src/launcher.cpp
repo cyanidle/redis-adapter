@@ -1,285 +1,124 @@
+#include <QLibrary>
+#include <QCommandLineParser>
 #include "broker/broker.h"
-#include "broker/brokersettings.h"
-#include "broker/workers/loggingworker.h"
-#include "broker/workers/loggingworkersettings.h"
-#include "broker/workers/mockworker.h"
-#include "settings-parsing/convertutils.hpp"
-#include "connectors/websocketserverconnector.h"
-#include "launcher.h"
-#include "radapterlogging.h"
-#include "localstorage.h"
-#include "localization.h"
-#include "routed_object/routesprovider.h"
-#include "consumers/redisstreamconsumer.h"
 #include "consumers/rediscacheconsumer.h"
 #include "consumers/rediskeyeventsconsumer.h"
-#include "producers/sqlarchiveproducer.h"
-#include "producers/redisstreamproducer.h"
+#include "consumers/redisstreamconsumer.h"
+#include "initialization.h"
+#include "interceptors/duplicatinginterceptor.h"
+#include "interceptors/validatinginterceptor.h"
 #include "producers/rediscacheproducer.h"
-#include "settings/modbussettings.h"
-#include "settings/redissettings.h"
-#include "modbus/modbusmaster.h"
-#include "modbus/modbusslave.h"
-#include "websocket/websocketclient.h"
-#include "raw_sockets/udpproducer.h"
-#include "raw_sockets/udpconsumer.h"
-#include "settings-parsing/adapters/toml.hpp"
+#include "producers/redisstreamproducer.h"
+#include "validators/common_validators.h"
+#include "launcher.h"
+#include "radapterlogging.h"
+#include "localization.h"
+#include "localstorage.h"
+#include "routed_object/routesprovider.h"
 #include "settings-parsing/adapters/yaml.hpp"
+#include "broker/workers/mockworker.h"
+#include "broker/workers/loggingworker.h"
 #include "filters/producerfilter.h"
-#include <QRegularExpression>
+#include "radapterconfig.h"
 #ifdef Q_OS_UNIX
 #include "utils/resourcemonitor.h"
 #endif
 using namespace Radapter;
 
-void tryInit(Launcher* launcher, void(Launcher::*method)(), const QString &moduleName) {
-    try {
-        (launcher->*method)();
-    } catch(std::runtime_error &exc) {
-        settingsParsingWarn().nospace() << "Could not enable module: [" << moduleName.toUpper() << "] --> Details: " << exc.what();
-    }
-}
+struct Radapter::LauncherPrivate {
+    Settings::Reader* reader;
+    QString configsResource;
+    QString configsFormat;
+    QString file;
+    QString pluginsPath;
+    QString configKey;
+    QCommandLineParser argsParser;
+    Settings::AppConfig config;
+};
 
 Launcher::Launcher(QObject *parent) :
     QObject(parent),
-    m_workers(),
-    m_reader()
+    d(new LauncherPrivate)
 {
     qSetMessagePattern(RADAPTER_CUSTOM_MESSAGE_PATTERN);
-    m_argsParser.setApplicationDescription("Redis Adapter");
+    d->reader = nullptr;
+    d->argsParser.setApplicationDescription(
+        "Redis Adapter. System for routing and collecting information from and to different protocols/devices/code modules.");
     parseCommandlineArgs();
-    tryInit(this, &Launcher::initRoutedJsons, "routed_jsons");
-    tryInit(this, &Launcher::initLogging, "logging");
-    tryInit(this, &Launcher::initLoggingWorkers, "logging_workers");
-    tryInit(this, &Launcher::initRedis, "redis");
-    tryInit(this, &Launcher::initModbus, "modbus");
-    tryInit(this, &Launcher::initBrokerSettings, "broker-settings");
-    tryInit(this, &Launcher::initWebsockets, "websockets");
-    tryInit(this, &Launcher::initSql, "sql");
-    tryInit(this, &Launcher::initFilters, "filters");
-    tryInit(this, &Launcher::initSockets, "raw-sockets");
-    tryInit(this, &Launcher::initMocks, "mocks");
-    tryInit(this, &Launcher::initLocalization, "localization");
+    Validator::registerAllCommon();
+    initPlugins();
+    initConfig();
+}
+
+void Launcher::initConfig()
+{
+    auto configMap = reader()->get(d->configKey).toMap();
+    d->config.allowExtra();
+    d->config.update(configMap);
+    broker()->applySettings(d->config.broker);
+    JsonRoutesProvider::init(JsonRoute::parseMap(d->config.json_routes));
+    for (const auto& config: d->config.redis->cache->consumers) {
+        addWorker(new Redis::CacheConsumer(config, newThread()));
+    }
+    for (const auto& config: d->config.redis->stream->consumers) {
+        addWorker(new Redis::StreamConsumer(config, newThread()));
+    }
+    for (const auto& config: d->config.sockets->udp->consumers) {
+        addWorker(new Udp::Consumer(config, newThread()));
+    }
+    for (const auto& config: d->config.redis->cache->producers) {
+        addWorker(new Redis::CacheProducer(config, newThread()));
+    }
+    for (const auto &config: d->config.redis->key_events->subscribers) {
+        addWorker(new Redis::KeyEventsConsumer(config, newThread()));
+    }
+    for (const auto& config: d->config.redis->stream->producers) {
+        addWorker(new Redis::StreamProducer(config, newThread()));
+    }
+    for (const auto& config: d->config.sockets->udp->producers) {
+        addWorker(new Udp::Producer(config, newThread()));
+    }
+    for (const auto& config: d->config.sockets->udp->consumers) {
+        addWorker(new Udp::Consumer(config, newThread()));
+    }
+    for (const auto& config: d->config.mocks) {
+        addWorker(new MockWorker(config, newThread()));
+    }
+    for (const auto& config: d->config.logging_workers) {
+        addWorker(new LoggingWorker(config, newThread()));
+    }
+    for (auto iter = d->config.interceptors->duplicating->begin(); iter != d->config.interceptors->duplicating->end(); ++iter) {
+        addInterceptor(iter.key(), new DuplicatingInterceptor(iter.value()));
+    }
+    for (auto iter = d->config.interceptors->validating->begin(); iter != d->config.interceptors->validating->end(); ++iter) {
+        addInterceptor(iter.key(), new ValidatingInterceptor(iter.value()));
+    }
+    if (d->config.localization.value.time_zone->isValid()) {
+        Localization::instance()->applyInfo(d->config.localization);
+    }
     LocalStorage::init(this);
 }
 
-void Launcher::addWorker(Worker* worker, QSet<InterceptorBase*> interceptors)
+void Launcher::initPlugins()
 {
-    m_workers.insert(worker, interceptors);
-}
-
-//! Все эти классы сохраняютс япри инициализации, логгинг их количества нужен,
-//! чтобы компилятор не удалил "неиспользуемые переменные"
-void Launcher::initRoutedJsons()
-{
-    auto jsonBindings = JsonRoute::parseMap(readSetting("json_routes").toMap());
-    JsonRoutesProvider::init(jsonBindings);
-    reDebug() << "config: Json Routes count: " << jsonBindings.size();
-}
-
-
-void Launcher::setLoggingFilters(const QMap<QString, bool> &loggers)
-{
-    auto filterRules = QStringList{
-        "*.debug=false",
-        "workers=true",
-        "redis-adapter=true",
-        "modbus=true",
-        "mysql=true",
-        "ws-server=true",
-        "ws-client=true",
-        "res-monitor=true",
-        "settings-parsing=true",
-        "broker=true",
-        "json-bindings=true",
-        "workers=true",
-    };
-    for (auto logInfo = loggers.begin(); logInfo != loggers.end(); logInfo++) {
-        auto rule = QString("%1=%2").arg(logInfo.key(), logInfo.value() ? "true" : "false");
-        if (filterRules.contains(rule)) {
-            filterRules[filterRules.indexOf(rule)] = rule;
-        } else {
-            filterRules.append(rule);
-        }
-    }
-    QMap<QString, QMap<QtMsgType, bool>> workerLoggers{};
-    for (auto iter{loggers.begin()}; iter != loggers.end(); ++iter) {
-        auto key = iter.key();
-        auto val = iter.value();
-        QtMsgType currentType = QtDebugMsg;
-        if (key.endsWith(".debug")) {
-            currentType = QtDebugMsg;
-            key.remove(".debug");
-        } else if (key.endsWith(".info")) {
-            currentType = QtInfoMsg;
-            key.remove(".info");
-        } else if (key.endsWith(".warn")) {
-            key.remove(".warn");
-            currentType = QtWarningMsg;
-        } else if (key.endsWith(".error")) {
-            key.remove(".error");
-            currentType = QtCriticalMsg;
-        } else {
-            auto &dbgEnabled = workerLoggers[key][QtDebugMsg];
-            if (!dbgEnabled) {
-                dbgEnabled = val;
-            }
-            auto &infoEnabled = workerLoggers[key][QtInfoMsg];
-            if (!infoEnabled) {
-                infoEnabled = val;
-            }
-            auto &warnEnabled = workerLoggers[key][QtWarningMsg];
-            if (!warnEnabled) {
-                warnEnabled = val;
-            }
-            auto &critEnabled = workerLoggers[key][QtCriticalMsg];
-            if (!critEnabled) {
-                critEnabled = val;
-            }
-            continue;
-        }
-        workerLoggers[key][currentType] = val;
-    }
-    Broker::instance()->applyWorkerLoggingFilters(workerLoggers);
-    auto filterString = filterRules.join("\n");
-    QLoggingCategory::setFilterRules(filterString);
-}
-
-void Launcher::initFilters()
-{
-    auto rawFilters = readSetting("filters").toMap();
-    for (auto iter = rawFilters.constBegin(); iter != rawFilters.constEnd(); ++iter) {
-        Settings::Filters::table().insert(iter.key(), convertQMap<double>(iter.value().toMap()));
-    }
-}
-
-void Launcher::initLoggingWorkers()
-{
-    for (const auto &logSettings : parseArrayOf<Radapter::LoggingWorkerSettings>("logging_workers")) {
-        addWorker(new Radapter::LoggingWorker(logSettings, new QThread(this)));
-    }
-}
-
-void Launcher::initBrokerSettings()
-{
-    Broker::instance()->applySettings(parseObject<BrokerSettings>("broker"));
-}
-
-void Launcher::initLogging()
-{
-    auto rawMap = readSetting("log_debug").toMap();
-    auto flattened = JsonDict{rawMap}.flatten(".");
-    setLoggingFilters(convertQMap<bool>(flattened));
-}
-
-void Launcher::initLocalization()
-{
-    auto localizationInfo = parseObject<Settings::LocalizationInfo>("localization");
-    Localization::instance()->applyInfo(localizationInfo);
-}
-
-void Launcher::initMocks()
-{
-    for (const auto &mockSettings : parseArrayOf<Radapter::MockWorkerSettings>("mocks")) {
-        addWorker(new Radapter::MockWorker(mockSettings, new QThread(this)));
-    }
-}
-
-void Launcher::initPipelines()
-{
-    Settings::Pipelines parsed;
-    try {
-        auto foundPipelines = readSetting().toMap();
-        foundPipelines = QVariantMap{{"pipelines", foundPipelines.value("pipelines")}};
-        parsed = Serializable::fromQMap<Settings::Pipelines>(foundPipelines);
-    } catch (std::runtime_error &exc) {
-        settingsParsingWarn() << "Could not read [PIPELINES]! Details:" << exc.what();
+    QDir dir(d->pluginsPath);
+    if (!dir.exists()) {
+        settingsParsingWarn() << "No plugins dir: " << dir.absolutePath();
         return;
     }
-    static QRegularExpression splitter("[<>]");
-    for (const auto &pipe: parsed.pipelines.value) {
-        auto split = pipe.split(splitter);
-        if (split.size() < 2) {
-            throw std::runtime_error("Pipeline length must be more than 2!");
+    settingsParsingWarn() << "Seaching dir for plugins:" << dir.absolutePath();
+    QList<QLibrary*> plugins;
+    for (const auto &file: dir.entryList(QDir::Filter::Files | QDir::Filter::NoSymLinks)) {
+        auto path = dir.filePath(file);
+        if (!QLibrary::isLibrary(path)) {
+            settingsParsingWarn() << path << "is not a library. Skipping";
+            continue;
         }
-        auto count = 0;
-        auto lastWorker = split.takeFirst().simplified();
-        auto match = splitter.match(pipe);
-        for (const auto &worker : split) {
-            auto op = match.captured(count++);
-            if (op == '<') {
-                broker()->connectTwoProxies(worker.simplified(), lastWorker);
-            } else if (op == '>') {
-                broker()->connectTwoProxies(lastWorker, worker.simplified());
-            }
-            lastWorker = worker.simplified();
-        }
+        auto lib = new QLibrary(path, this);
+        plugins.append(lib);
     }
-}
-
-void Launcher::initSockets()
-{
-    for (const auto &udp : parseArrayOf<Udp::ProducerSettings>("sockets.udp.producers")) {
-        addWorker(new Udp::Producer(udp, new QThread(this)));
-    }
-    for (const auto &udp : parseArrayOf<Udp::ConsumerSettings>("sockets.udp.consumers")) {
-        addWorker(new Udp::Consumer(udp, new QThread(this)));
-    }
-}
-
-void Launcher::initRedis()
-{
-    auto redisServers = parseArrayOf<Settings::RedisServer>("redis.servers");
-    reDebug() << "config: RedisServer count: " << redisServers.size();
-    for (auto &streamConsumer : parseArrayOf<Settings::RedisStreamConsumer>("redis.stream.consumers")) {
-        addWorker(new Redis::StreamConsumer(streamConsumer, new QThread(this)));
-    }
-    for (auto &streamProducer : parseArrayOf<Settings::RedisStreamProducer>("redis.stream.producers")) {
-        addWorker(new Redis::StreamProducer(streamProducer, new QThread(this)));
-    }
-    for (auto &cacheConsumer : parseArrayOf<Settings::RedisCacheConsumer>("redis.cache.consumers")) {
-        addWorker(new Redis::CacheConsumer(cacheConsumer, new QThread(this)));
-    }
-    for (auto &cacheProducer : parseArrayOf<Settings::RedisCacheProducer>("redis.cache.producers")) {
-        addWorker(new Redis::CacheProducer(cacheProducer, new QThread(this)));
-    }
-    for (auto &keyEventConsumer : parseArrayOf<Settings::RedisKeyEventSubscriber>("redis.keyevents.subscribers")) {
-        addWorker(new Redis::KeyEventsConsumer(keyEventConsumer, new QThread(this)));
-    }
-    //auto redisStreamGroupConsumers = readFromToml<Settings::RedisStreamGroupConsumer>("redis.stream.group_consumer");
-}
-
-void Launcher::initModbus()
-{
-    Settings::parseRegisters(readSetting("modbus.registers").toMap());
-    auto mbDevices = parseArrayOf<Settings::ModbusDevice>("modbus.devices");
-    reDebug() << "config: Modbus devices count: " << mbDevices.size();
-    for (const auto& slaveInfo : parseArrayOf<Settings::ModbusSlave>("modbus.slaves")) {
-        addWorker(new Modbus::Slave(slaveInfo, new QThread(this)));
-    }
-    for (const auto& masterInfo : parseArrayOf<Settings::ModbusMaster>("modbus.masters")) {
-        addWorker(new Modbus::Master(masterInfo, new QThread(this)));
-    }
-}
-
-void Launcher::initWebsockets()
-{
-    for (auto &wsClient : parseArrayOf<Settings::WebsocketClientInfo>("websocket.clients")) {
-        addWorker(new Websocket::Client(wsClient, new QThread(this)));
-    }
-    auto websocketServer = parseObject<Settings::WebsocketServerInfo>("websocket.server");
-    if (websocketServer.port) {
-        addWorker(new Websocket::ServerConnector(websocketServer, new QThread(this)));
-    }
-}
-
-void Launcher::initSql()
-{
-    auto sqlClientsInfo = parseArrayOf<Settings::SqlClientInfo>("sql.clients");
-    reDebug() << "config: Sql clients count: " << sqlClientsInfo.size();
-    for (auto &archive : parseArrayOf<Settings::SqlStorageInfo>("sql.storage.archives")) {
-        addWorker(new MySql::ArchiveProducer(archive, new QThread(this)));
-    }
+    settingsParsingWarn() << "Found" << plugins.size() << "plugins!";
+    Radapter::initPlugins(plugins);
 }
 
 void Launcher::parseCommandlineArgs()
@@ -290,28 +129,32 @@ void Launcher::parseCommandlineArgs()
     if (QCoreApplication::applicationVersion().isEmpty()) {
         QCoreApplication::setApplicationVersion(RADAPTER_VERSION);
     }
-    m_argsParser.addHelpOption();
-    m_argsParser.addVersionOption();
-    m_argsParser.addOptions({
+    d->argsParser.addHelpOption();
+    d->argsParser.addVersionOption();
+    d->argsParser.addOptions({
                   {{"d", "directory"},
                     "Config will be read from <directory>. (default: ./conf)", "directory", "conf"},
                   {{"p", "parser"},
                     "Config will be read from .<parser_format> files. (available: yaml, toml) (default: yaml)", "parser", "yaml"},
                   {{"f", "file"},
-                    "File to read settings from. (default: config)", "file", "config"}
+                    "File to read settings from. (default: <directory>/config.<parser-extension>)", "file", "config"},
+                  {{QString("plugins-dir")},
+                    "Directory with plugins. (default: ./plugins)", "plugins-dir", "plugins"},
+                  {{"c", "config-key"},
+                   "Subkey of Settings::AppConfig. (default: ''(root))", "config-key", ""},
                   });
-    m_argsParser.process(*QCoreApplication::instance());
-    m_configsResource = m_argsParser.value("directory");
-    m_configsFormat = m_argsParser.value("parser");
-    m_mainPath = m_argsParser.value("file");
-    if (m_configsFormat == "toml") {
-        m_reader = new Settings::TomlReader(m_configsResource, m_mainPath, this);
-    } else if (m_configsFormat == "yaml") {
-        m_reader = new Settings::YamlReader(m_configsResource, m_mainPath, this);
+    d->argsParser.process(*QCoreApplication::instance());
+    d->configsResource = d->argsParser.value("directory");
+    d->configsFormat = d->argsParser.value("parser");
+    d->pluginsPath = d->argsParser.value("plugins-dir");
+    d->file = d->argsParser.value("file");
+    d->configKey = d->argsParser.value("config-key");
+    if (d->configsFormat == "yaml") {
+        d->reader = new Settings::YamlReader(d->configsResource, d->file, this);
     } else {
-        throw std::runtime_error("Invalid configs format: " + m_configsFormat.toStdString() + "; Can be (toml/yaml)");
+        throw std::runtime_error("Invalid configs format: " + d->configsFormat.toStdString() + "; Can be (toml/yaml)");
     }
-    settingsParsingWarn() << "Using parser:" << m_configsFormat;
+    settingsParsingWarn() << "Using parser:" << d->configsFormat;
 }
 
 Broker *Launcher::broker() const
@@ -319,20 +162,19 @@ Broker *Launcher::broker() const
     return Broker::instance();
 }
 
-QVariant Launcher::readSetting(const QString &path) {
-    return m_reader->get(path);
+
+void Launcher::addWorker(Radapter::Worker *worker)
+{
+    broker()->registerWorker(worker);
 }
 
-void Launcher::initProxies()
+void Launcher::addInterceptor(const QString& name, Interceptor *interceptor)
 {
-    for (auto workerIter = m_workers.begin(); workerIter != m_workers.end(); ++workerIter) {
-        Broker::instance()->registerProxy(workerIter.key()->createProxy(workerIter.value()));
-    }
+    broker()->registerInterceptor(name, interceptor);
 }
 
 void Launcher::run()
 {
-    initProxies();
 #ifdef Q_OS_UNIX
     auto resmonThr = new QThread(this);
     auto resmon = new ResourceMonitor();
@@ -340,8 +182,7 @@ void Launcher::run()
     resmon->moveToThread(resmonThr);
     resmonThr->start(QThread::LowPriority);
 #endif
-    Broker::instance()->connectProducersAndConsumers();
-    initPipelines();
+    initPipelines(d->config.pipelines.value);
     Broker::instance()->runAll();
     emit started();
 }
@@ -359,16 +200,21 @@ QThread *Launcher::newThread()
 
 QCommandLineParser &Launcher::commandLineParser()
 {
-    return m_argsParser;
+    return d->argsParser;
+}
+
+Launcher::~Launcher()
+{
+    delete d;
 }
 
 const QString &Launcher::configsDirectory() const
 {
-    return m_configsResource;
+    return d->configsResource;
 }
 
 Settings::Reader *Launcher::reader()
 {
-    return m_reader;
+    return d->reader;
 }
 

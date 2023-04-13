@@ -115,7 +115,7 @@ QString Modbus::printUnit(const QModbusDataUnit &unit)
 {
     auto result = "Table: " + printTable(unit.registerType()) + "; Vals: [";
     for (auto &val : unit.values()) {
-        result.append(QString::number(val, 16)).append(", ");
+        result.append(QString::number(val, 16).toUpper()).append(" ");
     }
-    return  result + "]; --> Start: " + QString::number(unit.startAddress()) + "; Count: " + QString::number(unit.valueCount());
+    return result + "]; --> Start: " + QString::number(unit.startAddress()) + "; Count: " + QString::number(unit.valueCount());
 }

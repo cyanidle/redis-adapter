@@ -5,7 +5,7 @@
 #include "serializable/serializable.h"
 #include "serializable/bindable.hpp"
 #include "serializable/validated.hpp"
-#include "serializable/common_validators.hpp"
+#include "validators/common_validators.h"
 
 class RoutedObject : protected Serializable::Object {
 public:
@@ -36,7 +36,7 @@ template <typename T>
 using Routed = Serializable::Plain<T>;
 template <typename T>
 using RoutedSeq = Serializable::Sequence<T>;
-using RoutedMinutes = Serializable::Validated<Serializable::Plain<bool>>::With<Validate::Minutes>;
-using RoutedHours = Serializable::Validated<Serializable::Plain<bool>>::With<Validate::Hours24>;
+using RoutedMinutes = Serializable::Validated<Serializable::Plain<int>>::With<Validator::Minutes>;
+using RoutedHours = Serializable::Validated<Serializable::Plain<int>>::With<Validator::Hours24>;
 
 #endif // BINDABLE_H

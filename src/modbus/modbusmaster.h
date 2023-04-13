@@ -2,12 +2,20 @@
 #define MODBUS_MASTER_H
 
 #include "broker/workers/worker.h"
+#include "jsondict/jsondict.h"
 #include "settings/modbussettings.h"
-#include "broker/sync/channel.h"
-#include <QModbusClient>
+#include "modbusparsing.h"
+#include <QModbusReply>
+#include <QModbusDevice>
 #include <QQueue>
 #include <QObject>
 
+class QTimer;
+class QModbusClient;
+namespace Redis {
+class CacheProducer;
+class CacheConsumer;
+}
 namespace Modbus {
 
 class Master : public Radapter::Worker
@@ -42,19 +50,25 @@ private:
     void executeNext();
     void initClient();
     void executeRead(const QModbusDataUnit &unit);
-    void executeWrite(const QModbusDataUnit &unit);
-
+    void executeWrite(const QModbusDataUnit &state);
+    void saveState(const JsonDict &state);
+    void fetchState();
+    void write(const JsonDict &data);
     void attachToChannel();
 
     Settings::ModbusMaster m_settings;
     QTimer *m_reconnectTimer;
     QTimer *m_readTimer;
-    QHash<QModbusDataUnit::RegisterType, QHash<int, QString>> m_reverseRegisters{};
+    QHash<QModbusDataUnit::RegisterType, QHash<int, QString>> m_reverseRegisters;
     QModbusClient *m_device = nullptr;
     std::atomic<bool> m_connected{false};
-    QQueue<QModbusDataUnit> m_readQueue{};
-    QQueue<QModbusDataUnit> m_writeQueue{};
-    JsonDict m_lastJson{};
+    QQueue<QModbusDataUnit> m_readQueue;
+    QQueue<QModbusDataUnit> m_writeQueue;
+    JsonDict m_state;
+    JsonDict m_wantedState;
+    QMap<QString, quint8> m_rewriteAttempts;
+    Redis::CacheProducer *m_stateWriter;
+    Redis::CacheConsumer *m_stateReader;
 };
 
 } // namespace Modbus

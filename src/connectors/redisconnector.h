@@ -38,6 +38,7 @@ public:
     explicit Connector(const Settings::RedisConnector &settings, QThread *thread);
     ~Connector() override;
     bool isConnected() const;
+    void waitConnected(Radapter::Worker *who = nullptr) const;
     int commandsLeft() const;
 signals:
     void connected();

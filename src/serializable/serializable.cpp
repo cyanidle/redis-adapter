@@ -50,3 +50,26 @@ QVariantMap Object::schema() const
     return result;
 
 }
+
+bool Object::is(const QMetaObject *mobj) const
+{
+    return metaObject()->inherits(mobj);
+}
+
+const void *Object::as(const QMetaObject *mobj) const
+{
+    if (is(mobj)) {
+        return this;
+    } else {
+        return nullptr;
+    }
+}
+
+void *Object::as(const QMetaObject *mobj)
+{
+    if (is(mobj)) {
+        return this;
+    } else {
+        return nullptr;
+    }
+}

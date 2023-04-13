@@ -1,7 +1,7 @@
 #include "producerfilter.h"
 
 ProducerFilter::ProducerFilter(const Settings::Filters::Table &filters)
-    : InterceptorBase(),
+    : Interceptor(),
       m_strategy(StrategyStrict),
       m_filters(filters),
       m_last()
@@ -18,12 +18,11 @@ ProducerFilter::ProducerFilter(const Settings::Filters::Table &filters)
     }
 }
 
-void ProducerFilter::onMsgFromWorker(const Radapter::WorkerMsg &msg)
+void ProducerFilter::onMsgFromWorker(Radapter::WorkerMsg &msg)
 {
-    if (msg.testFlags(Radapter::WorkerMsg::MsgBad |
-                      Radapter::WorkerMsg::MsgReply |
+    if (msg.testFlags(Radapter::WorkerMsg::MsgReply |
                       Radapter::WorkerMsg::MsgCommand)) {
-        emit msgToBroker(msg);
+        emit msgFromWorker(msg);
         return;
     }
     if (m_strategy == StrategyByWildcard) {
@@ -33,10 +32,10 @@ void ProducerFilter::onMsgFromWorker(const Radapter::WorkerMsg &msg)
     m_last.merge(msg);
 }
 
-void ProducerFilter::filterStrictByName(const Radapter::WorkerMsg &srcMsg)
+void ProducerFilter::filterStrictByName(Radapter::WorkerMsg &srcMsg)
 {
     if (m_last.isEmpty()) {
-        emit msgToBroker(srcMsg);
+        emit msgFromWorker(srcMsg);
     }
     bool shouldAdd = false;
     for (auto &item : srcMsg) {
@@ -57,7 +56,7 @@ void ProducerFilter::filterStrictByName(const Radapter::WorkerMsg &srcMsg)
         }
     }
     if (shouldAdd) {
-        emit msgToBroker(srcMsg);
+        emit msgFromWorker(srcMsg);
     }
 }
 

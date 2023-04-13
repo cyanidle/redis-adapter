@@ -1,12 +1,13 @@
 #include "redisstreamqueries.h"
-#include "jsondict/jsondict.hpp"
+#include "jsondict/jsondict.h"
 #include <QStringList>
 
 QString Redis::addToStream(const QString &stream, const JsonDict &data, quint32 size)
 {
     QString fields;
+    fields.reserve(150);
     for (const auto &iter : data) {
-        fields.append(iter.key().join(':') + " " + iter.value().toString());
+        fields.append(" ").append(iter.key().join(':')).append(" ").append(iter.value().toString());
     }
     return QStringLiteral("XADD %1 MAXLEN ~ %2 * %3").arg(stream).arg(size).arg(fields);
 }

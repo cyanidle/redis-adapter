@@ -1,6 +1,7 @@
 #include "redisstreamproducer.h"
 #include <QVariantMap>
 #include <QDebug>
+#include "broker/workers/private/workermsg.h"
 #include "radapterlogging.h"
 #include "formatting/redis/redisstreamqueries.h"
 

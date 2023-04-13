@@ -16,8 +16,11 @@ CacheProducer::CacheProducer(const Settings::RedisCacheProducer &config, QThread
 
 void CacheProducer::onMsg(const Radapter::WorkerMsg &msg)
 {
-    writeObject(m_objectKey, msg, m_manager.create<NoReplyContext>(this));
     m_manager.clearDone();
+    if (m_objectKey.isEmpty()) {
+        workerError(this) << "To write plain Jsons, specify 'object_hash_key' in config!";
+    }
+    writeObject(m_objectKey, msg, m_manager.create<NoReplyContext>(this));
 }
 
 void CacheProducer::onCommand(const Radapter::WorkerMsg &msg)
@@ -86,7 +89,7 @@ void CacheProducer::writeObject(const QString &objectKey, const JsonDict &json, 
     QString keys;
     auto flat = json.flatten();
     for (auto iter{flat.begin()}; iter != flat.end(); ++iter) {
-        keys.append(iter.key() + " " + iter.value().toString());
+        keys.append(QStringLiteral(" %1 %2").arg(iter.key(), iter.value().toString()));
     }
     auto command = QStringLiteral("HMSET %1 %2").arg(objectKey, keys);
     if (runAsyncCommand(&CacheProducer::objectWriteCallback, command, handle) != REDIS_OK) {

@@ -1,9 +1,13 @@
 #include "modbusmaster.h"
 #include "broker/broker.h"
+#include "broker/sync/channel.h"
+#include <QModbusRtuSerialMaster>
+#include "commands/rediscommands.h"
 #include "templates/algorithms.hpp"
-#include <QModbusRtuSerialClient>
-#include "modbusparsing.h"
+#include "consumers/rediscacheconsumer.h"
+#include "producers/rediscacheproducer.h"
 #include <QModbusReply>
+#include <QModbusClient>
 #include <QModbusTcpClient>
 
 using namespace Modbus;
@@ -13,7 +17,9 @@ Master::Master(const Settings::ModbusMaster &settings, QThread *thread) :
     Radapter::Worker(settings.worker, thread),
     m_settings(settings),
     m_reconnectTimer(new QTimer(this)),
-    m_readTimer(new QTimer(this))
+    m_readTimer(new QTimer(this)),
+    m_stateWriter(nullptr),
+    m_stateReader(nullptr)
 {
     m_reconnectTimer->setInterval(settings.reconnect_timeout_ms);
     m_reconnectTimer->callOnTimeout(this, &Master::connectDevice);
@@ -57,9 +63,24 @@ void Master::initClient()
 
 void Master::onRun()
 {
+    if (!m_settings.state_reader->isEmpty()) {
+        m_stateReader = broker()->getWorker<Redis::CacheConsumer>(m_settings.state_reader);
+        if (!m_stateReader) {
+            throw std::runtime_error(printSelf().toStdString() + ": Could not fetch RedisCacheConsumer: " + m_settings.state_reader->toStdString());
+        }
+        m_stateReader->waitConnected(this);
+    }
+    if (!m_settings.state_writer->isEmpty()) {
+        m_stateWriter = broker()->getWorker<Redis::CacheProducer>(m_settings.state_writer);
+        if (!m_stateWriter) {
+            throw std::runtime_error(printSelf().toStdString() + ": Could not fetch RedisCacheProducer: " + m_settings.state_writer->toStdString());
+        }
+        m_stateWriter->waitConnected(this);
+    }
     initClient();
     attachToChannel();
     connectDevice();
+    fetchState();
     if (config().poll_rate) {
         m_readTimer->start();
     }
@@ -92,27 +113,71 @@ const Settings::ModbusMaster &Master::config() const
     return m_settings;
 }
 
+void Master::saveState(const JsonDict &state)
+{
+    if (m_stateWriter) {
+        auto command = prepareCommand(new Redis::Cache::WriteObject(workerName(), state));
+        command.receivers() = {m_stateWriter};
+        command.ignoreReply();
+        emit sendMsg(command);
+    }
+}
+
+void Master::fetchState()
+{
+    if (m_stateReader) {
+        auto command = prepareCommand(new Redis::Cache::ReadObject(workerName()));
+        command.setCallback(this, [this](const ReplyJson *reply){
+            m_state.merge(reply->json());
+            m_wantedState.merge(m_state);
+            emit sendBasic(m_state);
+        });
+        command.receivers() = {m_stateReader};
+        emit sendMsg(command);
+    }
+}
+
 void Master::onMsg(const Radapter::WorkerMsg &msg)
+{
+    write(msg);
+}
+
+void Master::write(const JsonDict &data)
 {
     if (!m_connected) {
         reDebug() << printSelf() << "Write while not connected!";
         return;
     }
     QList<QModbusDataUnit> results;
-    for (auto& iter : msg) {
+    for (auto& iter : data) {
+        if (!iter.value().isValid()) continue;
         auto fullKeyJoined = iter.key().join(":");
-        if (m_settings.registers.contains(fullKeyJoined)) {
-            auto regInfo = m_settings.registers.value(fullKeyJoined);
-            auto value = iter.value();
-            if (value.canConvert(QMetaType(regInfo.type))) {
-                results.append(parseValueToDataUnit(value, regInfo));
-            } else {
-                reWarn() << printSelf() << ": Received: " << value << "; Key:" << fullKeyJoined;
+        if (!m_settings.registers.contains(fullKeyJoined)) continue;
+        auto regInfo = m_settings.registers.value(fullKeyJoined);
+        if (!regInfo.writable) {
+            workerInfo(this) << "Attempt to write to protected register: " << regInfo.print();
+            continue;
+        }
+        auto value = iter.value();
+        if (!regInfo.validator.value.validate(value)) {
+            workerWarn(this, .nospace())
+                << "Property: '" << fullKeyJoined
+                << "' was invalidated by Validator[" << regInfo.validator.value.name()
+                << "] --> value: " << value;
+            continue;
+        }
+        if (value.canConvert(regInfo.type)) {
+            m_wantedState[iter.key()] = value;
+            if (m_state[iter.key()] == value) {
+                continue;
             }
+            results.append(parseValueToDataUnit(value, regInfo));
+        } else {
+            workerError(this) << "Incompatible value under:" << fullKeyJoined << " --> " << value << "; Wanted: " << regInfo.type.value;
         }
     }
-    for (auto &item : mergeDataUnits(results)) {
-        enqeueWrite(item);
+    for (const auto &state : mergeDataUnits(results)) {
+        enqeueWrite(state);
     }
 }
 
@@ -160,7 +225,9 @@ void Master::onStateChanged(QModbusDevice::State state)
 void Master::onReadReady()
 {
     auto rawReply = qobject_cast<QModbusReply *>(sender());
-    if (!rawReply) return;
+    if (!rawReply) {
+        return;
+    }
     QScopedPointer<QModbusReply, QScopedPointerDeleteLater> reply{rawReply};
     if (reply->error() != QModbusDevice::NoError) {
         workerError(this, .noquote()) << ": Error Reading:\n" << reply->errorString();
@@ -191,14 +258,17 @@ void Master::onReadReady()
 
 void Master::onWriteReady()
 {
-    auto rawReply = qobject_cast<QModbusReply *>(sender());
-    if (!rawReply) return;
+    auto rawReply = qobject_cast<QModbusReply*>(sender());
+    if (!rawReply) {
+        return;
+    }
     QScopedPointer<QModbusReply, QScopedPointerDeleteLater> reply{rawReply};
     auto unit = reply->result();
-    if (reply->error() == QModbusDevice::NoError) {
+    auto err = reply->error();
+    if (err == QModbusDevice::NoError) {
         workerInfo(this, .nospace().noquote()) << ": Written:\n" << printUnit(unit);
     } else {
-        workerError(this, .nospace().noquote()) << ": Error Writing:\n" << printUnit(unit) << ";\nReason: " << reply->errorString();
+        workerError(this, .nospace().noquote()) << ": Error Writing. Reason: " << reply->errorString();
         reconnect();
     }
 }
@@ -217,16 +287,35 @@ void Master::doRead()
 void Master::formatAndSendJson(const JsonDict &json)
 {
     JsonDict result;
+    JsonDict toRewrite;
     for (auto &newJson : json) {
         auto key = newJson.key();
-        auto lastVal = m_lastJson.value(key);
-        if (lastVal != newJson.value() || !m_lastJson.contains(key)) {
-            result.insert(key, newJson.value());
-            m_lastJson[key] = newJson.value();
+        auto joinedKey = key.join(':');
+        auto &lastVal = m_state[key];
+        auto &wantedVal = m_wantedState[key];
+        auto &newVal = newJson.value();
+        auto &rewriteAttempts = m_rewriteAttempts[joinedKey];
+        if (newVal != lastVal) {
+            lastVal = newVal;
+            wantedVal = newVal;
+            result[key] = newVal;
+        } else if (newVal != wantedVal && rewriteAttempts < m_settings.retries) {
+            rewriteAttempts++;
+            workerWarn(this) << "Rewriting property:" << joinedKey
+                             << "; Value:" << wantedVal
+                             << "; Attemtps:" << rewriteAttempts;
+            toRewrite[key] = wantedVal;
+        } else {
+            wantedVal = newVal;
+            rewriteAttempts = 0;
         }
     }
     if (!result.isEmpty()) {
-        emit sendMsg(prepareMsg(result));
+        saveState(result);
+        emit sendBasic(result);
+    }
+    if (!toRewrite.isEmpty()) {
+        write(toRewrite);
     }
 }
 
@@ -236,9 +325,9 @@ void Master::enqeueRead(const QModbusDataUnit &unit)
     emit askTrigger();
 }
 
-void Master::enqeueWrite(const QModbusDataUnit &unit)
+void Master::enqeueWrite(const QModbusDataUnit &state)
 {
-    m_writeQueue.enqueue(unit);
+    m_writeQueue.enqueue(state);
     emit askTrigger();
 }
 
@@ -258,10 +347,10 @@ void Master::executeRead(const QModbusDataUnit &unit)
     }
 }
 
-void Master::executeWrite(const QModbusDataUnit &unit)
+void Master::executeWrite(const QModbusDataUnit &state)
 {
-    if (auto reply = m_device->sendWriteRequest(unit, m_settings.slave_id)) {
-        workerInfo(this, .noquote()) << "Writing...:\n" << printUnit(unit);
+    if (auto reply = m_device->sendWriteRequest(state, m_settings.slave_id)) {
+        workerInfo(this, .noquote()) << "Writing...:\n" << printUnit(state);
         connect(reply, &QModbusReply::destroyed, this, &Master::queryDone);
         if (!reply->isFinished()) {
             QObject::connect(reply, &QModbusReply::finished, this, &Master::onWriteReady);

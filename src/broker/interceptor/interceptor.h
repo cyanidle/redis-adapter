@@ -4,32 +4,30 @@
 #include "private/global.h"
 
 namespace Radapter {
-class RADAPTER_API InterceptorBase;
+class RADAPTER_API Interceptor;
 class WorkerMsg;
 class Worker;
-typedef QSet<InterceptorBase*> Interceptors;
+class Broker;
+typedef QSet<Interceptor*> Interceptors;
 }
 
 //! Класс, перехватывающий трафик
-class Radapter::InterceptorBase : public QObject
+class Radapter::Interceptor : public QObject
 {
     Q_OBJECT
 public:
-    explicit InterceptorBase();
+    explicit Interceptor();
     const Worker* worker() const;
     QThread *thread();
 signals:
-    void msgToWorker(const Radapter::WorkerMsg &msg);
-    void msgToBroker(const Radapter::WorkerMsg &msg);
-
+    void msgFromWorker(Radapter::WorkerMsg &msg);
 public slots:
-    virtual void onMsgFromWorker(const Radapter::WorkerMsg &msg);
-    virtual void onMsgFromBroker(const Radapter::WorkerMsg &msg);
+    virtual void onMsgFromWorker(Radapter::WorkerMsg &msg);
 protected:
     Worker* workerNonConst() const;
-public slots:
-
 private:
+    friend Worker;
+    friend Broker;
 };
 
 #endif //INTERCEPTORBASE_H

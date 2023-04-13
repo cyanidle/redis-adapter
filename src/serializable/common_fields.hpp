@@ -4,6 +4,7 @@
 #include "private/global.h"
 #include "private/impl_serializable.h"
 #include "radapterlogging.h"
+#include "field_super.h"
 
 namespace Serializable {
     struct FieldConcept;
@@ -47,7 +48,6 @@ Q_DECLARE_METATYPE(Serializable::FieldConcept*)
 namespace Serializable {
 namespace Private {
 template <typename Class, typename Field>
-
 struct FieldHolder : FieldConcept {
     FieldHolder(Field Class::*fieldGetter) : m_fieldGetter(fieldGetter) {}
     QVariant schema(const Object *owner) const override final {
@@ -94,11 +94,12 @@ template <typename Class, typename Field>
 FieldConcept* upcastField(Field Class::*fieldGetter) {
     return new Private::FieldHolder<Class, Field>(fieldGetter);
 }
-template<typename T, bool isBig = true>
-struct FieldCommon {
+struct IsFieldCheck {};
+template<typename T>
+struct FieldCommon : IsFieldCheck {
     friend Serializable::Object;
     using valueType = T;
-    using valueRef = typename std::conditional<isBig, T, T&>::type;
+    using valueRef = T&;
     FieldCommon() = default;
     template<typename U>
     FieldCommon(U&&other) : value(std::forward<U>(other)) {}
@@ -106,7 +107,7 @@ struct FieldCommon {
     template<typename U>
     FieldCommon &operator=(U&&other){value = std::forward<U>(other); return *this;}
     FieldCommon &operator=(const FieldCommon &other) = default;
-    bool operator==(const valueRef other) const {return value == other;}
+    bool operator==(const T& other) const {return value == other;}
     bool operator==(const FieldCommon &other) const {return value == other.value;}
     T* operator->() {return &value;}
     const T* operator->() const {return &value;}
@@ -120,9 +121,7 @@ struct FieldCommon {
     const NestedIntrospection introspectNested() const {return NestedIntrospection();}
     NestedIntrospection introspectNested() {return NestedIntrospection();}
     const void *rawValue() const {return &value;}
-    void update(const valueRef newVal) {
-        this->value = newVal;
-    }
+    void update(const T& newVal) {this->value = newVal;}
     T value;
 };
 }
@@ -418,8 +417,8 @@ struct PlainMapping : public Private::MappingCommon<T> {
     }
     QVariant readVariant() const {
         QVariantMap values;
-        for (auto iter = this->value.begin(); iter != this->value.cend(); +iter) {
-            values.insert(iter().key(), iter().value().serialize());
+        for (auto iter = this->value.begin(); iter != this->value.cend(); ++iter) {
+            values.insert(iter.key(), QVariant::fromValue(iter.value()));
         }
         return values;
     }
@@ -457,8 +456,8 @@ struct NestedMapping : public Private::MappingCommon<T> {
     enum {fieldType = FieldMappingOfNested};
     FieldType type() const {return static_cast<FieldType>(fieldType);}
     QVariant schema() const {
-        auto nestedSchema = this->value.isEmpty() ? T().schema() : this->value.constFirst().schema();
-        auto mobj = this->value.isEmpty() ? T().metaObject() : this->value.constFirst().metaObject();
+        auto nestedSchema = this->value.isEmpty() ? T().schema() : this->value.first().schema();
+        auto mobj = this->value.isEmpty() ? T().metaObject() : this->value.first().metaObject();
         QVariantMap actual_schema {
             {"type_name", QMetaType::fromType<QMap<QString, T>>().name()},
             {"nested_type_name", QStringLiteral("mapping<string, %1>").arg(QString(mobj->className()))},
@@ -471,22 +470,29 @@ struct NestedMapping : public Private::MappingCommon<T> {
     }
     QVariant readVariant() const {
         QVariantMap values;
-        for (auto iter = this->value.begin(); iter != this->value.cend(); +iter) {
-            values.insert(iter().key() ,iter().value().serialize());
+        for (auto iter = this->value.begin(); iter != this->value.cend(); ++iter) {
+            values.insert(iter.key(), iter.value().serialize());
         }
         return values;
     }
     NestedIntrospection introspectNested() {
-        return NestedIntrospection(QMap<QString, Object*>{&this->value.begin(), &this->value.end()});
+        QMap<QString, Object*> result;
+        for (auto iter = this->value.begin(); iter != this->value.end(); ++iter) {
+            result.insert(iter.key(), &iter.value());
+        }
+        return NestedIntrospection(result);
     }
     const NestedIntrospection introspectNested() const {
-        return NestedIntrospection(QMap<QString, Object*>{&this->value.begin(), &this->value.end()});
+        QMap<QString, Object*> result;
+        for (auto iter = this->value.begin(); iter != this->value.end(); ++iter) {
+            result.insert(iter.key(), const_cast<Object*>((const Object*) &iter.value()));
+        }
+        return NestedIntrospection(result);
     }
     bool updateWithVariant(const QVariant &source) {
         QMap<QString, T> temp;
         auto asMap = source.toMap();
         for (auto iter = asMap.cbegin(); iter != asMap.cend(); ++iter) {
-            if (!iter.value().canConvert<T>()) continue;
             auto current = T();
             auto currentOk = current.update(iter.value().toMap());
             if (currentOk) {

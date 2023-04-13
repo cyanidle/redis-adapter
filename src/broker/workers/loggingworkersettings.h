@@ -5,11 +5,11 @@
 #include "settings-parsing/serializablesettings.h"
 #include "private/global.h"
 #include "workersettings.h"
-#include "settings-parsing/settings_validators.hpp"
+#include "settings-parsing/settings_validators.h"
 
-namespace Radapter {
+namespace Settings {
 
-struct RADAPTER_API LoggingWorkerSettings : public WorkerSettings
+struct RADAPTER_API LoggingWorker : public Worker
 {
     Q_GADGET
     IS_SERIALIZABLE
@@ -47,6 +47,6 @@ protected:
         }
     }
 };
-Q_DECLARE_OPERATORS_FOR_FLAGS(LoggingWorkerSettings::LogMsgs)
+Q_DECLARE_OPERATORS_FOR_FLAGS(LoggingWorker::LogMsgs)
 }
 #endif // LOGGINGINTERCEPTORSETTINGS_H

@@ -3,20 +3,20 @@
 
 #include <QTimer>
 #include <QFile>
-#include "mockworkersettings.h"
 #include "worker.h"
 #include "private/global.h"
+#include "jsondict/jsondict.h"
 
-
-namespace Radapter {
-class RADAPTER_API MockWorker;
+namespace Settings {
+struct MockWorker;
 }
+namespace Radapter {
 
-class Radapter::MockWorker : public Radapter::Worker
+class RADAPTER_API MockWorker : public Radapter::Worker
 {
     Q_OBJECT
 public:
-    explicit MockWorker(const MockWorkerSettings &settings, QThread *thread);
+    explicit MockWorker(const Settings::MockWorker &settings, QThread *thread);
     void onRun() override;
 public slots:
     void onMsg(const Radapter::WorkerMsg &msg) override;
@@ -29,8 +29,9 @@ private:
 
     QFile* m_file;
     QTimer* m_mockTimer;
-    QList< JsonDict> m_jsons;
+    QList<JsonDict> m_jsons;
     int m_currentIndex;
 };
+}
 
 #endif

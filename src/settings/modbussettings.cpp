@@ -1,9 +1,10 @@
 #include "modbussettings.h"
-#include "jsondict/jsondict.hpp"
+#include "jsondict/jsondict.h"
 #include "templates/algorithms.hpp"
 
 using namespace Settings;
 using namespace Serializable;
+typedef QMap<QString /*deviceName*/, Registers> DevicesRegisters;
 Q_GLOBAL_STATIC(DevicesRegisters, allRegisters)
 
 void Settings::parseRegisters(const QVariantMap &registersFile) {
@@ -19,7 +20,7 @@ void Settings::parseRegisters(const QVariantMap &registersFile) {
                     auto regName = iter.domainKey().join(":");
                     auto regInfo = *iter.domainMap();
                     regInfo["table"] = toInsert;
-                    (*allRegisters)[deviceName][regName] = fromQMap<RegisterInfo>(regInfo);
+                    (*allRegisters)[deviceName][regName] = parseObject<RegisterInfo>(regInfo);
                 }
             }
         }
@@ -70,7 +71,7 @@ void ModbusSlave::postUpdate() {
 void ModbusMaster::postUpdate()
 {
     for (auto &name: register_names) {
-        auto &toMerge = (*allRegisters)[name.replace('.', ':')];
+        auto &toMerge = (*allRegisters).value(name.replace('.', ':'));
         if (toMerge.isEmpty()) {
             throw std::runtime_error(worker->name->toStdString() + ": Missing registers with name: " + name.toStdString());
         }
@@ -110,6 +111,38 @@ bool OrdersValidator::validate(QVariant &value)
     return true;
 }
 
+void RegisterInfo::postUpdate()
+{
+    if (table == QModbusDataUnit::InputRegisters || table == QModbusDataUnit::DiscreteInputs) {
+        writable = false;
+    }
+}
 
+bool ChooseRegValueType::validate(QVariant &value) {
+    static QMap<QString, QMetaType::Type>
+        map{{"uint16", QMetaType::UShort},
+            {"word", QMetaType::UShort},
+            {"uint32", QMetaType::UInt},
+            {"dword", QMetaType::UInt},
+            {"float", QMetaType::Float},
+            {"float32", QMetaType::Float}};
+    auto asStr = value.toString().toLower();
+    value.setValue(map.value(asStr));
+    return map.contains(asStr);
+}
 
-
+bool ChooseRegisterTable::validate(QVariant &value) {
+    static QMap<QString, QModbusDataUnit::RegisterType>
+        map{{"holding",QModbusDataUnit::HoldingRegisters},
+            {"input",QModbusDataUnit::InputRegisters},
+            {"coils",QModbusDataUnit::Coils},
+            {"discrete_inputs",QModbusDataUnit::DiscreteInputs},
+            {"holding_registers",QModbusDataUnit::HoldingRegisters},
+            {"input_registers",QModbusDataUnit::InputRegisters},
+            {"coils",QModbusDataUnit::Coils},
+            {"di",QModbusDataUnit::DiscreteInputs},
+            {"do",QModbusDataUnit::Coils},};
+    auto asStr = value.toString().toLower();
+    value.setValue(map.value(asStr));
+    return map.contains(asStr);
+}

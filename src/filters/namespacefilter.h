@@ -5,15 +5,15 @@
 
 namespace Radapter {
 
-class NamespaceFilter : public Radapter::InterceptorBase
+class NamespaceFilter : public Radapter::Interceptor
 {
     Q_OBJECT
 public:
-    NamespaceFilter(const QStringList& targetNamespace);
+    NamespaceFilter(const QString& targetNamespace);
 public slots:
-    virtual void onMsgFromBroker(const Radapter::WorkerMsg &msg) override;
+    virtual void onMsgFromWorker(Radapter::WorkerMsg &msg) override;
 private:
-    QList<QStringList> m_namespaces;
+    QStringList m_namespace;
 };
 
 } // namespace Radapter
