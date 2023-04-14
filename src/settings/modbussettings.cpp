@@ -8,9 +8,6 @@ typedef QMap<QString /*deviceName*/, Registers> DevicesRegisters;
 Q_GLOBAL_STATIC(DevicesRegisters, allRegisters)
 
 void Settings::parseRegisters(const QVariantMap &registersFile) {
-    if (!allRegisters->isEmpty()) {
-        throw std::runtime_error("Register parsing called second time!");
-    }
     auto parseRegisters = [&](const QVariantMap &src, const QVariant &toInsert) {
         for (auto iter = src.begin(); iter != src.end(); ++iter) {
             auto deviceName = iter.key();
@@ -31,7 +28,7 @@ void Settings::parseRegisters(const QVariantMap &registersFile) {
     parseRegisters(registersFile["discrete_inputs"].toMap(), "discrete_inputs");
 }
 
-void ModbusSlave::postUpdate() {
+void ModbusSlave::init() {
     for (auto &name: register_names) {
         auto &toMerge = (*allRegisters).value(name.replace('.', ':'));
         for (auto newRegisters = toMerge.begin(); newRegisters != toMerge.end(); ++newRegisters) {
@@ -68,7 +65,7 @@ void ModbusSlave::postUpdate() {
     device = Settings::ModbusDevice::get(device_name);
 }
 
-void ModbusMaster::postUpdate()
+void ModbusMaster::init()
 {
     for (auto &name: register_names) {
         auto &toMerge = (*allRegisters).value(name.replace('.', ':'));

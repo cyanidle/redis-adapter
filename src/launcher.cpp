@@ -7,6 +7,8 @@
 #include "initialization.h"
 #include "interceptors/duplicatinginterceptor.h"
 #include "interceptors/validatinginterceptor.h"
+#include "modbus/modbusmaster.h"
+#include "modbus/modbusslave.h"
 #include "producers/rediscacheproducer.h"
 #include "producers/redisstreamproducer.h"
 #include "validators/common_validators.h"
@@ -86,6 +88,12 @@ void Launcher::initConfig()
     }
     for (const auto& config: d->config.logging_workers) {
         addWorker(new LoggingWorker(config, newThread()));
+    }
+    for (const auto& config: d->config.modbus->slaves) {
+        addWorker(new Modbus::Slave(config, newThread()));
+    }
+    for (const auto& config: d->config.modbus->masters) {
+        addWorker(new Modbus::Master(config, newThread()));
     }
     for (auto iter = d->config.interceptors->duplicating->begin(); iter != d->config.interceptors->duplicating->end(); ++iter) {
         addInterceptor(iter.key(), new DuplicatingInterceptor(iter.value()));

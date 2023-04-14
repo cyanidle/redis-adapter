@@ -70,6 +70,15 @@ struct Modbus : public SerializableSettings {
     FIELD(NonRequiredSequence<ModbusSlave>, slaves)
     FIELD(NonRequiredSequence<ModbusMaster>, masters)
     FIELD(NonRequired<QVariantMap>, registers)
+    POST_UPDATE {
+        Settings::parseRegisters(registers);
+        for (auto &slave: slaves) {
+            slave.init();
+        }
+        for (auto &master: masters) {
+            master.init();
+        }
+    }
 };
 
 struct Websocket : public SerializableSettings {
@@ -98,8 +107,10 @@ struct AppConfig : public SerializableSettings {
     FIELD(NonRequiredSequence<LoggingWorker>, logging_workers)
     FIELD(NonRequiredSequence<MockWorker>, mocks)
     FIELD(NonRequired<Redis>, redis)
+    FIELD(NonRequired<Modbus>, modbus)
     FIELD(NonRequired<Sockets>, sockets)
     FIELD(NonRequiredSequence<QString>, pipelines)
+
 };
 }
 

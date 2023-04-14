@@ -113,7 +113,7 @@ namespace Settings {
         RegisterCounts counts{};
         Registers registers{};
 
-        void postUpdate() override;
+        void init();
     };
 
     struct RADAPTER_API ModbusMaster : ModbusWorker {
@@ -130,7 +130,7 @@ namespace Settings {
 
         ModbusDevice device{};
         Registers registers{};
-        void postUpdate() override;
+        void init();
     };
 
 }
