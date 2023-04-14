@@ -23,8 +23,8 @@ struct RADAPTER_API LoggingWorker : public Worker
     Q_DECLARE_FLAGS(LogMsgs, LogMsgTypes)
     Q_ENUM(LogMsgTypes)
     FIELD(Settings::Required<QString>, filepath)
-    FIELD(Settings::NonRequired<QString>, log, "normal")
-    using NonRequiredJsonFormat = Serializable::Validated<Settings::NonRequired<QJsonDocument::JsonFormat>>::With<Settings::ChooseJsonFormat>;
+    FIELD(Settings::HasDefault<QString>, log, "normal")
+    using NonRequiredJsonFormat = Serializable::Validated<Settings::HasDefault<QJsonDocument::JsonFormat>>::With<Settings::ChooseJsonFormat>;
     FIELD(NonRequiredJsonFormat, format, QJsonDocument::Indented)
 
     LogMsgs log_{LogNormal};

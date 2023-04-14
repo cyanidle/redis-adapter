@@ -34,6 +34,7 @@ private:
     CurrentType m_currentType;
 };
 namespace Private {
+void *allocHelper(int size);
 template <typename T>
 void check_type() {
     constexpr auto isQGadget = Radapter::has_QGadget_Macro<T>::Value;

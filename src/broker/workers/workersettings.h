@@ -9,7 +9,7 @@ struct RADAPTER_API Worker : public Settings::SerializableSettings
     IS_SERIALIZABLE
     FIELD(Required<QString>, name)
     FIELD(NonRequiredLogLevel, log_level, QtMsgType::QtDebugMsg)
-    FIELD(NonRequired<bool>, print_msgs, false)
+    FIELD(HasDefault<bool>, print_msgs, false)
     Worker(const QString &name = "") : name(name) {}
 };
 

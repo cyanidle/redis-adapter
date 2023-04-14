@@ -18,58 +18,58 @@ namespace Settings {
 struct Udp : public SerializableSettings {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(NonRequiredSequence<::Udp::ProducerSettings>, producers)
-    FIELD(NonRequiredSequence<::Udp::ConsumerSettings>, consumers)
+    FIELD(OptionalSequence<::Udp::ProducerSettings>, producers)
+    FIELD(OptionalSequence<::Udp::ConsumerSettings>, consumers)
 };
 
 struct Sockets : public SerializableSettings {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(NonRequired<Udp>, udp)
+    FIELD(Optional<Udp>, udp)
 };
 
 struct Interceptors : public SerializableSettings {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(NonRequiredMapping<ValidatingInterceptor>, validating)
-    FIELD(NonRequiredMapping<DuplicatingInterceptor>, duplicating)
+    FIELD(OptionalMapping<ValidatingInterceptor>, validating)
+    FIELD(OptionalMapping<DuplicatingInterceptor>, duplicating)
 
 };
 
 struct Stream : public SerializableSettings {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(NonRequiredSequence<RedisStreamConsumer>, consumers)
-    FIELD(NonRequiredSequence<RedisStreamProducer>, producers)
+    FIELD(OptionalSequence<RedisStreamConsumer>, consumers)
+    FIELD(OptionalSequence<RedisStreamProducer>, producers)
 };
 struct Cache : public SerializableSettings {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(NonRequiredSequence<RedisCacheConsumer>, consumers)
-    FIELD(NonRequiredSequence<RedisCacheProducer>, producers)
+    FIELD(OptionalSequence<RedisCacheConsumer>, consumers)
+    FIELD(OptionalSequence<RedisCacheProducer>, producers)
 };
 struct KeyEvents : public SerializableSettings {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(NonRequiredSequence<RedisKeyEventSubscriber>, subscribers)
+    FIELD(OptionalSequence<RedisKeyEventSubscriber>, subscribers)
 };
 
 struct Redis : public SerializableSettings {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(NonRequiredSequence<RedisServer>, servers)
-    FIELD(NonRequired<Stream>, stream)
-    FIELD(NonRequired<Cache>, cache)
-    FIELD(NonRequired<KeyEvents>, key_events)
+    FIELD(RequiredSequence<RedisServer>, servers)
+    FIELD(Optional<Stream>, stream)
+    FIELD(Optional<Cache>, cache)
+    FIELD(Optional<KeyEvents>, key_events)
 };
 
 struct Modbus : public SerializableSettings {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(NonRequiredSequence<ModbusDevice>, devices)
-    FIELD(NonRequiredSequence<ModbusSlave>, slaves)
-    FIELD(NonRequiredSequence<ModbusMaster>, masters)
-    FIELD(NonRequired<QVariantMap>, registers)
+    FIELD(RequiredSequence<ModbusDevice>, devices)
+    FIELD(Required<QVariantMap>, registers)
+    FIELD(OptionalSequence<ModbusSlave>, slaves)
+    FIELD(OptionalSequence<ModbusMaster>, masters)
     POST_UPDATE {
         Settings::parseRegisters(registers);
         for (auto &slave: slaves) {
@@ -84,33 +84,33 @@ struct Modbus : public SerializableSettings {
 struct Websocket : public SerializableSettings {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(NonRequiredSequence<WebsocketClient>, clients)
-    FIELD(NonRequiredSequence<WebsocketServer>, servers)
+    FIELD(OptionalSequence<WebsocketClient>, clients)
+    FIELD(OptionalSequence<WebsocketServer>, servers)
 };
 
 struct Sql : public SerializableSettings {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(NonRequiredSequence<SqlClientInfo>, clients)
-    FIELD(NonRequiredSequence<SqlStorageInfo>, archives)
+    FIELD(OptionalSequence<SqlClientInfo>, clients)
+    FIELD(OptionalSequence<SqlStorageInfo>, archives)
 };
 
 struct AppConfig : public SerializableSettings {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(NonRequired<QVariantMap>, json_routes)
-    FIELD(NonRequired<QVariantMap>, filters) //not implemented
-    FIELD(NonRequired<QVariantMap>, log_debug) //not implemented
-    FIELD(NonRequired<Interceptors>, interceptors)
-    FIELD(NonRequired<Broker>, broker)
-    FIELD(NonRequired<LocalizationInfo>, localization)
-    FIELD(NonRequiredSequence<LoggingWorker>, logging_workers)
-    FIELD(NonRequiredSequence<MockWorker>, mocks)
-    FIELD(NonRequired<Redis>, redis)
-    FIELD(NonRequired<Modbus>, modbus)
-    FIELD(NonRequired<Sockets>, sockets)
-    FIELD(NonRequiredSequence<QString>, pipelines)
-
+    FIELD(Optional<QVariantMap>, json_routes)
+    FIELD(Optional<QVariantMap>, filters) //not implemented
+    FIELD(Optional<QVariantMap>, log_debug) //not implemented
+    FIELD(Optional<Interceptors>, interceptors)
+    FIELD(Optional<Broker>, broker)
+    FIELD(Optional<LocalizationInfo>, localization)
+    FIELD(OptionalSequence<LoggingWorker>, logging_workers)
+    FIELD(OptionalSequence<MockWorker>, mocks)
+    FIELD(Optional<Redis>, redis)
+    FIELD(Optional<Modbus>, modbus)
+    FIELD(Optional<Sockets>, sockets)
+    FIELD(OptionalSequence<QString>, pipelines)
+    void postUpdate() override;
 };
 }
 

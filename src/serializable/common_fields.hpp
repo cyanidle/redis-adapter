@@ -22,7 +22,7 @@ namespace Serializable {
     Q_ENUM_NS(FieldType)
     struct FieldConcept {
         friend Object;
-        virtual QVariant schema(const Object *owner) const = 0;
+        virtual QVariantMap schema(const Object *owner) const = 0;
         virtual QVariant readVariant(const Object *owner) const = 0;
         virtual bool updateWithVariant(Object *owner, const QVariant &source) = 0;
         virtual FieldType type(const Object *owner) const = 0;
@@ -50,8 +50,10 @@ namespace Private {
 template <typename Class, typename Field>
 struct FieldHolder : FieldConcept {
     FieldHolder(Field Class::*fieldGetter) : m_fieldGetter(fieldGetter) {}
-    QVariant schema(const Object *owner) const override final {
-        return field(owner)->schema();
+    QVariantMap schema(const Object *owner) const override final {
+        auto result = field(owner)->schema();
+        result["attributes"] = field(owner)->attributes();
+        return result;
     }
     QVariant readVariant(const Object *owner) const override final {
         return field(owner)->readVariant();
@@ -139,7 +141,7 @@ struct PlainField : public Private::FieldCommon<T>
     int valueMetaTypeId() const {return staticValueMetaTypeId();}
     enum {fieldType = FieldPlain};
     FieldType type() const {return static_cast<FieldType>(fieldType);}
-    QVariant schema() const {
+    QVariantMap schema() const {
         QVariantMap actual_schema {
             {"type_id", QMetaType::fromType<T>().id()},
             {"type_name", QMetaType::fromType<T>().name()},
@@ -181,7 +183,7 @@ struct NestedField : public Private::FieldCommon<T> {
     int valueMetaTypeId() const {return staticValueMetaTypeId();}
     enum {fieldType = FieldPlain};
     FieldType type() const {return static_cast<FieldType>(fieldType);}
-    QVariant schema() const {
+    QVariantMap schema() const {
         QVariantMap merged;
         for (const auto &field : this->value.fields()) {
             merged.insert(field, this->value.field(field)->schema(&this->value));
@@ -211,7 +213,6 @@ struct NestedField : public Private::FieldCommon<T> {
 
 template<typename T>
 using Plain = typename std::conditional<std::is_base_of<Object, T>::value, NestedField<T>, PlainField<T>>::type;
-
 
 namespace Private {
 template<typename T>
@@ -255,7 +256,7 @@ struct PlainSequence : public Private::SequenceCommon<T> {
     int valueMetaTypeId() const {return staticValueMetaTypeId();}
     enum {fieldType = FieldSequence};
     FieldType type() const {return static_cast<FieldType>(fieldType);}
-    QVariant schema() const {
+    QVariantMap schema() const {
         QVariantMap actual_schema {
             {"type_name", QMetaType::fromType<QList<T>>().name()},
             {"nested_type_name", QMetaType::fromType<T>().name()},
@@ -306,7 +307,7 @@ struct NestedSequence : public Private::SequenceCommon<T> {
     int valueMetaTypeId() const {return staticValueMetaTypeId();}
     enum {fieldType = FieldSequenceOfNested};
     FieldType type() const {return static_cast<FieldType>(fieldType);}
-    QVariant schema() const {
+    QVariantMap schema() const {
         auto nestedSchema = this->value.isEmpty() ? T().schema() : this->value.constFirst().schema();
         auto mobj = this->value.isEmpty() ? T().metaObject() : this->value.constFirst().metaObject();
         QString fullName = QStringLiteral("sequence<%1>").arg(QString(mobj->className()));
@@ -404,7 +405,7 @@ struct PlainMapping : public Private::MappingCommon<T> {
     int valueMetaTypeId() const {return staticValueMetaTypeId();}
     enum {fieldType = FieldMapping};
     FieldType type() const {return static_cast<FieldType>(fieldType);}
-    QVariant schema() const {
+    QVariantMap schema() const {
         QVariantMap actual_schema {
             {"type_name", QMetaType::fromType<QMap<QString, T>>().name()},
             {"nested_type_name", QMetaType::fromType<T>().name()},
@@ -455,7 +456,7 @@ struct NestedMapping : public Private::MappingCommon<T> {
     int valueMetaTypeId() const {return staticValueMetaTypeId();}
     enum {fieldType = FieldMappingOfNested};
     FieldType type() const {return static_cast<FieldType>(fieldType);}
-    QVariant schema() const {
+    QVariantMap schema() const {
         auto nestedSchema = this->value.isEmpty() ? T().schema() : this->value.first().schema();
         auto mobj = this->value.isEmpty() ? T().metaObject() : this->value.first().metaObject();
         QVariantMap actual_schema {

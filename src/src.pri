@@ -1,6 +1,7 @@
 SOURCES+= \
    $$PWD/launcher.cpp \
    $$PWD/initialization.cpp \
+   $$PWD/radapterconfig.cpp \
    $$PWD/radapterlogging.cpp \
    $$PWD/localstorage.cpp \
    $$PWD/localization.cpp

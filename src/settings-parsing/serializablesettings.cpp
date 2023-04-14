@@ -14,7 +14,7 @@ QString SerializableSettings::print() const
     return JsonDict{serialize()}.printDebug().replace("Json", metaObject()->className());
 }
 
-bool SerializableSettings::update(const QVariantMap &src)
+void SerializableSettings::checkForExtra(const QVariantMap &src)
 {
     for (auto key = src.keyBegin(); key != src.keyEnd(); ++key) {
         if (!m_allowExtra && !fields().contains(*key)) {
@@ -23,41 +23,38 @@ bool SerializableSettings::update(const QVariantMap &src)
                                      + " --> " + key->toStdString());
         }
     }
+}
+
+void SerializableSettings::processField(const QString &name, const QVariant &newValue)
+{
+    auto found = field(name);
+    auto hasDefault = found->attributes(this).contains(HAS_DEFAULT_ATTR);
+    auto isOptional = found->attributes(this).contains(OPTION_ATTR);
+    auto fieldTypeName = QStringLiteral("%1<%2>").arg(found->typeName(this), QString(QMetaType(found->valueMetaTypeId(this)).name()));
+    if (!newValue.isValid()) {
+        if (hasDefault || isOptional) {
+            return;
+        } else {
+            throw std::runtime_error(std::string(metaObject()->className())
+                                     + ": Missing value for: "
+                                     + name.toStdString()
+                                     + "; Of Type: "
+                                     + fieldTypeName.toStdString());
+        }
+    }
+    auto wasUpdated = found->updateWithVariant(this, newValue);
+    if (wasUpdated) return;
+    auto msg = QStringLiteral("Field '%1': Wanted: %2; Received: %3").arg(name, fieldTypeName, newValue.typeName());
+    throw std::runtime_error(std::string(metaObject()->className()) + ": Value type missmatch: " + msg.toStdString());
+}
+
+bool SerializableSettings::update(const QVariantMap &src)
+{
+    if (!m_allowExtra) {
+        checkForExtra(src);
+    }
     for (const auto &fieldName : fields()) {
-        auto found = field(fieldName);
-        auto valueFromSource = src.value(fieldName);
-        auto required = !found->attributes(this).contains(NON_REQUIRED_ATTR);
-        if (!valueFromSource.isValid() && !required) {
-            continue;
-        }
-        auto wasUpdated = found->updateWithVariant(this, valueFromSource);
-        if (!wasUpdated) {
-            auto fieldTypeName = QStringLiteral("%1<%2>").arg(found->typeName(this), QString(QMetaType(found->valueMetaTypeId(this)).name()));
-            if (src.contains(fieldName)) {
-                auto received = QString(src[fieldName].typeName());
-                if (received.isEmpty()) {
-                    auto asJson = JsonDict(src[fieldName].toMap());
-                    if (!asJson.isEmpty()) {
-                        received = asJson.printDebug();
-                    }
-                }
-                auto msg = QStringLiteral("Field '%1': Wanted: %2; Received: %3").arg(fieldName, fieldTypeName, received);
-                throw std::runtime_error(std::string(metaObject()->className()) + ": Value type missmatch: " + msg.toStdString());
-            } else {
-                if (required) {
-                    throw std::runtime_error(std::string(metaObject()->className())
-                                             + ": Missing value for: "
-                                             + fieldName.toStdString()
-                                             + "; Of Type: "
-                                             + fieldTypeName.toStdString());
-                } else {
-                    settingsParsingWarn().nospace()
-                        << metaObject()->className()
-                        << ": Error in Field: " << fieldName
-                        << "; Of Type: " << fieldTypeName;
-                }
-            }
-        }
+        processField(fieldName, src.value(fieldName));
     }
     postUpdate();
     return true;

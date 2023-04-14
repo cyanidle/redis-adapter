@@ -10,7 +10,7 @@ struct ChooseJsonFormat {
 struct StringToFileSize {
     static bool validate(QVariant &src);
 };
-using NonRequiredFileSize = Serializable::Validated<Settings::NonRequired<quint64>>::With<Settings::StringToFileSize>;
+using NonRequiredFileSize = Serializable::Validated<Settings::HasDefault<quint64>>::With<Settings::StringToFileSize>;
 using RequiredFileSize = Serializable::Validated<Settings::Required<quint64>>::With<Settings::StringToFileSize>;
 }
 

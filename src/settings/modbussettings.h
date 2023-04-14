@@ -14,13 +14,13 @@ namespace Settings {
     struct ChooseRegisterTable {
         static bool validate(QVariant& value);
     };
-    using RegisterTable = Serializable::Validated<Required<QModbusDataUnit::RegisterType>>::With<ChooseRegisterTable>;
+    using RequiredRegisterTable = Serializable::Validated<Required<QModbusDataUnit::RegisterType>>::With<ChooseRegisterTable>;
     using RegisterValueType = Serializable::Validated<Required<QMetaType::Type>>::With<ChooseRegValueType>;
 
     struct RADAPTER_API ModbusQuery : SerializableSettings {
         Q_GADGET
         IS_SERIALIZABLE
-        FIELD(RegisterTable, type)
+        FIELD(RequiredRegisterTable, type)
         FIELD(Required<quint16>, reg_index)
         FIELD(Required<quint8>, reg_count)
         typedef QMap<QString, QModbusDataUnit::RegisterType> Map;
@@ -40,8 +40,8 @@ namespace Settings {
         typedef QMap<QString, ModbusDevice> Map;
         Q_GADGET
         IS_SERIALIZABLE
-        FIELD(NonRequired<TcpDevice>, tcp)
-        FIELD(NonRequired<SerialDevice>, rtu)
+        FIELD(HasDefault<TcpDevice>, tcp)
+        FIELD(HasDefault<SerialDevice>, rtu)
 
         QSharedPointer<Radapter::Sync::Channel> channel;
 
@@ -75,14 +75,14 @@ namespace Settings {
     struct RADAPTER_API RegisterInfo : SerializableSettings {
         Q_GADGET
         IS_SERIALIZABLE
-        using Orders = Serializable::Validated<NonRequired<PackingMode>>::With<OrdersValidator>;
+        using Orders = Serializable::Validated<HasDefault<PackingMode>>::With<OrdersValidator>;
         FIELD(Orders, endianess)
-        FIELD(NonRequiredValidator, validator)
-        FIELD(RegisterTable, table)
-        FIELD(MarkNonRequired<RegisterValueType>, type, QMetaType::UShort)
+        FIELD(RequiredRegisterTable, table)
         FIELD(Required<int>, index)
-        FIELD(NonRequired<bool>, resetting, false) // not implemented yet
-        FIELD(NonRequired<bool>, writable, true)
+        FIELD(MarkHasDefault<RegisterValueType>, type, QMetaType::UShort)
+        FIELD(HasDefault<bool>, resetting, false) // not implemented yet
+        FIELD(HasDefault<bool>, writable, true)
+        FIELD(OptionalValidator, validator)
         void postUpdate() override;
     };
     typedef QMap<QString /*reg:Name*/, RegisterInfo> Registers;
@@ -102,7 +102,7 @@ namespace Settings {
         FIELD(Required<QString>, device_name)
         FIELD(Required<quint16>, slave_id)
         FIELD(RequiredSequence<QString>, register_names)
-        FIELD(NonRequired<quint32>, reconnect_timeout_ms, 3000)
+        FIELD(HasDefault<quint32>, reconnect_timeout_ms, 3000)
     };
 
     struct RADAPTER_API ModbusSlave : ModbusWorker {
@@ -121,12 +121,12 @@ namespace Settings {
         IS_SERIALIZABLE
         FIELD(RequiredSequence<ModbusQuery>, queries)
 
-        FIELD(NonRequired<quint32>, poll_rate, 500)
-        FIELD(NonRequired<quint32>, responce_time, 150)
-        FIELD(NonRequired<quint32>, retries, 3)
+        FIELD(HasDefault<quint32>, poll_rate, 500)
+        FIELD(HasDefault<quint32>, responce_time, 150)
+        FIELD(HasDefault<quint32>, retries, 3)
 
-        FIELD(NonRequired<QString>, state_writer)
-        FIELD(NonRequired<QString>, state_reader)
+        FIELD(Optional<QString>, state_writer)
+        FIELD(Optional<QString>, state_reader)
 
         ModbusDevice device{};
         Registers registers{};
