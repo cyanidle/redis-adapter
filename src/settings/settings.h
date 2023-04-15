@@ -31,12 +31,12 @@ struct ByteOrderValidator {
         return map.contains(asStr);
     }
 };
-using NonRequiredByteOrder = Serializable::Validated<NonRequired<QDataStream::ByteOrder>>::With<ByteOrderValidator>;
+using NonRequiredByteOrder = Serializable::Validated<HasDefault<QDataStream::ByteOrder>>::With<ByteOrderValidator>;
 
 struct RADAPTER_API Pipelines : public SerializableSettings {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(NonRequiredSequence<QString>, pipelines)
+    FIELD(SequenceHasDefault<QString>, pipelines)
 };
 
 struct RADAPTER_API ServerInfo : public SerializableSettings {
@@ -49,7 +49,7 @@ struct RADAPTER_API ServerInfo : public SerializableSettings {
 struct RADAPTER_API TcpDevice : public ServerInfo {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(NonRequired<QString>, name)
+    FIELD(HasDefault<QString>, name)
     typedef QMap<QString, TcpDevice> Map;
     bool isValid () const {
         return port > 0;
@@ -77,11 +77,11 @@ struct RADAPTER_API SerialDevice : SerializableSettings {
     Q_GADGET
     IS_SERIALIZABLE
     FIELD(Required<QString>, port_name)
-    FIELD(NonRequired<QString>, name)
-    FIELD(NonRequired<int>, parity, QSerialPort::NoParity)
-    FIELD(NonRequired<int>, baud, QSerialPort::Baud115200)
-    FIELD(NonRequired<int>, data_bits, QSerialPort::Data8)
-    FIELD(NonRequired<int>, stop_bits, QSerialPort::OneStop)
+    FIELD(HasDefault<QString>, name)
+    FIELD(HasDefault<int>, parity, QSerialPort::NoParity)
+    FIELD(HasDefault<int>, baud, QSerialPort::Baud115200)
+    FIELD(HasDefault<int>, data_bits, QSerialPort::Data8)
+    FIELD(HasDefault<int>, stop_bits, QSerialPort::OneStop)
     FIELD(NonRequiredByteOrder, byte_order, QDataStream::BigEndian)
 
     typedef QMap<QString, SerialDevice> Map;
@@ -171,12 +171,12 @@ struct RADAPTER_API WebsocketServer : SerializableSettings {
     IS_SERIALIZABLE
     FIELD(Required<Worker>, worker)
 
-    FIELD(NonRequired<quint16>, port, 1234)
-    FIELD(NonRequired<quint16>, heartbeat_ms, 10000)
-    FIELD(NonRequired<quint16>, keepalive_time, 20000)
-    FIELD(NonRequired<QString>, bind_to, "0.0.0.0")
-    FIELD(NonRequired<QString>, name, "redis-adapter")
-    FIELD(NonRequired<bool>, secure, false)
+    FIELD(HasDefault<quint16>, port, 1234)
+    FIELD(HasDefault<quint16>, heartbeat_ms, 10000)
+    FIELD(HasDefault<quint16>, keepalive_time, 20000)
+    FIELD(HasDefault<QString>, bind_to, "0.0.0.0")
+    FIELD(HasDefault<QString>, name, "redis-adapter")
+    FIELD(HasDefault<bool>, secure, false)
 
     POST_UPDATE {
         if (heartbeat_ms >= keepalive_time) {

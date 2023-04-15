@@ -19,6 +19,7 @@ void CacheProducer::onMsg(const Radapter::WorkerMsg &msg)
     m_manager.clearDone();
     if (m_objectKey.isEmpty()) {
         workerError(this) << "To write plain Jsons, specify 'object_hash_key' in config!";
+        return;
     }
     writeObject(m_objectKey, msg, m_manager.create<NoReplyContext>(this));
 }

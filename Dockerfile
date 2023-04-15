@@ -57,5 +57,4 @@ COPY --from=builder /starter.sh ${APP_DIR}/${APP_NAME}.sh
 COPY --from=builder /docker-entrypoint.sh /usr/local/bin/
 COPY --from=builder /tini /usr/bin/tini
 WORKDIR ${APP_DIR}
-#ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/docker-entrypoint.sh"]
-CMD ["bash"]
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/docker-entrypoint.sh"]

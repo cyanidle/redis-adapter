@@ -8,6 +8,8 @@
 #include "initialization.h"
 #include "interceptors/duplicatinginterceptor.h"
 #include "interceptors/validatinginterceptor.h"
+#include "modbus/modbusmaster.h"
+#include "modbus/modbusslave.h"
 #include "producers/rediscacheproducer.h"
 #include "producers/redisstreamproducer.h"
 #include "validators/common_validators.h"
@@ -56,8 +58,6 @@ void Launcher::initConfig()
     auto configMap = reader()->get(d->configKey).toMap();
     d->config.allowExtra();
     d->config.update(configMap);
-    broker()->applySettings(d->config.broker);
-    JsonRoutesProvider::init(JsonRoute::parseMap(d->config.json_routes));
     for (const auto& config: d->config.redis->cache->consumers) {
         addWorker(new Redis::CacheConsumer(config, newThread()));
     }
@@ -88,17 +88,17 @@ void Launcher::initConfig()
     for (const auto& config: d->config.logging_workers) {
         addWorker(new LoggingWorker(config, newThread()));
     }
+    for (const auto& config: d->config.modbus->slaves) {
+        addWorker(new Modbus::Slave(config, newThread()));
+    }
+    for (const auto& config: d->config.modbus->masters) {
+        addWorker(new Modbus::Master(config, newThread()));
+    }
     for (auto iter = d->config.interceptors->duplicating->begin(); iter != d->config.interceptors->duplicating->end(); ++iter) {
         addInterceptor(iter.key(), new DuplicatingInterceptor(iter.value()));
     }
     for (auto iter = d->config.interceptors->validating->begin(); iter != d->config.interceptors->validating->end(); ++iter) {
         addInterceptor(iter.key(), new ValidatingInterceptor(iter.value()));
-    }
-    if (d->config.localization.value.time_zone->isValid()) {
-        Localization::instance()->applyInfo(d->config.localization);
-    }
-    if (d->config.api->enable) {
-        addWorker(new ApiServer(d->config.api, newThread(), this));
     }
     LocalStorage::init(this);
 }
@@ -121,7 +121,7 @@ void Launcher::initPlugins()
         auto lib = new QLibrary(path, this);
         plugins.append(lib);
     }
-    settingsParsingWarn() << "Found" << plugins.size() << "plugins!";
+    settingsParsingWarn() << "Found" << plugins.size() << "plugin(s)!";
     Radapter::initPlugins(plugins);
 }
 
@@ -139,7 +139,7 @@ void Launcher::parseCommandlineArgs()
                   {{"d", "directory"},
                     "Config will be read from <directory>. (default: ./conf)", "directory", "conf"},
                   {{"p", "parser"},
-                    "Config will be read from .<parser_format> files. (available: yaml, toml) (default: yaml)", "parser", "yaml"},
+                    "Config will be read from .<parser_format> files. (available: yaml) (default: yaml)", "parser", "yaml"},
                   {{"f", "file"},
                     "File to read settings from. (default: <directory>/config.<parser-extension>)", "file", "config"},
                   {{QString("plugins-dir")},

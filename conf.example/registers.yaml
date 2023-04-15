@@ -1,0 +1,7 @@
+holding_registers:
+  meteo:
+    wind_direction: {index: 1}
+    wind_speed: {index: 4}
+    air_temperature: {index: 6}
+    air_humidity: {index: 7}
+    atmospheric_pressure: {index: 8}

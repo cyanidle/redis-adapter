@@ -60,7 +60,8 @@ QMap<QString, FieldConcept *> Private::fieldsHelper(const Object *who)
         auto field = mobj->property(i);
         auto name = QLatin1String(field.name());
         if (name.startsWith(start)) {
-            result.insert(name.mid(start.size()), field.readOnGadget(who).value<FieldConcept*>());
+            auto value = field.readOnGadget(who).value<FieldConcept*>();
+            result.insert(name.mid(start.size()), value);
         }
     }
     return result;
@@ -80,6 +81,11 @@ QStringList Private::fieldNamesHelper(const Object *who)
         }
     }
     return result;
+}
+
+void *Private::allocHelper(int size)
+{
+    return malloc(size);
 }
 
 }
