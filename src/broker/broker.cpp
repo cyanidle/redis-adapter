@@ -51,6 +51,9 @@ void Broker::onMsgFromWorker(const Radapter::WorkerMsg &msg)
         emit broadcastToAll(msg);
         return;
     }
+    if (!msg.sender()) {
+        throw std::runtime_error("Cannot have msg without sender!");
+    }
     auto copy = msg;
     copy.receivers().subtract(msg.sender()->consumers()); // consumers already received the msg
     emit broadcastToAll(copy);
