@@ -75,18 +75,18 @@ public:
     QVariant &privateData();
     QVariant privateData() const;
     template <class User, class Slot>
-    void setCallback(User *user, Slot slot) {
+    void setCallback(User *user, Slot&&slot) {
         if (!command()) {
             throw std::runtime_error("Attempt to set callback for non-command Msg!");
         }
-        command()->setCallback(user, slot);
+        command()->setCallback(user, std::forward<Slot>(slot));
     }
     template <class User, class Slot>
-    void setFailCallback(User *user, Slot slot) {
+    void setFailCallback(User *user, Slot&&slot) {
         if (!command()) {
             throw std::runtime_error("Attempt to set fail-callback for non-command Msg!");
         }
-        command()->setFailCallback(user, slot);
+        command()->setFailCallback(user, std::forward<Slot>(slot));
     }
 private:
     friend class Radapter::Worker;

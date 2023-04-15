@@ -63,8 +63,6 @@ protected slots:
     virtual void onMsg(const Radapter::WorkerMsg &msg);
     virtual void onBroadcast(const Radapter::WorkerMsg &msg);
 private slots:
-    void onSendBasic(const JsonDict &msg);
-    void onSendRouted(const RoutedObject &obj, const QString &fieldName = {});
     void onWorkerDestroyed(QObject *worker);
     void onSendMsgPriv(const Radapter::WorkerMsg &msg);
     void onMsgFromBroker(const Radapter::WorkerMsg &msg);

@@ -100,6 +100,9 @@ void Launcher::initConfig()
     for (auto iter = d->config.interceptors->validating->begin(); iter != d->config.interceptors->validating->end(); ++iter) {
         addInterceptor(iter.key(), new ValidatingInterceptor(iter.value()));
     }
+    if (d->config.api->enabled) {
+        addWorker(new ApiServer(d->config.api, newThread(), this));
+    }
     LocalStorage::init(this);
 }
 

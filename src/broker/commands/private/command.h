@@ -49,12 +49,12 @@ public:
     void setCallback(const CommandCallback &cb);
     void setFailCallback(const CommandCallback &cb);
     template <class User, class Slot>
-    void setCallback(User *user, Slot slot) {
-        setCallback(CommandCallback::fromAny(user, slot));
+    void setCallback(User *user, Slot&&slot) {
+        setCallback(CommandCallback::fromAny(user, std::forward<Slot>(slot)));
     }
     template <class User, class Slot>
-    void setFailCallback(User *user, Slot slot) {
-        setFailCallback(CommandCallback::fromAny(user, slot));
+    void setFailCallback(User *user, Slot&&slot) {
+        setFailCallback(CommandCallback::fromAny(user, std::forward<Slot>(slot)));
     }
     const CommandCallback &callback() const;
     CommandCallback &callback();

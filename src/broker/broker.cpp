@@ -45,13 +45,15 @@ Broker::Broker() :
 {
 }
 
-// Doesnt need mutex, bc is always connected via Qt::QueuedConnection
 void Broker::onMsgFromWorker(const Radapter::WorkerMsg &msg)
 {
     if (msg.isBroadcast()) {
         emit broadcastToAll(msg);
         return;
     }
+    auto copy = msg;
+    copy.receivers().subtract(msg.sender()->consumers()); // consumers already received the msg
+    emit broadcastToAll(copy);
     if (msg.receivers().isEmpty()) {
         if (d->settings.warn_no_receivers) {
             brokerWarn() << "Msg with no receivers! Sender:" << msg.sender();
@@ -84,7 +86,8 @@ void Broker::registerWorker(Worker* worker)
     connect(this, &Broker::broadcastToAll,
             worker, &Worker::onMsgFromBroker,
             thread() == worker->workerThread() ? Qt::DirectConnection : Qt::QueuedConnection);
-
+    connect(worker, &Worker::sendMsg, this, &Broker::onMsgFromWorker,
+            thread() == worker->workerThread() ? Qt::DirectConnection : Qt::QueuedConnection);
     brokerInfo() << "Registering worker:" << worker->printSelf();
     d->workers.insert(worker->workerName(), worker);
 }

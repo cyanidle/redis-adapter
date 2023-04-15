@@ -35,6 +35,20 @@ struct CommandCallback {
             cb(command_cast<const CommandT*>(cmdFromMsg(msg)), CommandT::replyCast(replyFromMsg(msg)));
         })
     {}
+    template<typename CommandT, typename ReplyT>
+    CommandCallback(Worker *context, std::function<void(const CommandT*, ReplyT*)> cb) :
+        m_ctx(context),
+        m_cb([cb](const WorkerMsg &msg){
+            cb(command_cast<const CommandT*>(cmdFromMsg(msg)), reply_cast<const ReplyT*>(replyFromMsg(msg)));
+        })
+    {}
+    template<typename User, typename CommandT, typename ReplyT>
+    CommandCallback(User *user, void (User::*cb)(const CommandT*, const ReplyT*)) :
+        m_ctx(user),
+        m_cb([user, cb](const WorkerMsg &msg){
+            (user->*cb)(command_cast<const CommandT*>(cmdFromMsg(msg)), reply_cast<const ReplyT*>(replyFromMsg(msg)));
+        })
+    {}
     template<typename User, typename CommandT>
     CommandCallback(User* user, void (User::*cb)(const CommandT*, const typename CommandT::WantedReply*)) :
         m_ctx(user),
@@ -56,15 +70,34 @@ struct CommandCallback {
             (user->*cb)(reply_cast<const ReplyT*>(replyFromMsg(msg)));
         })
     {}
+    CommandCallback(Worker *context, std::function<void()> cb) :
+        m_ctx(context),
+        m_cb([cb](const WorkerMsg &msg){
+            Q_UNUSED(msg)
+            cb();
+        })
+    {}
+    template<typename User>
+    CommandCallback(User* user, void (User::*cb)()) :
+        m_ctx(user),
+        m_cb([user, cb] (const WorkerMsg &msg) {
+            Q_UNUSED(msg)
+            (user->*cb)();
+        })
+    {}
     void execute(const WorkerMsg &msg) const;
     Worker *worker() const;
     template<typename User, typename Slot>
-    static CommandCallback fromAny(User *user, Slot slot, typename std::enable_if<CallableInfo<Slot>::IsLambda>::type* = nullptr) {
-        return CommandCallback(user, typename LambdaInfo<Slot>::AsStdFunction(slot));
+    static CommandCallback fromAny(User *user, Slot&&slot, typename std::enable_if<
+                                                                CallableInfo<Slot>::IsLambda &&
+                                                                std::is_copy_constructible_v<Slot>
+                                                                                    >::type* = nullptr) {
+        return CommandCallback(user, typename LambdaInfo<Slot>::AsStdFunction(std::forward<Slot>(slot)));
     }
     template<typename User, typename Slot>
-    static CommandCallback fromAny(User *user, Slot slot, typename std::enable_if<CallableInfo<Slot>::IsFunction || CallableInfo<Slot>::IsMethod>::type* = nullptr) {
-        return CommandCallback(user, slot);
+    static CommandCallback fromAny(User *user, Slot&&slot, typename std::enable_if<CallableInfo<Slot>::IsFunction ||
+                                                                                    CallableInfo<Slot>::IsMethod>::type* = nullptr) {
+        return CommandCallback(user, std::forward<Slot>(slot));
     }
 protected:
     static const Reply* replyFromMsg(const WorkerMsg &msg);

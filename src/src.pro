@@ -5,7 +5,8 @@ QT += core \
     sql \
     websockets \
     network \
-    httpserver
+    httpserver \
+    concurrent
 
 QT -= gui
 

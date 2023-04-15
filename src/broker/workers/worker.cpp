@@ -56,8 +56,12 @@ Worker::Worker(const Settings::Worker &settings, QThread *thread) :
         brokerWarn()<< "=== Worker (" << workerName() << "): Running in Debug Mode! ===";
     }
     connect(this, &Worker::sendMsg, &Worker::onSendMsgPriv);
-    connect(this, &Worker::sendBasic, &Worker::onSendBasic);
-    connect(this, &Worker::sendRouted, &Worker::onSendRouted);
+    connect(this, &Worker::sendBasic, [this](const JsonDict &data){
+        emit sendMsg(prepareMsg(data));
+    });
+    connect(this, &Worker::sendRouted, [this](const RoutedObject &obj, const QString &fieldName){
+        emit sendMsg(prepareMsg(obj.send(fieldName)));
+    });
     connect(thread, &QThread::started, this, &Worker::onRun);
     connect(thread, &QThread::destroyed, this, &Worker::deleteLater);
     connect(thread, &QThread::finished, thread, &QThread::deleteLater);
@@ -234,16 +238,6 @@ void Worker::onMsg(const Radapter::WorkerMsg &msg)
 void Worker::onBroadcast(const WorkerMsg &msg)
 {
     Q_UNUSED(msg);
-}
-
-void Worker::onSendBasic(const JsonDict &msg)
-{
-    emit sendMsg(prepareMsg(msg));
-}
-
-void Worker::onSendRouted(const RoutedObject &obj, const QString &fieldName)
-{
-    emit sendMsg(prepareMsg(obj.send(fieldName)));
 }
 
 void Worker::onWorkerDestroyed(QObject *worker)

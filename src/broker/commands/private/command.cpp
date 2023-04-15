@@ -60,6 +60,11 @@ void Command::setCallback(const CommandCallback &cb)
     m_cb = cb;
 }
 
+void Command::setFailCallback(const CommandCallback &cb)
+{
+    m_failCb = cb;
+}
+
 CommandCallback &Command::callback()
 {
     return m_cb;

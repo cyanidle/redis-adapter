@@ -17,10 +17,11 @@ public:
     ApiServer(const Settings::RadapterApi& settings, QThread *thread, Launcher* launcher);
     ~ApiServer();
     void onRun() override;
-    void initHandlers();
-public slots:
-    void onMsg(const Radapter::WorkerMsg& msg) override;
 private:
+    void serviceEndpoints();
+    void configEndpoints();
+    void redisEndpoints();
+
     Private *d;
 };
 
