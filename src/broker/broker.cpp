@@ -51,6 +51,12 @@ void Broker::onMsgFromWorker(const Radapter::WorkerMsg &msg)
         emit broadcastToAll(msg);
         return;
     }
+    if (!msg.sender()) {
+        throw std::runtime_error("Cannot have msg without sender!");
+    }
+    auto copy = msg;
+    copy.receivers().subtract(msg.sender()->consumers());
+    emit broadcastToAll(copy);
     if (msg.receivers().isEmpty()) {
         if (d->settings.warn_no_receivers) {
             brokerWarn() << "Msg with no receivers! Sender:" << msg.sender();
@@ -81,7 +87,9 @@ void Broker::registerWorker(Worker* worker)
     connect(this, &Broker::broadcastToAll,
             worker, &Worker::onMsgFromBroker,
             thread() == worker->workerThread() ? Qt::DirectConnection : Qt::QueuedConnection);
-
+    connect(worker, &Worker::sendMsg,
+            this, &Broker::onMsgFromWorker,
+            thread() == worker->workerThread() ? Qt::DirectConnection : Qt::QueuedConnection);
     brokerInfo() << "Registering worker:" << worker->printSelf();
     d->workers.insert(worker->workerName(), worker);
 }
