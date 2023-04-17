@@ -27,6 +27,7 @@ void SerializableSettings::checkForExtra(const QVariantMap &src)
 
 void SerializableSettings::processField(const QString &name, const QVariant &newValue)
 {
+    m_currentField = name;
     auto found = field(name);
     auto hasDefault = found->attributes(this).contains(HAS_DEFAULT_ATTR);
     auto isOptional = found->attributes(this).contains(OPTION_ATTR);
@@ -50,11 +51,22 @@ void SerializableSettings::processField(const QString &name, const QVariant &new
 
 bool SerializableSettings::update(const QVariantMap &src)
 {
-    if (!m_allowExtra) {
-        checkForExtra(src);
-    }
-    for (const auto &fieldName : fields()) {
-        processField(fieldName, src.value(fieldName));
+    try {
+        if (!m_allowExtra) {
+            checkForExtra(src);
+        }
+        for (const auto &fieldName : fields()) {
+            processField(fieldName, src.value(fieldName));
+        }
+    } catch (std::runtime_error &err) {
+        auto allFields = fields().join(", ");
+        if (!m_currentField.isEmpty()) {
+            allFields.replace(m_currentField, "--> " + m_currentField + " <--");
+        }
+        throw std::runtime_error(err.what()
+                                 + std::string("\n# in ") + metaObject()->className()
+                                 + std::string(" (")
+                                 + allFields.toStdString() + ")");
     }
     postUpdate();
     return true;

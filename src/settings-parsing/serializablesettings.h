@@ -86,6 +86,7 @@ protected:
     void processField(const QString &name, const QVariant &newValue);
 
     bool m_allowExtra;
+    QString m_currentField;
 };
 
 } // namespace Settings

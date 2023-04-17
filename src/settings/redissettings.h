@@ -54,22 +54,10 @@ namespace Settings {
             StartFromTop,
             StartFromFirst
         };
-        static bool validate(QVariant &target) {
-            auto asStr = target.toString().toLower();
-            if (asStr == "persistent_id") {
-                target.setValue(StartPersistentId);
-            } else if (asStr == "from_top") {
-                target.setValue(StartFromTop);
-            } else if (asStr == "from_first") {
-                target.setValue(StartFromFirst);
-            } else {
-                return false;
-            }
-            return true;
-        }
         Q_ENUM(StartMode)
-        using StartFrom = Serializable::Validated<HasDefault<StartMode>>::With<RedisStreamConsumer>;
 
+        static bool validate(QVariant &target);
+        using StartFrom = Serializable::Validated<HasDefault<StartMode>>::With<RedisStreamConsumer>;
         Q_GADGET
         IS_SERIALIZABLE
         FIELD(StartFrom, start_from, StartPersistentId)
