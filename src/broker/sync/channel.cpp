@@ -72,5 +72,5 @@ void Channel::activate(QObject *who)
     m_debug->start();
     m_userStates[who].waitingForTrigger = false;
     m_busy = who;
-    emit trigger(who, {});
+    emit trigger(who, QPrivateSignal{});
 }
