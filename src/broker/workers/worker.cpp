@@ -267,7 +267,9 @@ void Worker::onMsgFromBroker(const Radapter::WorkerMsg &msg)
             workerError(this) << "Null Reply, while flagged as reply! Sender: " << msg.sender();
             return;
         }
-        if (msg.command() && msg.command()->callback().worker() == this) {
+        if (msg.command() && msg.command()->replyIgnored()) {
+            return;
+        } else if (msg.command() && msg.command()->callback().worker() == this) {
             if (msg.command()->replyOk(msg.reply())) {
                 if (msg.command()->callback()) {
                     msg.command()->callback().execute(msg);
@@ -279,8 +281,6 @@ void Worker::onMsgFromBroker(const Radapter::WorkerMsg &msg)
             } else {
                 onReply(msg);
             }
-        } else if (msg.command() && msg.command()->replyIgnored()) {
-            return;
         } else {
             onReply(msg);
         }
@@ -305,9 +305,10 @@ void Worker::onSendMsgPriv(const Radapter::WorkerMsg &msg)
     }
 }
 
-WorkerProxy* Worker::createPipe(const QList<Interceptor*> &interceptors)
+WorkerProxy* Worker::createPipe(const QList<Interceptor*> &rawInterceptors)
 {
     QMutexLocker locker(staticMutex);
+    QList<Interceptor*> interceptors = rawInterceptors;
     auto proxy = new WorkerProxy(this);
     auto start = new PipeStart(proxy);
     connect(this, &Worker::sendMsg, start, &PipeStart::onSendMsg);
@@ -316,12 +317,8 @@ WorkerProxy* Worker::createPipe(const QList<Interceptor*> &interceptors)
     d->pipes[proxy].start = start;
     for (auto &interceptor : interceptors) {
         if (staticUsedInterceptors->contains(interceptor)) {
-            brokerError() << "=======================================================================================";
-            brokerError() << "WorkerBase::CreateProxy(): Interceptors list contains copies or already used ones!";
-            brokerError() << "WorkerBase::CreateProxy(): This will result in msg loops! Aborting!";
-            brokerError() << "=======================================================================================";
-            delete proxy;
-            throw std::runtime_error("Interceptors list contains copies! Will result in msg loops!");
+            workerInfo(this) << "Creating copy of:" << interceptor;
+            interceptor = interceptor->newCopy();
         }
         interceptor->setParent(nullptr);
         interceptor->moveToThread(proxy->thread());

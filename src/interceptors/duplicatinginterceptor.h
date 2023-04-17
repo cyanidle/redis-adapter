@@ -15,6 +15,7 @@ class DuplicatingInterceptor : public Radapter::Interceptor
     Q_OBJECT
 public:
     DuplicatingInterceptor(const Settings::DuplicatingInterceptor &settings);
+    Interceptor *newCopy() const override;
 public slots:
     virtual void onMsgFromWorker(Radapter::WorkerMsg &msg) override;
 private:

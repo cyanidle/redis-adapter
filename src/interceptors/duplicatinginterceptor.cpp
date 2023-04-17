@@ -9,6 +9,11 @@ DuplicatingInterceptor::DuplicatingInterceptor(const Settings::DuplicatingInterc
 {
 }
 
+Interceptor *DuplicatingInterceptor::newCopy() const
+{
+    return new DuplicatingInterceptor(*m_settings);
+}
+
 void DuplicatingInterceptor::onMsgFromWorker(WorkerMsg &msg)
 {
     for (auto iter = m_settings->_by_field.cbegin(); iter != m_settings->_by_field.cend(); ++iter) {

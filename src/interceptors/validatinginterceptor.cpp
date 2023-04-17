@@ -18,6 +18,11 @@ ValidatingInterceptor::~ValidatingInterceptor()
     delete d;
 }
 
+Radapter::Interceptor *ValidatingInterceptor::newCopy() const
+{
+    return new ValidatingInterceptor(d->settings);
+}
+
 void ValidatingInterceptor::onMsgFromWorker(WorkerMsg &msg)
 {
     validate(msg);

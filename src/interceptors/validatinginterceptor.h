@@ -15,6 +15,7 @@ class ValidatingInterceptor : public Interceptor {
 public:
     ValidatingInterceptor(const Settings::ValidatingInterceptor& settings);
     ~ValidatingInterceptor();
+    Interceptor *newCopy() const override;
 public slots:
     virtual void onMsgFromWorker(Radapter::WorkerMsg &msg) override;
 private:
