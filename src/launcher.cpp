@@ -22,6 +22,8 @@
 #include "broker/workers/loggingworker.h"
 #include "filters/producerfilter.h"
 #include "radapterconfig.h"
+#include "websocket/websocketclient.h"
+#include "websocket/websocketserver.h"
 #ifdef Q_OS_UNIX
 #include "utils/resourcemonitor.h"
 #endif
@@ -92,6 +94,12 @@ void Launcher::initConfig()
     }
     for (const auto& config: d->config.modbus->masters) {
         addWorker(new Modbus::Master(config, newThread()));
+    }
+    for (const auto& config: d->config.websocket->servers) {
+        addWorker(new Websocket::Server(config, newThread()));
+    }
+    for (const auto& config: d->config.websocket->clients) {
+        addWorker(new Websocket::Client(config, newThread()));
     }
     for (auto iter = d->config.interceptors->duplicating->begin(); iter != d->config.interceptors->duplicating->end(); ++iter) {
         addInterceptor(iter.key(), new DuplicatingInterceptor(iter.value()));
