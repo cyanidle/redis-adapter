@@ -19,6 +19,7 @@ public:
     explicit Interceptor();
     const Worker* worker() const;
     QThread *thread();
+    virtual Interceptor *newCopy() const = 0;
 signals:
     void msgFromWorker(Radapter::WorkerMsg &msg);
 public slots:

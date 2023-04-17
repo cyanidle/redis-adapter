@@ -89,7 +89,8 @@ void Broker::registerWorker(Worker* worker)
     connect(this, &Broker::broadcastToAll,
             worker, &Worker::onMsgFromBroker,
             thread() == worker->workerThread() ? Qt::DirectConnection : Qt::QueuedConnection);
-    connect(worker, &Worker::sendMsg, this, &Broker::onMsgFromWorker,
+    connect(worker, &Worker::sendMsg,
+            this, &Broker::onMsgFromWorker,
             thread() == worker->workerThread() ? Qt::DirectConnection : Qt::QueuedConnection);
     brokerInfo() << "Registering worker:" << worker->printSelf();
     d->workers.insert(worker->workerName(), worker);

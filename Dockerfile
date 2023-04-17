@@ -17,13 +17,12 @@ COPY . .
 RUN /env/setup-cross
 RUN set -eux; \
     qmake; \
-    make -j${JOBS}
-RUN set -eux; \
+    make -j${JOBS}; \
     mkdir -p ${APP_DIR}; \
     modules=$(cat .qtmodules); \
-# using $QT_BIN_PATH, $SYSROOT_DIR and $TOOLCHAIN_PATH from rsk39/qt5-env image
+# using $QT_PATH, $SYSROOT_DIR and $TOOLCHAIN_PATH from rsk39/qt5-env image
     app_src_libs=$(ls | grep libradapter.*);\
-    qt_libs=$(for module in $modules; do ls -d ${QT_BIN_PATH}/lib/* | grep -i $module*.so*; done); \
+    qt_libs=$(for module in $modules; do ls -d ${QT_PATH}/lib/* | grep -i $module*.so*; done); \
     os_specific="libicui18n libicuuc libicudata libmariadb"; \
     os_libs=$(for module in $os_specific; do ls -d ${SYSROOT_DIR}/usr/lib/${TOOLCHAIN_ARCH}/* | grep "$module.*\.so.*"; done); \
     plugins=$(ls plugins | grep .so | xargs printf "plugins/%s "); \
@@ -39,7 +38,7 @@ RUN set -eux; \
     ${APP_DIR}; \
     cd ${APP_DIR}; \
     mkdir sqldrivers; \
-    cp ${QT_BIN_PATH}/plugins/sqldrivers/libqsqlmysql.so sqldrivers/ 
+    cp ${QT_PATH}/plugins/sqldrivers/libqsqlmysql.so sqldrivers/ 
 WORKDIR ${APP_DIR}
 CMD ["bash"]
 

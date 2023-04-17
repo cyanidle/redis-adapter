@@ -122,7 +122,7 @@ namespace Settings {
         FIELD(RequiredSequence<ModbusQuery>, queries)
 
         FIELD(HasDefault<quint32>, poll_rate, 500)
-        FIELD(HasDefault<quint32>, responce_time, 150)
+        FIELD(HasDefault<quint32>, response_time_ms, 150)
         FIELD(HasDefault<quint32>, retries, 3)
 
         FIELD(Optional<QString>, state_writer)

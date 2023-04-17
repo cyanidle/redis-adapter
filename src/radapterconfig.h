@@ -110,6 +110,7 @@ struct AppConfig : public SerializableSettings {
     FIELD(Optional<Redis>, redis)
     FIELD(Optional<Modbus>, modbus)
     FIELD(Optional<Sockets>, sockets)
+    FIELD(Optional<Websocket>, websocket)
     FIELD(OptionalSequence<QString>, pipelines)
     FIELD(HasDefault<RadapterApi>, api)
     void postUpdate() override;
