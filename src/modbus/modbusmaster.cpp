@@ -55,7 +55,7 @@ void Master::initClient()
         m_device->setConnectionParameter(QModbusDevice::SerialPortNameParameter, m_settings.device.rtu->port_name.value);
         m_device->setConnectionParameter(QModbusDevice::SerialStopBitsParameter, m_settings.device.rtu->stop_bits);
     }
-    m_device->setTimeout(m_settings.responce_time);
+    m_device->setTimeout(m_settings.response_time_ms);
     m_device->setNumberOfRetries(m_settings.retries);
     connect(m_device, &QModbusDevice::stateChanged, this, &Master::onStateChanged);
     connect(m_device, &QModbusDevice::errorOccurred, this, &Master::onErrorOccurred);
