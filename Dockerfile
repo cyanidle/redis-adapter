@@ -20,10 +20,10 @@ RUN set -eux; \
     mkdir -p ${APP_DIR}; \
     modules=$(cat .qtmodules); \
 # using $QT_DIR, $SYSROOT_DIR and $TOOLCHAIN_PATH from rsk39/qt6-env image
-    app_src_libs=$(ls | grep -i radapter-sdk*.so*);\
+    app_src_libs=$(ls | grep -i radapter-sdk*.so*) || app_src_libs=;\
     modules="${modules} concurrent test"; \
     qt_libs=$(for module in $modules; do ls -d ${QT_DIR}/lib/* | grep -i $module*.so*; done); \
-    os_specific="libicui18n libicuuc libicudata libmariadb libbrotlidec libb2 libbrotlicommon libgomp ssl"; \
+    os_specific="libicui18n libicuuc libicudata libmariadb libbrotlidec libb2 libbrotlicommon libgomp ssl crypto"; \
     os_libs=$(for module in $os_specific; do ls -d ${SYSROOT_DIR}/usr/lib/${TOOLCHAIN_ARCH}/* | grep "$module.*\.so.*"; done); \
     plugins=$(ls plugins | grep .so | xargs printf "plugins/%s "); \
     mkdir ${APP_DIR}/plugins; \
@@ -38,7 +38,8 @@ RUN set -eux; \
     ${APP_DIR}; \
     cd ${APP_DIR}; \
     mkdir sqldrivers; \
-    cp ${QT_DIR}/plugins/sqldrivers/libqsqlmysql.so sqldrivers/ 
+    cp ${QT_DIR}/plugins/sqldrivers/libqsqlmysql.so sqldrivers/ ; \
+    cp -dr ${QT_DIR}/plugins/tls tls/ 
 WORKDIR ${APP_DIR}
 CMD ["bash"]
 
