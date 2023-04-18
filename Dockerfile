@@ -14,16 +14,15 @@ ARG JOBS
 ENV JOBS=${JOBS}
 WORKDIR /build
 COPY . .
-RUN /env/setup-cross
 RUN set -eux; \
     qmake; \
     make -j${JOBS}; \
     mkdir -p ${APP_DIR}; \
     modules=$(cat .qtmodules); \
-# using $QT_PATH, $SYSROOT_DIR and $TOOLCHAIN_PATH from rsk39/qt5-env image
-    app_src_libs=$(ls | grep libradapter.*);\
-    qt_libs=$(for module in $modules; do ls -d ${QT_PATH}/lib/* | grep -i $module*.so*; done); \
-    os_specific="libicui18n libicuuc libicudata libmariadb"; \
+# using $QT_DIR, $SYSROOT_DIR and $TOOLCHAIN_PATH from rsk39/qt5-env image
+    app_src_libs=$(ls | grep -i libradapter*.so*);\
+    qt_libs=$(for module in $modules; do ls -d ${QT_DIR}/lib/* | grep -i $module*.so*; done); \
+    os_specific="libicui18n libicuuc libicudata libmariadb libbrotlidec libb2 libbrotlicommon libgomp"; \
     os_libs=$(for module in $os_specific; do ls -d ${SYSROOT_DIR}/usr/lib/${TOOLCHAIN_ARCH}/* | grep "$module.*\.so.*"; done); \
     plugins=$(ls plugins | grep .so | xargs printf "plugins/%s "); \
     mkdir ${APP_DIR}/plugins; \
@@ -38,7 +37,7 @@ RUN set -eux; \
     ${APP_DIR}; \
     cd ${APP_DIR}; \
     mkdir sqldrivers; \
-    cp ${QT_PATH}/plugins/sqldrivers/libqsqlmysql.so sqldrivers/ 
+    cp ${QT_DIR}/plugins/sqldrivers/libqsqlmysql.so sqldrivers/ 
 WORKDIR ${APP_DIR}
 CMD ["bash"]
 
