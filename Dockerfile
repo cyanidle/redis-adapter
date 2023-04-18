@@ -19,8 +19,9 @@ RUN set -eux; \
     make -j${JOBS}; \
     mkdir -p ${APP_DIR}; \
     modules=$(cat .qtmodules); \
-# using $QT_DIR, $SYSROOT_DIR and $TOOLCHAIN_PATH from rsk39/qt5-env image
+# using $QT_DIR, $SYSROOT_DIR and $TOOLCHAIN_PATH from rsk39/qt6-env image
     app_src_libs=$(ls | grep -i libradapter*.so*);\
+    modules="${modules} concurrent test"; \
     qt_libs=$(for module in $modules; do ls -d ${QT_DIR}/lib/* | grep -i $module*.so*; done); \
     os_specific="libicui18n libicuuc libicudata libmariadb libbrotlidec libb2 libbrotlicommon libgomp"; \
     os_libs=$(for module in $os_specific; do ls -d ${SYSROOT_DIR}/usr/lib/${TOOLCHAIN_ARCH}/* | grep "$module.*\.so.*"; done); \
