@@ -46,3 +46,6 @@ redis-adapter
 
 **/__pycache__
 log/
+
+GIT_COMMIT
+VERSION
