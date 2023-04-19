@@ -6,7 +6,7 @@
 
 #define PLUGIN_LOADER_FUNCTION_NAME "radapterFetchPlugin"
 namespace Validator{
-using Function = bool (*)(QVariant&);
+using Function = bool (*)(QVariant &target, const QVariantList &args, QVariant& state);
 }
 namespace Radapter {
 class Interceptor;

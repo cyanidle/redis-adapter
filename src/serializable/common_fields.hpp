@@ -45,6 +45,7 @@ namespace Serializable {
     };
 }
 Q_DECLARE_METATYPE(Serializable::FieldConcept*)
+Q_DECLARE_METATYPE(QSharedPointer<Serializable::FieldConcept>)
 namespace Serializable {
 namespace Private {
 template <typename Class, typename Field>
@@ -93,8 +94,8 @@ private:
     Field Class::*m_fieldGetter;
 };
 template <typename Class, typename Field>
-FieldConcept* upcastField(Field Class::*fieldGetter) {
-    return new Private::FieldHolder<Class, Field>(fieldGetter);
+QVariant upcastField(Field Class::*fieldGetter) {
+    return QVariant::fromValue(QSharedPointer<FieldConcept>(new Private::FieldHolder<Class, Field>(fieldGetter)));
 }
 struct IsFieldCheck {};
 template<typename T>
@@ -357,23 +358,23 @@ struct MappingCommon : public Private::FieldCommon<QMap<QString, T>> {
     using Private::FieldCommon<QMap<QString, T>>::FieldCommon;
     using Private::FieldCommon<QMap<QString, T>>::operator=;
     using Private::FieldCommon<QMap<QString, T>>::operator==;
-    typename QMap<QString, T>::iterator begin() {
-        return value.begin();
+    typename QMap<QString, T>::key_value_iterator begin() {
+        return value.keyValueBegin();
     }
-    typename QMap<QString, T>::iterator end() {
-        return value.end();
+    typename QMap<QString, T>::key_value_iterator end() {
+        return value.keyValueEnd();
     }
-    typename QMap<QString, T>::const_iterator begin() const {
-        return value.begin();
+    typename QMap<QString, T>::const_key_value_iterator begin() const {
+        return value.keyValueBegin();
     }
-    typename QMap<QString, T>::const_iterator end() const {
-        return value.end();
+    typename QMap<QString, T>::const_key_value_iterator end() const {
+        return value.keyValueEnd();
     }
-    typename QMap<QString, T>::const_iterator cbegin() const {
-        return value.cbegin();
+    typename QMap<QString, T>::const_key_value_iterator cbegin() const {
+        return value.keyValueBegin();
     }
-    typename QMap<QString, T>::const_iterator cend() const {
-        return value.cend();
+    typename QMap<QString, T>::const_key_value_iterator cend() const {
+        return value.keyValueEnd();
     }
 };
 }
@@ -489,6 +490,22 @@ struct NestedMapping : public Private::MappingCommon<T> {
 template<typename T>
 using Mapping = typename std::conditional<std::is_base_of<Object, T>::value, NestedMapping<T>, PlainMapping<T>>::type;
 
+}
+
+namespace std
+{
+template<typename T>
+struct tuple_size<::Serializable::Private::MappingCommon<T>>: integral_constant<size_t, 2> {};
+template<typename T>
+struct tuple_element<0, ::Serializable::Private::MappingCommon<T>>
+{
+    using type = QString;
+};
+template<typename T>
+struct tuple_element<1, ::Serializable::Private::MappingCommon<T>>
+{
+    using type = T;
+};
 }
 
 

@@ -9,6 +9,7 @@
 #include "interceptors/duplicatinginterceptor.h"
 #include "interceptors/validatinginterceptor.h"
 #include "modbus/modbusmaster.h"
+#include "radapterlogging.h"
 #include "modbus/modbusslave.h"
 #include "producers/rediscacheproducer.h"
 #include "producers/redisstreamproducer.h"

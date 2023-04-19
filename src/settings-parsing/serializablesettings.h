@@ -66,8 +66,7 @@ using MappingHasDefault = MarkHasDefault<Serializable::Mapping<T>>;
 template<typename T>
 using OptionalMapping = Option<RequiredMapping<T>>;
 
-
-using RequiredValidator = Serializable::Plain<Serializable::Validator>;
+using RequiredValidator = Serializable::Plain<Validator::Fetched>;
 using OptionalValidator = Option<RequiredValidator>;
 
 using RequiredLogLevel = Serializable::Validated<Required<QtMsgType>>::With<Validator::LogLevel>;

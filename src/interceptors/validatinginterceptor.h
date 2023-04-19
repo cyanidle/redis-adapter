@@ -21,7 +21,7 @@ public slots:
 private:
     void validate(WorkerMsg &msg);
 
-    const ValidatingInterceptorPrivate *d;
+    ValidatingInterceptorPrivate *d;
 };
 
 } //namespace Radapter

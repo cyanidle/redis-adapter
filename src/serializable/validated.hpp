@@ -9,19 +9,19 @@
 namespace Serializable {
 
 template <typename Validator>
-void validate(QVariant &target) {
-    static_assert(std::is_same<bool, decltype(Validator::validate(target))>(),
-            "Validators must implement 'static bool validate(QVariant& value)'. True = ok / False = invalid");
+void validate(QVariant &target, const QVariantList &args, QVariant &state) {
+    static_assert(std::is_same<bool, decltype(Validator::validate(target, args, state))>(),
+            "Validators must implement 'static bool validate(QVariant& value, const QVariantList &args, QVariant &state)'. True = ok / False = invalid");
     if (!target.isValid()) return;
-    if (!Validator::validate(target)) {
+    if (!Validator::validate(target, args, state)) {
         target = QVariant();
     }
 }
 
 template <typename Validator, typename...Validators>
-void validate(QVariant &target, typename std::enable_if<sizeof...(Validators)>::type* = nullptr) {
-    validate<Validator>(target);
-    validate<Validators...>(target);
+void validate(QVariant &target, const QVariantList &args, QVariant &state, typename std::enable_if<sizeof...(Validators)>::type* = nullptr) {
+    validate<Validator>(target, args, state);
+    validate<Validators...>(target, args, state);
 }
 
 template <typename Target, typename Validator, typename...Validators>
@@ -29,7 +29,8 @@ struct PreValidator : public Target {
     FIELD_SUPER(Target)
     bool updateWithVariant(const QVariant &source) {
         auto copy = source;
-        validate<Validator, Validators...>(copy);
+        auto nullState = QVariant{};
+        validate<Validator, Validators...>(copy, {}, nullState);
         return Target::updateWithVariant(copy);
     }
     const QStringList &attributes() const {

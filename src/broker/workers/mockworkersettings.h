@@ -10,8 +10,8 @@ struct RADAPTER_API MockWorker : Worker
 {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(Settings::HasDefault<quint32>, mock_timer_delay, 3000)
-    FIELD(Settings::HasDefault<QString>, json_file_path)
+    FIELD(HasDefault<quint32>, mock_timer_delay, 3000)
+    FIELD(HasDefault<QString>, json_file_path)
 };
 
 }

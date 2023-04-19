@@ -19,7 +19,9 @@ Q_DECLARE_METATYPE(QDataStream::ByteOrder)
 namespace Settings {
 struct ByteOrderValidator {
     typedef QMap<QString, QDataStream::ByteOrder> Map;
-    static bool validate(QVariant &src) {
+    static bool validate(QVariant &src, const QVariantList &args, QVariant &state) {
+        Q_UNUSED(args)
+        Q_UNUSED(state)
         static Map map{
             {"little",  QDataStream::LittleEndian},
             {"big",  QDataStream::BigEndian},
@@ -151,7 +153,9 @@ struct RADAPTER_API Filters {
 };
 
 struct ValidateTimeZone {
-    static bool validate(QVariant& target) {
+    static bool validate(QVariant& target, const QVariantList &args, QVariant &state) {
+        Q_UNUSED(args)
+        Q_UNUSED(state)
         auto time_zone = QTimeZone(target.toString().toStdString().c_str());
         target.setValue(time_zone);
         return time_zone.isValid();

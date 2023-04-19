@@ -19,7 +19,6 @@ public:
     QThread *workerThread() const;
     Worker *worker() const;
 signals:
-    void msgToBroker(const Radapter::WorkerMsg &msg);
     void msgToConsumers(const Radapter::WorkerMsg &msg);
 public slots:
     void onMsgFromWorker(Radapter::WorkerMsg &msg);

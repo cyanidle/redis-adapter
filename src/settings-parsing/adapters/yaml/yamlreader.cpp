@@ -18,7 +18,11 @@ void YamlReader::recurseMapNode(const QStringList &prefix, const Node &who, Json
         auto key = prefix;
         key.append(node.first.as<QString>());
         if (node.second.IsDefined() && node.second.IsScalar() && node.second.Tag() == "!include") {
-            setPath(node.second.as<QString>());
+            auto toInclude = node.second.as<QString>();
+            if (toInclude.isEmpty()) {
+                throw std::runtime_error("Cannot have !include statement with empty string/nonstring");
+            }
+            setPath(toInclude);
             output[key] = getAll();
         }
         if (node.second.IsDefined() && node.second.IsMap()) {

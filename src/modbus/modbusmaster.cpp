@@ -159,7 +159,7 @@ void Master::write(const JsonDict &data)
             continue;
         }
         auto value = iter.value();
-        if (!regInfo.validator.value.validate(value)) {
+        if (!regInfo.validator->validate(value)) {
             workerWarn(this, .nospace())
                 << "Property: '" << fullKeyJoined
                 << "' was invalidated by Validator[" << regInfo.validator.value.name()

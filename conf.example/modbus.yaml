@@ -1,0 +1,15 @@
+devices:
+  - tcp:
+      name: meteo.device
+      host: localhost
+      port: 502
+masters:
+  - worker: 
+      name: meteo.modbus
+    register_names: [meteo]
+    device_name: meteo.device
+    slave_id: 1
+    queries: 
+      - {type: holding, reg_index: 1, reg_count: 6}
+
+registers: !include registers.yaml

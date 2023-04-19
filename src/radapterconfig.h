@@ -96,9 +96,23 @@ struct Sql : public SerializableSettings {
     FIELD(OptionalSequence<SqlStorageInfo>, archives)
 };
 
+struct ValidatorArgsInfo : public SerializableSettings {
+    Q_GADGET
+    IS_SERIALIZABLE
+    FIELD(Required<QString>, new_name)
+    FIELD(Required<QVariantList>, with_args)
+};
+
+struct ValidatorInfo : public SerializableSettings {
+    Q_GADGET
+    IS_SERIALIZABLE
+    FIELD(RequiredSequence<ValidatorArgsInfo>, provide_args)
+};
+
 struct AppConfig : public SerializableSettings {
     Q_GADGET
     IS_SERIALIZABLE
+    FIELD(OptionalMapping<ValidatorInfo>, validators)
     FIELD(Optional<QVariantMap>, json_routes)
     FIELD(Optional<QVariantMap>, filters) //not implemented
     FIELD(Optional<QVariantMap>, log_debug) //not implemented

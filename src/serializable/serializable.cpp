@@ -4,12 +4,12 @@ using namespace Serializable;
 
 FieldConcept *Object::field(const QString &fieldName)
 {
-    return _priv_allFields().value(fieldName);
+    return _priv_allFields().value(fieldName).data();
 }
 
 const FieldConcept *Object::field(const QString &fieldName) const
 {
-    return _priv_allFields().value(fieldName);
+    return _priv_allFields().value(fieldName).data();
 }
 
 const QList<QString> &Object::fields() const

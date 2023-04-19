@@ -56,7 +56,7 @@ namespace Settings {
         };
         Q_ENUM(StartMode)
 
-        static bool validate(QVariant &target);
+        static bool validate(QVariant &target, const QVariantList &args, QVariant &state);
         using StartFrom = Serializable::Validated<HasDefault<StartMode>>::With<RedisStreamConsumer>;
         Q_GADGET
         IS_SERIALIZABLE

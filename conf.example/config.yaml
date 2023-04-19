@@ -1,53 +1,12 @@
 pipelines:
-  - meteo.modbus > |meteo.divide| > |meteo.duplicate| > |meteo.format| > meteo.redis.cache
+  - meteo.modbus > |meteo.divide| > |meteo.round_wind_direction| > |meteo.duplicate| > |meteo.format| > meteo.redis.cache
+  - test.data > |meteo.divide| > |meteo.round_wind_direction| > |meteo.duplicate| > |meteo.format| > meteo.redis.cache
 
-redis:
-  servers:
-    - name: local
-      host: redis
-      port: 6379
-  cache:
-    producers:
-      - worker:
-          name: meteo.redis.cache
-          print_msgs: true
-        server_name: local
-        object_hash_key: meteo
+mocks:
+  - name: test.data
+    json_file_path: /home/alexej/repos/redis-adapter/mocks/data.json
 
-interceptors:
-  duplicating:
-    meteo.duplicate:
-      by_field:
-        "wind_direction": [wind_direction_raw]
-        "atmospheric_pressure": [atmospheric_pressure_raw]
-  validating:
-    meteo.format:
-      by_field:
-        "wind_direction": wind_direction_360_ru
-        "atmospheric_pressure": hecta_pascals_to_mm_atmospheric
-        "last_update": set_unix_timestamp
-    meteo.divide:
-      by_validator:
-        int_divide_by_10: [
-          wind_speed,
-          air_temperature,
-          air_humidity,
-          atmospheric_pressure,
-        ]
-
-modbus:
-  devices:
-    - tcp:
-        name: meteo.device
-        host: localhost
-        port: 502
-  masters:
-    - worker: 
-        name: meteo.modbus
-      register_names: [meteo]
-      device_name: meteo.device
-      slave_id: 1
-      queries: 
-        - {type: holding, reg_index: 1, reg_count: 6}
-
-  registers: !include registers.yaml
+redis: !include redis.yaml
+interceptors: !include interceptors.yaml
+modbus: !include modbus.yaml
+validators: !include validators.yaml

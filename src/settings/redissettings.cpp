@@ -1,6 +1,8 @@
 #include "redissettings.h"
 
-bool Settings::RedisStreamConsumer::validate(QVariant &target) {
+bool Settings::RedisStreamConsumer::validate(QVariant &target, const QVariantList &args, QVariant &state) {
+    Q_UNUSED(args)
+    Q_UNUSED(state)
     auto asStr = target.toString().toLower();
     if (asStr == "persistent_id") {
         target.setValue(StartPersistentId);

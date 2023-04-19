@@ -3,8 +3,6 @@
 
 #include <QObject>
 #include "settings-parsing/reader.h"
-#include "serializable/utils.hpp"
-#include "radapterlogging.h"
 
 class QCommandLineParser;
 namespace Settings {

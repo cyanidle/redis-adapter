@@ -130,8 +130,8 @@ QString WorkerMsg::printFullDebug() const
     }
     auto result = QStringLiteral("\n### Msg Id: ");
     result.reserve(150);
-    auto flatData = QStringLiteral("# Flat Msg: \n") + printFlatData() + "\n\n";
-    return result.append(QString::number(id())).append(QStringLiteral(" Debug Info ###\n"))
+    auto flatData = printFlatData() + "\n\n";
+    return result.append(QString::number(id())).append(QStringLiteral(" Debug Info ###\n\n"))
            .append(QStringLiteral("# Sender: ")).append(senderWorker->printSelf()).append("\n")
            .append(QStringLiteral("# Targets: [")).append(printReceivers().join(", ")).append("]\n")
            .append(QStringLiteral("# Flags: ")).append(printFlags()).append("\n")

@@ -84,8 +84,10 @@ void ModbusMaster::init()
     device = Settings::ModbusDevice::get(device_name);
 }
 
-bool OrdersValidator::validate(QVariant &value)
+bool OrdersValidator::validate(QVariant &value, const QVariantList &args, QVariant &state)
 {
+    Q_UNUSED(args)
+    Q_UNUSED(state)
     auto asStr = value.toString().toLower();
     if (asStr.isEmpty()) return true;
     bool wordsBig = false;
@@ -115,7 +117,9 @@ void RegisterInfo::postUpdate()
     }
 }
 
-bool ChooseRegValueType::validate(QVariant &value) {
+bool ChooseRegValueType::validate(QVariant &value, const QVariantList &args, QVariant &state) {
+    Q_UNUSED(args)
+    Q_UNUSED(state)
     static QMap<QString, QMetaType::Type>
         map{{"uint16", QMetaType::UShort},
             {"word", QMetaType::UShort},
@@ -128,7 +132,9 @@ bool ChooseRegValueType::validate(QVariant &value) {
     return map.contains(asStr);
 }
 
-bool ChooseRegisterTable::validate(QVariant &value) {
+bool ChooseRegisterTable::validate(QVariant &value, const QVariantList &args, QVariant &state) {
+    Q_UNUSED(args)
+    Q_UNUSED(state)
     static QMap<QString, QModbusDataUnit::RegisterType>
         map{{"holding",QModbusDataUnit::HoldingRegisters},
             {"input",QModbusDataUnit::InputRegisters},

@@ -13,4 +13,11 @@ void Settings::AppConfig::postUpdate() {
     if (broker.isValid()) {
         Radapter::Broker::instance()->applySettings(broker);
     }
+    if (validators.isValid()) {
+        for (auto [name, info]: validators) {
+            for (auto &argSetting: info.provide_args) {
+                ::Validator::Fetched::addArgsFor(name, argSetting.with_args, argSetting.new_name);
+            }
+        }
+    }
 }

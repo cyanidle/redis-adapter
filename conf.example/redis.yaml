@@ -1,0 +1,11 @@
+servers:
+  - name: local
+    host: redis
+    port: 6379
+cache:
+  producers:
+    - worker:
+        name: meteo.redis.cache
+        print_msgs: true
+      server_name: local
+      object_hash_key: meteo

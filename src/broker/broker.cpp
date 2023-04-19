@@ -226,11 +226,6 @@ void Broker::connectProxyToWorker(WorkerProxy* producerProxy, Worker *consumer)
             consumer->workerThread() == producerProxy->workerThread()
                 ? Qt::DirectConnection
                 : Qt::QueuedConnection);
-    connect(producerProxy, &WorkerProxy::msgToBroker,
-            this, &Broker::onMsgFromWorker,
-            producerProxy->workerThread() == thread()
-                ? Qt::DirectConnection
-                : Qt::QueuedConnection);
     d->connections.append(conn);
     if (!producerProxy->consumers().contains(consumer)) {
         producerProxy->addConsumer(consumer);

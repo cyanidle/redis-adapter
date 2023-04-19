@@ -312,7 +312,9 @@ WorkerProxy* Worker::createPipe(const QList<Interceptor*> &rawInterceptors)
     for (auto &interceptor : interceptors) {
         if (staticUsedInterceptors->contains(interceptor)) {
             workerInfo(this) << "Creating copy of:" << interceptor;
+            auto wasName = interceptor->objectName();
             interceptor = interceptor->newCopy();
+            interceptor->setObjectName(wasName);
         }
         interceptor->setParent(nullptr);
         interceptor->moveToThread(proxy->thread());

@@ -3,7 +3,7 @@
 
 void Validator::registerAllCommon()
 {
-    Serializable::Validator::initialize();
+    Validator::Fetched::initialize();
     makeFetchable<Minutes>("minutes", "minute");
     makeFetchable<Hours24>("hours24", "hours");
     makeFetchable<Hours12>("hours12");
@@ -11,8 +11,10 @@ void Validator::registerAllCommon()
     makeFetchable<LogLevel>("log_level", "loglevel");
 }
 
-bool Validator::LogLevel::validate(QVariant &target)
+bool Validator::LogLevel::validate(QVariant &target, const QVariantList &args, QVariant &state)
 {
+    Q_UNUSED(args)
+    Q_UNUSED(state)
     static QMap<QString, QtMsgType> lvls{
         {"debug", QtMsgType::QtDebugMsg},
         {"info", QtMsgType::QtInfoMsg},

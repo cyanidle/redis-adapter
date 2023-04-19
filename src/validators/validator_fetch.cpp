@@ -6,35 +6,12 @@
 
 template <typename T>
 using QStringMap = QMap<QString, T>;
-
-Q_GLOBAL_STATIC(QStringMap<const Validator::Executor*>, allValidators)
+Q_GLOBAL_STATIC(QStringMap<Validator::Function>, allValidators)
+Q_GLOBAL_STATIC(QStringMap<QVariantList>, allArgs)
 Q_GLOBAL_STATIC(QRecursiveMutex, staticMutex)
 
-Validator::Executor::Executor(Function func) :
-    m_func(func)
+Validator::Function Validator::fetchFunction(const QLatin1String &name)
 {
-}
-
-bool Validator::Executor::validate(QVariant &target) const
-{
-    return m_func(target);
-}
-
-QString Validator::Executor::name() const
-{
-    QMutexLocker lock(&(*staticMutex));
-    return allValidators->key(this);
-}
-
-QStringList Validator::Executor::aliases() const
-{
-    QMutexLocker lock(&(*staticMutex));
-    return allValidators->keys(this);
-}
-
-const Validator::Executor *Validator::fetch(const QLatin1String &name)
-{
-    QMutexLocker lock(&(*staticMutex));
     return allValidators->value(QString(name).toLower());
 }
 
@@ -45,90 +22,112 @@ int Validator::Private::add(Function func, const char *alias)
     if (allValidators->contains(QLatin1String(alias))) {
         throw std::runtime_error(std::string("Duplicate validator with name: ") + alias);
     }
-    allValidators->insert(QLatin1String(alias), new Executor(func));
+    allValidators->insert(QLatin1String(alias), func);
     return 0;
 }
 
-const Validator::Executor *Validator::fetch(const char *name)
+Validator::Function Validator::fetchFunction(const char *name)
 {
-    QMutexLocker lock(&(*staticMutex));
-    return fetch(QLatin1String(name));
+    return fetchFunction(QLatin1String(name));
 }
 
-const Validator::Executor *Validator::fetch(const QString &name)
+Validator::Function Validator::fetchFunction(const QString &name)
 {
-    QMutexLocker lock(&(*staticMutex));
     return allValidators->value(name.toLower());
 }
 
-QString Validator::nameOf(const Executor *validator)
+Validator::Fetched::Fetched() :
+    m_executor(nullptr)
+{
+}
+
+Validator::Fetched::Fetched(const QString &name) :
+    m_name(name),
+    m_args(allArgs->value(name)),
+    m_executor(fetchFunction(name))
+{
+    if (!m_executor && !name.isEmpty()) {
+        throw std::runtime_error("Unavailable validator: " + name.toStdString());
+    }
+    auto test = QVariant{};
+    validate(test);
+}
+
+void Validator::Fetched::addArgsFor(const QString &name, const QVariantList &args, const QString &newName)
 {
     QMutexLocker lock(&(*staticMutex));
-    return allValidators->key(validator);
+    if (allArgs->contains(newName)) {
+        throw std::runtime_error("Args already added for: " + name.toStdString());
+    }
+    allArgs->insert(newName, args);
+    if (allValidators->contains(newName)) {
+        throw std::runtime_error("Validator name already taken: " + newName.toStdString());
+    }
+    allValidators->insert(newName, fetchFunction(name));
 }
 
-Serializable::Validator::Validator() :
-    m_executor(nullptr)
+void Validator::Fetched::initialize()
 {
-}
-
-Serializable::Validator::Validator(const QString &name) :
-    m_name(name),
-    m_executor(nullptr)
-{
-    if (name.isEmpty()) return;
-    auto fetched = ::Validator::fetch(name);
-    if (!fetched) throw std::runtime_error("Unavailable validator: " + name.toStdString());
-    m_executor = fetched;
-}
-
-void Serializable::Validator::initialize()
-{
+    QMutexLocker lock(&(*staticMutex));
     auto converter = [](const QString& name){
-        return Validator(name);
+        return Fetched(name);
     };
-    auto backConverter = [](const Validator& conv){
-        return conv.m_executor ? conv.m_executor->name() : "";
+    auto backConverter = [](const Fetched& conv){
+        return conv.m_executor ? allValidators->key(conv.m_executor) : "<Unkown>";
     };
-    if (!QMetaType::registerConverter<QString, Validator>(converter)) {
+    if (!QMetaType::registerConverter<QString, Fetched>(converter)) {
         throw std::runtime_error("Could not register Validator converter!");
     }
-    if (!QMetaType::registerConverter<Validator, QString>(backConverter)) {
+    if (!QMetaType::registerConverter<Fetched, QString>(backConverter)) {
         throw std::runtime_error("Could not register Validator back converter!");
     }
 }
 
-bool Serializable::Validator::validate(QVariant &target) const
+bool Validator::Fetched::validate(QVariant &target) const
 {
     if (!m_executor) {
         throw std::runtime_error("Attempt to validate with nonexistent validator. Name: " + m_name.toStdString());
     }
-    return m_executor->validate(target);
+    auto nullState = QVariant{};
+    return m_executor(target, m_args, nullState);
 }
 
-const QString &Serializable::Validator::name() const
+bool Validator::Fetched::validate(QVariant &target, QVariant& state) const
+{
+    if (!m_executor) {
+        throw std::runtime_error("Attempt to validate with nonexistent validator. Name: " + m_name.toStdString());
+    }
+    return m_executor(target, m_args, state);
+}
+
+const QString &Validator::Fetched::name() const
 {
     return m_name;
 }
 
-bool Serializable::Validator::operator<(const Validator &other) const
+bool Validator::Fetched::isValid() const
+{
+    return m_executor != nullptr;
+}
+
+bool Validator::Fetched::operator<(const Fetched &other) const
 {
     return m_name < other.m_name;
 }
 
-bool Serializable::Validator::operator==(const QVariant &variant) const
+bool Validator::Fetched::operator==(const QVariant &variant) const
 {
-    return m_executor ? m_executor->name() == variant.toString() : false;
+    return m_name == variant.toString();
 }
 
-bool Serializable::Validator::operator!=(const QVariant &variant) const
+bool Validator::Fetched::operator!=(const QVariant &variant) const
 {
     return !(*this)==variant;
 }
 
-Serializable::Validator::operator bool() const
+Validator::Fetched::operator bool() const
 {
-    return m_executor;
+    return isValid();
 }
 
 int Validator::Private::add(Function func, const char **aliases, int count)

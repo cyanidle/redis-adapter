@@ -9,10 +9,10 @@ Q_DECLARE_METATYPE(QMetaType::Type)
 
 namespace Settings {
     struct ChooseRegValueType {
-        static bool validate(QVariant& value);
+        static bool validate(QVariant& value, const QVariantList &args, QVariant &state);
     };
     struct ChooseRegisterTable {
-        static bool validate(QVariant& value);
+        static bool validate(QVariant& value, const QVariantList &args, QVariant &state);
     };
     using RequiredRegisterTable = Serializable::Validated<Required<QModbusDataUnit::RegisterType>>::With<ChooseRegisterTable>;
     using RegisterValueType = Serializable::Validated<Required<QMetaType::Type>>::With<ChooseRegValueType>;
@@ -69,7 +69,7 @@ namespace Settings {
     };
 
     struct OrdersValidator {
-        static bool validate(QVariant &value);
+        static bool validate(QVariant &value, const QVariantList &args, QVariant &state);
     };
 
     struct RADAPTER_API RegisterInfo : SerializableSettings {

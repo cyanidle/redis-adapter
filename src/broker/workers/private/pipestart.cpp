@@ -6,6 +6,7 @@ namespace Radapter {
 
 void PipeStart::onSendMsg(const WorkerMsg &msg)
 {
+    if (msg.isBroadcast()) return;
     auto copy = msg;
     emit msgFromWorker(copy);
 }

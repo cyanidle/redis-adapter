@@ -41,17 +41,6 @@ Worker *WorkerProxy::worker() const
 
 void WorkerProxy::onMsgFromWorker(Radapter::WorkerMsg &msg)
 {
-    if (msg.isBroadcast()) {
-        emit msgToBroker(msg); //! on broadcast just send to broker
-        return;
-    }
-    auto receivers = msg.receivers();
-    auto forwarded = receivers.subtract(worker()->consumers());
-    if (!forwarded.isEmpty() ) {
-        auto copy = msg;
-        copy.receivers() = forwarded;
-        emit msgToBroker(copy); //! everyone except direct consumers
-    }
     emit msgToConsumers(msg);
 }
 

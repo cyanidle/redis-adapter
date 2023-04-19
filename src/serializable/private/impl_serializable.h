@@ -41,7 +41,7 @@ void check_type() {
     static_assert(isQGadget, "Must use Q_GADGET macro!");
 }
 QStringList fieldNamesHelper(const Object *who);
-QMap<QString, FieldConcept*> fieldsHelper(const Object *who);
+QMap<QString, QSharedPointer<FieldConcept>> fieldsHelper(const Object *who);
 }
 
 #define FIELD(field_type, name, ...) \
@@ -51,7 +51,7 @@ QMap<QString, FieldConcept*> fieldsHelper(const Object *who);
 constexpr auto is_wrapped = ::std::is_base_of<::Serializable::Private::IsFieldCheck, typename std::decay<decltype(name)>::type>(); \
 static_assert(is_wrapped, "Dont use raw types in FIELD() macro"); \
         _has_Is_Serializable(); \
-        return QVariant::fromValue(::Serializable::Private::upcastField(& THIS_TYPE :: name)); \
+        return ::Serializable::Private::upcastField(& THIS_TYPE :: name); \
     } \
     Q_PROPERTY(QVariant __field__ ##name READ _priv_getFinalPtr_##name) \
     public:
@@ -72,8 +72,8 @@ static_assert(is_wrapped, "Dont use raw types in FIELD() macro"); \
         static QStringList fieldsNames{::Serializable::Private::fieldNamesHelper(this)}; \
         return fieldsNames; \
     } \
-    virtual const QMap<QString, ::Serializable::FieldConcept*> &_priv_allFields() const override { \
-        static QMap<QString, ::Serializable::FieldConcept*> result{::Serializable::Private::fieldsHelper(this)}; \
+    virtual const QMap<QString, QSharedPointer<::Serializable::FieldConcept>> &_priv_allFields() const override { \
+        static QMap<QString, QSharedPointer<::Serializable::FieldConcept>> result{::Serializable::Private::fieldsHelper(this)}; \
         return result; \
     } \
     public: \

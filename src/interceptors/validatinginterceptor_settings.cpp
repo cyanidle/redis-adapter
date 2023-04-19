@@ -1,7 +1,9 @@
 #include "validatinginterceptor_settings.h"
 #include <QRegularExpression>
 
-void Settings::ValidatingInterceptor::postUpdate() {
+void Settings::ValidatingInterceptor::init() {
+    final_by_validator_glob.clear();
+    final_by_validator.clear();
     QMap<QString, QStringList> temp;
     for (auto iter = by_validator->cbegin(); iter != by_validator->cend(); ++iter) {
         temp[iter.key()].append(iter.value());
@@ -10,14 +12,14 @@ void Settings::ValidatingInterceptor::postUpdate() {
         temp[iter.value()].append(iter.key());
     }
     for (auto iter = temp.cbegin(); iter != temp.cend(); ++iter) {
-        auto validator = Serializable::Validator(iter.key());
+        auto validator = Validator::Fetched(iter.key());
         for (const auto &field: iter.value()) {
             final_by_validator[validator].append(field);
         }
     }
-    for (auto iter = by_glob.cbegin(); iter != by_glob.cend(); ++iter) {
-        auto validator = Serializable::Validator(iter.key());
-        auto asRegex = QRegularExpression::wildcardToRegularExpression(iter.value());
+    for (auto [name, value]: by_glob) {
+        auto validator = Validator::Fetched(name);
+        auto asRegex = QRegularExpression::wildcardToRegularExpression(value);
         final_by_validator_glob.insert(validator, QRegularExpression{asRegex});
     }
 }

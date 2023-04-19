@@ -50,17 +50,17 @@ QMap<QString, const Serializable::Object *> Serializable::NestedIntrospection::a
 }
 
 namespace Serializable {
-QMap<QString, FieldConcept *> Private::fieldsHelper(const Object *who)
+QMap<QString, QSharedPointer<FieldConcept>> Private::fieldsHelper(const Object *who)
 {
     constexpr QLatin1String start("__field__", 9);
     auto mobj = who->metaObject();
     auto props = mobj->propertyCount();
-    QMap<QString, FieldConcept*> result;
+    QMap<QString, QSharedPointer<FieldConcept>> result;
     for (int i = 0; i < props ; i ++) {
         auto field = mobj->property(i);
         auto name = QLatin1String(field.name());
         if (name.startsWith(start)) {
-            auto value = field.readOnGadget(who).value<FieldConcept*>();
+            auto value = field.readOnGadget(who).value<QSharedPointer<FieldConcept>>();
             result.insert(name.mid(start.size()), value);
         }
     }
