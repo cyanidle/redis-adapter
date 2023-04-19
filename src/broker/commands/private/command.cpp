@@ -4,7 +4,7 @@ namespace Radapter {
 
 Command::Command(quint32 type) :
     m_type(type),
-    m_ignoreReply(true)
+    m_ignoreReply(false)
 {
 }
 

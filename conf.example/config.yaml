@@ -1,10 +1,10 @@
 pipelines:
-  - meteo.modbus > |meteo.divide| > |meteo.round_wind_direction| > |meteo.duplicate| > |meteo.format| > meteo.redis.cache
-  - test.data > |meteo.divide| > |meteo.round_wind_direction| > |meteo.duplicate| > |meteo.format| > meteo.redis.cache
+  - meteo.modbus > |meteo.divide| > |meteo.round_wind_direction| > |meteo.duplicate| > |meteo.format| > meteo.redis.cache.writer
+  #- test.data > |meteo.divide| > |meteo.round_wind_direction| > |meteo.duplicate| > |meteo.format| > meteo.redis.cache.writer
 
-mocks:
-  - name: test.data
-    json_file_path: /home/alexej/repos/redis-adapter/mocks/data.json
+#mocks:
+#  - name: test.data
+#    json_file_path: /home/alexej/repos/redis-adapter/mocks/data.json
 
 redis: !include redis.yaml
 interceptors: !include interceptors.yaml
