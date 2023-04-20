@@ -31,7 +31,7 @@ void SerializableSettings::processField(const QString &name, const QVariant &new
     auto found = field(name);
     auto hasDefault = found->attributes(this).contains(HAS_DEFAULT_ATTR);
     auto isOptional = found->attributes(this).contains(OPTION_ATTR);
-    auto fieldTypeName = QStringLiteral("%1<%2>").arg(found->typeName(this), QString(QMetaType(found->valueMetaTypeId(this)).name()));
+    auto fieldTypeName = found->fieldRepr(this);
     if (!newValue.isValid()) {
         if (hasDefault || isOptional) {
             return;
@@ -62,6 +62,14 @@ bool SerializableSettings::update(const QVariantMap &src)
         auto allFields = fields().join(", ");
         if (!m_currentField.isEmpty()) {
             allFields.replace(m_currentField, "--> " + m_currentField + " <--");
+        }
+        for (auto &name: fields()) {
+            if (field(name)->isSequence(this)) {
+                allFields.replace(name, name + "[]");
+            }
+            if (field(name)->isMapping(this)) {
+                allFields.replace(name, name + "{}");
+            }
         }
         throw std::runtime_error(err.what()
                                  + std::string("\n# in ") + metaObject()->className()

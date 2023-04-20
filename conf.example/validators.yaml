@@ -1,9 +1,0 @@
-int_divide_by:
-  provide_args:
-    - new_name: int_divide_by_10
-      with_args: [10.]
-
-round_last:
-  provide_args:
-    - new_name: round_last_60
-      with_args: [60]

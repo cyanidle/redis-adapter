@@ -1,6 +1,7 @@
 #include "validator_fetch.h"
 #include "qmutex.h"
 #include "radapterlogging.h"
+#include "templates/algorithms.hpp"
 #include <QMetaProperty>
 #include <QString>
 
@@ -33,6 +34,7 @@ Validator::Function Validator::fetchFunction(const char *name)
 
 Validator::Function Validator::fetchFunction(const QString &name)
 {
+    QMutexLocker lock(&(*staticMutex));
     return allValidators->value(name.toLower());
 }
 
@@ -43,9 +45,25 @@ Validator::Fetched::Fetched() :
 
 Validator::Fetched::Fetched(const QString &name) :
     m_name(name),
-    m_args(allArgs->value(name)),
-    m_executor(fetchFunction(name))
+    m_args(),
+    m_executor()
 {
+    QMutexLocker lock(&(*staticMutex));
+    m_args = allArgs->value(name);
+    m_executor = fetchFunction(name);
+    // validator(arg0, args1) --> register args for 'validator' (new name: validator(arg0, args1))
+    // ^ if not exists
+    if (m_name.contains('(') && m_name.endsWith(')') && !m_executor) {
+        QVariantList args;
+        auto nameCopy = m_name;
+        auto asSplit = nameCopy.remove(')').split('(')[1].split(',');
+        for (auto &str : asSplit) {
+            args.append(str.simplified());
+        }
+        Validator::Fetched::addArgsFor(m_name.split('(')[0], args, m_name);
+        m_args = args;
+        m_executor = fetchFunction(m_name);
+    }
     if (!m_executor && !name.isEmpty()) {
         throw std::runtime_error("Unavailable validator: " + name.toStdString());
     }
@@ -63,6 +81,7 @@ void Validator::Fetched::addArgsFor(const QString &name, const QVariantList &arg
     if (allValidators->contains(newName)) {
         throw std::runtime_error("Validator name already taken: " + newName.toStdString());
     }
+    settingsParsingWarn() << "Adding argumets for validator:" << name << '(' << args << ") --> new name:" << newName;
     allValidators->insert(newName, fetchFunction(name));
 }
 
@@ -153,5 +172,6 @@ int Validator::Private::add(Function func, const QStringList &aliases)
 
 const QStringList Validator::available()
 {
+    QMutexLocker lock(&(*staticMutex));
     return allValidators->keys();
 }

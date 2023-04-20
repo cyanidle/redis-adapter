@@ -17,6 +17,7 @@ struct LauncherPrivate;
 class RADAPTER_API Launcher : public QObject
 {
     Q_OBJECT
+    struct Private;
 public:
     explicit Launcher(QObject *parent = nullptr);
     const QString &configsDirectory() const;
@@ -41,7 +42,7 @@ private:
     void initConfig();
     void initPlugins();
 
-    LauncherPrivate *d;
+    Private *d;
 };
 
 }

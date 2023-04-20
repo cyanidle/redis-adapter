@@ -84,8 +84,8 @@ protected:
     void checkForExtra(const QVariantMap &src);
     void processField(const QString &name, const QVariant &newValue);
 
-    bool m_allowExtra;
     QString m_currentField;
+    bool m_allowExtra;
 };
 
 } // namespace Settings

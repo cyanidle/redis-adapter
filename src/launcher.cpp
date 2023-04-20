@@ -31,7 +31,7 @@
 #endif
 using namespace Radapter;
 
-struct Radapter::LauncherPrivate {
+struct Radapter::Launcher::Private {
     Settings::Reader* reader;
     QString configsResource;
     QString configsFormat;
@@ -44,7 +44,7 @@ struct Radapter::LauncherPrivate {
 
 Launcher::Launcher(QObject *parent) :
     QObject(parent),
-    d(new LauncherPrivate)
+    d(new Private)
 {
     qSetMessagePattern(RADAPTER_CUSTOM_MESSAGE_PATTERN);
     d->reader = nullptr;
@@ -103,11 +103,11 @@ void Launcher::initConfig()
     for (const auto& config: d->config.websocket->clients) {
         addWorker(new Websocket::Client(config, newThread()));
     }
-    for (auto iter = d->config.interceptors->duplicating->begin(); iter != d->config.interceptors->duplicating->end(); ++iter) {
-        addInterceptor(iter.key(), new DuplicatingInterceptor(iter.value()));
+    for (auto [name, config]: d->config.interceptors->duplicating) {
+        addInterceptor(name, new DuplicatingInterceptor(config));
     }
-    for (auto iter = d->config.interceptors->validating->begin(); iter != d->config.interceptors->validating->end(); ++iter) {
-        addInterceptor(iter.key(), new ValidatingInterceptor(iter.value()));
+    for (auto [name, config]: d->config.interceptors->validating) {
+        addInterceptor(name, new ValidatingInterceptor(config));
     }
     if (d->config.api->enabled) {
         addWorker(new ApiServer(d->config.api, newThread(), this));

@@ -11,10 +11,10 @@ validating:
       "last_update": set_unix_timestamp
   meteo.round_wind_direction:
     by_field:
-      "wind_direction": round_last_60
+      "wind_direction": round_last(60)
   meteo.divide:
     by_validator:
-      int_divide_by_10: [
+      int_divide_by(10): [
         wind_speed,
         air_temperature,
         air_humidity,
