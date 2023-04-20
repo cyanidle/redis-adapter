@@ -13,7 +13,6 @@ signals:
     void wasUpdated();
     void updateFailed();
 };
-struct Dummy{};
 }
 
 template<typename Target>
