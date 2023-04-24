@@ -1,7 +1,7 @@
 #ifndef RADAPTERAPISETTINGS_H
 #define RADAPTERAPISETTINGS_H
 
-#include "broker/workers/workersettings.h"
+#include "broker/workers/settings/workersettings.h"
 #include "settings-parsing/settings_validators.h"
 
 namespace Settings {

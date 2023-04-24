@@ -1,9 +1,10 @@
 #ifndef RADAPTERCONFIG_H
 #define RADAPTERCONFIG_H
 
-#include "broker/workers/loggingworkersettings.h"
+#include "broker/workers/settings/loggingworkersettings.h"
 #include "broker/brokersettings.h"
-#include "broker/workers/mockworkersettings.h"
+#include "broker/workers/settings/mockworkersettings.h"
+#include "broker/workers/settings/repeatersettings.h"
 #include "httpserver/radapterapisettings.h"
 #include "interceptors/duplicatinginterseptor_settings.h"
 #include "interceptors/validatinginterceptor_settings.h"
@@ -96,27 +97,14 @@ struct Sql : public SerializableSettings {
     FIELD(OptionalSequence<SqlStorageInfo>, archives)
 };
 
-struct ValidatorArgsInfo : public SerializableSettings {
-    Q_GADGET
-    IS_SERIALIZABLE
-    FIELD(Required<QString>, new_name)
-    FIELD(Required<QVariantList>, with_args)
-};
-
-struct ValidatorInfo : public SerializableSettings {
-    Q_GADGET
-    IS_SERIALIZABLE
-    FIELD(RequiredSequence<ValidatorArgsInfo>, provide_args)
-};
-
 struct AppConfig : public SerializableSettings {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(OptionalMapping<ValidatorInfo>, validators)
     FIELD(Optional<QVariantMap>, json_routes)
     FIELD(Optional<QVariantMap>, filters) //not implemented
     FIELD(Optional<QVariantMap>, log_debug) //not implemented
     FIELD(Optional<Interceptors>, interceptors)
+    FIELD(OptionalSequence<Repeater>, repeaters)
     FIELD(Optional<Broker>, broker)
     FIELD(Optional<LocalizationInfo>, localization)
     FIELD(OptionalSequence<LoggingWorker>, logging_workers)

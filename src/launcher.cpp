@@ -1,6 +1,7 @@
 #include <QLibrary>
 #include <QCommandLineParser>
 #include "broker/broker.h"
+#include "broker/workers/repeater.h"
 #include "consumers/rediscacheconsumer.h"
 #include "consumers/rediskeyeventsconsumer.h"
 #include "consumers/redisstreamconsumer.h"
@@ -102,6 +103,9 @@ void Launcher::initConfig()
     }
     for (const auto& config: d->config.websocket->clients) {
         addWorker(new Websocket::Client(config, newThread()));
+    }
+    for (const auto& config: d->config.repeaters) {
+        addWorker(new Repeater(config, newThread()));
     }
     for (auto [name, config]: d->config.interceptors->duplicating) {
         addInterceptor(name, new DuplicatingInterceptor(config));

@@ -1,13 +1,13 @@
 SOURCES+= \
    $$PWD/mockworker.cpp \
    $$PWD/loggingworker.cpp \
-   $$PWD/worker.cpp
+   $$PWD/worker.cpp \
+   $$PWD/repeater.cpp
 HEADERS+= \
    $$PWD/loggingworker.h \
-   $$PWD/loggingworkersettings.h \
+   $$PWD/repeater.h \
    $$PWD/mockworker.h \
-   $$PWD/workersettings.h \
-   $$PWD/worker.h \
-   $$PWD/mockworkersettings.h
+   $$PWD/worker.h
 
 include($$PWD/private/private.pri)
+include($$PWD/settings/settings.pri)

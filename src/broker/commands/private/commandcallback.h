@@ -4,7 +4,6 @@
 #include "templates/callable_info.hpp"
 #include <QtGlobal>
 #include <functional>
-#include <type_traits>
 
 namespace Radapter {
 // forward declarations
@@ -88,15 +87,15 @@ struct CommandCallback {
     void execute(const WorkerMsg &msg) const;
     Worker *worker() const;
     template<typename User, typename Slot>
-    static CommandCallback fromAny(User *user, Slot&&slot, typename std::enable_if<
-                                                                CallableInfo<Slot>::IsLambda &&
-                                                                std::is_copy_constructible_v<Slot>
-                                                                                    >::type* = nullptr) {
+    static CommandCallback fromAny(User *user, Slot&&slot,
+    std::enable_if_t<CallableInfo<Slot>::IsLambda && std::is_copy_constructible_v<Slot>>* = nullptr)
+    {
         return CommandCallback(user, typename LambdaInfo<Slot>::AsStdFunction(std::forward<Slot>(slot)));
     }
     template<typename User, typename Slot>
-    static CommandCallback fromAny(User *user, Slot&&slot, typename std::enable_if<CallableInfo<Slot>::IsFunction ||
-                                                                                    CallableInfo<Slot>::IsMethod>::type* = nullptr) {
+    static CommandCallback fromAny(User *user, Slot&&slot,
+    std::enable_if_t<CallableInfo<Slot>::IsFunction || CallableInfo<Slot>::IsMethod>* = nullptr)
+    {
         return CommandCallback(user, std::forward<Slot>(slot));
     }
 protected:
