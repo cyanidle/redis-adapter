@@ -2,7 +2,7 @@
 #define ROUTED_OBJECT_H
 
 #include "jsonroute.h"
-#include "serializable/serializable.h"
+#include "serializable/serializableobject.h"
 #include "serializable/bindable.hpp"
 #include "serializable/validated.hpp"
 #include "validators/common_validators.h"

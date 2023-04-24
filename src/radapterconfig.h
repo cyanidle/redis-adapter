@@ -5,58 +5,60 @@
 #include "broker/brokersettings.h"
 #include "broker/workers/settings/mockworkersettings.h"
 #include "broker/workers/settings/repeatersettings.h"
+#include "filters/producerfiltersettings.hpp"
 #include "httpserver/radapterapisettings.h"
 #include "interceptors/duplicatinginterseptor_settings.h"
 #include "interceptors/validatinginterceptor_settings.h"
 #include "raw_sockets/udpconsumer.h"
 #include "raw_sockets/udpproducer.h"
-#include "settings-parsing/serializablesettings.h"
+#include "settings-parsing/serializablesetting.h"
 #include "settings/modbussettings.h"
 #include "settings/redissettings.h"
 #include "settings/settings.h"
 
 namespace Settings {
 
-struct Udp : public SerializableSettings {
+struct Udp : public Serializable {
     Q_GADGET
     IS_SERIALIZABLE
     FIELD(OptionalSequence<::Udp::ProducerSettings>, producers)
     FIELD(OptionalSequence<::Udp::ConsumerSettings>, consumers)
 };
 
-struct Sockets : public SerializableSettings {
+struct Sockets : public Serializable {
     Q_GADGET
     IS_SERIALIZABLE
     FIELD(Optional<Udp>, udp)
 };
 
-struct Interceptors : public SerializableSettings {
+struct Interceptors : public Serializable {
     Q_GADGET
     IS_SERIALIZABLE
     FIELD(OptionalMapping<ValidatingInterceptor>, validating)
     FIELD(OptionalMapping<DuplicatingInterceptor>, duplicating)
+    FIELD(OptionalMapping<ProducerFilter>, filters)
 
 };
 
-struct Stream : public SerializableSettings {
+struct Stream : public Serializable {
     Q_GADGET
     IS_SERIALIZABLE
     FIELD(OptionalSequence<RedisStreamConsumer>, consumers)
     FIELD(OptionalSequence<RedisStreamProducer>, producers)
 };
-struct Cache : public SerializableSettings {
+struct Cache : public Serializable {
     Q_GADGET
     IS_SERIALIZABLE
     FIELD(OptionalSequence<RedisCacheConsumer>, consumers)
     FIELD(OptionalSequence<RedisCacheProducer>, producers)
 };
-struct KeyEvents : public SerializableSettings {
+struct KeyEvents : public Serializable {
     Q_GADGET
     IS_SERIALIZABLE
     FIELD(OptionalSequence<RedisKeyEventSubscriber>, subscribers)
 };
 
-struct Redis : public SerializableSettings {
+struct Redis : public Serializable {
     Q_GADGET
     IS_SERIALIZABLE
     FIELD(RequiredSequence<RedisServer>, servers)
@@ -65,43 +67,33 @@ struct Redis : public SerializableSettings {
     FIELD(Optional<KeyEvents>, key_events)
 };
 
-struct Modbus : public SerializableSettings {
+struct Modbus : public Serializable {
     Q_GADGET
     IS_SERIALIZABLE
+    FIELD(Required<Registers>, registers)
     FIELD(RequiredSequence<ModbusDevice>, devices)
-    FIELD(Required<QVariantMap>, registers)
     FIELD(OptionalSequence<ModbusSlave>, slaves)
     FIELD(OptionalSequence<ModbusMaster>, masters)
-    POST_UPDATE {
-        Settings::parseRegisters(registers);
-        for (auto &slave: slaves) {
-            slave.init();
-        }
-        for (auto &master: masters) {
-            master.init();
-        }
-    }
 };
 
-struct Websocket : public SerializableSettings {
+struct Websocket : public Serializable {
     Q_GADGET
     IS_SERIALIZABLE
     FIELD(OptionalSequence<WebsocketClient>, clients)
     FIELD(OptionalSequence<WebsocketServer>, servers)
 };
 
-struct Sql : public SerializableSettings {
+struct Sql : public Serializable {
     Q_GADGET
     IS_SERIALIZABLE
     FIELD(OptionalSequence<SqlClientInfo>, clients)
     FIELD(OptionalSequence<SqlStorageInfo>, archives)
 };
 
-struct AppConfig : public SerializableSettings {
+struct AppConfig : public Serializable {
     Q_GADGET
     IS_SERIALIZABLE
     FIELD(Optional<QVariantMap>, json_routes)
-    FIELD(Optional<QVariantMap>, filters) //not implemented
     FIELD(Optional<QVariantMap>, log_debug) //not implemented
     FIELD(Optional<Interceptors>, interceptors)
     FIELD(OptionalSequence<Repeater>, repeaters)

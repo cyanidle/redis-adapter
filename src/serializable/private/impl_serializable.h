@@ -43,7 +43,9 @@ void check_type() {
 QStringList fieldNamesHelper(const Object *who);
 QMap<QString, QSharedPointer<FieldConcept>> fieldsHelper(const Object *who);
 }
+}
 
+#ifndef DOXYGEN
 #define FIELD(field_type, name, ...) \
     public: field_type name {__VA_ARGS__}; \
     private: \
@@ -81,6 +83,6 @@ static_assert(is_wrapped, "Dont use raw types in FIELD() macro"); \
         ::Serializable::Private::check_type<THIS_TYPE>(); \
         return &this->staticMetaObject; \
     };
-}
+#endif
 
 #endif // SERIALIZER_H

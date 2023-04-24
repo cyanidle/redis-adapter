@@ -1,6 +1,6 @@
 #include "redissettings.h"
-
-bool Settings::RedisStreamConsumer::validate(QVariant &target, const QVariantList &args, QVariant &state) {
+using namespace Settings;
+bool RedisStreamConsumer::validate(QVariant &target, const QVariantList &args, QVariant &state) {
     Q_UNUSED(args)
     Q_UNUSED(state)
     auto asStr = target.toString().toLower();
@@ -14,4 +14,14 @@ bool Settings::RedisStreamConsumer::validate(QVariant &target, const QVariantLis
         return false;
     }
     return true;
+}
+
+Q_GLOBAL_STATIC(QStringMap<RedisServer>, cacheMap)
+
+void RedisConnector::postUpdate() {
+    server = cacheMap->value(server_name);
+}
+
+void RedisServer::postUpdate() {
+    cacheMap->insert(name, *this);
 }

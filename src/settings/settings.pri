@@ -1,4 +1,5 @@
 SOURCES+= \
+   $$PWD/settings.cpp \
    $$PWD/redissettings.cpp \
    $$PWD/modbussettings.cpp
 HEADERS+= \

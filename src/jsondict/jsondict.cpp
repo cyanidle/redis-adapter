@@ -674,3 +674,13 @@ QDebug operator<<(QDebug dbg, const JsonDict &json)
     dbg.noquote() << json.printDebug();
     return dbg;
 }
+
+JsonDict Radapter::literals::operator "" _json(const char *str, std::size_t n)
+{
+    QJsonParseError err;
+    QJsonDocument doc = QJsonDocument::fromJson(QByteArray(str, static_cast<int>(n)), &err);
+    if (!doc.isObject() || err.error != QJsonParseError::NoError) {
+        throw std::runtime_error("Json Parse Error!");
+    }
+    return JsonDict::fromJsonObj(doc.object());
+}

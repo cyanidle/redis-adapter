@@ -1,20 +1,20 @@
-#include "serializablesettings.h"
+#include "serializablesetting.h"
 #include "jsondict/jsondict.h"
 #include "templates/algorithms.hpp"
 
 namespace Settings {
 
-SerializableSettings::SerializableSettings() :
+Serializable::Serializable() :
     m_allowExtra(false)
 {
 }
 
-QString SerializableSettings::print() const
+QString Serializable::print() const
 {
     return JsonDict{serialize()}.printDebug().replace("Json", metaObject()->className());
 }
 
-void SerializableSettings::checkForExtra(const QVariantMap &src)
+void Serializable::checkForExtra(const QVariantMap &src)
 {
     for (auto key = src.keyBegin(); key != src.keyEnd(); ++key) {
         if (!m_allowExtra && !fields().contains(*key)) {
@@ -25,7 +25,7 @@ void SerializableSettings::checkForExtra(const QVariantMap &src)
     }
 }
 
-void SerializableSettings::processField(const QString &name, const QVariant &newValue)
+void Serializable::processField(const QString &name, const QVariant &newValue)
 {
     m_currentField = name;
     auto found = field(name);
@@ -49,7 +49,7 @@ void SerializableSettings::processField(const QString &name, const QVariant &new
     throw std::runtime_error(std::string(metaObject()->className()) + ": Value type missmatch: " + msg.toStdString());
 }
 
-bool SerializableSettings::update(const QVariantMap &src)
+bool Serializable::update(const QVariantMap &src)
 {
     try {
         if (!m_allowExtra) {
@@ -80,7 +80,7 @@ bool SerializableSettings::update(const QVariantMap &src)
     return true;
 }
 
-void SerializableSettings::allowExtra(bool state)
+void Serializable::allowExtra(bool state)
 {
     m_allowExtra = state;
 }

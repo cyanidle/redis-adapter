@@ -1,9 +1,9 @@
 SOURCES+= \
-   $$PWD/serializable.cpp
+    $$PWD/serializableobject.cpp
 HEADERS+= \
+   $$PWD/serializableobject.h \
    $$PWD/validated.hpp \
    $$PWD/field_super.h \
-   $$PWD/serializable.h \
    $$PWD/bindable.hpp \
    $$PWD/common_fields.hpp
 

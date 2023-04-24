@@ -1,5 +1,5 @@
 #include "impl_serializable.h"
-#include "../serializable.h"
+#include "../serializableobject.h"
 
 Serializable::NestedIntrospection::NestedIntrospection(Object *obj) :
     m_data(QVariant::fromValue(obj)), m_currentType(TypeObject)

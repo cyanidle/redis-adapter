@@ -21,6 +21,7 @@ namespace Modbus {
 class Master : public Radapter::Worker
 {
     Q_OBJECT
+    struct Private;
 public:
     Master(const Settings::ModbusMaster &settings, QThread *thread);
     void onRun() override;
@@ -56,19 +57,7 @@ private:
     void write(const JsonDict &data);
     void attachToChannel();
 
-    Settings::ModbusMaster m_settings;
-    QTimer *m_reconnectTimer;
-    QTimer *m_readTimer;
-    QHash<QModbusDataUnit::RegisterType, QHash<int, QString>> m_reverseRegisters;
-    QModbusClient *m_device = nullptr;
-    std::atomic<bool> m_connected{false};
-    QQueue<QModbusDataUnit> m_readQueue;
-    QQueue<QModbusDataUnit> m_writeQueue;
-    JsonDict m_state;
-    JsonDict m_wantedState;
-    QMap<QString, quint8> m_rewriteAttempts;
-    Redis::CacheProducer *m_stateWriter;
-    Redis::CacheConsumer *m_stateReader;
+    Private *d;
 };
 
 } // namespace Modbus

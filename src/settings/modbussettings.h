@@ -7,75 +7,54 @@
 
 Q_DECLARE_METATYPE(QMetaType::Type)
 
-namespace Settings {
-    struct ChooseRegValueType {
+namespace Validator {
+    struct ByteWordOrder {
+        static bool validate(QVariant &value, const QVariantList &args, QVariant &state);
+    };
+    struct RegValueType {
         static bool validate(QVariant& value, const QVariantList &args, QVariant &state);
     };
-    struct ChooseRegisterTable {
+    struct RegisterTable {
         static bool validate(QVariant& value, const QVariantList &args, QVariant &state);
     };
-    using RequiredRegisterTable = Serializable::Validated<Required<QModbusDataUnit::RegisterType>>::With<ChooseRegisterTable>;
-    using RegisterValueType = Serializable::Validated<Required<QMetaType::Type>>::With<ChooseRegValueType>;
+}
 
-    struct RADAPTER_API ModbusQuery : SerializableSettings {
+namespace Settings {
+    using RequiredRegisterTable = ::Serializable::Validated<Required<QModbusDataUnit::RegisterType>>::With<Validator::RegisterTable>;
+    using RegisterValueType = ::Serializable::Validated<Required<QMetaType::Type>>::With<Validator::RegValueType>;
+
+    struct RADAPTER_API ModbusQuery : Serializable {
         Q_GADGET
         IS_SERIALIZABLE
         FIELD(RequiredRegisterTable, type)
         FIELD(Required<quint16>, reg_index)
         FIELD(Required<quint8>, reg_count)
-        typedef QMap<QString, QModbusDataUnit::RegisterType> Map;
     };
-    struct RADAPTER_API PackingMode : SerializableSettings {
+    struct RADAPTER_API PackingMode : Serializable {
         Q_GADGET
         IS_SERIALIZABLE
         FIELD(NonRequiredByteOrder, words, QDataStream::LittleEndian)
         FIELD(NonRequiredByteOrder, bytes, QDataStream::LittleEndian)
+
         PackingMode() = default;
-        PackingMode(QDataStream::ByteOrder words, QDataStream::ByteOrder bytes) :
-            words(words), bytes(bytes)
-        {}
+        PackingMode(QDataStream::ByteOrder words, QDataStream::ByteOrder bytes);
     };
 
-    struct RADAPTER_API ModbusDevice : SerializableSettings {
+    struct RADAPTER_API ModbusDevice : Serializable {
         typedef QMap<QString, ModbusDevice> Map;
         Q_GADGET
         IS_SERIALIZABLE
-        FIELD(HasDefault<TcpDevice>, tcp)
-        FIELD(HasDefault<SerialDevice>, rtu)
+        FIELD(Optional<TcpDevice>, tcp)
+        FIELD(Optional<SerialDevice>, rtu)
 
         QSharedPointer<Radapter::Sync::Channel> channel;
-
-        static const ModbusDevice &get(const QString &name) {
-            if (!table().contains(name)) throw std::invalid_argument("Missing Modbus Device: " + name.toStdString());
-            return table()[name];
-        }
-    protected:
-        static Map &table() {
-            static Map map{};
-            return map;
-        }
-        POST_UPDATE {
-            static QThread channelsThread;
-            if (!channel) channel.reset(new Radapter::Sync::Channel(&channelsThread));
-            channelsThread.start();
-            settingsParsingWarn().noquote() << "New " << print();
-            if (tcp->isValid() && rtu->isValid()) {
-                throw std::runtime_error("[Modbus Device] Both tcp and rtu device is prohibited! Use one");
-            } else if (!tcp->isValid() && !rtu->isValid()) {
-                throw std::runtime_error("[Modbus Device] Tcp or Rtu device not specified!");
-            }
-            table().insert(tcp->port ? tcp->name : rtu->name, *this);
-        }
+        void postUpdate() override;
     };
 
-    struct OrdersValidator {
-        static bool validate(QVariant &value, const QVariantList &args, QVariant &state);
-    };
-
-    struct RADAPTER_API RegisterInfo : SerializableSettings {
+    struct RADAPTER_API RegisterInfo : Serializable {
         Q_GADGET
         IS_SERIALIZABLE
-        using Orders = Serializable::Validated<HasDefault<PackingMode>>::With<OrdersValidator>;
+        using Orders = ::Serializable::Validated<HasDefault<PackingMode>>::With<Validator::ByteWordOrder>;
         FIELD(Orders, endianess)
         FIELD(RequiredRegisterTable, table)
         FIELD(Required<int>, index)
@@ -85,9 +64,6 @@ namespace Settings {
         FIELD(OptionalValidator, validator)
         void postUpdate() override;
     };
-    typedef QMap<QString /*reg:Name*/, RegisterInfo> Registers;
-    void RADAPTER_API parseRegisters(const QVariantMap &registersFile);
-
     struct RegisterCounts {
         quint16 coils{};
         quint16 di{};
@@ -95,7 +71,8 @@ namespace Settings {
         quint16 input_registers{};
     };
 
-    struct RADAPTER_API ModbusWorker : SerializableSettings {
+    //! Common Modbus worker params
+    struct RADAPTER_API ModbusWorker : Serializable {
         Q_GADGET
         IS_SERIALIZABLE
         FIELD(Required<Worker>, worker)
@@ -111,9 +88,9 @@ namespace Settings {
 
         ModbusDevice device{};
         RegisterCounts counts{};
-        Registers registers{};
+        QStringMap<RegisterInfo> registers{};
 
-        void init();
+        void postUpdate() override;
     };
 
     struct RADAPTER_API ModbusMaster : ModbusWorker {
@@ -129,8 +106,21 @@ namespace Settings {
         FIELD(Optional<QString>, state_reader)
 
         ModbusDevice device{};
-        Registers registers{};
-        void init();
+        QStringMap<RegisterInfo> registers{};
+        void postUpdate() override;
+    };
+
+    struct RADAPTER_API Registers : Serializable {
+        Q_GADGET
+        IS_SERIALIZABLE
+        FIELD(OptionalMapping<QVariantMap>, holding)
+        FIELD(OptionalMapping<QVariantMap>, holding_registers)
+        FIELD(OptionalMapping<QVariantMap>, input)
+        FIELD(OptionalMapping<QVariantMap>, input_registers)
+        FIELD(OptionalMapping<QVariantMap>, coils)
+        FIELD(OptionalMapping<QVariantMap>, discrete_inputs)
+        FIELD(OptionalMapping<QVariantMap>, di)
+        void postUpdate() override;
     };
 
 }

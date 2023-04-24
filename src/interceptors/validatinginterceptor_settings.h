@@ -1,11 +1,11 @@
 #ifndef VALIDATINGINTERCEPTOR_SETTINGS_H
 #define VALIDATINGINTERCEPTOR_SETTINGS_H
 
-#include "settings-parsing/serializablesettings.h"
+#include "settings-parsing/serializablesetting.h"
 #include <QRegularExpression>
 
 namespace Settings {
-struct ValidatingInterceptor : public SerializableSettings {
+struct ValidatingInterceptor : public Serializable {
     Q_GADGET
     IS_SERIALIZABLE
     FIELD(MappingHasDefault<QString>, by_field)

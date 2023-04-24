@@ -1,5 +1,5 @@
-#ifndef SERIALIZABLE_H
-#define SERIALIZABLE_H
+#ifndef SERIALIZABLEOBJECT_H
+#define SERIALIZABLEOBJECT_H
 
 #include "common_fields.hpp"
 
@@ -47,7 +47,9 @@ T *Object::as()
     return static_cast<T *>(as(&T::staticMetaObject));
 }
 
+#ifndef DOXYGEN
 #define POST_UPDATE virtual void postUpdate() override
+#endif
 
 template <typename T>
 T parseObject(const QVariantMap &source) {

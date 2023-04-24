@@ -1,21 +1,32 @@
 #include "producerfilter.h"
+#include "filters/producerfiltersettings.hpp"
 
-ProducerFilter::ProducerFilter(const Settings::Filters::Table &filters)
-    : Interceptor(),
-      m_strategy(StrategyStrict),
-      m_filters(filters),
-      m_last()
+using namespace Radapter;
+
+struct ProducerFilter::Private {
+    Settings::ProducerFilter settings;
+    ProducerFilter::Strategy strategy;
+    QMap<QString, double> all_fields;
+    Radapter::WorkerMsg last;
+};
+
+ProducerFilter::ProducerFilter(const Settings::ProducerFilter &settings) :
+    d(new Private)
 {
-    for (auto filter = m_filters.begin();
-         filter != m_filters.end();
-         filter++)
-    {
-        if (filter.key().contains("*")) {
-            m_wildcardFilters.insert(filter.key(), filter.value());
-            m_strategy = StrategyByWildcard;
-            break;
-        }
+    d->strategy = settings.by_wildcard->isEmpty() ? StrategyByWildcard : StrategyStrict;
+    for (auto [field, val] : settings.by_field) {
+        d->all_fields.insert(field, val);
     }
+}
+
+Radapter::Interceptor *ProducerFilter::newCopy() const
+{
+    return new ProducerFilter(d->settings);
+}
+
+ProducerFilter::~ProducerFilter()
+{
+    delete d;
 }
 
 void ProducerFilter::onMsgFromWorker(Radapter::WorkerMsg &msg)
@@ -25,24 +36,24 @@ void ProducerFilter::onMsgFromWorker(Radapter::WorkerMsg &msg)
         emit msgFromWorker(msg);
         return;
     }
-    if (m_strategy == StrategyByWildcard) {
+    if (d->strategy == StrategyByWildcard) {
         addFiltersByWildcard(msg);
     }
     filterStrictByName(msg);
-    m_last.merge(msg);
+    d->last.merge(msg);
 }
 
 void ProducerFilter::filterStrictByName(Radapter::WorkerMsg &srcMsg)
 {
-    if (m_last.isEmpty()) {
+    if (d->last.isEmpty()) {
         emit msgFromWorker(srcMsg);
     }
     bool shouldAdd = false;
     for (auto &item : srcMsg) {
         auto currentValue = item.value();
-        auto lastValue = m_last[item.key()];
+        auto lastValue = d->last[item.key()];
         auto currentKey = item.key().join(":");
-        if (!m_filters.contains(currentKey)) {
+        if (!d->all_fields.contains(currentKey)) {
             shouldAdd = true;
             break;
         }
@@ -50,7 +61,7 @@ void ProducerFilter::filterStrictByName(Radapter::WorkerMsg &srcMsg)
             shouldAdd = true;
             break;
         }
-        if (qAbs(currentValue.toDouble() - lastValue.toDouble()) > m_filters[currentKey]) {
+        if (qAbs(currentValue.toDouble() - lastValue.toDouble()) > d->all_fields[currentKey]) {
             shouldAdd = true;
             break;
         }
@@ -64,16 +75,14 @@ void ProducerFilter::addFiltersByWildcard(const JsonDict &cachedJson)
 {
     auto cachedKeys = cachedJson.flatten(":").keys();
     for (auto &key : cachedKeys) {
-        if (m_filters.contains(key)) {
+        if (d->all_fields.contains(key)) {
             continue;
         }
-        for (auto filter = m_wildcardFilters.begin();
-             filter != m_wildcardFilters.end();
-             filter++)
+        for (auto [glob, val]: d->settings.by_wildcard)
         {
-            auto wildcardKey = filter.key().split("*").first();
-            if (key.startsWith(wildcardKey)) {
-                m_filters.insert(key, filter.value());
+            auto globRe = QRegularExpression(QRegularExpression::wildcardToRegularExpression(glob));
+            if (globRe.globalMatch(key).isValid()) {
+                d->all_fields.insert(key, val);
             }
         }
     }

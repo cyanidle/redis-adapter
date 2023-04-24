@@ -10,72 +10,52 @@
 #include <QModbusDataUnit>
 #include <QTimeZone>
 #include "broker/workers/settings/workersettings.h"
-#include "settings-parsing/serializablesettings.h"
+#include "settings-parsing/serializablesetting.h"
 #include <QJsonDocument>
 
 Q_DECLARE_METATYPE(QTimeZone)
 Q_DECLARE_METATYPE(QDataStream::ByteOrder)
 
-namespace Settings {
-struct ByteOrderValidator {
-    typedef QMap<QString, QDataStream::ByteOrder> Map;
-    static bool validate(QVariant &src, const QVariantList &args, QVariant &state) {
-        Q_UNUSED(args)
-        Q_UNUSED(state)
-        static Map map{
-            {"little",  QDataStream::LittleEndian},
-            {"big",  QDataStream::BigEndian},
-            {"littleendian",  QDataStream::LittleEndian},
-            {"bigendian", QDataStream::BigEndian}
-        };
-        auto asStr = src.toString().toLower();
-        src.setValue(map.value(asStr));
-        return map.contains(asStr);
-    }
+namespace Validator {
+struct ByteOrder {
+    static bool validate(QVariant &src, const QVariantList &args, QVariant &state);
 };
-using NonRequiredByteOrder = Serializable::Validated<HasDefault<QDataStream::ByteOrder>>::With<ByteOrderValidator>;
 
-struct RADAPTER_API Pipelines : public SerializableSettings {
+struct TimeZone {
+    static bool validate(QVariant& target, const QVariantList &args, QVariant &state);
+};
+}
+
+namespace Settings {
+using NonRequiredByteOrder = ::Serializable::Validated<HasDefault<QDataStream::ByteOrder>>::With<Validator::ByteOrder>;
+using RequiredTimeZone = ::Serializable::Validated<Settings::Required<QTimeZone>>::With<Validator::TimeZone>;
+
+struct RADAPTER_API Pipelines : public Serializable
+{
     Q_GADGET
     IS_SERIALIZABLE
     FIELD(SequenceHasDefault<QString>, pipelines)
 };
 
-struct RADAPTER_API ServerInfo : public SerializableSettings {
+struct RADAPTER_API ServerInfo : public Serializable
+{
     Q_GADGET
     IS_SERIALIZABLE
     FIELD(Required<QString>, host)
     FIELD(Required<quint16>, port)
 };
 
-struct RADAPTER_API TcpDevice : public ServerInfo {
+struct RADAPTER_API TcpDevice : public ServerInfo
+{
     Q_GADGET
     IS_SERIALIZABLE
     FIELD(HasDefault<QString>, name)
-    typedef QMap<QString, TcpDevice> Map;
-    bool isValid () const {
-        return port > 0;
-    }
-    POST_UPDATE {
-        if (!name->isEmpty()) {
-            table().insert(name, *this);
-        }
-    }
-    static bool has(const QString &name) {
-        return table().contains(name);
-    }
-    static const TcpDevice &get(const QString &name) {
-        if (!table().contains(name)) throw std::invalid_argument("Missing TCP Device: " + name.toStdString());
-        return table()[name];
-    }
-protected:
-    static Map &table() {
-        static Map map{};
-        return map;
-    }
+
+    void postUpdate() override;
 };
 
-struct RADAPTER_API SerialDevice : SerializableSettings {
+struct RADAPTER_API SerialDevice : Serializable
+{
     Q_GADGET
     IS_SERIALIZABLE
     FIELD(Required<QString>, port_name)
@@ -86,27 +66,7 @@ struct RADAPTER_API SerialDevice : SerializableSettings {
     FIELD(HasDefault<int>, stop_bits, QSerialPort::OneStop)
     FIELD(NonRequiredByteOrder, byte_order, QDataStream::BigEndian)
 
-    typedef QMap<QString, SerialDevice> Map;
-    bool isValid () const {
-        return !port_name->isEmpty();
-    }
-    POST_UPDATE {
-        if (!name->isEmpty()) {
-            table().insert(name, *this);
-        }
-    }
-    static bool has(const QString &name) {
-        return table().contains(name);
-    }
-    static const SerialDevice &get(const QString &name) {
-        if (!table().contains(name)) throw std::invalid_argument("Missing SERIAL Device: " + name.toStdString());
-        return table()[name];
-    }
-protected:
-    static Map &table() {
-        static Map map{};
-        return map;
-    }
+    void postUpdate() override;
 };
 
 
@@ -118,21 +78,12 @@ struct RADAPTER_API SqlClientInfo : ServerInfo
     FIELD(Required<QString>, name)
     FIELD(Required<QString>, database)
     FIELD(Required<QString>, username)
-    POST_UPDATE {
-        table().insert(name, *this);
-    }
-    static const SqlClientInfo &get(const QString& name) {
-        if (!table().contains(name)) throw std::invalid_argument("Missing Sql Client with name: " + name.toStdString());
-        return table()[name];
-    }
-protected:
-    static Map& table() {
-        static Map map{};
-        return map;
-    }
+
+    void postUpdate() override;
+    static const SqlClientInfo &get(const QString& name);
 };
 
-struct RADAPTER_API SqlStorageInfo : SerializableSettings
+struct RADAPTER_API SqlStorageInfo : Serializable
 {
     Q_GADGET
     IS_SERIALIZABLE
@@ -143,34 +94,14 @@ struct RADAPTER_API SqlStorageInfo : SerializableSettings
     FIELD(Required<QString>, table_name)
 };
 
-struct RADAPTER_API Filters {
-    typedef QMap<QString /*filterName*/, double> Table;
-    typedef QMap<QString /*filterName*/, Table> TableMap;
-    static TableMap &table() {
-        static TableMap map{};
-        return map;
-    }
-};
-
-struct ValidateTimeZone {
-    static bool validate(QVariant& target, const QVariantList &args, QVariant &state) {
-        Q_UNUSED(args)
-        Q_UNUSED(state)
-        auto time_zone = QTimeZone(target.toString().toStdString().c_str());
-        target.setValue(time_zone);
-        return time_zone.isValid();
-    }
-};
-
-struct RADAPTER_API LocalizationInfo : SerializableSettings {
-    using RequiredTimeZone = Serializable::Validated<Required<QTimeZone>>::With<ValidateTimeZone>;
+struct RADAPTER_API LocalizationInfo : Serializable {
 
     Q_GADGET
     IS_SERIALIZABLE
     FIELD(RequiredTimeZone, time_zone)
 };
 
-struct RADAPTER_API WebsocketServer : SerializableSettings {
+struct RADAPTER_API WebsocketServer : Serializable {
     Q_GADGET
     IS_SERIALIZABLE
     FIELD(Required<Worker>, worker)
@@ -182,11 +113,7 @@ struct RADAPTER_API WebsocketServer : SerializableSettings {
     FIELD(HasDefault<QString>, name, "redis-adapter")
     FIELD(HasDefault<bool>, secure, false)
 
-    POST_UPDATE {
-        if (heartbeat_ms >= keepalive_time) {
-            throw std::runtime_error("Cannot have 'heartbeat_ms' bigger than 'keepalive_time'");
-        }
-    }
+    void postUpdate() override;
 };
 
 struct RADAPTER_API WebsocketClient : WebsocketServer {

@@ -2,14 +2,14 @@
 #define UDP_CONSUMER_H
 
 #include "broker/workers/worker.h"
-#include "settings-parsing/serializablesettings.h"
+#include "settings-parsing/serializablesetting.h"
 #include "settings/settings.h"
 #include <QUdpSocket>
 #include <QObject>
 
 namespace Udp {
 
-struct ConsumerSettings : Settings::SerializableSettings
+struct ConsumerSettings : Settings::Serializable
 {
     Q_GADGET
     IS_SERIALIZABLE

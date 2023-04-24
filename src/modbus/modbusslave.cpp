@@ -9,46 +9,55 @@
 using namespace Modbus;
 using namespace Radapter;
 
+struct Slave::Private {
+    Settings::ModbusSlave settings;
+    QTimer *reconnectTimer = nullptr;
+    QHash<QModbusDataUnit::RegisterType, QHash<int /*index*/, QString>> reverseRegisters;
+    QModbusServer *modbusDevice = nullptr;
+    JsonDict state;
+    std::atomic<bool> connected{false};
+};
+
 Slave::Slave(const Settings::ModbusSlave &settings, QThread *thread) :
     Worker(settings.worker, thread),
-    m_settings(settings),
-    m_reconnectTimer(new QTimer(this)),
-    m_reverseRegisters()
+    d(new Private)
 {
-    m_reconnectTimer->setInterval(settings.reconnect_timeout_ms);
-    m_reconnectTimer->setSingleShot(true);
-    m_reconnectTimer->callOnTimeout(this, &Slave::connectDevice);
+    d->settings = settings;
+    d->reconnectTimer = new QTimer(this);
+    d->reconnectTimer->setInterval(settings.reconnect_timeout_ms);
+    d->reconnectTimer->setSingleShot(true);
+    d->reconnectTimer->callOnTimeout(this, &Slave::connectDevice);
     connect(this->workerThread(), &QThread::started, this, &Slave::connectDevice);
-    if (settings.device.tcp->isValid()) {
-        modbusDevice = new QModbusTcpServer(this);
-        modbusDevice->setConnectionParameter(QModbusDevice::NetworkPortParameter, settings.device.tcp->port);
-        modbusDevice->setConnectionParameter(QModbusDevice::NetworkAddressParameter, settings.device.tcp->host);
+    if (settings.device.tcp.isValid()) {
+        d->modbusDevice = new QModbusTcpServer(this);
+        d->modbusDevice->setConnectionParameter(QModbusDevice::NetworkPortParameter, settings.device.tcp->port);
+        d->modbusDevice->setConnectionParameter(QModbusDevice::NetworkAddressParameter, settings.device.tcp->host);
     } else {
-        modbusDevice = new QModbusRtuSerialServer(this);
-        modbusDevice->setConnectionParameter(QModbusDevice::SerialPortNameParameter, settings.device.rtu->port_name);
-        modbusDevice->setConnectionParameter(QModbusDevice::SerialParityParameter, settings.device.rtu->parity);
-        modbusDevice->setConnectionParameter(QModbusDevice::SerialBaudRateParameter, settings.device.rtu->baud);
-        modbusDevice->setConnectionParameter(QModbusDevice::SerialDataBitsParameter, settings.device.rtu->data_bits);
-        modbusDevice->setConnectionParameter(QModbusDevice::SerialStopBitsParameter, settings.device.rtu->stop_bits);
+        d->modbusDevice = new QModbusRtuSerialServer(this);
+        d->modbusDevice->setConnectionParameter(QModbusDevice::SerialPortNameParameter, settings.device.rtu->port_name);
+        d->modbusDevice->setConnectionParameter(QModbusDevice::SerialParityParameter, settings.device.rtu->parity);
+        d->modbusDevice->setConnectionParameter(QModbusDevice::SerialBaudRateParameter, settings.device.rtu->baud);
+        d->modbusDevice->setConnectionParameter(QModbusDevice::SerialDataBitsParameter, settings.device.rtu->data_bits);
+        d->modbusDevice->setConnectionParameter(QModbusDevice::SerialStopBitsParameter, settings.device.rtu->stop_bits);
     }
-    modbusDevice->setServerAddress(settings.slave_id);
-    connect(modbusDevice, &QModbusServer::dataWritten,
+    d->modbusDevice->setServerAddress(settings.slave_id);
+    connect(d->modbusDevice, &QModbusServer::dataWritten,
             this, &Slave::onDataWritten);
-    connect(modbusDevice, &QModbusServer::stateChanged,
+    connect(d->modbusDevice, &QModbusServer::stateChanged,
             this, &Slave::onStateChanged);
-    connect(modbusDevice, &QModbusServer::errorOccurred,
+    connect(d->modbusDevice, &QModbusServer::errorOccurred,
             this, &Slave::onErrorOccurred);
     QModbusDataUnitMap regMap;
-    for (auto regIter = deviceRegisters().constBegin(); regIter != deviceRegisters().constEnd(); ++regIter) {
-        if (m_reverseRegisters[regIter->table].contains(regIter->index)) {
+    for (auto regIter = d->settings.registers.constBegin(); regIter != d->settings.registers.constEnd(); ++regIter) {
+        if (d->reverseRegisters[regIter->table].contains(regIter->index)) {
             throw std::invalid_argument("Register index collission on: " +
                                         regIter.key().toStdString() +
                                         "; With --> " +
-                                        m_reverseRegisters[regIter->table][regIter->index].toStdString() +
+                                        d->reverseRegisters[regIter->table][regIter->index].toStdString() +
                                         " (Table: "+ printTable(regIter->table).toStdString() +
                                         "; Register: " + QString::number(regIter->index).toStdString() + ")");
         }
-        m_reverseRegisters[regIter->table][regIter->index] = regIter.key();
+        d->reverseRegisters[regIter->table][regIter->index] = regIter.key();
     }
     workerDebug(this) << "Inserting Coils: Start: 0; Count: " << settings.counts.coils;
     regMap.insert(QModbusDataUnit::Coils, {QModbusDataUnit::Coils, 0, settings.counts.coils});
@@ -58,30 +67,31 @@ Slave::Slave(const Settings::ModbusSlave &settings, QThread *thread) :
     regMap.insert(QModbusDataUnit::InputRegisters, {QModbusDataUnit::InputRegisters, 0, settings.counts.input_registers});
     workerDebug(this) << "Inserting DI: Start: 0; Count: " << settings.counts.di;
     regMap.insert(QModbusDataUnit::DiscreteInputs, {QModbusDataUnit::DiscreteInputs, 0, settings.counts.di});
-    modbusDevice->setMap(regMap);
+    d->modbusDevice->setMap(regMap);
 }
 
 Slave::~Slave()
 {
     disconnectDevice();
+    delete d;
 }
 
 bool Slave::isConnected() const
 {
-    return m_connected;
+    return d->connected;
 }
 
 void Slave::connectDevice()
 {
-    if (!modbusDevice->connectDevice()) {
-        workerWarn(this) << ": Failed to connect: Attempt to reconnect to: " << m_settings.device.print();
-        m_reconnectTimer->start();
+    if (!d->modbusDevice->connectDevice()) {
+        workerWarn(this) << ": Failed to connect: Attempt to reconnect to: " << d->settings.device.print();
+        d->reconnectTimer->start();
     }
 }
 
 void Slave::disconnectDevice()
 {
-    modbusDevice->disconnectDevice();
+    d->modbusDevice->disconnectDevice();
 }
 
 void Slave::handleNewWords(QVector<quint16> &words, QModbusDataUnit::RegisterType table, int address, int size)
@@ -89,12 +99,12 @@ void Slave::handleNewWords(QVector<quint16> &words, QModbusDataUnit::RegisterTyp
     JsonDict diff;
     auto wordsData = words.data();
     for (int i = 0; i < size;) {
-        if (!m_reverseRegisters[table].contains(address + i)) {
+        if (!d->reverseRegisters[table].contains(address + i)) {
             ++i;
             continue;
         }
-        const auto &regString = m_reverseRegisters[table][address];
-        auto regInfo = deviceRegisters().value(regString);
+        const auto &regString = d->reverseRegisters[table][address + i];
+        const auto &regInfo = d->settings.registers[regString];
         auto sizeWords = QMetaType(regInfo.type).sizeOf()/2;
         if (i + sizeWords > size) {
             workerWarn(this) << "Insufficient size of value: " << sizeWords;
@@ -111,9 +121,9 @@ void Slave::handleNewWords(QVector<quint16> &words, QModbusDataUnit::RegisterTyp
             } else {
                 newValue = result;
             }
-            if (m_state[key] != newValue) {
+            if (d->state[key] != newValue) {
                 diff[key] = newValue;
-                m_state[key] = newValue;
+                d->state[key] = newValue;
             }
         } else {
             workerWarn(this) << "Modbus Slave error: Current adress: " << address + i;
@@ -131,16 +141,16 @@ void Slave::onDataWritten(QModbusDataUnit::RegisterType table, int address, int 
         bool ok = false;
         switch (table) {
         case QModbusDataUnit::Coils:
-            ok = modbusDevice->data(QModbusDataUnit::Coils, quint16(address + i), &(words[i]));
+            ok = d->modbusDevice->data(QModbusDataUnit::Coils, quint16(address + i), &(words[i]));
             break;
         case QModbusDataUnit::DiscreteInputs:
-            ok = modbusDevice->data(QModbusDataUnit::DiscreteInputs, quint16(address + i), &(words[i]));
+            ok = d->modbusDevice->data(QModbusDataUnit::DiscreteInputs, quint16(address + i), &(words[i]));
             break;
         case QModbusDataUnit::HoldingRegisters:
-            ok = modbusDevice->data(QModbusDataUnit::HoldingRegisters, quint16(address + i), &(words[i]));
+            ok = d->modbusDevice->data(QModbusDataUnit::HoldingRegisters, quint16(address + i), &(words[i]));
             break;
         case QModbusDataUnit::InputRegisters:
-            ok = modbusDevice->data(QModbusDataUnit::InputRegisters, quint16(address + i), &(words[i]));
+            ok = d->modbusDevice->data(QModbusDataUnit::InputRegisters, quint16(address + i), &(words[i]));
             break;
         default:
             workerWarn(this) << "Invalid data written: Adress: " << address + i << "; Table: " << printTable(table);
@@ -156,17 +166,17 @@ void Slave::onDataWritten(QModbusDataUnit::RegisterType table, int address, int 
 
 void Slave::onErrorOccurred(QModbusDevice::Error error)
 {
-    workerWarn(this) << "Error: " << m_settings.device.print() << "; Reason: " << error;
+    workerWarn(this) << "Error: " << d->settings.device.print() << "; Reason: " << error;
     disconnectDevice();
-    m_reconnectTimer->start();
+    d->reconnectTimer->start();
 }
 
 void Slave::onStateChanged(QModbusDevice::State state)
 {
     if (state == QModbusDevice::ConnectedState) {
-        m_connected = true;
+        d->connected = true;
     } else {
-        m_connected = false;
+        d->connected = false;
     }
     workerWarn(this) << "New state --> " << state;
 }
@@ -176,9 +186,9 @@ void Slave::onMsg(const Radapter::WorkerMsg &msg)
     QList<QModbusDataUnit> results;
     for (auto& iter : msg) {
         auto fullKeyJoined = iter.key().join(":");
-        if (m_settings.registers.contains(fullKeyJoined)) {
-            m_state[fullKeyJoined] = iter.value();
-            auto regInfo = m_settings.registers.value(fullKeyJoined);
+        if (d->settings.registers.contains(fullKeyJoined)) {
+            d->state[fullKeyJoined] = iter.value();
+            auto regInfo = d->settings.registers.value(fullKeyJoined);
             auto value = iter.value();
             if (Q_LIKELY(value.canConvert(QMetaType(regInfo.type)))) {
                 results.append(parseValueToDataUnit(value, regInfo));
@@ -188,7 +198,7 @@ void Slave::onMsg(const Radapter::WorkerMsg &msg)
         }
     }
     for (auto &item: mergeDataUnits(results)) {
-        modbusDevice->setData(item);
+        d->modbusDevice->setData(item);
     }
 }
 

@@ -263,7 +263,6 @@ private:
     friend JsonDict;
 };
 
-
 struct JsonDict::iterator : public iterator_base<QVariantMap> {
     using iterator_base::iterator_base;
     using iterator_base::operator!=;
@@ -284,9 +283,58 @@ private:
     friend JsonDict;
 };
 
+namespace std
+{
+template<>
+struct tuple_size<::JsonDict::iterator>
+{
+    static constexpr size_t value = 2;
+};
+template<>
+struct tuple_element<0, ::JsonDict::iterator>
+{
+    using type = QStringList;
+};
+
+template<>
+struct tuple_element<1, ::JsonDict::iterator>
+{
+    using type = QVariant&;
+};
+
+template<std::size_t Index>
+std::tuple_element_t<Index, ::JsonDict::iterator>& get(::JsonDict::iterator &iter)
+{
+    if constexpr (Index == 0) return iter.key();
+    if constexpr (Index == 1) return iter.value();
+}
+template<>
+struct tuple_size<::JsonDict::const_iterator>
+{
+    static constexpr size_t value = 2;
+};
+template<>
+struct tuple_element<0, ::JsonDict::const_iterator>
+{
+    using type = QStringList;
+};
+
+template<>
+struct tuple_element<1, ::JsonDict::const_iterator>
+{
+    using type = const QVariant&;
+};
+
+template<std::size_t Index>
+std::tuple_element_t<Index, ::JsonDict::const_iterator>& get(::JsonDict::const_iterator &iter)
+{
+    if constexpr (Index == 0) return iter.key();
+    if constexpr (Index == 1) return iter.value();
+}
+}
 
 template<typename MapT>
-QStringList JsonDict::iterator_base< MapT>::key() const {
+QStringList JsonDict::iterator_base<MapT>::key() const {
     if (historyEmpty()) {
         return {m_current.key()};
     }
@@ -446,15 +494,7 @@ QString JsonDict::iterator_base<MapT>::field() const {
 
 namespace Radapter {
     namespace literals {
-        inline JsonDict operator "" _json(const char* str, std::size_t n)
-        {
-            QJsonParseError err;
-            QJsonDocument doc = QJsonDocument::fromJson(QByteArray(str, static_cast<int>(n)), &err);
-            if (!doc.isObject() || err.error != QJsonParseError::NoError) {
-                throw std::runtime_error("Json Parse Error!");
-            }
-            return JsonDict::fromJsonObj(doc.object());
-        }
+        JsonDict operator "" _json(const char* str, std::size_t n);
     }
 }
 QDebug operator<<(QDebug dbg, const JsonDict &json);

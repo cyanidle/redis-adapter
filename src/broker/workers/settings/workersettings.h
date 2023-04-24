@@ -1,9 +1,9 @@
 #ifndef WORKERBASESETTINGS_H
 #define WORKERBASESETTINGS_H
 
-#include "settings-parsing/serializablesettings.h"
+#include "settings-parsing/serializablesetting.h"
 namespace Settings {
-struct RADAPTER_API Worker : public Settings::SerializableSettings
+struct RADAPTER_API Worker : public Settings::Serializable
 {
     Q_GADGET
     IS_SERIALIZABLE

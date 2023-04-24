@@ -1,10 +1,10 @@
 #ifndef BROKERSETTINGS_H
 #define BROKERSETTINGS_H
 
-#include "settings-parsing/serializablesettings.h"
+#include "settings-parsing/serializablesetting.h"
 
 namespace Settings {
-struct Broker : SerializableSettings
+struct Broker : Serializable
 {
     Q_GADGET
     IS_SERIALIZABLE

@@ -7,7 +7,7 @@
 
 namespace Udp {
 
-struct ProducerSettings : Settings::SerializableSettings
+struct ProducerSettings : Settings::Serializable
 {
     Q_GADGET
     IS_SERIALIZABLE

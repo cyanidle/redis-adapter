@@ -4,34 +4,15 @@
 
 using namespace Settings;
 using namespace Serializable;
-typedef QMap<QString /*deviceName*/, Registers> DevicesRegisters;
-Q_GLOBAL_STATIC(DevicesRegisters, allRegisters)
+typedef QMap<QString /*regName*/, RegisterInfo> DevicesRegisters;
+typedef QMap<QString /*deviceName*/, DevicesRegisters> AllRegisters;
+Q_GLOBAL_STATIC(AllRegisters, allRegisters)
+Q_GLOBAL_STATIC(QStringMap<ModbusDevice>, devicesMap)
 
-void Settings::parseRegisters(const QVariantMap &registersFile) {
-    auto parseRegisters = [&](const QVariantMap &src, const QVariant &toInsert) {
-        for (auto iter = src.begin(); iter != src.end(); ++iter) {
-            auto deviceName = iter.key();
-            const auto deviceRegs = JsonDict(iter.value());
-            for (auto &iter : deviceRegs) {
-                if (iter.field() == "index" && iter.value().canConvert<int>()) {
-                    auto regName = iter.domainKey().join(":");
-                    auto regInfo = *iter.domainMap();
-                    regInfo["table"] = toInsert;
-                    (*allRegisters)[deviceName][regName] = parseObject<RegisterInfo>(regInfo);
-                }
-            }
-        }
-    };
-    parseRegisters(registersFile["holding_registers"].toMap(), "holding");
-    parseRegisters(registersFile["input_registers"].toMap(), "input");
-    parseRegisters(registersFile["coils"].toMap(), "coils");
-    parseRegisters(registersFile["discrete_inputs"].toMap(), "discrete_inputs");
-}
-
-void ModbusSlave::init() {
+void ModbusSlave::postUpdate() {
     for (auto &name: register_names) {
         auto toMerge = (*allRegisters).value(name.replace('.', ':'));
-        for (auto newRegisters = toMerge.begin(); newRegisters != toMerge.end(); ++newRegisters) {
+        for (auto newRegisters = toMerge.cbegin(); newRegisters != toMerge.cend(); ++newRegisters) {
             auto name = newRegisters.key();
             auto &reg = newRegisters.value();
             if (registers.contains(name)) {
@@ -62,10 +43,10 @@ void ModbusSlave::init() {
     if (registers.isEmpty()) {
         throw std::runtime_error("Empty registers for Mb Slave! Available: " + allRegisters->keys().join(", ").toStdString());
     }
-    device = Settings::ModbusDevice::get(device_name);
+    device = devicesMap->value(device_name);
 }
 
-void ModbusMaster::init()
+void ModbusMaster::postUpdate()
 {
     for (auto &name: register_names) {
         auto toMerge = (*allRegisters).value(name.replace('.', ':'));
@@ -81,10 +62,10 @@ void ModbusMaster::init()
             registers[name] = reg;
         }
     }
-    device = Settings::ModbusDevice::get(device_name);
+    device = devicesMap->value(device_name);
 }
 
-bool OrdersValidator::validate(QVariant &value, const QVariantList &args, QVariant &state)
+bool Validator::ByteWordOrder::validate(QVariant &value, const QVariantList &args, QVariant &state)
 {
     Q_UNUSED(args)
     Q_UNUSED(state)
@@ -117,7 +98,7 @@ void RegisterInfo::postUpdate()
     }
 }
 
-bool ChooseRegValueType::validate(QVariant &value, const QVariantList &args, QVariant &state) {
+bool Validator::RegValueType::validate(QVariant &value, const QVariantList &args, QVariant &state) {
     Q_UNUSED(args)
     Q_UNUSED(state)
     static QMap<QString, QMetaType::Type>
@@ -132,7 +113,7 @@ bool ChooseRegValueType::validate(QVariant &value, const QVariantList &args, QVa
     return map.contains(asStr);
 }
 
-bool ChooseRegisterTable::validate(QVariant &value, const QVariantList &args, QVariant &state) {
+bool Validator::RegisterTable::validate(QVariant &value, const QVariantList &args, QVariant &state) {
     Q_UNUSED(args)
     Q_UNUSED(state)
     static QMap<QString, QModbusDataUnit::RegisterType>
@@ -148,4 +129,49 @@ bool ChooseRegisterTable::validate(QVariant &value, const QVariantList &args, QV
     auto asStr = value.toString().toLower();
     value.setValue(map.value(asStr));
     return map.contains(asStr);
+}
+
+PackingMode::PackingMode(QDataStream::ByteOrder words, QDataStream::ByteOrder bytes) :
+    words(words), bytes(bytes)
+{}
+
+
+void ModbusDevice::postUpdate() {
+    static QThread channelsThread;
+    if (!channel) channel.reset(new Radapter::Sync::Channel(&channelsThread));
+    channelsThread.start();
+    settingsParsingWarn().noquote() << "New " << print();
+    if (tcp.isValid() && rtu.isValid()) {
+        throw std::runtime_error("[Modbus Device] Both tcp and rtu device is prohibited! Use one");
+    } else if (!tcp.isValid() && !rtu.isValid()) {
+        throw std::runtime_error("[Modbus Device] Tcp or Rtu device not specified!");
+    }
+    devicesMap->insert(tcp->port ? tcp->name : rtu->name, *this);
+}
+
+void Registers::postUpdate()
+{
+    auto parseRegisters = [&](const QString &deviceName, const QVariantMap &regs, const QVariant &toInsert) {
+        const auto deviceRegs = JsonDict(regs);
+        for (auto &iter : deviceRegs) {
+            if (iter.field() == "index" && iter.value().canConvert<int>()) {
+                auto regName = iter.domainKey().join(":");
+                auto regInfo = *iter.domainMap();
+                regInfo["table"] = toInsert;
+                (*allRegisters)[deviceName][regName] = parseObject<RegisterInfo>(regInfo);
+            }
+        }
+    };
+    auto parse = [&](const QMap<QString, QVariantMap> &mapping, const QVariant &toInsert) {
+        for (auto iter = mapping.cbegin(); iter != mapping.cend(); ++iter) {
+            parseRegisters(iter.key(), iter.value(), toInsert);
+        }
+    };
+    parse(holding, "holding");
+    parse(holding_registers, "holding");
+    parse(input, "input");
+    parse(input_registers, "input");
+    parse(coils, "coils");
+    parse(di, "discrete_inputs");
+    parse(discrete_inputs, "discrete_inputs");
 }

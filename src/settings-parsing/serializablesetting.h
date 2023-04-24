@@ -2,7 +2,7 @@
 #define SETTINGS_SERIALIZABLESETTINGS_H
 
 #include <QJsonDocument>
-#include "serializable/serializable.h"
+#include "serializable/serializableobject.h"
 #include "serializable/validated.hpp"
 #include "validators/common_validators.h"
 #include "validators/validator_fetch.h"
@@ -72,14 +72,14 @@ using OptionalValidator = Option<RequiredValidator>;
 using RequiredLogLevel = Serializable::Validated<Required<QtMsgType>>::With<Validator::LogLevel>;
 using NonRequiredLogLevel = MarkHasDefault<RequiredLogLevel>;
 
-struct SerializableSettings : public Serializable::Object
+struct Serializable : public ::Serializable::Object
 {
     Q_GADGET
 public:
     QString print() const;
     virtual bool update(const QVariantMap &src) override;
     void allowExtra(bool state = true);
-    SerializableSettings();
+    Serializable();
 protected:
     void checkForExtra(const QVariantMap &src);
     void processField(const QString &name, const QVariant &newValue);

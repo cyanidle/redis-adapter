@@ -2,7 +2,7 @@
 #define LOGGINGINTERCEPTORSETTINGS_H
 
 #include <QJsonDocument>
-#include "settings-parsing/serializablesettings.h"
+#include "settings-parsing/serializablesetting.h"
 #include "private/global.h"
 #include "workersettings.h"
 #include "settings-parsing/settings_validators.h"
@@ -24,7 +24,7 @@ struct RADAPTER_API LoggingWorker : public Worker
     Q_ENUM(LogMsgTypes)
     FIELD(Settings::Required<QString>, filepath)
     FIELD(Settings::HasDefault<QString>, log, "normal")
-    using NonRequiredJsonFormat = Serializable::Validated<Settings::HasDefault<QJsonDocument::JsonFormat>>::With<Settings::ChooseJsonFormat>;
+    using NonRequiredJsonFormat = ::Serializable::Validated<Settings::HasDefault<QJsonDocument::JsonFormat>>::With<Settings::ChooseJsonFormat>;
     FIELD(NonRequiredJsonFormat, format, QJsonDocument::Indented)
     FIELD(HasDefault<quint32>, reopen_each, 3000)
 

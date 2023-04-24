@@ -3,21 +3,16 @@
 #include "settings.h"
 
 namespace Settings {
+
     struct RADAPTER_API RedisServer : ServerInfo {
-        typedef QMap<QString, RedisServer> Map;
-        static Map &cacheMap() {
-            static Map map{};
-            return map;
-        }
         Q_GADGET
         IS_SERIALIZABLE
         FIELD(Required<QString>, name)
-        POST_UPDATE {
-            cacheMap().insert(name, *this);
-        }
+
+        void postUpdate() override;
     };
 
-    struct RADAPTER_API RedisConnector : Settings::SerializableSettings {
+    struct RADAPTER_API RedisConnector : Serializable {
         Q_GADGET
         IS_SERIALIZABLE
         FIELD(Required<Worker>, worker)
@@ -30,9 +25,7 @@ namespace Settings {
         FIELD(HasDefault<quint16>, command_timeout, 150)
 
         RedisServer server;
-        POST_UPDATE {
-            server = RedisServer::cacheMap().value(server_name);
-        }
+        void postUpdate() override;
     };
 
     struct RADAPTER_API RedisKeyEventSubscriber : RedisConnector {
@@ -55,9 +48,9 @@ namespace Settings {
             StartFromFirst
         };
         Q_ENUM(StartMode)
-
         static bool validate(QVariant &target, const QVariantList &args, QVariant &state);
-        using StartFrom = Serializable::Validated<HasDefault<StartMode>>::With<RedisStreamConsumer>;
+        using StartFrom = ::Serializable::Validated<HasDefault<StartMode>>::With<RedisStreamConsumer>;
+
         Q_GADGET
         IS_SERIALIZABLE
         FIELD(StartFrom, start_from, StartPersistentId)

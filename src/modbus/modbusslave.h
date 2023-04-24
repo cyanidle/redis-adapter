@@ -13,6 +13,7 @@ namespace Modbus {
 class RADAPTER_API Slave : public Radapter::Worker
 {
     Q_OBJECT
+    struct Private;
 public:
     Slave(const Settings::ModbusSlave &settings, QThread *thread);
     ~Slave();
@@ -24,18 +25,11 @@ private slots:
     void onErrorOccurred(QModbusDevice::Error error);
     void onStateChanged(QModbusDevice::State state);
 private:
-    Settings::Registers &deviceRegisters() {return m_settings.registers;}
     void connectDevice();
     void disconnectDevice();
-    const Settings::ModbusSlave &config() const {return m_settings;}
     void handleNewWords(QVector<quint16> &words, QModbusDataUnit::RegisterType table, int address, int size);
 
-    Settings::ModbusSlave m_settings;
-    QTimer *m_reconnectTimer = nullptr;
-    QHash<QModbusDataUnit::RegisterType, QHash<int /*index*/, QString>> m_reverseRegisters;
-    QModbusServer *modbusDevice = nullptr;
-    JsonDict m_state;
-    std::atomic<bool> m_connected{false};
+    Private *d;
 };
 
 } // namespace Modbus

@@ -49,3 +49,5 @@ log/
 
 GIT_COMMIT
 VERSION
+
+doxygen/

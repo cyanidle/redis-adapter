@@ -1,11 +1,11 @@
 #ifndef DUPLICATINGINTERSEPTOR_SETTINGS_H
 #define DUPLICATINGINTERSEPTOR_SETTINGS_H
 
-#include "settings-parsing/serializablesettings.h"
+#include "settings-parsing/serializablesetting.h"
 
 namespace Settings {
 
-struct DuplicatingInterceptor : public SerializableSettings {
+struct DuplicatingInterceptor : public Serializable {
     Q_GADGET
     IS_SERIALIZABLE
     FIELD(RequiredMapping<QStringList>, by_field)
