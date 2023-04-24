@@ -26,6 +26,7 @@ struct RADAPTER_API LoggingWorker : public Worker
     FIELD(Settings::HasDefault<QString>, log, "normal")
     using NonRequiredJsonFormat = Serializable::Validated<Settings::HasDefault<QJsonDocument::JsonFormat>>::With<Settings::ChooseJsonFormat>;
     FIELD(NonRequiredJsonFormat, format, QJsonDocument::Indented)
+    FIELD(HasDefault<quint32>, reopen_each, 3000)
 
     LogMsgs log_{LogNormal};
 protected:

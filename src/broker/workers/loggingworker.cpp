@@ -1,5 +1,5 @@
 #include "loggingworker.h"
-#include "broker/workers/loggingworkersettings.h"
+#include "settings/loggingworkersettings.h"
 #include "broker/workers/private/workermsg.h"
 #include "jsondict/jsondict.h"
 #include "radapterlogging.h"
@@ -18,13 +18,15 @@ struct Radapter::LoggingWorkerPrivate
 {
     QFile *file;
     Settings::LoggingWorker settings;
+    quint32 logsCount;
 };
 
 LoggingWorker::LoggingWorker(const Settings::LoggingWorker &settings, QThread *thread) :
     Radapter::Worker(settings, thread),
     d(new LoggingWorkerPrivate{
         new QFile(this),
-        settings
+        settings,
+        0
     })
 {
     QDir().mkpath(settings.filepath->left(settings.filepath->lastIndexOf("/")));
@@ -74,6 +76,10 @@ void LoggingWorker::appendToFile(const JsonDict &info)
     QTextStream out(d->file);
     out << info.toBytes(d->settings.format) << ",";
     Qt::endl(out);
+    if (++d->logsCount > d->settings.reopen_each) {
+        d->logsCount = 0;
+        d->file->close();
+    }
 }
 
 bool LoggingWorker::testMsgForLog(const Radapter::WorkerMsg &msg) {
