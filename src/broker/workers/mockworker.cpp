@@ -4,7 +4,7 @@
 #include "broker/workers/private/workermsg.h"
 #include "private/global.h"
 #include "radapterlogging.h"
-#include "mockworkersettings.h"
+#include "settings/mockworkersettings.h"
 
 using namespace Radapter;
 

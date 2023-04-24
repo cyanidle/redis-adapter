@@ -5,7 +5,7 @@
 #include <QThread>
 #include <QMutex>
 #include "broker/interceptor/interceptor.h"
-#include "workersettings.h"
+#include "settings/workersettings.h"
 #include "radapterlogging.h"
 #include "private/workerproxy.h"
 #include "routed_object/routed_object.h"
