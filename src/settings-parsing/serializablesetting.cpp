@@ -95,7 +95,7 @@ QVariant Serializable::printExamplePlain(const ::Serializable::FieldConcept *fie
        {"QString", "String"},
        {"QMap", "Map"},
        {"QList", "List"},
-       {"QStringList", "List<String>"},
+       {"QStringList", "StringList"},
        {"QVariantMap", "Map<String, Any>"},
        {"QVariantList", "List<Any>"},
        {"QVariant", "Any"},

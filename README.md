@@ -1,3 +1,8 @@
+## Генерация примера конфигурации
+```bash
+./redis-adapter --dump-config-example > config.yaml.example
+```
+
 ## Сборка Docker-контейнера
 ```bash
 docker build --load --platform=linux/amd64 --build-arg TARGET_DEVICE=amd64 --build-arg JOBS=<потоков на сборку> -t rsk39.tech/redis-adapter:<тэг версии>-amd64 .
