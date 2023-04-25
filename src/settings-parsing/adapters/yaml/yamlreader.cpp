@@ -43,3 +43,28 @@ QVariant YamlReader::getAll()
     setPath(pathWas);
     return result.toVariant();
 }
+
+QString YamlReader::format(const QVariant &data) const
+{
+    auto node = Node(data);
+    node.SetStyle(EmitterStyle::Block);
+    std::stringstream str;
+    str << node;
+    auto res = QString::fromStdString(str.str());
+    return res;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

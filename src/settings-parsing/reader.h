@@ -14,6 +14,7 @@ public:
 
     QVariant operator[](const QString &key);
     virtual QVariant get(const QString &key) = 0;
+    virtual QString format(const QVariant &data) const = 0;
     virtual QVariant getAll() = 0;
 
     const QString &resource() const;

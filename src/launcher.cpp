@@ -149,32 +149,40 @@ void Launcher::parseCommandlineArgs()
     if (QCoreApplication::applicationVersion().isEmpty()) {
         QCoreApplication::setApplicationVersion(RADAPTER_VERSION);
     }
-    d->argsParser.addHelpOption();
-    d->argsParser.addVersionOption();
     d->argsParser.addOptions({
                   {{"d", "directory"},
-                    "Config will be read from <directory>. (default: ./conf)", "directory", "conf"},
+                    "Config will be read from <directory> (default: $(pwd)/conf).", "directory", "conf"},
                   {{"p", "parser"},
-                    "Config will be read from .<parser_format> files. (available: yaml) (default: yaml)", "parser", "yaml"},
+                    "Config will be read from <.parser_format> files (available: yaml) (default: yaml).", "parser", "yaml"},
                   {{"f", "file"},
-                    "File to read settings from. (default: <directory>/config.<parser-extension>)", "file", "config"},
+                    "File to read settings from (default: <directory>/config.<parser-extension>).", "file", "config"},
                   {{QString("plugins-dir")},
-                    "Directory with plugins. (default: ./plugins)", "plugins-dir", "plugins"},
+                    "Directory with plugins (default: $(pwd)/plugins).", "plugins-dir", "plugins"},
                   {{"c", "config-key"},
-                   "Subkey of Settings::AppConfig. (default: ''(root))", "config-key", ""},
+                   "Subkey of Settings::AppConfig (default: ''(root)).", "config-key", ""},
+                  {QString{"dump-config-example"},
+                   "Write config example to stdout."},
                   });
+    d->argsParser.addHelpOption();
+    d->argsParser.addVersionOption();
     d->argsParser.process(*QCoreApplication::instance());
     d->configsResource = d->argsParser.value("directory");
     d->configsFormat = d->argsParser.value("parser");
     d->pluginsPath = d->argsParser.value("plugins-dir");
     d->file = d->argsParser.value("file");
     d->configKey = d->argsParser.value("config-key");
+    auto isExamplesMode = d->argsParser.isSet("dump-config-example");
     if (d->configsFormat == "yaml") {
         d->reader = new Settings::YamlReader(d->configsResource, d->file, this);
     } else {
         throw std::runtime_error("Invalid configs format: " + d->configsFormat.toStdString() + "; Can be (toml/yaml)");
     }
-    settingsParsingWarn() << "Using parser:" << d->configsFormat;
+    if (isExamplesMode) {
+        QTextStream(stdout) << d->reader->format(config().printExample());
+        std::exit(0);
+    } else {
+        settingsParsingWarn() << "Using parser:" << d->configsFormat;
+    }
 }
 
 Broker *Launcher::broker() const

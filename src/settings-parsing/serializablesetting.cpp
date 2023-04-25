@@ -74,10 +74,105 @@ bool Serializable::update(const QVariantMap &src)
         throw std::runtime_error(err.what()
                                  + std::string("\n# in ") + metaObject()->className()
                                  + std::string(" (")
-                                 + allFields.toStdString() + ")");
+                                 + allFields.toStdString() + ')');
     }
     postUpdate();
     return true;
+}
+
+QVariant Serializable::printExample(const ::Serializable::FieldConcept *field) const
+{
+    if (field->isNested(this)) {
+        return printExampleNested(field);
+    } else {
+        return printExamplePlain(field);
+    }
+}
+
+QVariant Serializable::printExamplePlain(const ::Serializable::FieldConcept *field) const
+{
+    static QMap<QString, QString> knownConversions{
+       {"QString", "String"},
+       {"QMap", "Map"},
+       {"QList", "List"},
+       {"QStringList", "List<String>"},
+       {"QVariantMap", "Map<String, Any>"},
+       {"QVariantList", "List<Any>"},
+       {"QVariant", "Any"},
+    };
+    auto prepareTypeName = [&](QString &name) {
+        for (auto iter = knownConversions.cbegin(); iter != knownConversions.cend(); ++iter) {
+            name.replace(iter.key(), iter.value());
+        }
+        return name;
+    };
+    if (field->isSequence(this)) {
+        auto typeName = field->typeName(this);
+        auto res = QStringLiteral("[<value>, <%1>...]").arg(prepareTypeName(typeName));
+        QVariantList result{res};
+        return result;
+    } else if (field->isMapping(this)) {
+        auto typeName = field->typeName(this);
+        auto res = QStringLiteral("{<string>: <%1>...}").arg(prepareTypeName(typeName));
+        QVariantMap result{{"<string>", res}};
+        return result;
+    } else {
+        auto data = field->readVariant(this).toString();
+        auto typeName = QStringLiteral("<%1>").arg(field->typeName(this));
+        return prepareTypeName(typeName) + ' ' + '(' + data + ')';
+    }
+}
+
+QVariant Serializable::printExampleNested(const ::Serializable::FieldConcept *field) const
+{
+    auto getFromNested = [&](const ::Serializable::Object *asObj) {
+        auto asSetting = asObj->as<Settings::Serializable>();
+        if (!asSetting) {
+            settingsParsingWarn()
+                << "### Non Settings::Serializable used as FIELD()! Who:"
+                << metaObject()->className()
+                << "; Field:" << field->introspect(this).asObject()->metaObject()->className();
+            return QVariant{"Error"};
+        } else {
+            return QVariant(asSetting->printExample());
+        }
+    };
+    if (field->isSequence(this)) {
+        auto list = field->introspect(this).asObjectsList();
+        QScopedPointer<Serializable::Object> ptr;
+        if (list.isEmpty()) {
+            ptr.reset(field->constructNested(this));
+            list.append(ptr.data());
+        }
+        QVariantList result;
+        for (auto &iter: list) {
+            result.append(getFromNested(iter));
+        }
+        return result;
+    } else if (field->isMapping(this)) {
+        auto map = field->introspect(this).asObjectsMap();
+        QScopedPointer<Serializable::Object> ptr;
+        if (map.isEmpty()) {
+            ptr.reset(field->constructNested(this));
+            map.insert("<name>", ptr.data());
+        }
+        QVariantMap result;
+        for (auto iter = map.cbegin(); iter != map.cend(); ++iter) {
+            result.insert(iter.key(), getFromNested(iter.value()));
+        }
+        return result;
+    } else {
+        return getFromNested(field->introspect(this).asObject());
+    }
+}
+
+QVariantMap Serializable::printExample() const
+{
+    QVariantMap result;
+    for (auto &name: fields()) {
+        result.insert(name, printExample(field(name)));
+    }
+    return result;
 }
 
 void Serializable::allowExtra(bool state)

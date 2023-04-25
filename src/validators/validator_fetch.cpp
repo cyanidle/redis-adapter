@@ -13,6 +13,7 @@ Q_GLOBAL_STATIC(QRecursiveMutex, staticMutex)
 
 Validator::Function Validator::fetchFunction(const QLatin1String &name)
 {
+    QMutexLocker lock(&(*staticMutex));
     return allValidators->value(QString(name).toLower());
 }
 

@@ -22,12 +22,10 @@ bool Object::update(const QVariantMap &source)
     bool wasUpdated = false;
     for (auto iter = source.cbegin(); iter != source.cend(); ++iter) {
         if (auto found = _priv_allFields().value(iter.key())) {
-            wasUpdated = found->updateWithVariant(this, iter.value()) || wasUpdated; // stays true once set
-        } else {
-            wasUpdated = wasUpdated || false;
+            wasUpdated |= found->updateWithVariant(this, iter.value()); // stays true once set
         }
     }
-    return wasUpdated; // --> was updated? true/false
+    return wasUpdated;
 }
 
 QVariantMap Object::serialize() const

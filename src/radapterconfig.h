@@ -1,4 +1,4 @@
-#ifndef RADAPTERCONFIG_H
+ #ifndef RADAPTERCONFIG_H
 #define RADAPTERCONFIG_H
 
 #include "broker/workers/settings/loggingworkersettings.h"

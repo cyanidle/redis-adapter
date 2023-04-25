@@ -32,7 +32,13 @@ struct convert<QVariant>
 {
     static Node encode(const QVariant& rhs)
     {
-        return Node(rhs.toString().toStdString());
+        if (rhs.typeId() == QMetaType::QVariantMap) {
+            return Node(rhs.toMap());
+        } else if (rhs.typeId() == QMetaType::QVariantList) {
+            return Node(rhs.toList());
+        } else {
+            return Node(rhs.toString().toStdString());
+        }
     }
 
     static bool decode(const Node& node, QVariant& rhs)
@@ -188,6 +194,34 @@ struct convert<QStringList>
         while (it != node.end())
         {
             rhs.push_back(it->as<QString>());
+            ++it;
+        }
+        return true;
+    }
+};
+// QVariantList
+template<>
+struct convert<QVariantList>
+{
+    static Node encode(const QVariantList& rhs)
+    {
+        Node node(NodeType::Sequence);
+        for (const auto &value: rhs) {
+            node.push_back(Node(value));
+        }
+        return node;
+    }
+
+    static bool decode(const Node& node, QVariantList& rhs)
+    {
+        if (!node.IsSequence())
+            return false;
+
+        rhs.clear();
+        const_iterator it = node.begin();
+        while (it != node.end())
+        {
+            rhs.push_back(it->as<QVariant>());
             ++it;
         }
         return true;
