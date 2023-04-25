@@ -18,6 +18,17 @@ QMap<QString, T> convertQMap(const QVariantMap &src)
     return result;
 }
 template<typename T>
+QVariantMap convertToQMap(const QMap<QString, T> &src)
+{
+    static_assert(QMetaTypeId2<T>::Defined, "Convertion to non-registered type prohibited!");
+    QVariantMap result;
+    for (auto iter = src.constBegin(); iter != src.constEnd(); ++iter) {
+        result.insert(iter.key(), QVariant::fromValue(iter.value()));
+    }
+    return result;
+}
+
+template<typename T>
 QList<T> convertQList(const QVariantList &src)
 {
     static_assert(QMetaTypeId2<T>::Defined, "Convertion to non-registered type prohibited!");

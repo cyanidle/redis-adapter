@@ -14,24 +14,40 @@ Serializable::NestedIntrospection::NestedIntrospection(const QMap<QString, Objec
 {}
 
 Serializable::Object *Serializable::NestedIntrospection::asObject() {
-    return m_currentType == TypeObject ? m_data.value<Object*>() : nullptr;
+
+    if (m_currentType != TypeObject) {
+        throw std::runtime_error("Field introspection type missmatch!");
+    }
+    return m_data.value<Object*>();
 }
 
 QList<Serializable::Object *> Serializable::NestedIntrospection::asObjectsList() {
-    return m_currentType == TypeSequence ? m_data.value<QList<Object*>>() : QList<Object*>();
+
+    if (m_currentType != TypeSequence) {
+        throw std::runtime_error("Field introspection type missmatch!");
+    }
+    return m_data.value<QList<Object*>>();
 }
 
 QMap<QString, Serializable::Object *> Serializable::NestedIntrospection::asObjectsMap() {
-    return m_currentType == TypeMapping ? m_data.value<QMap<QString, Object*>>() : QMap<QString, Object*>();
+
+    if (m_currentType != TypeMapping) {
+        throw std::runtime_error("Field introspection type missmatch!");
+    }
+    return m_data.value<QMap<QString, Object*>>();
 }
 
 const Serializable::Object *Serializable::NestedIntrospection::asObject() const {
-    return m_currentType == TypeObject ? m_data.value<Object*>() : nullptr;
+
+    if (m_currentType != TypeObject) {
+        throw std::runtime_error("Field introspection type missmatch!");
+    }
+    return m_data.value<Object*>();
 }
 
 QList<const Serializable::Object *> Serializable::NestedIntrospection::asObjectsList() const {
     if (m_currentType != TypeSequence) {
-        return {};
+        throw std::runtime_error("Field introspection type missmatch!");
     }
     auto objsList = m_data.value<QList<Object*>>();
     return QList<const Object*>{objsList.begin(), objsList.end()};
@@ -39,7 +55,7 @@ QList<const Serializable::Object *> Serializable::NestedIntrospection::asObjects
 
 QMap<QString, const Serializable::Object *> Serializable::NestedIntrospection::asObjectsMap() const {
     if (m_currentType != TypeMapping) {
-        return {};
+        throw std::runtime_error("Field introspection type missmatch!");
     }
     QMap<QString, const Object*> result;
     auto objsMap = m_data.value<QMap<QString, Object*>>();
