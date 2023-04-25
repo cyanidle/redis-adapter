@@ -25,7 +25,7 @@ public:
 protected:
     virtual void postUpdate(){};
 private:
-    virtual const QMap<QString, QSharedPointer<FieldConcept>> &_priv_allFields() const = 0;
+    virtual const QMap<QString, FieldConcept*> &_priv_allFields() const = 0;
     virtual const QList<QString> &_priv_allFieldsNamesCached() const = 0;
 };
 
@@ -47,9 +47,7 @@ T *Object::as()
     return static_cast<T *>(as(&T::staticMetaObject));
 }
 
-#ifndef DOXYGEN
 #define POST_UPDATE virtual void postUpdate() override
-#endif
 
 template <typename T>
 T parseObject(const QVariantMap &source) {

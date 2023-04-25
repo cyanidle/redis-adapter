@@ -41,11 +41,10 @@ void check_type() {
     static_assert(isQGadget, "Must use Q_GADGET macro!");
 }
 QStringList fieldNamesHelper(const Object *who);
-QMap<QString, QSharedPointer<FieldConcept>> fieldsHelper(const Object *who);
+QMap<QString, FieldConcept *> fieldsHelper(const Object *who);
 }
 }
 
-#ifndef DOXYGEN
 #define FIELD(field_type, name, ...) \
     public: field_type name {__VA_ARGS__}; \
     private: \
@@ -74,8 +73,8 @@ static_assert(is_wrapped, "Dont use raw types in FIELD() macro"); \
         static QStringList fieldsNames{::Serializable::Private::fieldNamesHelper(this)}; \
         return fieldsNames; \
     } \
-    virtual const QMap<QString, QSharedPointer<::Serializable::FieldConcept>> &_priv_allFields() const override { \
-        static QMap<QString, QSharedPointer<::Serializable::FieldConcept>> result{::Serializable::Private::fieldsHelper(this)}; \
+    virtual const QMap<QString, ::Serializable::FieldConcept*> &_priv_allFields() const override { \
+        static QMap<QString, ::Serializable::FieldConcept*> result{::Serializable::Private::fieldsHelper(this)}; \
         return result; \
     } \
     public: \
@@ -83,6 +82,5 @@ static_assert(is_wrapped, "Dont use raw types in FIELD() macro"); \
         ::Serializable::Private::check_type<THIS_TYPE>(); \
         return &this->staticMetaObject; \
     };
-#endif
 
 #endif // SERIALIZER_H

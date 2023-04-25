@@ -18,17 +18,17 @@
 
 namespace Settings {
 
-struct Udp : public Serializable {
+struct UdpSockets : public Serializable {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(OptionalSequence<::Udp::ProducerSettings>, producers)
-    FIELD(OptionalSequence<::Udp::ConsumerSettings>, consumers)
+    FIELD(OptionalSequence<Udp::ProducerSettings>, producers)
+    FIELD(OptionalSequence<Udp::ConsumerSettings>, consumers)
 };
 
 struct Sockets : public Serializable {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(Optional<Udp>, udp)
+    FIELD(Optional<UdpSockets>, udp)
 };
 
 struct Interceptors : public Serializable {

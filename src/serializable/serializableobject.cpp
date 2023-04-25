@@ -4,12 +4,12 @@ using namespace Serializable;
 
 FieldConcept *Object::field(const QString &fieldName)
 {
-    return _priv_allFields().value(fieldName).data();
+    return _priv_allFields().value(fieldName);
 }
 
 const FieldConcept *Object::field(const QString &fieldName) const
 {
-    return _priv_allFields().value(fieldName).data();
+    return _priv_allFields().value(fieldName);
 }
 
 const QList<QString> &Object::fields() const
@@ -21,8 +21,7 @@ bool Object::update(const QVariantMap &source)
 {
     bool wasUpdated = false;
     for (auto iter = source.cbegin(); iter != source.cend(); ++iter) {
-        auto found = _priv_allFields().value(iter.key());
-        if (found) {
+        if (auto found = _priv_allFields().value(iter.key())) {
             wasUpdated = found->updateWithVariant(this, iter.value()) || wasUpdated; // stays true once set
         } else {
             wasUpdated = wasUpdated || false;

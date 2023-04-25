@@ -22,30 +22,30 @@ namespace Serializable {
     Q_ENUM_NS(FieldType)
     struct FieldConcept {
         friend Object;
-        virtual QVariantMap schema(const Object *owner) const = 0;
-        virtual QVariant readVariant(const Object *owner) const = 0;
-        virtual bool updateWithVariant(Object *owner, const QVariant &source) = 0;
-        virtual FieldType fieldType(const Object *owner) const = 0;
-        virtual int valueMetaTypeId(const Object *owner) const = 0;
-        virtual void *rawValue(Object *owner) = 0;
-        virtual const void *rawValue(const Object *owner) const = 0;
-        virtual const QStringList &attributes(const Object *owner) const = 0;
-        virtual const NestedIntrospection introspectNested(const Object *owner) const = 0;
-        virtual NestedIntrospection introspectNested(Object *owner) = 0;
-        virtual const QString &fieldRepr(const Object *owner) const = 0;
-        virtual const QString &typeName(const Object *owner) const = 0;
-        bool isNested(const Object *owner) const {
+        virtual QVariantMap schema(const Serializable::Object *owner) const = 0;
+        virtual QVariant readVariant(const Serializable::Object *owner) const = 0;
+        virtual bool updateWithVariant(Serializable::Object *owner, const QVariant &source) = 0;
+        virtual FieldType fieldType(const Serializable::Object *owner) const = 0;
+        virtual int valueMetaTypeId(const Serializable::Object *owner) const = 0;
+        virtual void *rawValue(Serializable::Object *owner) = 0;
+        virtual const void *rawValue(const Serializable::Object *owner) const = 0;
+        virtual const QStringList &attributes(const Serializable::Object *owner) const = 0;
+        virtual const NestedIntrospection introspectNested(const Serializable::Object *owner) const = 0;
+        virtual NestedIntrospection introspectNested(Serializable::Object *owner) = 0;
+        virtual const QString &fieldRepr(const Serializable::Object *owner) const = 0;
+        virtual const QString &typeName(const Serializable::Object *owner) const = 0;
+        bool isNested(const Serializable::Object *owner) const {
             auto res = fieldType(owner);
             return res == FieldNested
                     || res == FieldSequenceOfNested
                     || res == FieldMappingOfNested;
         }
-        bool isMapping(const Object *owner) const {
+        bool isMapping(const Serializable::Object *owner) const {
             auto res = fieldType(owner);
             return res == FieldMapping
                    || res == FieldMappingOfNested;
         }
-        bool isSequence(const Object *owner) const {
+        bool isSequence(const Serializable::Object *owner) const {
             auto res = fieldType(owner);
             return res == FieldSequence
                    || res == FieldSequenceOfNested;
@@ -60,49 +60,49 @@ namespace Private {
 template <typename Class, typename Field>
 struct FieldHolder : FieldConcept {
     FieldHolder(Field Class::*fieldGetter) : m_fieldGetter(fieldGetter) {}
-    QVariantMap schema(const Object *owner) const override final {
+    QVariantMap schema(const Serializable::Object *owner) const override final {
         auto result = field(owner)->schema();
         result["attributes"] = field(owner)->attributes();
         return result;
     }
-    QVariant readVariant(const Object *owner) const override final {
+    QVariant readVariant(const Serializable::Object *owner) const override final {
         return field(owner)->readVariant();
     }
-    bool updateWithVariant(Object *owner, const QVariant &source) override final {
+    bool updateWithVariant(Serializable::Object *owner, const QVariant &source) override final {
         return field(owner)->updateWithVariant(source);
     }
-    FieldType fieldType(const Object *owner) const override final {
+    FieldType fieldType(const Serializable::Object *owner) const override final {
         return field(owner)->fieldType();
     }
-    int valueMetaTypeId(const Object *owner) const override final {
+    int valueMetaTypeId(const Serializable::Object *owner) const override final {
         return field(owner)->valueMetaTypeId();
     }
-    void *rawValue(Object *owner) override final {
+    void *rawValue(Serializable::Object *owner) override final {
         return field(owner)->rawValue();
     }
-    const void *rawValue(const Object *owner) const override final {
+    const void *rawValue(const Serializable::Object *owner) const override final {
         return field(owner)->rawValue();
     }
-    const QStringList &attributes(const Object *owner) const override final {
+    const QStringList &attributes(const Serializable::Object *owner) const override final {
         return field(owner)->attributes();
     }
-    NestedIntrospection introspectNested(Object *owner) override final {
+    NestedIntrospection introspectNested(Serializable::Object *owner) override final {
         return field(owner)->introspectNested();
     }
-    const NestedIntrospection introspectNested(const Object *owner) const override final {
+    const NestedIntrospection introspectNested(const Serializable::Object *owner) const override final {
         return field(owner)->introspectNested();
     }
-    const QString &fieldRepr(const Object *owner) const override final {
+    const QString &fieldRepr(const Serializable::Object *owner) const override final {
         return field(owner)->fieldRepr();
     }
-    const QString &typeName(const Object *owner) const override final {
+    const QString &typeName(const Serializable::Object *owner) const override final {
         return field(owner)->typeName();
     }
 protected:
-    const Field *field(const Object *owner) const {
-        return const_cast<FieldHolder*>(this)->field(const_cast<Object*>(owner));
+    const Field *field(const Serializable::Object *owner) const {
+        return const_cast<FieldHolder*>(this)->field(const_cast<Serializable::Object*>(owner));
     }
-    Field *field(Object *owner) {
+    Field *field(Serializable::Object *owner) {
         return &(reinterpret_cast<Class*>(owner)->*m_fieldGetter);
     }
 private:
@@ -110,7 +110,7 @@ private:
 };
 template <typename Class, typename Field>
 QVariant upcastField(Field Class::*fieldGetter) {
-    return QVariant::fromValue(QSharedPointer<FieldConcept>(new Private::FieldHolder<Class, Field>(fieldGetter)));
+    return QVariant::fromValue(new Private::FieldHolder<Class, Field>(fieldGetter));
 }
 struct IsFieldCheck {};
 template<typename T>
@@ -462,7 +462,6 @@ struct PlainMapping : public Private::MappingCommon<T> {
         auto asMap = source.toMap();
         for (auto iter = asMap.cbegin(); iter != asMap.cend(); ++iter) {
             if (!iter.value().canConvert<T>()) continue;
-            auto tempVal = iter->value<T>();
             temp.insert(iter.key(), iter->value<T>());
         }
         if (!temp.empty()) {
