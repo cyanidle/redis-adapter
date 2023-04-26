@@ -1,4 +1,4 @@
- #ifndef RADAPTERCONFIG_H
+#ifndef RADAPTERCONFIG_H
 #define RADAPTERCONFIG_H
 
 #include "broker/workers/settings/loggingworkersettings.h"
@@ -71,7 +71,9 @@ struct Modbus : public Serializable {
     Q_GADGET
     IS_SERIALIZABLE
     FIELD(Required<Registers>, registers)
+    COMMENT(registers, "Registers are initialized first")
     FIELD(RequiredSequence<ModbusDevice>, devices)
+    COMMENT(devices, "Then devices")
     FIELD(OptionalSequence<ModbusSlave>, slaves)
     FIELD(OptionalSequence<ModbusMaster>, masters)
 };
@@ -106,6 +108,7 @@ struct AppConfig : public Serializable {
     FIELD(Optional<Sockets>, sockets)
     FIELD(Optional<Websocket>, websocket)
     FIELD(OptionalSequence<QString>, pipelines)
+    COMMENT(pipelines, "Example: 'worker.name > |interceptor| > worker.2.name'")
     FIELD(HasDefault<RadapterApi>, api)
     void postUpdate() override;
 };

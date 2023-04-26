@@ -6,6 +6,7 @@
 #include "templates/containerfilter.hpp"
 #include "templates/enumerator.hpp"
 #include "templates/reverser.hpp"
+#include "templates/keyvalwrapper.hpp"
 #include "zipiterator.hpp"
 
 namespace Radapter{
@@ -196,6 +197,18 @@ template <typename Container, typename Filter>
 auto filter(const Container &container, Filter filter) -> FilterConstHolder<Container, Filter>
 {
     return FilterConstHolder<Container, Filter>(container, filter);
+}
+
+template <typename K, typename T>
+auto keyVal(const QMap<K, T> &map)
+{
+    return ConstKeyValWrapper(map);
+}
+
+template <typename K, typename T>
+auto keyVal(QMap<K, T> &map)
+{
+    return KeyValWrapper(map);
 }
 
 }

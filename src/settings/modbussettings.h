@@ -121,6 +121,14 @@ namespace Settings {
         FIELD(OptionalMapping<QVariantMap>, discrete_inputs)
         FIELD(OptionalMapping<QVariantMap>, di)
         void postUpdate() override;
+
+        COMMENT(holding, "{index: int, type: (float32/uint32/uint16), validator: (name), endianess: (abcd), writable: (bool)}")
+        COMMENT(holding_registers, "{index: int, type: (float32/uint32/uint16), validator: (name), endianess: (abcd), writable: (bool)}")
+        COMMENT(input, "{index: int, type: (float32/uint32/uint16), validator: (name), endianess: (abcd), writable: (bool)}")
+        COMMENT(input_registers, "{index: int, type: (float32/uint32/uint16), validator: (name), endianess: (abcd), writable: (bool)}")
+        COMMENT(coils, "{index: int, type: (float32/uint32/uint16), validator: (name), endianess: (abcd), writable: (bool)}")
+        COMMENT(discrete_inputs, "{index: int, type: (float32/uint32/uint16), validator: (name), endianess: (abcd), writable: (bool)}")
+        COMMENT(di, "{index: int, type: (float32/uint32/uint16), validator: (name), endianess: (abcd), writable: (bool)}")
     };
 
 }

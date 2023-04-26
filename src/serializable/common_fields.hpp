@@ -114,7 +114,8 @@ private:
 };
 template <typename Class, typename Field>
 FieldConcept* upcastField(Field Class::*fieldGetter) {
-    return new Private::FieldHolder<Class, Field>(fieldGetter);
+    return new Private::FieldHolder<Class, Field>(fieldGetter); // NOLINT: does create unwatched wrapper
+    // only used for init of static Map<Name, FieldConcept*>
 }
 struct IsFieldCheck {};
 template<typename T>

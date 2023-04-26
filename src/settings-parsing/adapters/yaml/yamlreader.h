@@ -16,7 +16,7 @@ class RADAPTER_API YamlReader : public DictReader
 public:
     YamlReader(const QString &dir = "conf", const QString &file = "config", QObject *parent = nullptr);
     QVariant getAll() override;
-    QString format(const QVariant &data) const override;
+    QString formatExample(const Example &example) const override;
 private:
     void recurseMapNode(const QStringList &prefix, const YAML::Node &who, JsonDict &output);
 };

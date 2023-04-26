@@ -22,7 +22,7 @@ CONFIG(release, debug|release){
     MOC_DIR = build/release
 }
 CONFIG -= debug_and_release
-
+PRECOMPILED_HEADER += private/global.h
 CONFIG += c++17 create_prl staticlib
 DESTDIR = ..
 DEFINES += RADAPTER_API=

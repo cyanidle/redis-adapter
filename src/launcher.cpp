@@ -178,7 +178,7 @@ void Launcher::parseCommandlineArgs()
         throw std::runtime_error("Invalid configs format: " + d->configsFormat.toStdString() + "; Can be (toml/yaml)");
     }
     if (isExamplesMode) {
-        QTextStream(stdout) << d->reader->format(config().printExample());
+        QTextStream(stdout) << d->reader->formatExample(config().getExample());
         std::exit(0);
     } else {
         settingsParsingWarn() << "Using parser:" << d->configsFormat;

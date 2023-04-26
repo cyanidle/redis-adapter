@@ -105,21 +105,25 @@ struct RADAPTER_API WebsocketServer : Serializable {
     Q_GADGET
     IS_SERIALIZABLE
     FIELD(Required<Worker>, worker)
-
+    FIELD(HasDefault<QString>, bind_to, "0.0.0.0")
     FIELD(HasDefault<quint16>, port, 1234)
     FIELD(HasDefault<quint16>, heartbeat_ms, 10000)
     FIELD(HasDefault<quint16>, keepalive_time, 20000)
-    FIELD(HasDefault<QString>, bind_to, "0.0.0.0")
     FIELD(HasDefault<QString>, name, "redis-adapter")
     FIELD(HasDefault<bool>, secure, false)
-
     void postUpdate() override;
 };
 
-struct RADAPTER_API WebsocketClient : WebsocketServer {
+struct RADAPTER_API WebsocketClient : Serializable {
     Q_GADGET
     IS_SERIALIZABLE
+    FIELD(Required<Worker>, worker)
     FIELD(Required<QString>, host)
+    FIELD(HasDefault<quint16>, port, 1234)
+    FIELD(HasDefault<quint16>, heartbeat_ms, 10000)
+    FIELD(HasDefault<quint16>, keepalive_time, 20000)
+    FIELD(HasDefault<QString>, name, "redis-adapter")
+    FIELD(HasDefault<bool>, secure, false)
 };
 
 } // namespace Settings

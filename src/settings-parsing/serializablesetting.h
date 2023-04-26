@@ -5,14 +5,27 @@
 #include "serializable/serializableobject.h"
 #include "serializable/validated.hpp"
 #include "validators/common_validators.h"
+#include "private/impl_settingscomment.h"
 #include "validators/validator_fetch.h"
+#include "settingsexample.h"
 
 #define HAS_DEFAULT_ATTR "has_default"
 #define OPTION_ATTR "optional"
+#define REQUIRED_ATTR "required"
 
 Q_DECLARE_METATYPE(QJsonDocument::JsonFormat)
 
 namespace Settings {
+
+template<typename Super>
+struct MarkRequired : public Super {
+    FIELD_SUPER(Super)
+protected:
+    const QStringList &attributes() const {
+        static const QStringList attrs{Super::attributes() + QStringList{REQUIRED_ATTR}};
+        return attrs;
+    }
+};
 
 template<typename Super>
 struct MarkHasDefault : public Super {
@@ -42,25 +55,29 @@ protected:
         }
     }
     const QStringList &attributes() const {
-        static QStringList attrs{Super::attributes() + QStringList{OPTION_ATTR}};
+        static QStringList attrs = [this]{
+            auto super = Super::attributes();
+            super.removeAll(REQUIRED_ATTR);
+            return super + QStringList{OPTION_ATTR};
+        }();
         return attrs;
     }
 private:
     bool m_valid{false};
 };
 
-template<typename T> using Required = Serializable::Plain<T>;
+template<typename T> using Required = MarkRequired<Serializable::Plain<T>>;
 template<typename T> using HasDefault = MarkHasDefault<Serializable::Plain<T>>;
 template<typename T> using Optional = MarkOptional<Required<T>>;
-template<typename T> using RequiredSequence = Serializable::Sequence<T>;
+template<typename T> using RequiredSequence = MarkRequired<Serializable::Sequence<T>>;
 template<typename T> using SequenceHasDefault = MarkHasDefault<Serializable::Sequence<T>>;
 template<typename T> using OptionalSequence = MarkOptional<RequiredSequence<T>>;
-template<typename T> using RequiredMapping = Serializable::Mapping<T>;
+template<typename T> using RequiredMapping = MarkRequired<Serializable::Mapping<T>>;
 template<typename T> using MappingHasDefault = MarkHasDefault<Serializable::Mapping<T>>;
 template<typename T> using OptionalMapping = MarkOptional<RequiredMapping<T>>;
 
-using RequiredValidator = Serializable::Plain<Validator::Fetched>;
-using OptionalValidator = MarkOptional<RequiredValidator>;
+using RequiredValidator = Required<Validator::Fetched>;
+using OptionalValidator = Optional<Validator::Fetched>;
 
 using RequiredLogLevel = Serializable::Validated<Required<QtMsgType>>::With<Validator::LogLevel>;
 using NonRequiredLogLevel = MarkHasDefault<RequiredLogLevel>;
@@ -72,19 +89,21 @@ struct Serializable : public ::Serializable::Object
 public:
     QString print() const;
     virtual bool update(const QVariantMap &src) override;
-    QVariantMap printExample() const;
+    QString getComment(const QString &fieldName) const;
+    QString getClassComment() const;
+    Example getExample() const;
     void allowExtra(bool state = true);
     Serializable();
 protected:
-    QVariant printExample(const ::Serializable::FieldConcept *field) const;
+    FieldExample getExample(const ::Serializable::FieldConcept *field) const;
     void checkForExtra(const QVariantMap &src);
     void processField(const QString &name, const QVariant &newValue);
 
     QString m_currentField;
     bool m_allowExtra;
 private:
-    QVariant printExamplePlain(const ::Serializable::FieldConcept *field) const;
-    QVariant printExampleNested(const ::Serializable::FieldConcept *field) const;
+    FieldExample getExamplePlain(const ::Serializable::FieldConcept *field) const;
+    FieldExample getExampleNested(const ::Serializable::FieldConcept *field) const;
 };
 
 } // namespace Settings
