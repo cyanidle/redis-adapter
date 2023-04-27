@@ -40,10 +40,8 @@ void initPipe(const QString& pipe)
         currentInterceptors.clear();
         prevWorker = point.simplified();
     }
-    for (auto pair: Radapter::zip(workers, interceptors)) {
-        auto sourceName = pair.first.first;
-        auto targetName = pair.first.second;
-        auto interceptorNames = pair.second;
+    for (auto [pair, interceptorNames]: Radapter::zip(workers, interceptors)) {
+        auto [sourceName, targetName] = pair;
         broker->connectTwo(sourceName, targetName, interceptorNames);
     }
 }
