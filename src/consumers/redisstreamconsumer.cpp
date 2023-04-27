@@ -60,7 +60,7 @@ void StreamConsumer::readCallback(redisReply *reply)
     auto replies = parsed.first().toList().last().toList();
     for (const auto &entry: replies) {
         auto parsedEntry = StreamEntry(entry.toList());
-        emit sendBasic(parsedEntry.values);
+        emit send(parsedEntry.values);
         setLastReadId(parsedEntry.streamId());
     }
 }

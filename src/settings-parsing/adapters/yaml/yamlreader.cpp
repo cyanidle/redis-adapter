@@ -41,7 +41,8 @@ QVariant YamlReader::getAll()
     auto wantedPath = resource() + "/" + path();
     auto actualPath = wantedPath.endsWith(extension) ? wantedPath : wantedPath + extension;
     auto config = LoadFile(actualPath.toStdString());
-    auto result = JsonDict(config.as<QVariantMap>(), ':', false);
+    auto asMap = config.as<QVariantMap>();
+    auto result = JsonDict(asMap, ':', false);
     recurseMapNode({}, config, result);
     setPath(pathWas);
     return result.toVariant();

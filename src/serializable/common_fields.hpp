@@ -114,11 +114,16 @@ private:
 };
 template <typename Class, typename Field>
 FieldConcept* upcastField(Field Class::*fieldGetter) {
+#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wall"
+#endif
     return new Private::FieldHolder<Class, Field>(fieldGetter); // NOLINT
     // only used for init of static Map<Name, FieldConcept*>. Concept lifetime should be static
+#ifdef __clang__
 #pragma clang diagnostic pop
+#endif
+
 }
 struct IsFieldCheck {};
 template<typename T>
