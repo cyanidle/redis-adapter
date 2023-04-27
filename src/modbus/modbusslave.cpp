@@ -130,7 +130,7 @@ void Slave::handleNewWords(QVector<quint16> &words, QModbusDataUnit::RegisterTyp
         }
     }
     if (!diff.isEmpty()) {
-        emit sendBasic(diff);
+        emit send(diff);
     }
 }
 

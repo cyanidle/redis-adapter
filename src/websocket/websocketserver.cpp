@@ -98,7 +98,7 @@ void Server::onTextMsg(const QString &data)
     auto err = QJsonParseError();
     auto json = JsonDict::fromJson(data.toUtf8(), &err);
     if (err.error == QJsonParseError::NoError) {
-        emit sendBasic(json);
+        emit send(json);
     } else {
         workerError(this) << "Error parsing data from client: " << printClient(sender());
     }

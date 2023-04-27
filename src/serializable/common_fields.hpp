@@ -114,8 +114,11 @@ private:
 };
 template <typename Class, typename Field>
 FieldConcept* upcastField(Field Class::*fieldGetter) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wall"
     return new Private::FieldHolder<Class, Field>(fieldGetter); // NOLINT
-    // only used for init of static Map<Name, FieldConcept*>
+    // only used for init of static Map<Name, FieldConcept*>. Concept lifetime should be static
+#pragma clang diagnostic pop
 }
 struct IsFieldCheck {};
 template<typename T>
@@ -206,6 +209,7 @@ struct NestedField : public Private::FieldCommon<T> {
     using Private::FieldCommon<T>::operator==;
     template <typename Class, typename Field>
     friend struct Private::FieldHolder;
+protected:
     static int staticValueMetaTypeId() {return -1;}
     Object* constructNested() const {return new T;}
     int valueMetaTypeId() const {return staticValueMetaTypeId();}
@@ -294,6 +298,7 @@ struct PlainSequence : public Private::SequenceCommon<T> {
     using Private::SequenceCommon<T>::operator==;
     template <typename Class, typename Field>
     friend struct Private::FieldHolder;
+protected:
     static int staticValueMetaTypeId() {return QMetaType::fromType<T>().id();}
     int valueMetaTypeId() const {return staticValueMetaTypeId();}
     const QString &fieldRepr() const {
@@ -344,6 +349,7 @@ struct NestedSequence : public Private::SequenceCommon<T> {
     using Private::SequenceCommon<T>::operator==;
     template <typename Class, typename Field>
     friend struct Private::FieldHolder;
+protected:
     Object* constructNested() const {return new T;}
     static int staticValueMetaTypeId() {return -1;}
     const QString &typeName() const {
@@ -457,6 +463,7 @@ struct PlainMapping : public Private::MappingCommon<T> {
     using Private::MappingCommon<T>::operator==;
     template <typename Class, typename Field>
     friend struct Private::FieldHolder;
+protected:
     static int staticValueMetaTypeId() {return QMetaType::fromType<T>().id();}
     int valueMetaTypeId() const {return staticValueMetaTypeId();}
     const QString &fieldRepr() const {
@@ -507,6 +514,7 @@ struct NestedMapping : public Private::MappingCommon<T> {
     using Private::MappingCommon<T>::operator==;
     template <typename Class, typename Field>
     friend struct Private::FieldHolder;
+protected:
     Object* constructNested() const {return new T;}
     static int staticValueMetaTypeId() {return -1;}
     const QString &typeName() const {

@@ -56,11 +56,14 @@ Worker::Worker(const Settings::Worker &settings, QThread *thread) :
         brokerWarn()<< "=== Worker (" << workerName() << "): Running in Debug Mode! ===";
     }
     connect(this, &Worker::sendMsg, &Worker::onSendMsgPriv);
-    connect(this, &Worker::sendBasic, [this](const JsonDict &data){
+    connect(this, &Worker::send, [this](const JsonDict &data){
         emit sendMsg(prepareMsg(data));
     });
     connect(this, &Worker::sendRouted, [this](const RoutedObject &obj, const QString &fieldName){
         emit sendMsg(prepareMsg(obj.send(fieldName)));
+    });
+    connect(this, &Worker::sendKey, [this](const QString &key, const QVariant &value){
+        emit sendMsg(prepareMsg(JsonDict{{key, value}}));
     });
     connect(thread, &QThread::started, this, &Worker::onRun);
     connect(thread, &QThread::destroyed, this, &Worker::deleteLater);

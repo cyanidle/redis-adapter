@@ -24,9 +24,9 @@ class RADAPTER_API Worker : public QObject {
     Q_OBJECT
 public:
     using WorkerSet = QSet<Worker*>;
+    explicit Worker(const Settings::Worker &settings, QThread *thread);
     bool isPrintMsgsEnabled() const;
     bool printEnabled(QtMsgType type) const;
-    explicit Worker(const Settings::Worker &settings, QThread *thread);
     WorkerProxy* createPipe(const QList<Interceptor *> &interceptors = {});
     const QString &workerName() const;
     const WorkerSet &consumers() const;
@@ -48,7 +48,8 @@ public:
     virtual ~Worker();
 signals:
     void sendMsg(const Radapter::WorkerMsg &msg);
-    void sendBasic(const JsonDict &msg);
+    void send(const JsonDict &msg);
+    void sendKey(const QString &key, const QVariant &value);
     void sendRouted(const RoutedObject &obj, const QString &fieldName = {});
 public slots:
     void run();

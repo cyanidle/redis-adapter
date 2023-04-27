@@ -29,7 +29,7 @@ void Consumer::readReady()
             workerError(this) << "Json Parse error!";
             return;
         }
-        emit sendBasic(asJson);
+        emit send(asJson);
     }
 }
 

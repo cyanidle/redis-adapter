@@ -52,7 +52,7 @@ QMap<QString, FieldConcept *> fieldsHelper(const Object *who);
 constexpr auto is_wrapped = ::std::is_base_of<::Serializable::Private::IsFieldCheck, typename std::decay<decltype(name)>::type>(); \
 static_assert(is_wrapped, "Dont use raw types in FIELD() macro"); \
         _has_Is_Serializable(); \
-        return QVariant::fromValue(::Serializable::Private::upcastField(& THIS_TYPE :: name)); \
+        return QVariant::fromValue(::Serializable::Private::upcastField(& THIS_TYPE :: name)); /* NOLINT*/ \
     } \
     Q_PROPERTY(QVariant __field__ ##name READ _priv_getFinalPtr_##name) \
     public:

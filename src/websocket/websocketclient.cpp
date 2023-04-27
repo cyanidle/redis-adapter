@@ -136,7 +136,7 @@ void Client::onSocketReceived(const QString &message)
         wsockClientDebug() << "empty json received";
         return;
     }
-    emit sendBasic(jsonMessage);
+    emit send(jsonMessage);
 }
 
 void Client::onConnectionLost()

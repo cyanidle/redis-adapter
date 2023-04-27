@@ -2,7 +2,7 @@
 from argparse import ArgumentParser
 import logging
 
-# TODO: create class which performs template mapping, checking mmissing params!
+# TODO: create class which performs template mapping, checking missing params!
 
 def start(template_path: str):
     pass

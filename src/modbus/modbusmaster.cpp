@@ -146,7 +146,7 @@ void Master::fetchState()
         command.setCallback(this, [this](const ReplyJson *reply){
             d->state.merge(reply->json());
             d->wantedState.merge(d->state);
-            emit sendBasic(d->state);
+            emit send(d->state);
         });
         command.receivers() = {d->stateReader};
         emit sendMsg(command);
@@ -328,7 +328,7 @@ void Master::formatAndSendJson(const JsonDict &json)
     }
     if (!result.isEmpty()) {
         saveState(result);
-        emit sendBasic(result);
+        emit send(result);
     }
     if (!toRewrite.isEmpty()) {
         write(toRewrite);
