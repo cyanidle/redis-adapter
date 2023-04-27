@@ -1,4 +1,5 @@
 #include "jsondict.h"
+#include "radapterlogging.h"
 
 int JsonDict::deepCount() const
 {
@@ -47,12 +48,7 @@ bool JsonDict::contains(const QStringList &key) const
 
 bool JsonDict::contains(const JsonDict &src) const
 {
-    if (count() < src.count()) {
-        return false;
-    }
-    for (auto otherItem = src.begin();
-         otherItem != src.end();
-         otherItem++)
+    for (const auto &otherItem: src)
     {
         auto thisItem = value(otherItem.key());
         if (!thisItem.isValid() || (thisItem != otherItem.value())) {
@@ -234,6 +230,11 @@ QVariant JsonDict::take(const QStringList &akey)
     return reinterpret_cast<QVariantMap*>(val->data())->take(akey.constLast());
 }
 
+QVariant JsonDict::take(const QString &akey, const QString &separator)
+{
+    return take(akey.split(separator));
+}
+
 QVariantMap JsonDict::flatten(const QString &separator) const
 {
     QVariantMap result;
@@ -395,7 +396,7 @@ QByteArray JsonDict::toBytes(QJsonDocument::JsonFormat format) const
 
 JsonDict JsonDict::fromJsonObj(const QJsonObject &json)
 {
-    return JsonDict(json.toVariantMap(), ':', false);
+    return JsonDict(json.toVariantMap(), false);
 }
 
 JsonDict JsonDict::fromJson(const QByteArray &json, QJsonParseError *err)
@@ -424,14 +425,19 @@ bool JsonDict::operator!=(const JsonDict &src) const
     return m_dict != src.m_dict;
 }
 
-QVariant JsonDict::take(const QString &akey)
+void JsonDict::clear()
 {
-    return m_dict.take(akey);
+    m_dict.clear();
+}
+
+QVariant JsonDict::take(const QString &akey, QChar separator)
+{
+    return take(akey.split(separator));
 }
 
 bool JsonDict::isEmpty() const
 {
-    return m_dict.isEmpty();
+    return !deepCount();
 }
 
 JsonDict JsonDict::diff(const JsonDict &other) const
@@ -477,11 +483,6 @@ JsonDict &JsonDict::nest(QChar separator)
     }
     swap(newState);
     return *this;
-}
-
-int JsonDict::count() const
-{
-    return m_dict.count();
 }
 
 QStringList JsonDict::firstKey() const
@@ -587,28 +588,34 @@ const QVariant JsonDict::value(const QString &akey, const QVariant &adefault) co
     return m_dict.value(akey, adefault);
 }
 
-JsonDict::JsonDict(const QVariant &src, const QString &separator, bool nest) :
+JsonDict::JsonDict(const QVariant &src, const QString &separator) :
     m_dict(src.toMap())
 {
-    if (!isEmpty() && nest) this->nest(separator);
+    if (!isEmpty()) this->nest(separator);
+    if (src.isValid() && m_dict.isEmpty()) {
+        reError() << "JsonDict received non-null non-map QVariant!";
+    }
 }
 
-JsonDict::JsonDict(const QVariantMap &src, QChar separator, bool nest) :
+JsonDict::JsonDict(const QVariantMap &src, bool nest, QChar separator) :
     m_dict(src)
 {
     if (!isEmpty() && nest) this->nest(separator);
 }
 
-JsonDict::JsonDict(const QVariant &src, QChar separator, bool nest) :
+JsonDict::JsonDict(const QVariant &src, bool nest, QChar separator) :
     m_dict(src.toMap())
 {
     if (!isEmpty() && nest) this->nest(separator);
+    if (src.isValid() && m_dict.isEmpty()) {
+        reError() << "JsonDict received non-null non-map QVariant!";
+    }
 }
 
-JsonDict::JsonDict(const QVariantMap &src, const QString &separator, bool nest) :
+JsonDict::JsonDict(const QVariantMap &src, const QString &separator) :
     m_dict(src)
 {
-    if (!isEmpty() && nest) this->nest(separator);
+    if (!isEmpty()) this->nest(separator);
 }
 
 JsonDict::JsonDict(std::initializer_list<std::pair<QString, QVariant> > initializer) :
@@ -617,7 +624,7 @@ JsonDict::JsonDict(std::initializer_list<std::pair<QString, QVariant> > initiali
     this->nest(':');
 }
 
-JsonDict::JsonDict(QVariantMap &&src, const QString &separator, bool nest) :
+JsonDict::JsonDict(QVariantMap &&src, bool nest, const QString &separator) :
     m_dict(std::move(src))
 {
     if (!isEmpty() && nest) this->nest(separator);

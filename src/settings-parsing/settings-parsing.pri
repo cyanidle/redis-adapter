@@ -1,16 +1,16 @@
 SOURCES+= \
+   $$PWD/dictreader.cpp \
    $$PWD/reader.cpp \
    $$PWD/serializablesetting.cpp \
-   $$PWD/settings_validators.cpp \
-   $$PWD/dictreader.cpp \
-   $$PWD/settingsexample.cpp
+   $$PWD/settingsexample.cpp \
+   $$PWD/settings_validators.cpp
 HEADERS+= \
-   $$PWD/private/impl_settingscomment.h \
-   $$PWD/serializablesetting.h \
-   $$PWD/settings_validators.h \
-   $$PWD/reader.h \
    $$PWD/convertutils.hpp \
    $$PWD/dictreader.h \
-   $$PWD/settingsexample.h
+   $$PWD/reader.h \
+   $$PWD/serializablesetting.h \
+   $$PWD/settingsexample.h \
+   $$PWD/settings_validators.h
 
 include($$PWD/adapters/adapters.pri)
+include($$PWD/private/private.pri)

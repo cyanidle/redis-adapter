@@ -1,4 +1,4 @@
-#include "validatinginterceptor_settings.h"
+#include "validatinginterceptorsettings.h"
 #include <QRegularExpression>
 
 void Settings::ValidatingInterceptor::init() {

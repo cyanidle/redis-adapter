@@ -65,10 +65,10 @@ void ApiServer::serviceEndpoints()
 void ApiServer::configEndpoints()
 {
     d->server->route("/config", [this](){
-        return JsonDict(d->launcher->config().serialize(), ':', false).toBytes(d->settings.json_format);
+        return JsonDict(d->launcher->config().serialize(), false).toBytes(d->settings.json_format);
     });
     d->server->route("/config/schema", [this](){
-        return JsonDict(d->launcher->config().schema(), ':', false).toBytes(d->settings.json_format);
+        return JsonDict(d->launcher->config().schema(), false).toBytes(d->settings.json_format);
     });
 }
 

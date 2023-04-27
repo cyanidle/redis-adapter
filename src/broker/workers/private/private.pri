@@ -3,7 +3,7 @@ SOURCES+= \
    $$PWD/workermsg.cpp \
    $$PWD/workerproxy.cpp
 HEADERS+= \
+   $$PWD/pipestart.h \
    $$PWD/workerdebug.h \
-   $$PWD/workerproxy.h \
    $$PWD/workermsg.h \
-   $$PWD/pipestart.h
+   $$PWD/workerproxy.h

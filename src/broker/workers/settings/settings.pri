@@ -1,6 +1,6 @@
 SOURCES+=
 HEADERS+= \
    $$PWD/loggingworkersettings.h \
-   $$PWD/workersettings.h \
+   $$PWD/mockworkersettings.h \
    $$PWD/repeatersettings.h \
-   $$PWD/mockworkersettings.h
+   $$PWD/workersettings.h

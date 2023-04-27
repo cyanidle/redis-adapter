@@ -1,8 +1,8 @@
 SOURCES+= \
    $$PWD/rediscacheproducer.cpp \
-   $$PWD/sqlarchiveproducer.cpp \
-   $$PWD/redisstreamproducer.cpp
+   $$PWD/redisstreamproducer.cpp \
+   $$PWD/sqlarchiveproducer.cpp
 HEADERS+= \
-   $$PWD/sqlarchiveproducer.h \
+   $$PWD/rediscacheproducer.h \
    $$PWD/redisstreamproducer.h \
-   $$PWD/rediscacheproducer.h
+   $$PWD/sqlarchiveproducer.h

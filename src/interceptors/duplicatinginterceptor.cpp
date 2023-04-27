@@ -1,6 +1,6 @@
 #include "duplicatinginterceptor.h"
 #include "broker/workers/private/workermsg.h"
-#include "duplicatinginterseptor_settings.h"
+#include "settings/duplicatinginterseptorsettings.h"
 
 namespace Radapter {
 

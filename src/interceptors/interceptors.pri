@@ -1,9 +1,12 @@
 SOURCES+= \
-   $$PWD/validatinginterceptor.cpp \
-   $$PWD/validatinginterceptor_settings.cpp \
-   $$PWD/duplicatinginterceptor.cpp
+   $$PWD/duplicatinginterceptor.cpp \
+   $$PWD/namespaceunwrapper.cpp \
+   $$PWD/namespacewrapper.cpp \
+   $$PWD/validatinginterceptor.cpp
 HEADERS+= \
-   $$PWD/validatinginterceptor_settings.h \
-   $$PWD/validatinginterceptor.h \
    $$PWD/duplicatinginterceptor.h \
-   $$PWD/duplicatinginterseptor_settings.h
+   $$PWD/namespaceunwrapper.h \
+   $$PWD/namespacewrapper.h \
+   $$PWD/validatinginterceptor.h
+
+include($$PWD/settings/settings.pri)

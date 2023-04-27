@@ -7,8 +7,10 @@
 #include "broker/workers/settings/repeatersettings.h"
 #include "filters/producerfiltersettings.hpp"
 #include "httpserver/radapterapisettings.h"
-#include "interceptors/duplicatinginterseptor_settings.h"
-#include "interceptors/validatinginterceptor_settings.h"
+#include "interceptors/settings/duplicatinginterseptorsettings.h"
+#include "interceptors/settings/namespaceunwrappersettings.h"
+#include "interceptors/settings/namespacewrappersettings.h"
+#include "interceptors/settings/validatinginterceptorsettings.h"
 #include "raw_sockets/udpconsumer.h"
 #include "raw_sockets/udpproducer.h"
 #include "settings-parsing/serializablesetting.h"
@@ -31,11 +33,19 @@ struct Sockets : public Serializable {
     FIELD(Optional<UdpSockets>, udp)
 };
 
+struct NamespaceInterceptors : public Serializable {
+    Q_GADGET
+    IS_SERIALIZABLE
+    FIELD(OptionalMapping<NamespaceUnwrapper>, unwrappers)
+    FIELD(OptionalMapping<NamespaceWrapper>, wrappers)
+};
+
 struct Interceptors : public Serializable {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(OptionalMapping<ValidatingInterceptor>, validating)
     FIELD(OptionalMapping<DuplicatingInterceptor>, duplicating)
+    FIELD(OptionalMapping<ValidatingInterceptor>, validating)
+    FIELD(Optional<NamespaceInterceptors>, namespaces)
     FIELD(OptionalMapping<ProducerFilter>, filters)
 
 };

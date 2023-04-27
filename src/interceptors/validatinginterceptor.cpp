@@ -1,6 +1,6 @@
 #include "validatinginterceptor.h"
 #include "broker/workers/private/workermsg.h"
-#include "validatinginterceptor_settings.h"
+#include "settings/validatinginterceptorsettings.h"
 
 using namespace Radapter;
 
@@ -28,7 +28,9 @@ Radapter::Interceptor *ValidatingInterceptor::newCopy() const
 void ValidatingInterceptor::onMsgFromWorker(WorkerMsg &msg)
 {
     validate(msg);
-    emit msgFromWorker(msg);
+    if (!msg.isEmpty()) {
+        emit msgFromWorker(msg);
+    }
 }
 
 void ValidatingInterceptor::validate(WorkerMsg &msg)

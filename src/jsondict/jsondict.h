@@ -38,12 +38,13 @@ class JsonDict
 {
 public:
     JsonDict() = default;
-    explicit JsonDict(const QVariant& src, QChar separator = ':', bool nest = true);
-    explicit JsonDict(const QVariant& src, const QString &separator, bool nest = true);
-    JsonDict(const QVariantMap& src, QChar separator = ':', bool nest = true);
-    JsonDict(const QVariantMap& src, const QString &separator, bool nest = true);
+    JsonDict(const JsonDict &) = default;
+    explicit JsonDict(const QVariant& src, bool nest = true, QChar separator = ':');
+    explicit JsonDict(const QVariant& src, const QString &separator);
+    JsonDict(const QVariantMap& src, bool nest = true, QChar separator = ':');
+    JsonDict(const QVariantMap& src, const QString &separator);
     JsonDict(std::initializer_list<std::pair<QString, QVariant>> initializer);
-    explicit JsonDict(QVariantMap&& src, const QString &separator = ":", bool nest = true);
+    explicit JsonDict(QVariantMap&& src, bool nest = true, const QString &separator = ":");
     //! \warning Implicitly covertible to QVariant and QVariantMap
     operator const QVariantMap&() const&;
     operator QVariantMap&() &;
@@ -82,7 +83,7 @@ public:
     //! Оператор глубокого сравнения словарей
     bool operator==(const JsonDict& src) const;
     bool operator!=(const JsonDict& src) const;
-    int count() const;
+    void clear();
     int deepCount() const;
     //! Конвертация в QJsonObject
     QJsonObject toJsonObj() const;
@@ -102,7 +103,8 @@ public:
     const QVariantMap &top() const;
     int remove(const QStringList &akey);
     QVariant take(const QStringList &akey);
-    QVariant take(const QString &akey);
+    QVariant take(const QString &akey, QChar separator = ':');
+    QVariant take(const QString &akey, const QString &separator);
     bool isEmpty() const;
     JsonDict diff(const JsonDict &other) const;
     JsonDict &nest(QChar separator = ':');

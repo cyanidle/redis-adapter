@@ -8,6 +8,8 @@
 #include "httpserver/radapterapi.h"
 #include "initialization.h"
 #include "interceptors/duplicatinginterceptor.h"
+#include "interceptors/namespaceunwrapper.h"
+#include "interceptors/namespacewrapper.h"
 #include "interceptors/validatinginterceptor.h"
 #include "modbus/modbusmaster.h"
 #include "radapterlogging.h"
@@ -112,6 +114,12 @@ void Launcher::initConfig()
     }
     for (auto [name, config]: d->config.interceptors->validating) {
         addInterceptor(name, new ValidatingInterceptor(config));
+    }
+    for (auto [name, config]: d->config.interceptors->namespaces->unwrappers) {
+        addInterceptor(name, new NamespaceUnwrapper(config));
+    }
+    for (auto [name, config]: d->config.interceptors->namespaces->wrappers) {
+        addInterceptor(name, new NamespaceWrapper(config));
     }
     if (d->config.api->enabled) {
         addWorker(new ApiServer(d->config.api, newThread(), this));
