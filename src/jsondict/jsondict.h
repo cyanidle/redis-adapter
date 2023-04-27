@@ -164,6 +164,12 @@ struct JsonDict::const_iterator {
     const_iterator operator++(int);
     const_iterator &operator*();
     const QVariant *operator->();
+    template<std::size_t Index>
+    std::tuple_element_t<Index, ::JsonDict::const_iterator>& get()
+    {
+        if constexpr (Index == 0) return key();
+        if constexpr (Index == 1) return value();
+    }
 private:
     struct Private;
     Private *d;
@@ -196,6 +202,12 @@ struct JsonDict::iterator {
     iterator operator++(int);
     iterator &operator*();
     QVariant *operator->();
+    template<std::size_t Index>
+    std::tuple_element_t<Index, ::JsonDict::iterator>& get()
+    {
+        if constexpr (Index == 0) return key();
+        if constexpr (Index == 1) return value();
+    }
 private:
     struct Private;
     Private *d;
@@ -243,14 +255,7 @@ struct tuple_element<1, ::JsonDict::const_iterator>
     using type = const QVariant&;
 };
 
-template<std::size_t Index>
-std::tuple_element_t<Index, ::JsonDict::const_iterator>& get(::JsonDict::const_iterator &iter)
-{
-    if constexpr (Index == 0) return iter.key();
-    if constexpr (Index == 1) return iter.value();
 }
-}
-
 namespace Radapter {
     namespace literals {
         JsonDict operator "" _json(const char* str, std::size_t n);
