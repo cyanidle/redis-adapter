@@ -25,7 +25,7 @@ CONFIG -= debug_and_release
 PRECOMPILED_HEADER += private/global.h
 CONFIG += c++17 create_prl staticlib
 DESTDIR = ..
-DEFINES += RADAPTER_API=
+DEFINES += RADAPTER_API= YAML_CPP_API=
 
 # GCC shared library flags
 gcc {

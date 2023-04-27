@@ -742,6 +742,14 @@ struct NestedIter {
         map_iter map;
         list_iter list;
     };
+    ~NestedIter() {
+        if (!is_valid) return;
+        if (is_map) {
+            map.~map_iter();
+        } else {
+            list.~list_iter();
+        }
+    }
 };
 
 struct iterator_private_common {
