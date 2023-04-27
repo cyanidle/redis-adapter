@@ -1,5 +1,5 @@
-#ifndef JsonDict_H
-#define JsonDict_H
+#ifndef JSON_DICT_H
+#define JSON_DICT_H
 
 #include <QObject>
 #include <QJsonDocument>
@@ -49,11 +49,11 @@ public:
     operator QVariantMap&() &;
     operator QVariantMap&&() &&;
     QVariant toVariant() const;
+    struct iterator;
+    struct const_iterator;
     //! Функция доступа к вложенным элементам.
     /// \warning Попытка доступа к несуществующему ключу создает пустое значение в нем,
     /// не повлияет на данные, но стоит быть внимательным (возвращает QVariant& доступный для модификации)
-    struct iterator;
-    struct const_iterator;
     QVariant& operator[](const iterator& akey);
     QVariant& operator[](const const_iterator& akey);
     QVariant& operator[](const QStringList& akey);
@@ -115,8 +115,6 @@ public:
     JsonDict &merge(const JsonDict &src, bool overwrite = true);
     JsonDict merge(const JsonDict &src) const;
     QVariantMap flatten(const QString &separator = ":") const;
-    template <typename MapT>
-    struct iterator_base;
     JsonDict::iterator begin();
     JsonDict::iterator end();
     JsonDict::const_iterator begin() const;
@@ -128,12 +126,6 @@ public:
 protected:
     friend struct iterator;
     friend struct const_iterator;
-    enum IteratorFlagValues {
-        None = 0,
-        IsEnd = 1 << 1,
-        IsInRecursion = 1 << 2,
-    };
-    Q_DECLARE_FLAGS(IterFlags, IteratorFlagValues);
     QVariantMap m_dict;
     const QVariant *recurseTo(const QStringList &fullKey, int ignoreLastKeys = 0) const;
     QVariant *recurseTo(const QStringList &fullKey, int ignoreLastKeys = 0);
@@ -145,15 +137,16 @@ private:
     QString processWarn(const QStringList &src, const int& index);
 };
 
-template <typename MapT>
-struct JsonDict::iterator_base {
-    using map_iter = typename std::conditional<std::is_const<MapT>::value, QVariantMap::const_iterator, QVariantMap::iterator>::type;
-    using list_iter = typename std::conditional<std::is_const<MapT>::value, QVariantList::const_iterator, QVariantList::iterator>::type;
-    using value_type = typename map_iter::value_type;
-    template <typename T>
-    using qual_val = typename std::conditional<std::is_const<MapT>::value, const T, T>::type;
-    using qual_map_value = typename std::conditional<std::is_const<MapT>::value, const value_type, value_type>::type;
-    using ListT = typename std::conditional<std::is_const<MapT>::value, const QVariantList, QVariantList>::type;
+struct JsonDict::const_iterator {
+    using iter = QVariantMap::const_iterator;
+    ~const_iterator();
+    const_iterator(iter begin, iter end);
+    const_iterator(const const_iterator &other);
+    const_iterator(const_iterator &&other);
+    const_iterator &operator=(const const_iterator &other);
+    const_iterator &operator=(const_iterator &&other);
+    bool operator==(const const_iterator &other) const;
+    bool operator!=(const const_iterator &other) const;
     QStringList key() const;
     QStringList domainKey() const;
     const QVariantMap *domainMap() const;
@@ -162,125 +155,50 @@ struct JsonDict::iterator_base {
     int depth() const;
     bool isDomainMap() const;
     bool isDomainList() const;
-    qual_map_value &value() const;
+    const QVariant &value() const;
     template <typename T>
-    qual_val<T> &value() const {return value().template value<T>();}
-    bool operator==(const iterator_base &other) const;
-    bool operator!=(const iterator_base &other) const;
-    iterator_base &operator++();
-    iterator_base operator++(int);
-    iterator_base &operator*();
-    qual_map_value *operator->();
-    iterator_base(map_iter start, map_iter end);
-protected:
-    constexpr bool isEnd () const noexcept {return m_flags.testFlag(IsEnd);}
-    constexpr bool historyEmpty() const noexcept {return m_traverseHistory.isEmpty();}
-    constexpr bool isRecursion() const noexcept {return m_flags.testFlag(IsInRecursion);}
-    void stopRecurse() {m_flags.setFlag(IsInRecursion, false);}
-    void startRecurse() {m_flags.setFlag(IsInRecursion);}
+    const T value() const {
+        return value().template value<T>();
+    }
+    const_iterator &operator++();
+    const_iterator operator++(int);
+    const_iterator &operator*();
+    const QVariant *operator->();
 private:
-    struct NestedIter {
-        NestedIter() : is_valid(false) {}
-        NestedIter(list_iter list) : is_map(false), list(list) {}
-        NestedIter(map_iter map) : is_map(true), map(map) {}
-        NestedIter(const NestedIter& other) : is_map(other.is_map), count(other.count) {
-            if (is_map) {
-                map = other.map;
-            } else {
-                list = other.list;
-            }
-        }
-        QString key() const {
-            assert(is_valid);
-            return is_map ? map.key() : QStringLiteral("[%1]").arg(count);
-        }
-        qual_map_value &value() const {
-            assert(is_valid);
-            return is_map ? map.value() : *list;
-        }
-        NestedIter &operator=(const NestedIter &other) {
-            is_valid = other.is_valid;
-            is_map = other.is_map;
-            count = other.count;
-            if (is_map) map = other.map;
-            else list = other.list;
-            return *this;
-        }
-        bool operator==(const NestedIter &other) const {
-            assert(is_valid);
-            if (is_map != other.is_map) return false;
-            return is_map ? map == other.map : list == other.list;
-        }
-        bool operator!=(const NestedIter &other) const {
-            return !(*this==other);
-        }
-        NestedIter &operator++() {
-            assert(is_valid);
-            if (is_map) {
-                ++map;
-            } else {
-                ++count;
-                ++list;
-            }
-            return *this;
-        }
-        bool is_map{false};
-        bool is_valid{true};
-        quint16 count{0};
-        union {
-            map_iter map;
-            list_iter list;
-        };
-    };
-    NestedIter m_current;
-    NestedIter m_end;
-    IterFlags m_flags;
-    struct TraverseState {
-        NestedIter current;
-        NestedIter end;
-    };
-    QStack<TraverseState> m_traverseHistory;
-    friend JsonDict;
+    struct Private;
+    Private *d;
 };
 
-struct JsonDict::const_iterator : public iterator_base<const QVariantMap> {
-    using iterator_base::iterator_base;
-    using iterator_base::operator!=;
-    using iterator_base::operator==;
-    using iterator_base::operator*;
-    using iterator_base::operator->;
-    using iterator_base::value;
-    using iterator_base::key;
-    using iterator_base::depth;
-    using iterator_base::domainKey;
-    using iterator_base::field;
-    using iterator_base::operator++;
-    using iterator_base::isDomainMap;
-    using iterator_base::isDomainList;
-    using iterator_base::domainMap;
-    using iterator_base::domainList;
+struct JsonDict::iterator {
+    using iter = QVariantMap::iterator;
+    ~iterator();
+    iterator(iter begin, iter end);
+    iterator(const iterator &other);
+    iterator(iterator &&other);
+    iterator &operator=(const iterator &other);
+    iterator &operator=(iterator &&other);
+    bool operator==(const iterator &other) const;
+    bool operator!=(const iterator &other) const;
+    QStringList key() const;
+    QStringList domainKey() const;
+    const QVariantMap *domainMap() const;
+    const QVariantList *domainList() const;
+    QString field() const;
+    int depth() const;
+    bool isDomainMap() const;
+    bool isDomainList() const;
+    QVariant &value() const;
+    template <typename T>
+    T value() const {
+        return value().template value<T>();
+    }
+    iterator &operator++();
+    iterator operator++(int);
+    iterator &operator*();
+    QVariant *operator->();
 private:
-    friend JsonDict;
-};
-
-struct JsonDict::iterator : public iterator_base<QVariantMap> {
-    using iterator_base::iterator_base;
-    using iterator_base::operator!=;
-    using iterator_base::operator==;
-    using iterator_base::operator*;
-    using iterator_base::operator->;
-    using iterator_base::value;
-    using iterator_base::key;
-    using iterator_base::depth;
-    using iterator_base::domainKey;
-    using iterator_base::field;
-    using iterator_base::operator++;
-    using iterator_base::isDomainMap;
-    using iterator_base::isDomainList;
-    using iterator_base::domainMap;
-    using iterator_base::domainList;
-private:
-    friend JsonDict;
+    struct Private;
+    Private *d;
 };
 
 namespace std
@@ -331,165 +249,6 @@ std::tuple_element_t<Index, ::JsonDict::const_iterator>& get(::JsonDict::const_i
     if constexpr (Index == 0) return iter.key();
     if constexpr (Index == 1) return iter.value();
 }
-}
-
-template<typename MapT>
-QStringList JsonDict::iterator_base<MapT>::key() const {
-    if (historyEmpty()) {
-        return {m_current.key()};
-    }
-    QStringList result;
-    for (auto &state : m_traverseHistory) {
-        result.append(state.current.key());
-    }
-    result.append(m_current.key());
-    return result;
-}
-
-template<typename MapT>
-QStringList JsonDict::iterator_base< MapT>::domainKey() const {
-    if (historyEmpty()) {
-        return {m_current.key()};
-    }
-    QStringList result;
-    for (auto &state : m_traverseHistory) {
-        result.append(state.current.key());
-    }
-    return result;
-}
-
-template<typename MapT>
-const QVariantMap *JsonDict::iterator_base<MapT>::domainMap() const
-{
-    if (!historyEmpty() && isDomainMap()) {
-        return reinterpret_cast<const QVariantMap*>(m_traverseHistory.last().current.value().data());
-    } else {
-        return nullptr;
-    }
-}
-
-template<typename MapT>
-const QVariantList *JsonDict::iterator_base<MapT>::domainList() const
-{
-    if (!historyEmpty() && isDomainList()) {
-        return reinterpret_cast<const QVariantList*>(m_traverseHistory.last().current.value().data());
-    } else {
-        return nullptr;
-    }
-}
-
-template<typename MapT>
-int JsonDict::iterator_base< MapT>::depth() const {
-    return m_traverseHistory.size();
-}
-
-template<typename MapT>
-bool JsonDict::iterator_base<MapT>::isDomainMap() const
-{
-    return m_current.is_map;
-}
-
-template<typename MapT>
-bool JsonDict::iterator_base<MapT>::isDomainList() const
-{
-    return !isDomainMap();
-}
-
-template<typename MapT>
-typename
-JsonDict::iterator_base<MapT>::qual_map_value &JsonDict::iterator_base<MapT>::value() const
-{
-    return m_current.value();
-}
-
-template<typename MapT>
-JsonDict::iterator_base<MapT> &JsonDict::iterator_base<MapT>::operator++()
-{
-    if (!isRecursion()){
-        ++m_current;
-    }
-    if (m_current == m_end) {
-        if (historyEmpty()) {
-            stopRecurse();
-            return *this;
-        }
-        auto popped = m_traverseHistory.pop();
-        m_current = popped.current;
-        m_end = popped.end;
-        ++m_current;
-        startRecurse();
-        return ++*this;
-    }
-    auto *val = &m_current.value();
-    if (val->typeId() == QMetaType::QVariantMap) {
-        m_traverseHistory.push(TraverseState{m_current, m_end});
-        auto *asDict = reinterpret_cast<MapT*>(val->data());
-        m_current = asDict->begin();
-        m_end = asDict->end();
-        startRecurse();
-        return ++*this;
-    } else if (val->typeId() == QMetaType::QVariantList) {
-        m_traverseHistory.push(TraverseState{m_current, m_end});
-        auto *asList = reinterpret_cast<ListT*>(val->data());
-        m_current = asList->begin();
-        m_end = asList->end();
-        startRecurse();
-        return ++*this;
-    } else if (!val->isValid()) {
-        ++m_current;
-        startRecurse();
-        return ++*this;
-    }
-    stopRecurse();
-    return *this;
-}
-
-template<typename MapT>
-JsonDict::iterator_base<MapT> JsonDict::iterator_base<MapT>::operator++(int) {
-    auto temp = *this;
-    ++*this;
-    return temp;
-}
-
-template<typename MapT>
-bool JsonDict::iterator_base<MapT>::operator==(const iterator_base &other) const {
-    return m_current == other.m_current;
-}
-
-template<typename MapT>
-bool JsonDict::iterator_base<MapT>::operator!=(const iterator_base &other) const {
-    return m_current != other.m_current;
-}
-
-template<typename MapT>
-JsonDict::iterator_base<MapT> &JsonDict::iterator_base<MapT>::operator*()
-{
-    return *this;
-}
-
-template<typename MapT>
-typename
-JsonDict::iterator_base<MapT>::qual_map_value *JsonDict::iterator_base<MapT>::operator->()
-{
-    return &value();
-}
-
-template<typename MapT>
-JsonDict::iterator_base<MapT>::iterator_base(map_iter start, map_iter end) :
-    m_current(start),
-    m_end(end),
-    m_flags(start == end ? IsEnd : 0),
-    m_traverseHistory()
-{
-    if (!isEnd()) {
-        startRecurse();
-        ++(*this);
-    }
-}
-
-template<typename MapT>
-QString JsonDict::iterator_base<MapT>::field() const {
-    return m_current.key();
 }
 
 namespace Radapter {
