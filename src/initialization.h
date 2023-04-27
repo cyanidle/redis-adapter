@@ -3,6 +3,7 @@
 
 #include "private/global.h"
 #include "radapterlogging.h"
+#include <stdexcept>
 
 class QLibrary;
 

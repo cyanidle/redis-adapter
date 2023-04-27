@@ -172,22 +172,22 @@ QVariant *JsonDict::find(QVariantList *list, qint64 index)
 
 JsonDict::iterator JsonDict::begin()
 {
-    return JsonDict::iterator(m_dict.begin(), m_dict.end());
+    return JsonDict::iterator(m_dict.begin(), m_dict.end(), &m_dict);
 }
 
 JsonDict::iterator JsonDict::end()
 {
-    return JsonDict::iterator(m_dict.end(), m_dict.end());
+    return JsonDict::iterator(m_dict.end(), m_dict.end(), &m_dict);
 }
 
 JsonDict::const_iterator JsonDict::begin() const
 {
-    return JsonDict::const_iterator(m_dict.begin(), m_dict.end());
+    return JsonDict::const_iterator(m_dict.begin(), m_dict.end(), &m_dict);
 }
 
 JsonDict::const_iterator JsonDict::end() const
 {
-    return JsonDict::const_iterator(m_dict.end(), m_dict.end());
+    return JsonDict::const_iterator(m_dict.end(), m_dict.end(), &m_dict);
 }
 
 JsonDict::const_iterator JsonDict::cbegin() const
@@ -685,16 +685,28 @@ JsonDict Radapter::literals::operator "" _json(const char *str, std::size_t n)
     return JsonDict::fromJsonObj(doc.object());
 }
 
-namespace { // similar to static func(). Allows compiler to optimize better
+//namespace { // similar to static func(). Allows compiler to optimize better
 template <bool isConst>
 struct NestedIter {
     using list_iter = std::conditional_t<isConst, QVariantList::const_iterator, QVariantList::iterator>;
     using map_iter = std::conditional_t<isConst, QVariantMap::const_iterator, QVariantMap::iterator>;
     using qual_value_t = std::conditional_t<isConst, const QVariant, QVariant>;
     NestedIter() : is_valid(false) {}
-    NestedIter(list_iter list) : is_map(false), list(list) {}
-    NestedIter(map_iter map) : is_map(true), map(map) {}
-    NestedIter(const NestedIter& other) : is_map(other.is_map), count(other.count) {
+    NestedIter(list_iter list, const void* container) :
+        is_map(false),
+        list(list),
+        _container(container)
+    {}
+    NestedIter(map_iter map, const void* container) :
+        is_map(true),
+        map(map),
+        _container(container)
+    {}
+    NestedIter(const NestedIter& other) :
+        is_map(other.is_map),
+        count(other.count),
+        _container(other._container)
+    {
         if (is_map) {
             map = other.map;
         } else {
@@ -713,6 +725,7 @@ struct NestedIter {
         is_valid = other.is_valid;
         is_map = other.is_map;
         count = other.count;
+        _container = other._container;
         if (is_map) map = other.map;
         else list = other.list;
         return *this;
@@ -720,6 +733,7 @@ struct NestedIter {
     bool operator==(const NestedIter &other) const {
         assert(is_valid);
         if (is_map != other.is_map) return false;
+        if (_container != other._container) return false;
         return is_map ? map == other.map : list == other.list;
     }
     bool operator!=(const NestedIter &other) const {
@@ -738,18 +752,9 @@ struct NestedIter {
     bool is_map{false};
     bool is_valid{true};
     quint16 count{0};
-    union {
-        map_iter map;
-        list_iter list;
-    };
-    ~NestedIter() {
-        if (!is_valid) return;
-        if (is_map) {
-            map.~map_iter();
-        } else {
-            list.~list_iter();
-        }
-    }
+    map_iter map;
+    list_iter list;
+    const void* _container{nullptr};
 };
 
 struct iterator_private_common {
@@ -773,16 +778,17 @@ struct iterator_private_common {
         flags.setFlag(IsInRecursion);
     }
 };
-} // namespace
+//} // namespace
 
 struct JsonDict::const_iterator::Private : iterator_private_common {
     using MapT = const QVariantMap;
     using ListT = const QVariantList;
-    NestedIter<true> current;
-    NestedIter<true> end;
+    using Iter = NestedIter<true>;
+    Iter current;
+    Iter end;
     struct TraverseState {
-        NestedIter<true> current;
-        NestedIter<true> end;
+        Iter current;
+        Iter end;
     };
     QStack<TraverseState> traverseHistory;
     bool historyEmpty() const noexcept {
@@ -793,66 +799,68 @@ struct JsonDict::const_iterator::Private : iterator_private_common {
 struct JsonDict::iterator::Private : iterator_private_common {
     using MapT = QVariantMap;
     using ListT = QVariantList;
-    NestedIter<false> current;
-    NestedIter<false> end;
+    using Iter = NestedIter<false>;
+    Iter current;
+    Iter end;
     struct TraverseState {
-        NestedIter<false> current;
-        NestedIter<false> end;
+        Iter current;
+        Iter end;
     };
     QStack<TraverseState> traverseHistory;
     bool historyEmpty() const noexcept {
         return traverseHistory.isEmpty();
     }
 };
-namespace {
+//namespace {
 template <typename Priv>
-struct PrivateLogic : Priv
+struct PrivateLogic
 {
+    PrivateLogic (Priv *d) : d(d) {}
     QStringList key() const
     {
-        if (this->historyEmpty()) {
-            return {this->current.key()};
+        if (d->historyEmpty()) {
+            return {d->current.key()};
         }
         QStringList result;
-        for (auto &state : this->traverseHistory) {
+        for (auto &state : d->traverseHistory) {
             result.append(state.current.key());
         }
-        result.append(this->current.key());
+        result.append(d->current.key());
         return result;
     }
     QStringList domainKey() const {
-        if (this->historyEmpty()) {
-            return {this->current.key()};
+        if (d->historyEmpty()) {
+            return {d->current.key()};
         }
         QStringList result;
-        for (auto &state : this->traverseHistory) {
+        for (auto &state : d->traverseHistory) {
             result.append(state.current.key());
         }
         return result;
     }
     const QVariantMap *domainMap() const
     {
-        if (!this->historyEmpty() && this->isDomainMap()) {
-            return reinterpret_cast<const QVariantMap*>(this->traverseHistory.last().current.value().data());
+        if (!d->historyEmpty() && isDomainMap()) {
+            return reinterpret_cast<const QVariantMap*>(d->traverseHistory.last().current.value().data());
         } else {
             return nullptr;
         }
     }
     const QVariantList *domainList() const
     {
-        if (!this->historyEmpty() && this->isDomainList()) {
-            return reinterpret_cast<const QVariantList*>(this->traverseHistory.last().current.value().data());
+        if (!d->historyEmpty() && isDomainList()) {
+            return reinterpret_cast<const QVariantList*>(d->traverseHistory.last().current.value().data());
         } else {
             return nullptr;
         }
     }
     int depth() const {
-        return this->traverseHistory.size();
+        return d->traverseHistory.size();
     }
 
     bool isDomainMap() const
     {
-        return this->current.is_map;
+        return d->current.is_map;
     }
 
     bool isDomainList() const
@@ -861,79 +869,77 @@ struct PrivateLogic : Priv
     }
     Priv &operator++()
     {
-        if (!this->isRecursion()){
-            ++this->current;
+        if (!d->isRecursion()){
+            ++d->current;
         }
-        if (this->current == this->end) {
-            if (this->historyEmpty()) {
-                this->stopRecurse();
-                return *this;
+        if (d->current == d->end) {
+            if (d->historyEmpty()) {
+                d->stopRecurse();
+                return *d;
             }
-            auto popped = this->traverseHistory.pop();
-            this->current = popped.current;
-            this->end = popped.end;
-            ++this->current;
-            this->startRecurse();
+            auto popped = d->traverseHistory.pop();
+            d->current = popped.current;
+            d->end = popped.end;
+            ++d->current;
+            d->startRecurse();
             return ++*this;
         }
-        auto *val = &this->current.value();
+        auto *val = &d->current.value();
         if (val->typeId() == QMetaType::QVariantMap) {
-            this->traverseHistory.push(typename Priv::TraverseState{this->current, this->end});
+            d->traverseHistory.push(typename Priv::TraverseState{d->current, d->end});
             auto *asDict = reinterpret_cast<typename Priv::MapT*>(val->data());
-            this->current = asDict->begin();
-            this->end = asDict->end();
-            this->startRecurse();
+            d->current = {asDict->begin(), asDict};
+            d->end = {asDict->end(), asDict};
+            d->startRecurse();
             return ++*this;
         } else if (val->typeId() == QMetaType::QVariantList) {
-            this->traverseHistory.push(typename Priv::TraverseState{this->current, this->end});
+            d->traverseHistory.push(typename Priv::TraverseState{d->current, d->end});
             auto *asList = reinterpret_cast<typename Priv::ListT*>(val->data());
-            this->current = asList->begin();
-            this->end = asList->end();
-            this->startRecurse();
+            d->current = {asList->begin(), asList};
+            d->end = {asList->end(), asList};
+            d->startRecurse();
             return ++*this;
         } else if (!val->isValid()) {
-            ++this->current;
-            this->startRecurse();
+            ++d->current;
+            d->startRecurse();
             return ++*this;
         }
-        this->stopRecurse();
-        return *this;
+        d->stopRecurse();
+        return *d;
     }
 
     bool operator==(const Priv &other) const {
-        return this->current == other.current;
+        return d->current == other.current;
     }
 
     QString field() const {
-        return this->current.key();
+        return d->current.key();
     }
-
+    Priv *d;
 };
 
 template <typename Priv>
-PrivateLogic<Priv> *logic(Priv *d) {
-    static_assert(sizeof(Priv) == (sizeof(PrivateLogic<Priv>)), "Do not add members to logic!");
-    return reinterpret_cast<PrivateLogic<Priv> *>(d);
+PrivateLogic<Priv> logic(Priv *d) {
+    return PrivateLogic{d};
 }
 
 template <typename Priv>
-const PrivateLogic<Priv> *logic(const Priv *d) {
-    static_assert(sizeof(Priv) == (sizeof(const PrivateLogic<Priv>)), "Do not add members to logic!");
-    return reinterpret_cast<const PrivateLogic<Priv> *>(d);
+const PrivateLogic<Priv> logic(const Priv *d) {
+    return PrivateLogic<Priv>(const_cast<Priv*>(d));
 }
 
-} // namespace
+//} // namespace
 
 JsonDict::iterator::~iterator()
 {
     delete d;
 }
 
-JsonDict::iterator::iterator(iter start, iter end) :
+JsonDict::iterator::iterator(iter start, iter end, void *container) :
     d(new Private{
         {start == end ? iterator_private_common::IsEnd : iterator_private_common::None},
-        start,
-        end,
+        {start, container},
+        {end, container},
         {}
     })
 {
@@ -963,7 +969,7 @@ JsonDict::iterator &JsonDict::iterator::operator=(const iterator &other)
 
 bool JsonDict::iterator::operator==(const iterator &other) const
 {
-    return *logic(d) == *logic(other.d);
+    return logic(d) == *other.d;
 }
 
 bool JsonDict::iterator::operator!=(const iterator &other) const
@@ -973,42 +979,42 @@ bool JsonDict::iterator::operator!=(const iterator &other) const
 
 QStringList JsonDict::iterator::key() const
 {
-    return logic(d)->key();
+    return logic(d).key();
 }
 
 QStringList JsonDict::iterator::domainKey() const
 {
-    return logic(d)->domainKey();
+    return logic(d).domainKey();
 }
 
 const QVariantMap *JsonDict::iterator::domainMap() const
 {
-    return logic(d)->domainMap();
+    return logic(d).domainMap();
 }
 
 const QVariantList *JsonDict::iterator::domainList() const
 {
-    return logic(d)->domainList();
+    return logic(d).domainList();
 }
 
 QString JsonDict::iterator::field() const
 {
-    return logic(d)->field();
+    return logic(d).field();
 }
 
 int JsonDict::iterator::depth() const
 {
-    return logic(d)->depth();
+    return logic(d).depth();
 }
 
 bool JsonDict::iterator::isDomainMap() const
 {
-    return logic(d)->isDomainMap();
+    return logic(d).isDomainMap();
 }
 
 bool JsonDict::iterator::isDomainList() const
 {
-    return logic(d)->isDomainList();
+    return logic(d).isDomainList();
 }
 
 QVariant &JsonDict::iterator::value() const
@@ -1018,7 +1024,7 @@ QVariant &JsonDict::iterator::value() const
 
 JsonDict::iterator &JsonDict::iterator::operator++()
 {
-    ++(*logic(d));
+    ++logic(d);
     return *this;
 }
 
@@ -1035,7 +1041,7 @@ QVariant *JsonDict::iterator::operator->()
 JsonDict::iterator JsonDict::iterator::operator++(int)
 {
     auto temp = *this;
-    ++(*logic(d));
+    ++logic(d);
     return temp;
 }
 
@@ -1050,11 +1056,11 @@ JsonDict::const_iterator::~const_iterator()
     delete d;
 }
 
-JsonDict::const_iterator::const_iterator(iter start, iter end) :
+JsonDict::const_iterator::const_iterator(iter start, iter end, const void *container) :
     d(new Private{
         {start == end ? iterator_private_common::IsEnd : iterator_private_common::None},
-        start,
-        end,
+        {start, container},
+        {end, container},
         {}
     })
 {
@@ -1084,7 +1090,7 @@ JsonDict::const_iterator &JsonDict::const_iterator::operator=(const const_iterat
 
 bool JsonDict::const_iterator::operator==(const const_iterator &other) const
 {
-    return *logic(d) == *logic(other.d);
+    return logic(d) == *other.d;
 }
 
 bool JsonDict::const_iterator::operator!=(const const_iterator &other) const
@@ -1094,42 +1100,42 @@ bool JsonDict::const_iterator::operator!=(const const_iterator &other) const
 
 QStringList JsonDict::const_iterator::key() const
 {
-    return logic(d)->key();
+    return logic(d).key();
 }
 
 QStringList JsonDict::const_iterator::domainKey() const
 {
-    return logic(d)->domainKey();
+    return logic(d).domainKey();
 }
 
 const QVariantMap *JsonDict::const_iterator::domainMap() const
 {
-    return logic(d)->domainMap();
+    return logic(d).domainMap();
 }
 
 const QVariantList *JsonDict::const_iterator::domainList() const
 {
-    return logic(d)->domainList();
+    return logic(d).domainList();
 }
 
 QString JsonDict::const_iterator::field() const
 {
-    return logic(d)->field();
+    return logic(d).field();
 }
 
 int JsonDict::const_iterator::depth() const
 {
-    return logic(d)->depth();
+    return logic(d).depth();
 }
 
 bool JsonDict::const_iterator::isDomainMap() const
 {
-    return logic(d)->isDomainMap();
+    return logic(d).isDomainMap();
 }
 
 bool JsonDict::const_iterator::isDomainList() const
 {
-    return logic(d)->isDomainList();
+    return logic(d).isDomainList();
 }
 
 const QVariant &JsonDict::const_iterator::value() const
@@ -1139,7 +1145,7 @@ const QVariant &JsonDict::const_iterator::value() const
 
 JsonDict::const_iterator &JsonDict::const_iterator::operator++()
 {
-    ++(*logic(d));
+    ++logic(d);
     return *this;
 }
 
@@ -1156,7 +1162,7 @@ const QVariant *JsonDict::const_iterator::operator->()
 JsonDict::const_iterator JsonDict::const_iterator::operator++(int)
 {
     auto temp = *this;
-    ++(*logic(d));
+    ++logic(d);
     return temp;
 }
 

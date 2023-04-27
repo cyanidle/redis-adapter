@@ -7,6 +7,7 @@
 #include <QString>
 #include <QVariant>
 #include <type_traits>
+#include <stdexcept>
 
 #define RADAPTER_VERSION "0.85"
 

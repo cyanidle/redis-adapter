@@ -1,11 +1,11 @@
 pipelines:
   - meteo.data > |meteo.divide| > |meteo.round_wind_direction| > |meteo.duplicate| > |meteo.format| > meteo.redis.cache.writer
   - meteo.modbus > meteo.data
-  - test.data > meteo.data
+  #- test.data > meteo.data
 
-mocks:
- - name: test.data
-   json_file_path: /home/alexej/repos/redis-adapter/mocks/data.json
+#mocks:
+# - name: test.data
+#   json_file_path: /home/alexej/repos/redis-adapter/mocks/data.json
 
 repeaters:
   - name: meteo.data

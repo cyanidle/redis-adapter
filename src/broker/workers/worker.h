@@ -9,7 +9,7 @@ class RoutedObject;
 class QThread;
 class JsonDict;
 namespace Settings {
-class Worker;
+struct Worker;
 }
 namespace Radapter {
 class Broker;

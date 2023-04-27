@@ -140,7 +140,7 @@ private:
 struct JsonDict::const_iterator {
     using iter = QVariantMap::const_iterator;
     ~const_iterator();
-    const_iterator(iter begin, iter end);
+    const_iterator(iter begin, iter end, const void *container);
     const_iterator(const const_iterator &other);
     const_iterator(const_iterator &&other);
     const_iterator &operator=(const const_iterator &other);
@@ -178,7 +178,7 @@ private:
 struct JsonDict::iterator {
     using iter = QVariantMap::iterator;
     ~iterator();
-    iterator(iter begin, iter end);
+    iterator(iter begin, iter end, void *container);
     iterator(const iterator &other);
     iterator(iterator &&other);
     iterator &operator=(const iterator &other);
