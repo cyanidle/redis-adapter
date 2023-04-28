@@ -198,14 +198,14 @@ auto filter(const Container &container, Filter filter) -> FilterConstHolder<Cont
     return FilterConstHolder<Container, Filter>(container, filter);
 }
 
-template <typename K, typename T>
-auto keyVal(const QMap<K, T> &map)
+template <typename Container>
+auto keyVal(const Container &map)
 {
     return ConstKeyValWrapper(map);
 }
 
-template <typename K, typename T>
-auto keyVal(QMap<K, T> &map)
+template <typename Container>
+auto keyVal(Container &map)
 {
     return KeyValWrapper(map);
 }

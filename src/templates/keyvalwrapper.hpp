@@ -3,11 +3,11 @@
 
 #include "private/global.h"
 
-template <typename K, typename T>
+template <typename Container>
 struct ConstKeyValWrapper {
-    using const_iterator = typename QMap<K, T>::const_key_value_iterator;
+    using const_iterator = typename Container::const_key_value_iterator;
     using iterator = const_iterator;
-    ConstKeyValWrapper(const QMap<K, T> &map) :
+    ConstKeyValWrapper(const Container &map) :
         m_map(map)
     {}
     iterator begin() {
@@ -29,14 +29,14 @@ struct ConstKeyValWrapper {
         return m_map.constKeyValueEnd();
     }
 private:
-    const QMap<K, T> &m_map;
+    const Container &m_map;
 };
 
-template <typename K, typename T>
+template <typename Container>
 struct KeyValWrapper {
-    using const_iterator = typename QMap<K, T>::const_key_value_iterator;
-    using iterator = typename QMap<K, T>::key_value_iterator;
-    KeyValWrapper(QMap<K, T> &map) :
+    using const_iterator = typename Container::const_key_value_iterator;
+    using iterator = typename Container::key_value_iterator;
+    KeyValWrapper(Container &map) :
         m_map(map)
     {}
     iterator begin() {
@@ -58,7 +58,7 @@ struct KeyValWrapper {
         return m_map.constKeyValueEnd();
     }
 private:
-    QMap<K, T> &m_map;
+    Container &m_map;
 };
 
 #endif // KEYVALWRAPPER_HPP

@@ -12,12 +12,14 @@
 #include "interceptors/settings/namespacewrappersettings.h"
 #include "interceptors/settings/validatinginterceptorsettings.h"
 #include "interceptors/validatinginterceptor.h"
+#include <QStringBuilder>
 #include "launcher.h"
 #include "qthread.h"
+#include <QRecursiveMutex>
 #include "validators/validator_fetch.h"
-#include <QDir>
 #include "templates/algorithms.hpp"
-#include <QLibrary>
+
+Q_GLOBAL_STATIC(QRecursiveMutex, staticMutex)
 
 using namespace Radapter;
 
@@ -25,6 +27,13 @@ struct FuncResult {
     QString func;
     QStringList data;
 };
+
+bool isFunc(const QString &what)
+{
+    auto split = what.split('(');
+    if (split.size() < 2) return false;
+    return split.last().endsWith(')');
+}
 
 FuncResult parseFunc(const QString &rawFunc)
 {
@@ -99,14 +108,46 @@ void tryConnecting(const QString &producer, const QString &consumer, const QStri
     broker->connectTwo(producer, consumer, pipe);
 }
 
+static bool isInterceptor (const QString &worker) {
+    return worker.startsWith('*');
+};
+
+bool handleBidirectional(QStringList &source)
+{
+    auto hadBidirect = false;
+    for (auto &point: source) {
+        if (!point.contains(" <=> ")) continue;
+        hadBidirect = true;
+        auto pairs = point.split(" <=> ");
+        if (pairs.size() < 2) {
+            throw std::runtime_error("Cannot have bidirectional pair (<=>) with only one worker!");
+        }
+        for (auto &subitem : pairs) {
+            if (isInterceptor(subitem)) {
+                throw std::runtime_error("Cannot have *interceptors in a bidirectional pair (<=>)!");
+            }
+        }
+        for (int i = 1; i < pairs.size(); ++i) {
+            auto currentPair = QPair<QString, QString>{pairs[i-1], pairs[i]};
+            initPipe(currentPair.first % " > " % currentPair.second);
+            initPipe(currentPair.second % " > " % currentPair.first);
+            point = currentPair.second;
+        }
+    }
+    return hadBidirect;
+}
+
 void Radapter::initPipe(const QString& pipe, QObject *parent)
 {
-    static auto isInterceptor = [](const QString &worker) {
-        return worker.startsWith('|') && worker.endsWith('|');
-    };
-    auto split = pipe.split('>');
+    QMutexLocker lock(&(*staticMutex));
+    auto split = pipe.split(" > ");
+    auto hadBidirect = handleBidirectional(split);
     if (split.size() < 2) {
-        throw std::runtime_error("Pipeline length must be more than 2!");
+        if (!hadBidirect) {
+            throw std::runtime_error("Pipeline length must be more than 2!");
+        } else {
+            return;
+        }
     }
     auto prevWorker = split.takeFirst().simplified();
     auto lastWorker = split.constLast().simplified();
@@ -122,7 +163,7 @@ void Radapter::initPipe(const QString& pipe, QObject *parent)
     for (const auto &point : split) {
         auto current = point.simplified();
         if (isInterceptor(current)) {
-            currentInterceptors.append(current.replace('|', "").simplified());
+            currentInterceptors.append(current.remove(0, 1).simplified());
             continue;
         }
         workers.append({prevWorker, current});
