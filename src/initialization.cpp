@@ -16,6 +16,7 @@
 #include "launcher.h"
 #include "qthread.h"
 #include <QRecursiveMutex>
+#include "raw_sockets/udpconsumer.h"
 #include "validators/validator_fetch.h"
 #include "templates/algorithms.hpp"
 
@@ -77,7 +78,7 @@ void tryCreateInterceptor(const QString &name, QObject *parent)
 void tryCreateWorker(const QString &name, QObject *parent)
 {
     auto broker = Radapter::Broker::instance();
-    auto [func, _] = parseFunc(name);
+    auto [func, data] = parseFunc(name);
     if (func == "repeater") {
         auto config = Settings::Repeater();
         config.name = name;
@@ -86,6 +87,15 @@ void tryCreateWorker(const QString &name, QObject *parent)
         auto config = Settings::MockWorker();
         config.name = name;
         broker->registerWorker(new MockWorker(config, new QThread(parent)));
+    }  else if (func == "udp.in") {
+        auto config = Udp::ConsumerSettings();
+        config.worker->name = name;
+        bool ok;
+        config.port = data[0].toUInt(&ok);
+        if (!ok) {
+            throw std::runtime_error("Invalid port passed to Udp::Consumer: " + data[0].toStdString());
+        }
+        broker->registerWorker(new Udp::Consumer(config, new QThread(parent)));
     } else {
         throw std::runtime_error("(" + name.toStdString() + ") is not supported in pipe!");
     }

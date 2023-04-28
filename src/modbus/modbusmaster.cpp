@@ -330,7 +330,9 @@ void Master::formatAndSendJson(const JsonDict &json)
         emit send(result);
     }
     if (!toRewrite.isEmpty()) {
-        write(toRewrite);
+        QTimer::singleShot(d->settings.response_time_ms, this, [this, toRewrite]{
+            write(toRewrite);
+        });
     }
 }
 
