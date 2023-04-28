@@ -5,7 +5,7 @@
 namespace Settings {
 
 Serializable::Serializable() :
-    m_allowExtra(false)
+    m_allowExtra(true)
 {
 }
 
@@ -183,9 +183,9 @@ Example Serializable::getExample() const
     return result;
 }
 
-void Serializable::allowExtra(bool state)
+void Serializable::forbidExtra(bool state)
 {
-    m_allowExtra = state;
+    m_allowExtra = !state;
 }
 
 } // namespace Settings

@@ -8,6 +8,7 @@ struct NamespaceUnwrapper : Serializable {
     Q_GADGET
     IS_SERIALIZABLE
     FIELD(Required<NestedKey>, unwrap_from);
+    FIELD(HasDefault<bool>, print_filtered, true);
 };
 }
 

@@ -1,7 +1,7 @@
 #include <QLibrary>
 #include <QCommandLineParser>
 #include "broker/broker.h"
-#include "broker/workers/repeater.h"
+#include "broker/workers/repeaterworker.h"
 #include "consumers/rediscacheconsumer.h"
 #include "consumers/rediskeyeventsconsumer.h"
 #include "consumers/redisstreamconsumer.h"
@@ -39,7 +39,7 @@ struct Radapter::Launcher::Private {
     QString configsResource;
     QString configsFormat;
     QString file;
-    QString pluginsPath;
+    //QString pluginsPath;
     QString configKey;
     QCommandLineParser argsParser;
     Settings::AppConfig config;
@@ -55,14 +55,12 @@ Launcher::Launcher(QObject *parent) :
         "Redis Adapter. System for routing and collecting information from and to different protocols/devices/code modules.");
     parseCommandlineArgs();
     Validator::registerAllCommon();
-    initPlugins();
     initConfig();
 }
 
 void Launcher::initConfig()
 {
     auto configMap = reader()->get(d->configKey).toMap();
-    d->config.allowExtra();
     d->config.update(configMap);
     for (const auto& config: d->config.redis->cache->consumers) {
         addWorker(new Redis::CacheConsumer(config, newThread()));
@@ -126,29 +124,6 @@ void Launcher::initConfig()
     }
     LocalStorage::init(this);
 }
-
-void Launcher::initPlugins()
-{
-    QDir dir(d->pluginsPath);
-    if (!dir.exists()) {
-        settingsParsingWarn() << "No plugins dir: " << dir.absolutePath();
-        return;
-    }
-    settingsParsingWarn() << "Seaching dir for plugins:" << dir.absolutePath();
-    QList<QLibrary*> plugins;
-    for (const auto &file: dir.entryList(QDir::Filter::Files | QDir::Filter::NoSymLinks)) {
-        auto path = dir.filePath(file);
-        if (!QLibrary::isLibrary(path)) {
-            settingsParsingWarn() << path << "is not a library. Skipping";
-            continue;
-        }
-        auto lib = new QLibrary(path, this);
-        plugins.append(lib);
-    }
-    settingsParsingWarn() << "Found" << plugins.size() << "plugin(s)!";
-    Radapter::initPlugins(plugins);
-}
-
 void Launcher::parseCommandlineArgs()
 {
     if (QCoreApplication::applicationName().isEmpty()) {
@@ -164,8 +139,8 @@ void Launcher::parseCommandlineArgs()
                     "Config will be read from <.parser_format> files (available: yaml) (default: yaml).", "parser", "yaml"},
                   {{"f", "file"},
                     "File to read settings from (default: <directory>/config.<parser-extension>).", "file", "config"},
-                  {{QString("plugins-dir")},
-                    "Directory with plugins (default: $(pwd)/plugins).", "plugins-dir", "plugins"},
+                  //{{QString("plugins-dir")},
+                  //  "Directory with plugins (default: $(pwd)/plugins).", "plugins-dir", "plugins"},
                   {{"c", "config-key"},
                    "Subkey of Settings::AppConfig (default: ''(root)).", "config-key", ""},
                   {QString{"dump-config-example"},
@@ -176,7 +151,7 @@ void Launcher::parseCommandlineArgs()
     d->argsParser.process(*QCoreApplication::instance());
     d->configsResource = d->argsParser.value("directory");
     d->configsFormat = d->argsParser.value("parser");
-    d->pluginsPath = d->argsParser.value("plugins-dir");
+    //d->pluginsPath = d->argsParser.value("plugins-dir");
     d->file = d->argsParser.value("file");
     d->configKey = d->argsParser.value("config-key");
     auto isExamplesMode = d->argsParser.isSet("dump-config-example");
@@ -213,12 +188,12 @@ void Launcher::run()
 {
 #ifdef Q_OS_UNIX
     auto resmonThr = new QThread(this);
-    auto resmon = new ResourceMonitor();
+    auto resmon = new ResourceMonitor(this);
     connect(resmonThr, &QThread::started, resmon, &ResourceMonitor::run);
     resmon->moveToThread(resmonThr);
     resmonThr->start(QThread::LowPriority);
 #endif
-    initPipelines(d->config.pipelines.value);
+    initPipelines(d->config.pipelines.value, this);
     Broker::instance()->runAll();
     emit started();
 }
@@ -237,6 +212,11 @@ QThread *Launcher::newThread()
 QCommandLineParser &Launcher::commandLineParser()
 {
     return d->argsParser;
+}
+
+void Launcher::createPipe(const QString &pipe)
+{
+    Radapter::initPipe(pipe, this);
 }
 
 Launcher::~Launcher()

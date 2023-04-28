@@ -3,6 +3,7 @@
 
 #include "private/global.h"
 #include "metaprogramming.hpp"
+#include "templates/callable_info.hpp"
 #include "templates/containerfilter.hpp"
 #include "templates/enumerator.hpp"
 #include "templates/reverser.hpp"
@@ -10,31 +11,29 @@
 #include "zipiterator.hpp"
 
 namespace Radapter{
-
+namespace Private {
+struct test_invalid{};
+}
 template <typename Object, typename Method, typename...Args>
 decltype(auto) test(const Object &val, Method pred, Args&&...args) {
-    struct Invalid{};
-    if constexpr (!std::is_pointer_v<Object> && !is_smart_ptr_v<Object> && !is_iterator_v<Object>) {
+    if constexpr (!CallableInfo<Method>::IsMethod) {
+        return pred(val, std::forward<Args>(args)...);
+    } else if constexpr (!std::is_pointer_v<Object> && !is_smart_ptr_v<Object> && !is_iterator_v<Object>) {
         return (val.*pred)(std::forward<Args>(args)...);
     } else if constexpr (std::is_pointer_v<Object> || is_iterator_v<Object>) {
         return (val->*pred)(std::forward<Args>(args)...);
     } else if constexpr (is_smart_ptr_v<Object>) {
         return (val.data()->*pred)(std::forward<Args>(args)...);
     } else {
-        static_assert(std::is_same_v<Object, Invalid>, "Invalid use of algorithm!");
+        static_assert(std::is_same_v<Object, Private::test_invalid>, "Invalid use of algorithm!");
     }
-}
-
-template <typename Function, typename...Args>
-typename FuncInfo<Function>::ReturnType test(Function pred, Args&&...args) {
-    return pred(std::forward<Args>(args)...);
 }
 
 template<typename Predicate>
 struct ContainerTester {
     ContainerTester(Predicate pred) : m_pred(pred) {}
     template <typename ValueT, typename...Args>
-    auto operator()(const ValueT &val, Args&&...args) const -> typename MethodInfo<Predicate>::ReturnType {
+    auto operator()(const ValueT &val, Args&&...args) const -> typename CallableInfo<Predicate>::Info::ReturnType {
         return test(val, m_pred, std::forward<Args>(args)...);
     }
 private:
@@ -104,7 +103,7 @@ auto for_each(Container &container, Predicate predicate) -> typename Container::
 }
 
 template <typename Container, typename Predicate>
-auto for_each(const Container &container, Predicate predicate) -> typename Container::iterator {
+auto for_each(const Container &container, Predicate predicate) -> typename Container::const_iterator {
     return std::for_each(container.begin(),
                         container.end(),
                         ContainerTester<Predicate>(predicate));

@@ -51,6 +51,7 @@ public:
     QSet<Worker *> &receivers() noexcept;
     template<class T> inline bool isFrom() const;
     const constexpr quint64 &id() const noexcept {return m_id;}
+    void setId(quint64 id);
     Worker *sender() const;
     const JsonDict &json() const;
     JsonDict &json();
@@ -95,7 +96,7 @@ private:
 
     static quint64 newMsgId();
     static std::atomic<quint64> m_currentMsgId;
-
+    void setDummy();
     void updateId();
 
     Flags m_flags;
@@ -142,9 +143,7 @@ void WorkerMsg::setReply(ReplyT *reply)
     static_assert(ReplyInfo<ReplyT>::Defined, "Reply must be registered with RADAPTER_DECLARE_REPLY()");
     static_assert(std::is_base_of<Reply, ReplyT>(), "Reply must inherit Radapter::Reply");
     m_flags |= MsgReply;
-    if (!command()) {
-        setCommand(new CommandDummy);
-    }
+    setDummy();
     m_serviceData[ServiceReply].setValue(QSharedPointer<Reply>(reply));
 }
 

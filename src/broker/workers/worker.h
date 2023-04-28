@@ -68,6 +68,7 @@ private slots:
     void onSendMsgPriv(const Radapter::WorkerMsg &msg);
     void onMsgFromBroker(const Radapter::WorkerMsg &msg);
 protected:
+    Settings::Worker &workerConfig();
     WorkerMsg prepareMsg(const JsonDict &msg = {}) const;
     WorkerMsg prepareMsg(JsonDict &&msg) const;
     WorkerMsg prepareReply(const WorkerMsg &msg, Reply *reply) const;

@@ -14,6 +14,7 @@ MockWorker::MockWorker(const Settings::MockWorker &settings, QThread* thread) :
     m_mockTimer(),
     m_currentIndex()
 {
+    workerConfig().print_msgs = true;
     if (settings.json_file_path->isEmpty()) {
         return;
     }

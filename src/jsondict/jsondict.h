@@ -38,7 +38,10 @@ class JsonDict
 {
 public:
     JsonDict() = default;
+    JsonDict(JsonDict &&) = default;
+    JsonDict &operator=(JsonDict &&) = default;
     JsonDict(const JsonDict &) = default;
+    JsonDict &operator=(const JsonDict &) = default;
     explicit JsonDict(const QVariant& src, bool nest = true, QChar separator = ':');
     explicit JsonDict(const QVariant& src, const QString &separator);
     JsonDict(const QVariantMap& src, bool nest = true, QChar separator = ':');
@@ -62,14 +65,14 @@ public:
     void insert(const QStringList& akey, const JsonDict &value);
     void insert(const QStringList& akey, const QVariant &value);
     void insert(const QStringList& akey, const QVariantMap &value);
-    void insert(const QString& akey, const QVariantMap &value);
+    void insert(const QString& akey, const QVariantMap &value, QChar sep = ':');
     //! Move optimisations
     void insert(const QStringList& akey, JsonDict &&value);
-    void insert(const QString& akey, const QVariant &value);
     void insert(const QStringList& akey, QVariant &&value);
-    void insert(const QString& akey, QVariant &&value);
     void insert(const QStringList& akey, QVariantMap &&value);
-    void insert(const QString& akey, QVariantMap &&value);
+    void insert(const QString& akey, const QVariant &value, QChar sep = ':');
+    void insert(const QString& akey, QVariant &&value, QChar sep = ':');
+    void insert(const QString& akey, QVariantMap &&value, QChar sep = ':');
     size_t depth() const;
     void swap(QVariantMap &dict) noexcept;
     const QVariant operator[](const QStringList& akey) const;
@@ -78,7 +81,7 @@ public:
     bool isValid(const QStringList& akey) const;
     bool isValid(const QString& akey) const;
     QList<QVariant> values() const;
-    const QVariant value(const QString& akey, const QVariant &adefault = QVariant()) const;
+    const QVariant value(const QString& akey, const QVariant &adefault = QVariant(), QChar sep = ':') const;
     const QVariant value(const QStringList& akey, const QVariant &adefault = QVariant()) const;
     //! Оператор глубокого сравнения словарей
     bool operator==(const JsonDict& src) const;

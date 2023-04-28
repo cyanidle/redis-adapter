@@ -162,7 +162,6 @@ void Master::write(const JsonDict &data)
 {
     if (!d->connected) {
         reDebug() << printSelf() << "Write while not connected!";
-        return;
     }
     QList<QModbusDataUnit> results;
     for (auto& iter : data) {
@@ -357,9 +356,11 @@ void Master::executeRead(const QModbusDataUnit &unit)
             delete reply;
         }
     } else {
-        workerError(this) << "Read Error: " << d->device->errorString() << "; Reconnecting...";
         emit queryDone();
-        reconnect();
+        if (d->connected) {
+            workerError(this) << "Read Error: " << d->device->errorString() << "; Reconnecting...";
+            reconnect();
+        }
     }
 }
 
@@ -374,9 +375,11 @@ void Master::executeWrite(const QModbusDataUnit &state)
             delete reply;
         }
     } else {
-        workerInfo(this) << "Write Error: " << d->device->errorString() << "; Reconnecting...";
         emit queryDone();
-        reconnect();
+        if (d->connected) {
+            workerInfo(this) << "Write Error: " << d->device->errorString() << "; Reconnecting...";
+            reconnect();
+        }
     }
 }
 

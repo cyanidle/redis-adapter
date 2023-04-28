@@ -140,7 +140,6 @@ void ModbusDevice::postUpdate() {
     static QThread channelsThread;
     if (!channel) channel.reset(new Radapter::Sync::Channel(&channelsThread));
     channelsThread.start();
-    settingsParsingWarn().noquote() << "New " << print();
     if (tcp.isValid() && rtu.isValid()) {
         throw std::runtime_error("[Modbus Device] Both tcp and rtu device is prohibited! Use one");
     } else if (!tcp.isValid() && !rtu.isValid()) {

@@ -24,11 +24,12 @@ public:
     const Settings::AppConfig &config() const;
     Settings::Reader *reader();
     QCommandLineParser &commandLineParser();
+    void createPipe(const QString &pipe);
     //! run() starts all configured radapter modules and workers
     void run();
     //! exec() calls run() and then return with QCoreApplication::exec();
     int exec();
-    ~Launcher();
+    ~Launcher() override;
 signals:
     void started();
 public slots:
@@ -40,7 +41,6 @@ private:
 
     void parseCommandlineArgs();
     void initConfig();
-    void initPlugins();
 
     Private *d;
 };

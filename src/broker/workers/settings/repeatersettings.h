@@ -6,6 +6,7 @@ namespace Settings {
 struct Repeater : Worker {
     Q_GADGET
     IS_SERIALIZABLE
+    FIELD(HasDefault<bool>, prevent_loopback, true)
 };
 }
 

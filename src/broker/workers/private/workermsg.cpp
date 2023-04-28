@@ -3,7 +3,6 @@
 #include "radapterlogging.h"
 #include "../worker.h"
 #include "broker/broker.h"
-#include "broker/replies/private/reply.h"
 
 using namespace Radapter;
 
@@ -131,10 +130,12 @@ QString WorkerMsg::printFullDebug() const
     auto result = QStringLiteral("\n### Msg Id: ");
     result.reserve(150);
     auto flatData = printFlatData() + "\n\n";
+    auto flags = printFlags();
+    flags = flags.isEmpty() ? QStringLiteral("# Flags: ").append(flags) : "";
     return result.append(QString::number(id())).append(QStringLiteral(" Debug Info ###\n\n"))
            .append(QStringLiteral("# Sender: ")).append(senderWorker->printSelf()).append("\n")
            .append(QStringLiteral("# Targets: [")).append(printReceivers().join(", ")).append("]\n")
-           .append(QStringLiteral("# Flags: ")).append(printFlags()).append("\n")
+           .append(flags).append("\n")
            .append(json().isEmpty() ? "\n" : flatData)
            .append(QStringLiteral("# Command: ")).append(command() ? command()->metaObject()->className() : "None").append("\n")
            .append(QStringLiteral("# Reply: ")).append(reply() ? reply()->metaObject()->className() : "None").append("\n\n")
@@ -192,6 +193,11 @@ QSet<Worker *> &Radapter::WorkerMsg::receivers() noexcept
     return m_receivers;
 }
 
+void WorkerMsg::setId(quint64 id)
+{
+    m_id = id;
+}
+
 Worker *Radapter::WorkerMsg::sender() const
 {
     return m_sender;
@@ -244,6 +250,13 @@ void Radapter::WorkerMsg::updateId()
 quint64 Radapter::WorkerMsg::newMsgId()
 {
     return m_currentMsgId.fetch_add(1, std::memory_order_relaxed);
+}
+
+void WorkerMsg::setDummy()
+{
+    if (!command()) {
+        setCommand(new CommandDummy);
+    }
 }
 
 QDebug operator<<(QDebug dbg, const WorkerMsg &msg){

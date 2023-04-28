@@ -53,7 +53,7 @@ Worker::Worker(const Settings::Worker &settings, QThread *thread) :
     d->config = settings;
     setObjectName(settings.name);
     if (isPrintMsgsEnabled()) {
-        brokerWarn()<< "=== Worker (" << workerName() << "): Running in Debug Mode! ===";
+        brokerWarn()<< "=== Worker (" << workerName() << "): Will print Msgs! ===";
     }
     connect(this, &Worker::sendMsg, &Worker::onSendMsgPriv);
     connect(this, &Worker::send, [this](const JsonDict &data){
@@ -290,6 +290,11 @@ void Worker::onMsgFromBroker(const Radapter::WorkerMsg &msg)
     } else {
         onMsg(msg);
     }
+}
+
+Settings::Worker &Worker::workerConfig()
+{
+    return d->config;
 }
 
 void Worker::onSendMsgPriv(const Radapter::WorkerMsg &msg)

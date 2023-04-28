@@ -92,7 +92,7 @@ public:
     QString getComment(const QString &fieldName) const;
     QString getClassComment() const;
     Example getExample() const;
-    void allowExtra(bool state = true);
+    void forbidExtra(bool state = true);
     Serializable();
 protected:
     FieldExample getExample(const ::Serializable::FieldConcept *field) const;

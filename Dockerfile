@@ -25,9 +25,7 @@ RUN set -eux; \
     qt_libs=$(for module in $modules; do ls -d ${QT_DIR}/lib/* | grep -i $module*.so*; done); \
     os_specific="libicui18n libicuuc libicudata libmariadb libbrotlidec libb2 libbrotlicommon libgomp ssl crypto"; \
     os_libs=$(for module in $os_specific; do ls -d ${SYSROOT_DIR}/usr/lib/${TOOLCHAIN_ARCH}/* | grep "$module.*\.so.*"; done); \
-    plugins=$(ls plugins | grep .so | xargs printf "plugins/%s "); \
     mkdir ${APP_DIR}/plugins; \
-    cp -dr $plugins ${APP_DIR}/plugins; \
     cp -dr \
         VERSION \
         GIT_COMMIT \

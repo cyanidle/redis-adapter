@@ -5,12 +5,10 @@
 #include "radapterlogging.h"
 #include <stdexcept>
 
-class QLibrary;
-
 namespace Radapter {
 
-void initPipelines(const QStringList &pipelines);
-void initPlugins(const QList<QLibrary*> plugins);
+void initPipelines(const QStringList &pipelines, QObject *parent = nullptr);
+void initPipe(const QString& pipe, QObject *parent = nullptr);
 
 template <typename Callable, typename...Args>
 void tryInit(Callable callable, const QString &moduleName, Args&&...args) {

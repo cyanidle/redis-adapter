@@ -100,7 +100,9 @@ void Server::onTextMsg(const QString &data)
     if (err.error == QJsonParseError::NoError) {
         emit send(json);
     } else {
-        workerError(this) << "Error parsing data from client: " << printClient(sender());
+        workerError(this)
+            << "Error parsing data from client: " << printClient(sender())
+            << "| Data:" << data;
     }
 }
 

@@ -519,9 +519,9 @@ void JsonDict::insert(const QStringList &akey, const QVariant &value)
     (*this)[akey] = value;
 }
 
-void JsonDict::insert(const QString &akey, const QVariant &value)
+void JsonDict::insert(const QString &akey, const QVariant &value, QChar sep)
 {
-    m_dict.insert(akey, value);
+    insert(akey.split(sep), value);
 }
 
 void JsonDict::insert(const QStringList &akey, QVariant &&value)
@@ -529,9 +529,9 @@ void JsonDict::insert(const QStringList &akey, QVariant &&value)
     (*this)[akey] = std::move(value);
 }
 
-void JsonDict::insert(const QString &akey, QVariant &&value)
+void JsonDict::insert(const QString &akey, QVariant &&value, QChar sep)
 {
-    m_dict.insert(akey, std::move(value));
+    insert(akey.split(sep), std::move(value));
 }
 
 void JsonDict::insert(const QStringList &akey, const QVariantMap &value)
@@ -539,9 +539,9 @@ void JsonDict::insert(const QStringList &akey, const QVariantMap &value)
     (*this)[akey] = value;
 }
 
-void JsonDict::insert(const QString &akey, const QVariantMap &value)
+void JsonDict::insert(const QString &akey, const QVariantMap &value, QChar sep)
 {
-    m_dict.insert(akey, value);
+    insert(akey.split(sep), value);
 }
 
 void JsonDict::insert(const QStringList &akey, QVariantMap &&value)
@@ -549,9 +549,9 @@ void JsonDict::insert(const QStringList &akey, QVariantMap &&value)
     (*this)[akey] = std::move(value);
 }
 
-void JsonDict::insert(const QString &akey, QVariantMap &&value)
+void JsonDict::insert(const QString &akey, QVariantMap &&value, QChar sep)
 {
-    m_dict.insert(akey, std::move(value));
+    insert(akey.split(sep), std::move(value));
 }
 
 void JsonDict::insert(const QStringList &akey, JsonDict &&value)
@@ -561,7 +561,7 @@ void JsonDict::insert(const QStringList &akey, JsonDict &&value)
 
 const QVariant JsonDict::operator[](const QString &akey) const
 {
-    return m_dict.value(akey);
+    return value(akey);
 }
 
 bool JsonDict::isValid(const QStringList &akey) const
@@ -583,9 +583,9 @@ QList<QVariant> JsonDict::values() const
     return result;
 }
 
-const QVariant JsonDict::value(const QString &akey, const QVariant &adefault) const
+const QVariant JsonDict::value(const QString &akey, const QVariant &adefault, QChar sep) const
 {
-    return m_dict.value(akey, adefault);
+    return value(akey.split(sep), adefault);
 }
 
 JsonDict::JsonDict(const QVariant &src, const QString &separator) :

@@ -222,6 +222,7 @@ struct LambdaInfo<T, typename std::enable_if<has_call_operator<T>::value>::type>
 {
     using typename LambdaInfo<decltype(&T::operator())>::Signature;
     using typename LambdaInfo<decltype(&T::operator())>::AsStdFunction;
+    using typename LambdaInfo<decltype(&T::operator())>::ReturnType;
     enum {
         ArgumentCount = LambdaInfo<decltype(&T::operator())>::ArgumentCount,
         IsLambda = true,
@@ -229,27 +230,30 @@ struct LambdaInfo<T, typename std::enable_if<has_call_operator<T>::value>::type>
 };
 
 // for pointers to member function
-template <typename ClassType, typename ReturnType, typename... Args>
-struct LambdaInfo<ReturnType(ClassType::*)(Args...) const> {
+template <typename ClassType, typename R, typename... Args>
+struct LambdaInfo<R(ClassType::*)(Args...) const> {
     enum { ArgumentCount = sizeof...(Args) };
-    using Signature = ReturnType(ClassType::*)(Args...) const;
-    typedef std::function<ReturnType (Args...)> AsStdFunction;
+    using ReturnType = R;
+    using Signature = R(ClassType::*)(Args...) const;
+    typedef std::function<R (Args...)> AsStdFunction;
 };
 
 // for pointers to member function
-template <typename ClassType, typename ReturnType, typename... Args>
-struct LambdaInfo<ReturnType(ClassType::*)(Args...) > {
+template <typename ClassType, typename R, typename... Args>
+struct LambdaInfo<R(ClassType::*)(Args...) > {
     enum { ArgumentCount = sizeof...(Args) };
-    using Signature = ReturnType(ClassType::*)(Args...);
-    typedef std::function<ReturnType (Args...)> AsStdFunction;
+    using ReturnType = R;
+    using Signature = R(ClassType::*)(Args...);
+    typedef std::function<R (Args...)> AsStdFunction;
 };
 
 // for function pointers
-template <typename ReturnType, typename... Args>
-struct LambdaInfo<ReturnType (*)(Args...)>  {
+template <typename R, typename... Args>
+struct LambdaInfo<R (*)(Args...)>  {
     enum { ArgumentCount = sizeof...(Args) };
-    using Signature = ReturnType (*)(Args...);
-    typedef std::function<ReturnType (Args...)> AsStdFunction;
+    using ReturnType = R;
+    using Signature = R (*)(Args...);
+    typedef std::function<R (Args...)> AsStdFunction;
 };
 
 template<typename Func>
