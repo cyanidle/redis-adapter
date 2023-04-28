@@ -38,6 +38,9 @@ bool isFunc(const QString &what)
 FuncResult parseFunc(const QString &rawFunc)
 {
     static auto splitter = QRegularExpression("\\(.*\\)");
+    if (rawFunc.size() < 2) {
+        throw std::runtime_error("Attempt to parse invalid pipe function: " + rawFunc.toStdString());
+    }
     auto func = rawFunc.split(splitter)[0];
     auto data = splitter
                     .match(rawFunc) // func(data, data)
@@ -108,30 +111,63 @@ void tryConnecting(const QString &producer, const QString &consumer, const QStri
     broker->connectTwo(producer, consumer, pipe);
 }
 
+enum Dir {
+    Normal,
+    Flipped
+};
+
+void tryCreateBidirConnect(QString left, QString right, QString pipe, Dir dir, QObject *parent)
+{
+    if (dir == Flipped) {
+        std::swap(left, right);
+    }
+    auto realPipe = pipe.replace('<', "")
+                        .replace('>', "")
+                        .replace('=', "")
+                        .simplified()
+                        .split(' ');
+    for (auto &item: realPipe) {
+        item = item.simplified();
+    }
+    QStringList fakePipe;
+    for (auto &item: realPipe) {
+        if (item.isEmpty()) continue;
+        auto [func, data] = parseFunc(item);
+        if (func == "branch") {
+            switch(dir) {
+            case Normal: fakePipe.append("unwrap("%data.join(',')%')');break;
+            case Flipped: fakePipe.append("wrap("%data.join(',')%')');break;
+            }
+        } else {
+            throw std::runtime_error("Unsupported func in bidirectional branch: " + item.toStdString());
+        }
+    }
+    tryConnecting(left, right, fakePipe, parent);
+}
+
 static bool isInterceptor (const QString &worker) {
     return worker.startsWith('*');
 };
 
-bool handleBidirectional(QStringList &source)
+bool handleBidirectional(QStringList &source, QObject *parent)
 {
+    static auto bidirSplitter = QRegularExpression(" <=.*> ");
     auto hadBidirect = false;
     for (auto &point: source) {
-        if (!point.contains(" <=> ")) continue;
+        if (!point.contains(bidirSplitter)) continue;
         hadBidirect = true;
-        auto pairs = point.split(" <=> ");
+        auto pairs = point.split(bidirSplitter);
+        auto match = bidirSplitter.match(point);
         if (pairs.size() < 2) {
-            throw std::runtime_error("Cannot have bidirectional pair (<=>) with only one worker!");
+            throw std::runtime_error("Cannot have bidirectional pair (<=...=>) with only one worker!");
         }
-        for (auto &subitem : pairs) {
-            if (isInterceptor(subitem)) {
-                throw std::runtime_error("Cannot have *interceptors in a bidirectional pair (<=>)!");
-            }
+        if (isInterceptor(pairs.first()) || isInterceptor(pairs.last())) {
+            throw std::runtime_error("Cannot have bidirectional pipe (<=...=>) starting or ending with interceptors!");
         }
         for (int i = 1; i < pairs.size(); ++i) {
-            auto currentPair = QPair<QString, QString>{pairs[i-1], pairs[i]};
-            initPipe(currentPair.first % " > " % currentPair.second);
-            initPipe(currentPair.second % " > " % currentPair.first);
-            point = currentPair.second;
+            tryCreateBidirConnect(pairs[i-1], pairs[i], match.captured(i-1), Normal, parent);
+            tryCreateBidirConnect(pairs[i-1], pairs[i], match.captured(i-1), Flipped, parent);
+            point = pairs[i];
         }
     }
     return hadBidirect;
@@ -140,8 +176,9 @@ bool handleBidirectional(QStringList &source)
 void Radapter::initPipe(const QString& pipe, QObject *parent)
 {
     QMutexLocker lock(&(*staticMutex));
+    try{
     auto split = pipe.split(" > ");
-    auto hadBidirect = handleBidirectional(split);
+    auto hadBidirect = handleBidirectional(split, parent);
     if (split.size() < 2) {
         if (!hadBidirect) {
             throw std::runtime_error("Pipeline length must be more than 2!");
@@ -174,6 +211,9 @@ void Radapter::initPipe(const QString& pipe, QObject *parent)
     for (auto [pair, interceptorNames]: Radapter::zip(workers, interceptors)) {
         auto [sourceName, targetName] = pair;
         tryConnecting(sourceName, targetName, interceptorNames, parent);
+    }
+    } catch(std::exception &exc) {
+        throw std::runtime_error("While initializing pipe: " + pipe.toStdString() + " --> " + exc.what());
     }
 }
 
