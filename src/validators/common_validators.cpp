@@ -92,7 +92,7 @@ void Validator::registerAllCommon()
     makeFetchable<LogLevel>("log_level", "loglevel");
     Validator::Private::add(roundLast, "round_last");
     Validator::Private::add(setUnixTimeStamp, "set_unix_timestamp");
-    Validator::Private::add(rusWindDirection360, "wind_direction_306_ru");
+    Validator::Private::add(rusWindDirection360, "wind_direction_360_ru");
     Validator::Private::add(intDivideBy, "int_divide_by");
     Validator::Private::add(hectaPascalsToAtmospheric, "hecta_pascals_to_mm_atmospheric");
 }

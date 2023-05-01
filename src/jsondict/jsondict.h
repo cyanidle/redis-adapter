@@ -38,12 +38,10 @@ class JsonDict
 {
 public:
     JsonDict() = default;
-    JsonDict(JsonDict &&) = default;
-    JsonDict &operator=(JsonDict &&) = default;
     JsonDict(const JsonDict &) = default;
     JsonDict(JsonDict &&) = default;
+    JsonDict &operator=(JsonDict &&) = default;
     JsonDict& operator=(const JsonDict &) = default;
-    JsonDict& operator=(JsonDict &&) = default;
     explicit JsonDict(const QVariant& src, bool nest = true, QChar separator = ':');
     explicit JsonDict(const QVariant& src, const QString &separator);
     JsonDict(const QVariantMap& src, bool nest = true, QChar separator = ':');
@@ -95,7 +93,7 @@ public:
     QByteArray toBytes(QJsonDocument::JsonFormat format = QJsonDocument::Compact) const;
     //! Заполнение из QJsonObject
     static JsonDict fromJsonObj(const QJsonObject &json);
-    static JsonDict fromJson(const QByteArray &json, QJsonParseError *err = nullptr);
+    static JsonDict fromBytes(const QByteArray &json, QJsonParseError *err = nullptr);
     bool contains(const QString &key) const;
     bool contains(const QStringList &key) const;
     bool contains(const JsonDict &src) const;

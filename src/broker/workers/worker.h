@@ -25,6 +25,13 @@ class RADAPTER_API Worker : public QObject {
     Q_OBJECT
     struct Private;
 public:
+    enum RoleFlags {
+        Consumer = 1 << 1,
+        Producer = 1 << 2,
+        ConsumerProducer = Consumer | Producer
+    };
+    Q_ENUM(RoleFlags)
+    Q_DECLARE_FLAGS(Role, RoleFlags)
     using WorkerSet = QSet<Worker*>;
     explicit Worker(const Settings::Worker &settings, QThread *thread);
     bool isPrintMsgsEnabled() const;
@@ -36,7 +43,7 @@ public:
     QStringList producersNames() const;
     QThread *workerThread() const;
     QList<WorkerProxy *> proxies() const;
-    QList<Interceptor*> pipe(WorkerProxy *proxy);
+    QList<Interceptor*> pipe(WorkerProxy *proxy) const;
     Broker *broker() const;
     bool wasStarted() const;
     bool is(const QMetaObject * mobj) const;
@@ -45,6 +52,7 @@ public:
     template <typename Target> Target *as();
     void addConsumer(Radapter::Worker* consumer, const QList<Radapter::Interceptor*> &interceptors = {});
     void addProducer(Radapter::Worker* producer, const QList<Radapter::Interceptor*> &interceptors = {});
+    Role getRole() const;
     QString printSelf() const;
     virtual ~Worker();
 signals:
@@ -63,11 +71,11 @@ protected slots:
     virtual void onMsg(const Radapter::WorkerMsg &msg);
     virtual void onBroadcast(const Radapter::WorkerMsg &msg);
 private slots:
-    void privConnectedTo(Radapter::Worker *producer);
     void onWorkerDestroyed(QObject *worker);
     void onSendMsgPriv(const Radapter::WorkerMsg &msg);
     void onMsgFromBroker(const Radapter::WorkerMsg &msg);
 protected:
+    void setRole(Role role);
     Settings::Worker &workerConfig();
     WorkerMsg prepareMsg(const JsonDict &msg = {}) const;
     WorkerMsg prepareMsg(JsonDict &&msg) const;

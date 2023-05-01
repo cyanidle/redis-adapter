@@ -10,7 +10,7 @@
 #include <type_traits>
 #include <stdexcept>
 
-#define RADAPTER_VERSION "0.85"
+#define RADAPTER_VERSION "0.9"
 
 #ifndef RADAPTER_API
 #define RADAPTER_API

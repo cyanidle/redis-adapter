@@ -20,12 +20,14 @@ struct WorkerPipe {
 
 struct Radapter::Worker::Private {
     Settings::Worker config;
-    QThread *thread;
+    QThread *thread{nullptr};
     QSet<Worker*> consumers;
     WorkerMsg baseMsg;
     QSet<Worker*> producers;
     QHash<WorkerProxy*, WorkerPipe> pipes;
-    std::atomic<bool> wasRun;
+    std::atomic<bool> wasRun{false};
+    Worker::Role role{Worker::ConsumerProducer};
+    QList<QMetaObject::Connection> roleConns;
 };
 
 Q_GLOBAL_STATIC(QRecursiveMutex, staticMutex);
@@ -146,6 +148,11 @@ void Worker::addProducer(Worker *producer, const QList<Interceptor *> &intercept
     }
 }
 
+Worker::Role Worker::getRole() const
+{
+    return d->role;
+}
+
 WorkerMsg Worker::prepareMsg(const JsonDict &msg) const
 {
     auto wrapped = d->baseMsg;
@@ -203,11 +210,6 @@ void Worker::onBroadcast(const WorkerMsg &msg)
     Q_UNUSED(msg);
 }
 
-void Worker::privConnectedTo(Worker *producer)
-{
-    emit connectedToProducer(producer, {});
-}
-
 void Worker::onWorkerDestroyed(QObject *worker)
 {
     d->consumers.remove(qobject_cast<Worker*>(worker));
@@ -257,6 +259,32 @@ void Worker::onMsgFromBroker(const Radapter::WorkerMsg &msg)
     }
 }
 
+void Worker::setRole(Role role)
+{
+    d->role = role;
+    for (auto &conn: d->roleConns) {
+        disconnect(conn);
+    }
+    auto disallow = [this, role](Worker *who){
+        if (wasStarted()) {
+            workerError(this) << "######## Connection prohibited! Role: " << role << "Source: " << who;
+        } else {
+            throw std::runtime_error(printSelf().toStdString()
+                                     + " --> Connection prohibited! (Role does not allow)"
+                                     + "\nRole: " + QMetaEnum::fromType<RoleFlags>().valueToKey(role)
+                                     + "\nTo --> " + who->printSelf().toStdString());
+        }
+    };
+    if (!role.testFlag(Consumer)) {
+        auto conn = connect(this, &Worker::connectedToProducer, this, disallow);
+        d->roleConns.append(conn);
+    }
+    if (!role.testFlag(Producer)) {
+        auto conn = connect(this, &Worker::connectedToConsumer, this, disallow);
+        d->roleConns.append(conn);
+    }
+}
+
 Settings::Worker &Worker::workerConfig()
 {
     return d->config;
@@ -277,9 +305,6 @@ WorkerProxy* Worker::createPipe(const QList<Interceptor*> &rawInterceptors)
     QMutexLocker locker(&(*staticMutex));
     QList<Interceptor*> interceptors = rawInterceptors;
     auto proxy = new WorkerProxy(this);
-    connect(proxy, &WorkerProxy::connectedTo, this, [this](Radapter::Worker *consumer){
-        emit connectedToConsumer(consumer, {});
-    });
     auto start = new PipeStart(proxy);
     connect(this, &Worker::sendMsg, start, &PipeStart::onSendMsg);
     proxy->setObjectName(workerName());
@@ -347,7 +372,7 @@ const Worker::WorkerSet &Worker::producers() const
 QStringList Worker::consumersNames() const
 {
     QStringList result;
-    for (auto consumer: d->consumers) {
+    for (auto consumer: qAsConst(d->consumers)) {
         result.append(consumer->workerName());
     }
     return result;
@@ -356,7 +381,7 @@ QStringList Worker::consumersNames() const
 QStringList Worker::producersNames() const
 {
     QStringList result;
-    for (auto producer: d->producers) {
+    for (auto producer: qAsConst(d->producers)) {
         result.append(producer->workerName());
     }
     return result;
@@ -376,7 +401,7 @@ QList<WorkerProxy *> Worker::proxies() const
     return result;
 }
 
-QList<Interceptor*> Worker::pipe(WorkerProxy *proxy)
+QList<Interceptor*> Worker::pipe(WorkerProxy *proxy) const
 {
     if (d->pipes.contains(proxy)) {
         return d->pipes[proxy].interceptors;

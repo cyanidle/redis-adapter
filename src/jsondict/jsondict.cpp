@@ -399,9 +399,9 @@ JsonDict JsonDict::fromJsonObj(const QJsonObject &json)
     return JsonDict(json.toVariantMap(), false);
 }
 
-JsonDict JsonDict::fromJson(const QByteArray &json, QJsonParseError *err)
+JsonDict JsonDict::fromBytes(const QByteArray &json, QJsonParseError *err)
 {
-    return JsonDict(QJsonDocument::fromJson(json, err).toVariant().toMap());
+    return JsonDict(QJsonDocument::fromJson(json, err).toVariant().toMap(), false);
 }
 
 QString JsonDict::processWarn(const QStringList &src, const int &index)

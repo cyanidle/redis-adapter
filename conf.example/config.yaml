@@ -1,5 +1,5 @@
 pipelines:
-  - meteo.data > |meteo.divide| > |meteo.round_wind_direction| > |meteo.duplicate| > |meteo.format| > meteo.redis.cache.writer
+  - meteo.data > *meteo.divide > *meteo.round_wind_direction > *meteo.duplicate > *meteo.format > meteo.redis.cache.writer
   - meteo.modbus > meteo.data
   #- test.data > meteo.data
 

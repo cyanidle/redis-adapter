@@ -1,11 +1,14 @@
 #include "initialization.h"
 #include "broker/broker.h"
 #include "broker/interceptor/interceptor.h"
+#include "broker/workers/fileworker.h"
 #include "broker/workers/mockworker.h"
 #include "broker/workers/repeaterworker.h"
+#include "broker/workers/settings/fileworkersettings.h"
 #include "broker/workers/settings/mockworkersettings.h"
 #include "broker/workers/settings/repeatersettings.h"
 #include "broker/workers/worker.h"
+#include "interceptors/metainfopipe.h"
 #include "interceptors/namespaceunwrapper.h"
 #include "interceptors/namespacewrapper.h"
 #include "interceptors/settings/namespaceunwrappersettings.h"
@@ -42,6 +45,9 @@ FuncResult parseFunc(const QString &rawFunc)
     if (rawFunc.size() < 2) {
         throw std::runtime_error("Attempt to parse invalid pipe function: " + rawFunc.toStdString());
     }
+    if (!rawFunc.contains(splitter)) {
+        return {rawFunc, {}};
+    }
     auto func = rawFunc.split(splitter)[0];
     auto data = splitter
                     .match(rawFunc) // func(data, data)
@@ -70,6 +76,8 @@ void tryCreateInterceptor(const QString &name, QObject *parent)
         auto config = Settings::ValidatingInterceptor();
         config.by_field.value = {{data[0], "set_unix_timestamp"}};
         broker->registerInterceptor(name, new ValidatingInterceptor(config));
+    } else if (func == "add_metadata") {
+        broker->registerInterceptor(name, new MetaInfoPipe());
     } else {
         throw std::runtime_error("(" + name.toStdString() + ") is not supported in pipe!");
     }
@@ -87,7 +95,12 @@ void tryCreateWorker(const QString &name, QObject *parent)
         auto config = Settings::MockWorker();
         config.name = name;
         broker->registerWorker(new MockWorker(config, new QThread(parent)));
-    }  else if (func == "udp.in") {
+    } else if (func == "file") {
+        auto config = Settings::FileWorker();
+        config.worker->name = name;
+        config.filepath = data[0];
+        broker->registerWorker(new FileWorker(config, new QThread(parent)));
+    } else if (func == "udp.in") {
         auto config = Udp::ConsumerSettings();
         config.worker->name = name;
         bool ok;
@@ -218,12 +231,12 @@ void Radapter::initPipe(const QString& pipe, QObject *parent)
         currentInterceptors.clear();
         prevWorker = point.simplified();
     }
-    for (auto [pair, interceptorNames]: Radapter::zip(workers, interceptors)) {
+    for (auto [pair, interceptorNames]: zip(workers, interceptors)) {
         auto [sourceName, targetName] = pair;
         tryConnecting(sourceName, targetName, interceptorNames, parent);
     }
     } catch(std::exception &exc) {
-        throw std::runtime_error("While initializing pipe: " + pipe.toStdString() + " --> " + exc.what());
+        throw std::runtime_error("While initializing pipe: " + pipe.toStdString() + " --> \n" + exc.what());
     }
 }
 

@@ -8,6 +8,7 @@ Producer::Producer(const ProducerSettings &settings, QThread *thread) :
     Radapter::Worker(settings.worker, thread),
     m_settings(settings)
 {
+    setRole(Worker::Consumer);
     m_socket = new QUdpSocket(this);
     connect(m_socket, &QAbstractSocket::errorOccurred, this, &Producer::onError);
     connect(m_socket, &QAbstractSocket::connected, this, &Producer::onConnected);

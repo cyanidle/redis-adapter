@@ -1,7 +1,7 @@
 #ifndef RADAPTERCONFIG_H
 #define RADAPTERCONFIG_H
 
-#include "broker/workers/settings/loggingworkersettings.h"
+#include "broker/workers/settings/fileworkersettings.h"
 #include "broker/brokersettings.h"
 #include "broker/workers/settings/mockworkersettings.h"
 #include "broker/workers/settings/repeatersettings.h"
@@ -111,7 +111,7 @@ struct AppConfig : public Serializable {
     FIELD(OptionalSequence<Repeater>, repeaters)
     FIELD(Optional<Broker>, broker)
     FIELD(Optional<LocalizationInfo>, localization)
-    FIELD(OptionalSequence<LoggingWorker>, logging_workers)
+    FIELD(OptionalSequence<FileWorker>, files)
     FIELD(OptionalSequence<MockWorker>, mocks)
     FIELD(Optional<Redis>, redis)
     FIELD(Optional<Modbus>, modbus)

@@ -48,6 +48,7 @@ Connector::~Connector()
     } else if (d->redisContext) {
         redisAsyncFree(d->redisContext);
     }
+    delete d;
 }
 
 void Connector::reconnect()

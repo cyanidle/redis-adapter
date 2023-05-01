@@ -24,7 +24,7 @@
 #include "routed_object/routesprovider.h"
 #include "settings-parsing/adapters/yaml.hpp"
 #include "broker/workers/mockworker.h"
-#include "broker/workers/loggingworker.h"
+#include "broker/workers/fileworker.h"
 #include "filters/producerfilter.h"
 #include "radapterconfig.h"
 #include "websocket/websocketclient.h"
@@ -43,19 +43,25 @@ struct Radapter::Launcher::Private {
     QString configKey;
     QCommandLineParser argsParser;
     Settings::AppConfig config;
+    bool readConfig{true};
 };
 
 Launcher::Launcher(QObject *parent) :
     QObject(parent),
     d(new Private)
 {
+    connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, [this]{
+        delete this;
+    });
     qSetMessagePattern(RADAPTER_CUSTOM_MESSAGE_PATTERN);
     d->reader = nullptr;
     d->argsParser.setApplicationDescription(
         "Redis Adapter. System for routing and collecting information from and to different protocols/devices/code modules.");
     parseCommandlineArgs();
     Validator::registerAllCommon();
-    initConfig();
+    if (d->readConfig) {
+        initConfig();
+    }
 }
 
 void Launcher::initConfig()
@@ -89,8 +95,8 @@ void Launcher::initConfig()
     for (const auto& config: d->config.mocks) {
         addWorker(new MockWorker(config, newThread()));
     }
-    for (const auto& config: d->config.logging_workers) {
-        addWorker(new LoggingWorker(config, newThread()));
+    for (const auto& config: d->config.files) {
+        addWorker(new FileWorker(config, newThread()));
     }
     for (const auto& config: d->config.modbus->slaves) {
         addWorker(new Modbus::Slave(config, newThread()));
@@ -141,8 +147,10 @@ void Launcher::parseCommandlineArgs()
                     "File to read settings from (default: <directory>/config.<parser-extension>).", "file", "config"},
                   //{{QString("plugins-dir")},
                   //  "Directory with plugins (default: $(pwd)/plugins).", "plugins-dir", "plugins"},
-                  {{"c", "config-key"},
-                   "Subkey of Settings::AppConfig (default: ''(root)).", "config-key", ""},
+                  {QString{"disable-config"},
+                   "Do not try reading config from non cli-args sources."},
+                  {QString{"config-key"},
+                   "Subkey to parse from Settings::AppConfig (default: '').", "config-key", ""},
                   {QString{"dump-config-example"},
                    "Write config example to stdout."},
                   });
@@ -155,6 +163,7 @@ void Launcher::parseCommandlineArgs()
     d->file = d->argsParser.value("file");
     d->configKey = d->argsParser.value("config-key");
     auto isExamplesMode = d->argsParser.isSet("dump-config-example");
+    d->readConfig = !d->argsParser.isSet("disable-config");
     if (d->configsFormat == "yaml") {
         d->reader = new Settings::YamlReader(d->configsResource, d->file, this);
     } else {
@@ -194,6 +203,9 @@ void Launcher::run()
     resmon->moveToThread(resmonThr);
     resmonThr->start(QThread::LowPriority);
 #endif
+    for (const auto &pipe: d->argsParser.positionalArguments()) {
+        initPipe(pipe, this);
+    }
     initPipelines(d->config.pipelines.value, this);
     Broker::instance()->runAll();
     emit started();

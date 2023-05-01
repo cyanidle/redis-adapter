@@ -44,11 +44,6 @@ void WorkerProxy::onMsgFromWorker(Radapter::WorkerMsg &msg)
     emit msgToConsumers(msg);
 }
 
-void WorkerProxy::onConnectedTo(Worker *consumer)
-{
-    emit connectedTo(consumer);
-}
-
 const QString WorkerProxy::proxyName() const
 {
     return worker()->workerName();

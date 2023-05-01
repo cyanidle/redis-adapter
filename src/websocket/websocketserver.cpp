@@ -96,7 +96,7 @@ void Server::onNewConnection()
 void Server::onTextMsg(const QString &data)
 {
     auto err = QJsonParseError();
-    auto json = JsonDict::fromJson(data.toUtf8(), &err);
+    auto json = JsonDict::fromBytes(data.toUtf8(), &err);
     if (err.error == QJsonParseError::NoError) {
         emit send(json);
     } else {

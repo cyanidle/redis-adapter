@@ -7,6 +7,7 @@ using namespace Radapter;
 Consumer::Consumer(const ConsumerSettings &settings, QThread *thread) :
     Radapter::Worker(settings.worker, thread)
 {
+    setRole(Worker::Producer);
     m_socket = new QUdpSocket(this);
     connect(m_socket, &QAbstractSocket::errorOccurred, this, &Consumer::onError);
     connect(m_socket, &QAbstractSocket::connected, this, &Consumer::onConnected);
@@ -24,7 +25,7 @@ void Consumer::readReady()
         auto info = m_socket->receiveDatagram();
         workerDebug(this) << "Receiving from: Host:" << info.senderAddress() << "Port:" << info.senderPort();
         QJsonParseError err;
-        auto asJson = JsonDict::fromJson(info.data(), &err);
+        auto asJson = JsonDict::fromBytes(info.data(), &err);
         if (err.error != QJsonParseError::NoError) {
             workerError(this) << "Json Parse error!";
             return;

@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QVariant>
 #include <QSet>
+#include "serializable/common_fields.hpp"
 #include "field_super.h"
 #define PRE_VALIDATER_ATTR "pre_validated"
 namespace Serializable {

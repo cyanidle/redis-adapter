@@ -202,6 +202,12 @@ void Broker::disconnect(Worker *producer, Worker *consumer)
 void Broker::connectProxyToWorker(WorkerProxy* producerProxy, Worker *consumer)
 {
     QMutexLocker locker(&d->mutex);
+    if (consumer->wasStarted()) {
+        throw std::runtime_error("Cannot connect already started worker: " + consumer->printSelf().toStdString());
+    }
+    if (producerProxy->worker()->wasStarted()) {
+        throw std::runtime_error("Cannot connect already started worker: " + producerProxy->worker()->printSelf().toStdString());
+    }
     if (producerProxy->worker() == consumer && !d->settings.allow_self_connect) {
         throw std::runtime_error("Attempt to connect worker to itself! Can be enabled by broker option: 'allow_self_connect'");
     }
@@ -227,10 +233,8 @@ void Broker::connectProxyToWorker(WorkerProxy* producerProxy, Worker *consumer)
             consumer->workerThread() == producerProxy->workerThread()
                 ? Qt::DirectConnection
                 : Qt::QueuedConnection);
-    auto notifyProxy = producerProxy->metaObject()->method(producerProxy->metaObject()->indexOfSlot("onConnectedTo"));
-    notifyProxy.invoke(producerProxy, Qt::QueuedConnection, Q_ARG(Radapter::Worker*, consumer));
-    auto notifyConsumer = consumer->metaObject()->method(consumer->metaObject()->indexOfSlot("privConnectedTo"));
-    notifyConsumer.invoke(consumer, Qt::QueuedConnection, Q_ARG(Radapter::Worker*, producerProxy->worker()));
+    emit producerProxy->worker()->connectedToConsumer(consumer, {});
+    emit consumer->connectedToProducer(producerProxy->worker(), {});
     d->connections.append(conn);
     if (!producerProxy->consumers().contains(consumer)) {
         producerProxy->worker()->addConsumer(consumer);

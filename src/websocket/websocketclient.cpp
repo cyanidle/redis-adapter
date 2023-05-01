@@ -127,7 +127,7 @@ void Client::onPong(quint64 elapsedTime, const QByteArray &payload)
 void Client::onSocketReceived(const QString &message)
 {
     auto parseStatus = QJsonParseError{};
-    auto jsonMessage = JsonDict::fromJson(message.toUtf8(), &parseStatus);
+    auto jsonMessage = JsonDict::fromBytes(message.toUtf8(), &parseStatus);
     if (parseStatus.error != parseStatus.NoError) {
         wsockClientDebug() << "json reply error:" << parseStatus.error << parseStatus.errorString();
         return;

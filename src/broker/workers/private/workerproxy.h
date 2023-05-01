@@ -19,12 +19,9 @@ public:
     QThread *workerThread() const;
     Worker *worker() const;
 signals:
-    void connectedTo(Radapter::Worker *consumer);
     void msgToConsumers(const Radapter::WorkerMsg &msg);
 public slots:
     void onMsgFromWorker(Radapter::WorkerMsg &msg);
-private slots:
-    void onConnectedTo(Radapter::Worker *consumer);
 private:
     friend class Radapter::Worker;
     friend class Radapter::Broker;

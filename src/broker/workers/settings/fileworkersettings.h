@@ -1,0 +1,25 @@
+#ifndef LOGGINGINTERCEPTORSETTINGS_H
+#define LOGGINGINTERCEPTORSETTINGS_H
+
+#include <QJsonDocument>
+#include "settings-parsing/serializablesetting.h"
+#include "private/global.h"
+#include "workersettings.h"
+#include "settings-parsing/settings_validators.h"
+
+namespace Settings {
+
+struct RADAPTER_API FileWorker : public Serializable
+{
+    Q_GADGET
+    IS_SERIALIZABLE
+    FIELD(Required<Worker>, worker)
+    FIELD(Settings::Required<QString>, filepath)
+    using NonRequiredJsonFormat = ::Serializable::Validated<Settings::HasDefault<QJsonDocument::JsonFormat>>::With<Settings::ChooseJsonFormat>;
+    FIELD(NonRequiredJsonFormat, format, QJsonDocument::Indented)
+    FIELD(HasDefault<quint32>, reopen_each, 0)
+
+};
+
+}
+#endif // LOGGINGINTERCEPTORSETTINGS_H

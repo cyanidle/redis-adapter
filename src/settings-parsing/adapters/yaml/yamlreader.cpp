@@ -2,6 +2,7 @@
 #include <yaml-cpp/node/node.h>
 #include <yaml-cpp/yaml.h>
 #include "jsondict/jsondict.h"
+#include "radapterlogging.h"
 #include "templates/algorithms.hpp"
 #include <QStringBuilder>
 #include "yamlqttypesadapter.hpp"
@@ -40,7 +41,13 @@ QVariant YamlReader::getAll()
     auto pathWas = path();
     auto wantedPath = resource() + "/" + path();
     auto actualPath = wantedPath.endsWith(extension) ? wantedPath : wantedPath + extension;
-    auto config = LoadFile(actualPath.toStdString());
+    Node config;
+    try {
+        config = LoadFile(actualPath.toStdString());
+    } catch (...) {
+        settingsParsingWarn() << "Could not load file: " << actualPath;
+        return {};
+    }
     auto asMap = config.as<QVariantMap>();
     auto result = JsonDict(asMap, false);
     recurseMapNode({}, config, result);
