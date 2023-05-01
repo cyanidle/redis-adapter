@@ -39,6 +39,7 @@ void ValidatingInterceptor::validate(WorkerMsg &msg)
         auto &validator = iter.key();
         for (const auto &field: iter.value()) {
             auto &state = d->validatorsState[field];
+            if (!msg.contains(field)) continue;
             validator.validate(msg[field], state);
         }
     }
@@ -49,6 +50,7 @@ void ValidatingInterceptor::validate(WorkerMsg &msg)
             auto shouldValidate = iter.value().match(keyJoined).hasMatch();
             if (shouldValidate) {
                 auto &state = d->validatorsState[keyJoined];
+                if (!msg.contains(keyJoined)) continue;
                 validator.validate(msg[keyJoined], state);
             }
         }

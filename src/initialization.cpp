@@ -20,6 +20,7 @@
 #include "qthread.h"
 #include <QRecursiveMutex>
 #include "raw_sockets/udpconsumer.h"
+#include "raw_sockets/udpproducer.h"
 #include "validators/validator_fetch.h"
 #include "templates/algorithms.hpp"
 
@@ -59,6 +60,22 @@ FuncResult parseFunc(const QString &rawFunc)
     return {func, data};
 }
 
+template<typename T>
+T tryExtract(const QString &full, const QStringList &data, int index, const QString &name) {
+
+    if (data.size() <= index) {
+        goto err;
+    } else {
+        auto var = QVariant(data[index]);
+        auto status = var.convert(QMetaType::fromType<T>());
+        if (!status) goto err;
+        return var.value<T>();
+    }
+err:
+    QString msg = "Could not get argument ("%name%") in "%full%" with index["%QString::number(index)%"] with type["%QMetaType::fromType<T>().name()%"]";
+    throw std::runtime_error(msg.toStdString());
+}
+
 void tryCreateInterceptor(const QString &name, QObject *parent)
 {
     Q_UNUSED(parent)
@@ -66,15 +83,27 @@ void tryCreateInterceptor(const QString &name, QObject *parent)
     auto [func, data] = parseFunc(name);
     if (func == "wrap") {
         auto config = Settings::NamespaceWrapper();
-        config.wrap_into = data[0];
+        config.wrap_into = tryExtract<QString>(name, data, 0, "wrap_into");
         broker->registerInterceptor(name, new NamespaceWrapper(config));
     } else if (func == "unwrap") {
         auto config = Settings::NamespaceUnwrapper();
-        config.unwrap_from = data[0];
+        config.unwrap_from = tryExtract<QString>(name, data, 0, "unwrap_from");
         broker->registerInterceptor(name, new NamespaceUnwrapper(config));
     } else if (func == "add_timestamp") {
         auto config = Settings::ValidatingInterceptor();
-        config.by_field.value = {{data[0], "set_unix_timestamp"}};
+        config.by_field.value = {{tryExtract<QString>(name, data, 0, "field"), "set_unix_timestamp"}};
+        broker->registerInterceptor(name, new ValidatingInterceptor(config));
+    } else if (func == "validate") {
+        auto config = Settings::ValidatingInterceptor();
+        auto validator = tryExtract<QString>(name, data, 0, "validator");
+        QStringList fields;
+        if (data.size() < 2) {
+            throw std::runtime_error("validate(validator, fields...) needs at least one field!");
+        }
+        for (int i = 1; i < data.size(); ++i) {
+            fields.append(tryExtract<QString>(name, data, i, "field_to_validate"));
+        }
+        config.by_validator[validator] = fields;
         broker->registerInterceptor(name, new ValidatingInterceptor(config));
     } else if (func == "add_metadata") {
         broker->registerInterceptor(name, new MetaInfoPipe());
@@ -98,17 +127,19 @@ void tryCreateWorker(const QString &name, QObject *parent)
     } else if (func == "file") {
         auto config = Settings::FileWorker();
         config.worker->name = name;
-        config.filepath = data[0];
+        config.filepath = tryExtract<QString>(name, data, 0, "filepath");
         broker->registerWorker(new FileWorker(config, new QThread(parent)));
     } else if (func == "udp.in") {
         auto config = Udp::ConsumerSettings();
         config.worker->name = name;
-        bool ok;
-        config.port = data[0].toUInt(&ok);
-        if (!ok) {
-            throw std::runtime_error("Invalid port passed to Udp::Consumer: " + data[0].toStdString());
-        }
+        config.port = tryExtract<quint16>(name, data, 0, "port");
         broker->registerWorker(new Udp::Consumer(config, new QThread(parent)));
+    } else if (func == "udp.out") {
+        auto config = Udp::ProducerSettings();
+        config.worker->name = name;
+        config.server->host = tryExtract<QString>(name, data, 0, "host");
+        config.server->port = tryExtract<quint16>(name, data, 1, "port");
+        broker->registerWorker(new Udp::Producer(config, new QThread(parent)));
     } else {
         throw std::runtime_error("(" + name.toStdString() + ") is not supported in pipe!");
     }
@@ -172,6 +203,20 @@ static bool isInterceptor (const QString &worker) {
     return worker.startsWith('*');
 };
 
+bool handleReverse(QStringList &source, QObject *parent)
+{
+    auto hadReverse = false;
+    for (auto &point: source) {
+        if (!point.contains(" < ")) continue;
+        hadReverse = true;
+        auto realPipe = point.split(" < ");
+        std::reverse(realPipe.begin(), realPipe.end());
+        initPipe(realPipe.join(" > "), parent);
+        point = realPipe.first();
+    }
+    return hadReverse;
+}
+
 bool handleBidirectional(QStringList &source, QObject *parent)
 {
     static auto bidirSplitter = QRegularExpression(" <=.*> ");
@@ -201,9 +246,10 @@ void Radapter::initPipe(const QString& pipe, QObject *parent)
     QMutexLocker lock(&(*staticMutex));
     try{
     auto split = pipe.split(" > ");
+    auto hadReverse = handleReverse(split, parent);
     auto hadBidirect = handleBidirectional(split, parent);
     if (split.size() < 2) {
-        if (!hadBidirect) {
+        if (!hadBidirect && !hadReverse) {
             throw std::runtime_error("Pipeline length must be more than 2!");
         } else {
             return;

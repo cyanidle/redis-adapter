@@ -44,6 +44,7 @@ struct Radapter::Launcher::Private {
     QCommandLineParser argsParser;
     Settings::AppConfig config;
     bool readConfig{true};
+    QStringList configOverrides;
 };
 
 Launcher::Launcher(QObject *parent) :
@@ -59,14 +60,24 @@ Launcher::Launcher(QObject *parent) :
         "Redis Adapter. System for routing and collecting information from and to different protocols/devices/code modules.");
     parseCommandlineArgs();
     Validator::registerAllCommon();
-    if (d->readConfig) {
-        initConfig();
-    }
+    initConfig();
 }
 
 void Launcher::initConfig()
 {
-    auto configMap = reader()->get(d->configKey).toMap();
+    JsonDict configMap;
+    if (d->readConfig) {
+        configMap = JsonDict(reader()->get(d->configKey).toMap(), false);
+    }
+    for (auto &config: d->configOverrides) {
+        assert(config.contains('='));
+        auto split = config.split('=');
+        auto key = split[0];
+        auto val = split[1];
+        settingsParsingWarn() << "Overriding config value for:" << key << "with" << val;
+        configMap[key] = val;
+    }
+    d->config.allowExtra();
     d->config.update(configMap);
     for (const auto& config: d->config.redis->cache->consumers) {
         addWorker(new Redis::CacheConsumer(config, newThread()));
@@ -145,12 +156,14 @@ void Launcher::parseCommandlineArgs()
                     "Config will be read from <.parser_format> files (available: yaml) (default: yaml).", "parser", "yaml"},
                   {{"f", "file"},
                     "File to read settings from (default: <directory>/config.<parser-extension>).", "file", "config"},
+                  {{"c", "config"},
+                    "Add/Override config value (use ':' for nesting, '=' for assignment). Example: api:enabled=false", "config", ""},
                   //{{QString("plugins-dir")},
                   //  "Directory with plugins (default: $(pwd)/plugins).", "plugins-dir", "plugins"},
-                  {QString{"disable-config"},
+                  {QString{"disable-config-reader"},
                    "Do not try reading config from non cli-args sources."},
                   {QString{"config-key"},
-                   "Subkey to parse from Settings::AppConfig (default: '').", "config-key", ""},
+                   "Subkey to parse, for example a key in yaml file (default: '' --> (root)).", "config-key", ""},
                   {QString{"dump-config-example"},
                    "Write config example to stdout."},
                   });
@@ -159,11 +172,12 @@ void Launcher::parseCommandlineArgs()
     d->argsParser.process(*QCoreApplication::instance());
     d->configsResource = d->argsParser.value("directory");
     d->configsFormat = d->argsParser.value("parser");
+    d->configOverrides = d->argsParser.values("config");
     //d->pluginsPath = d->argsParser.value("plugins-dir");
     d->file = d->argsParser.value("file");
     d->configKey = d->argsParser.value("config-key");
     auto isExamplesMode = d->argsParser.isSet("dump-config-example");
-    d->readConfig = !d->argsParser.isSet("disable-config");
+    d->readConfig = !d->argsParser.isSet("disable-config-reader");
     if (d->configsFormat == "yaml") {
         d->reader = new Settings::YamlReader(d->configsResource, d->file, this);
     } else {

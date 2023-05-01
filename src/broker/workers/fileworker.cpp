@@ -28,12 +28,12 @@ struct Radapter::FileWorker::Private
 FileWorker::FileWorker(const Settings::FileWorker &settings, QThread *thread) :
     Radapter::Worker(settings.worker, thread),
     d(new FileWorker::Private{
-        .file = new QFile(this),
-        .settings = settings,
-        .writeCount = 0,
-        .writeEnabled = false,
-        .readEnabled = false,
-        .helper = nullptr
+        /*.file*/ new QFile(this),
+        /*.settings*/ settings,
+        /*.writeCount*/ 0,
+        /*.writeEnabled*/ false,
+        /*.readEnabled*/ false,
+        /*.helper*/ nullptr
     })
 {
     if (settings.filepath != "stdin" && settings.filepath != "stdout" && settings.filepath->contains('/')) {
@@ -87,8 +87,8 @@ void FileWorker::appendToFile(const JsonDict &info)
         return;
     }
     QTextStream out(d->file);
-    bool appendComma = d->file->size() != 2;
-    if (appendComma) out << ',' << '\n';
+    bool prependComma = d->file->size() != 2;
+    if (prependComma) out << ',' << '\n';
     out << info.toBytes(d->settings.format);
     if (d->settings.reopen_each && ++d->writeCount > d->settings.reopen_each) {
         d->writeCount = 0;
