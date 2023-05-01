@@ -70,6 +70,7 @@ namespace Settings {
         Q_GADGET
         IS_SERIALIZABLE
         FIELD(Optional<QString>, object_hash_key)
+        FIELD(HasDefault<bool>, use_polling, true)
         FIELD(HasDefault<quint32>, update_rate, 600)
     };
 

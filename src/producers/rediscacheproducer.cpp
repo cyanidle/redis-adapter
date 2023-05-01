@@ -2,6 +2,7 @@
 #include "formatting/redis/rediscachequeries.h"
 #include "async_context/rediscachecontext.h"
 #include "commands/rediscommands.h"
+#include "settings/redissettings.h"
 
 using namespace Redis;
 using namespace Cache;

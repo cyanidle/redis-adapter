@@ -5,34 +5,48 @@
 #include <WinSock2.h>
 #endif
 #include <QDataStream>
+#include "settings/redissettings.h"
+#include <QObject>
+#include <QTimer>
 
 using namespace Redis;
 
+struct Connector::Private {
+    Settings::RedisConnector config;
+    redisAsyncContext* redisContext{};
+    QTimer* reconnectTimer{};
+    QTimer* commandTimeout{};
+    RedisQtAdapter* client{};
+    QTimer* pingTimer{nullptr};
+    std::atomic<bool> isConnected{false};
+    quint8 commandTimeoutsCounter{0};
+};
+
 Connector::Connector(const Settings::RedisConnector &settings, QThread *thread) :
     Worker(settings.worker, thread),
-    m_config(settings),
-    m_reconnectTimer(new QTimer(this)),
-    m_commandTimeout(new QTimer(this))
+    d(new Private{settings})
 {
-    m_reconnectTimer->setSingleShot(true);
-    m_commandTimeout->setSingleShot(true);
-    m_reconnectTimer->callOnTimeout(this, &Connector::reconnect);
-    m_commandTimeout->callOnTimeout(this, &Connector::onCommandTimeout);
+    d->reconnectTimer = new QTimer(this);
+    d->commandTimeout = new QTimer(this);
+    d->reconnectTimer->setSingleShot(true);
+    d->commandTimeout->setSingleShot(true);
+    d->reconnectTimer->callOnTimeout(this, &Connector::reconnect);
+    d->commandTimeout->callOnTimeout(this, &Connector::onCommandTimeout);
     connect(this, &Connector::connected, &Connector::selectDb);
-    connect(this, &Connector::connected, m_reconnectTimer, &QTimer::stop);
-    connect(this, &Connector::disconnected, m_reconnectTimer, QOverload<>::of(&QTimer::start));
-    m_reconnectTimer->setInterval(m_config.reconnect_delay);
-    m_commandTimeout->setInterval(m_config.command_timeout);
+    connect(this, &Connector::connected, d->reconnectTimer, &QTimer::stop);
+    connect(this, &Connector::disconnected, d->reconnectTimer, QOverload<>::of(&QTimer::start));
+    d->reconnectTimer->setInterval(d->config.reconnect_delay);
+    d->commandTimeout->setInterval(d->config.command_timeout);
     enablePingKeepalive();
 }
 
 Connector::~Connector()
 {
-    if (m_isConnected) {
-        m_redisContext->data = nullptr;
-        redisAsyncDisconnect(m_redisContext);
-    } else if (m_redisContext) {
-        redisAsyncFree(m_redisContext);
+    if (d->isConnected) {
+        d->redisContext->data = nullptr;
+        redisAsyncDisconnect(d->redisContext);
+    } else if (d->redisContext) {
+        redisAsyncFree(d->redisContext);
     }
 }
 
@@ -50,41 +64,41 @@ void Connector::tryConnect()
         workerError(this) << "Attempt to connect while connected";
         return;
     }
-    timeval timeout{0, m_config.tcp_timeout};
+    timeval timeout{0, d->config.tcp_timeout};
     auto options = redisOptions{};
-    REDIS_OPTIONS_SET_TCP(&options, m_config.server.host->toStdString().c_str(), m_config.server.port);
+    REDIS_OPTIONS_SET_TCP(&options, d->config.server.host->toStdString().c_str(), d->config.server.port);
     options.connect_timeout = &timeout;
-    m_redisContext = redisAsyncConnectWithOptions(&options);
-    m_redisContext->data = this;
-    m_client->setContext(m_redisContext);
-    redisAsyncSetConnectCallback(m_redisContext, connectCallback);
-    redisAsyncSetDisconnectCallback(m_redisContext, disconnectCallback);
-    if (m_redisContext->err) {
-        workerError(this) << "Connection error:" << m_redisContext->errstr;
+    d->redisContext = redisAsyncConnectWithOptions(&options);
+    d->redisContext->data = this;
+    d->client->setContext(d->redisContext);
+    redisAsyncSetConnectCallback(d->redisContext, connectCallback);
+    redisAsyncSetDisconnectCallback(d->redisContext, disconnectCallback);
+    if (d->redisContext->err) {
+        workerError(this) << "Connection error:" << d->redisContext->errstr;
         clearContext();
-        m_reconnectTimer->start();
+        d->reconnectTimer->start();
     }
 }
 
 void Connector::clearContext()
 {
-    if (m_redisContext) {
-        redisAsyncFree(m_redisContext);
-        m_redisContext = nullptr;
+    if (d->redisContext) {
+        redisAsyncFree(d->redisContext);
+        d->redisContext = nullptr;
     }
 }
 
 void Connector::onCommandTimeout()
 {
-    if (++m_commandTimeoutsCounter >= m_config.max_command_errors) {
-        m_commandTimeoutsCounter = m_config.max_command_errors;
+    if (++d->commandTimeoutsCounter >= d->config.max_command_errors) {
+        d->commandTimeoutsCounter = d->config.max_command_errors;
         setConnected(false);
     }
 }
 
 void Connector::selectDb()
 {
-    auto selectCommand = QStringLiteral("SELECT %2").arg(m_config.db_index);
+    auto selectCommand = QStringLiteral("SELECT %2").arg(d->config.db_index);
     runAsyncCommand(&Connector::selectCallback, selectCommand);
 }
 
@@ -103,11 +117,11 @@ void Connector::pingCallback(redisReply *replyPtr)
 
 void Connector::startAsyncCommand(bool bypassTrack)
 {
-    if (m_pingTimer) {
-        m_pingTimer->stop();
+    if (d->pingTimer) {
+        d->pingTimer->stop();
     }
     if (!bypassTrack) {
-        m_commandTimeout->start();
+        d->commandTimeout->start();
     }
 }
 
@@ -130,8 +144,8 @@ void Connector::connectCallback(const redisAsyncContext *context, int status)
     workerInfo(adapter) << "Connected with status" << status;
     if (status != REDIS_OK) {
         // hiredis already freed the context
-        adapter->m_redisContext = nullptr;
-        adapter->m_reconnectTimer->start();
+        adapter->d->redisContext = nullptr;
+        adapter->d->reconnectTimer->start();
     } else {
         adapter->setConnected(true);
     }
@@ -199,13 +213,13 @@ void Connector::disconnectCallback(const redisAsyncContext *context, int status)
     auto adapter = static_cast<Connector *>(context->data);
     workerInfo(adapter) << "Disconnected with status" << status;
     adapter->setConnected(false);
-    adapter->m_redisContext = nullptr;
+    adapter->d->redisContext = nullptr;
     adapter->setConnected(false);
 }
 
 bool Connector::isConnected() const
 {
-    return m_isConnected;
+    return d->isConnected;
 }
 
 void Connector::waitConnected(Radapter::Worker *who) const
@@ -222,7 +236,7 @@ int Connector::runAsyncCommand(const QString &command)
     if (!isConnected() || !isValidContext()) {
         return REDIS_ERR;
     }
-    return redisAsyncCommand(m_redisContext, nullptr, nullptr, command.toStdString().c_str());
+    return redisAsyncCommand(d->redisContext, nullptr, nullptr, command.toStdString().c_str());
 }
 
 int Connector::commandsLeft() const
@@ -238,9 +252,9 @@ int Connector::commandsLeft() const
 
 void Connector::setConnected(bool state, const QString &reason)
 {
-    if (m_isConnected != state) {
-        m_isConnected = state;
-        if (m_isConnected) {
+    if (d->isConnected != state) {
+        d->isConnected = state;
+        if (d->isConnected) {
             workerInfo(this) << "Connection successful.";
             emit connected();
         } else {
@@ -249,29 +263,39 @@ void Connector::setConnected(bool state, const QString &reason)
         }
     }
     if (state) {
-        m_commandTimeout->stop();
-        m_commandTimeoutsCounter = 0;
+        d->commandTimeout->stop();
+        d->commandTimeoutsCounter = 0;
     }
 }
 
 void Connector::enablePingKeepalive()
 {
-    if (!m_pingTimer) {
-        m_pingTimer = new QTimer(this);
-        m_pingTimer->setInterval(m_config.ping_delay);
-        m_pingTimer->callOnTimeout(this, &Connector::doPing);
-        connect(this, &Connector::connected, m_pingTimer, QOverload<>::of(&QTimer::start));
-        connect(this, &Connector::disconnected, m_pingTimer, &QTimer::stop);
-        connect(this, &Connector::commandsFinished, m_pingTimer, QOverload<>::of(&QTimer::start));
+    if (!d->pingTimer) {
+        d->pingTimer = new QTimer(this);
+        d->pingTimer->setInterval(d->config.ping_delay);
+        d->pingTimer->callOnTimeout(this, &Connector::doPing);
+        connect(this, &Connector::connected, d->pingTimer, QOverload<>::of(&QTimer::start));
+        connect(this, &Connector::disconnected, d->pingTimer, &QTimer::stop);
+        connect(this, &Connector::commandsFinished, d->pingTimer, QOverload<>::of(&QTimer::start));
     }
 }
 
 void Connector::disablePingKeepalive()
 {
-    if (m_pingTimer) {
-        m_pingTimer->deleteLater();
-        m_pingTimer = nullptr;
+    if (d->pingTimer) {
+        d->pingTimer->deleteLater();
+        d->pingTimer = nullptr;
     }
+}
+
+redisAsyncContext *Connector::context()
+{
+    return d->redisContext;
+}
+
+const redisAsyncContext *Connector::context() const
+{
+    return d->redisContext;
 }
 
 bool Connector::isValidContext()
@@ -281,17 +305,17 @@ bool Connector::isValidContext()
 
 void Connector::setDbIndex(const quint16 dbIndex)
 {
-    if (m_config.db_index != dbIndex) {
-        m_config.db_index = dbIndex;
+    if (d->config.db_index != dbIndex) {
+        d->config.db_index = dbIndex;
         selectDb();
     }
 }
 
 void Connector::onRun()
 {
-    workerInfo(this, .noquote().nospace()) << ": Connnecting to: " << m_config.print() <<
-                                    "(Host: " << m_config.server.host.value << "; Port: " << m_config.server.port.value << ")";
-    m_client = new RedisQtAdapter(this);
+    workerInfo(this, .noquote().nospace()) << ": Connnecting to: " << d->config.print() <<
+                                    "(Host: " << d->config.server.host.value << "; Port: " << d->config.server.port.value << ")";
+    d->client = new RedisQtAdapter(this);
     tryConnect();
     Radapter::Worker::onRun();
 }

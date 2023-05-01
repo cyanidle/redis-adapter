@@ -4,6 +4,7 @@
 #include "broker/workers/private/workermsg.h"
 #include "radapterlogging.h"
 #include "formatting/redis/redisstreamqueries.h"
+#include "settings/redissettings.h"
 
 #define TRIM_TIMEOUT_MS     60000
 #define ADDS_COUNT_TO_TRIM  1000u

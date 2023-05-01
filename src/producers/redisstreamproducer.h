@@ -5,7 +5,9 @@
 #include <QQueue>
 #include <QTimer>
 #include "connectors/redisconnector.h"
-
+namespace Settings {
+struct RedisStreamProducer;
+}
 namespace Redis {
 class RADAPTER_API StreamProducer;
 }

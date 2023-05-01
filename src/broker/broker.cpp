@@ -4,6 +4,7 @@
 #include "broker/workers/private/workermsg.h"
 #include "radapterlogging.h"
 #include <QMutex>
+#include <QThread>
 #include <QMutexLocker>
 #include "templates/algorithms.hpp"
 #include "workers/worker.h"
@@ -226,9 +227,13 @@ void Broker::connectProxyToWorker(WorkerProxy* producerProxy, Worker *consumer)
             consumer->workerThread() == producerProxy->workerThread()
                 ? Qt::DirectConnection
                 : Qt::QueuedConnection);
+    auto notifyProxy = producerProxy->metaObject()->method(producerProxy->metaObject()->indexOfSlot("onConnectedTo"));
+    notifyProxy.invoke(producerProxy, Qt::QueuedConnection, Q_ARG(Radapter::Worker*, consumer));
+    auto notifyConsumer = consumer->metaObject()->method(consumer->metaObject()->indexOfSlot("privConnectedTo"));
+    notifyConsumer.invoke(consumer, Qt::QueuedConnection, Q_ARG(Radapter::Worker*, producerProxy->worker()));
     d->connections.append(conn);
     if (!producerProxy->consumers().contains(consumer)) {
-        producerProxy->addConsumer(consumer);
+        producerProxy->worker()->addConsumer(consumer);
     }
     if (!consumer->producers().contains(producerProxy->worker())) {
         consumer->addProducer(producerProxy->worker());

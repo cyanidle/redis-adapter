@@ -14,6 +14,10 @@ class RADAPTER_API WorkerMsg : public JsonDict {
     Q_GADGET
 public:
     WorkerMsg();
+    WorkerMsg(const WorkerMsg &) = default;
+    WorkerMsg(WorkerMsg &&) = default;
+    WorkerMsg &operator=(const WorkerMsg&) = default;
+    WorkerMsg &operator=(WorkerMsg&&) = default;
     WorkerMsg(Worker *sender, const QStringList &receivers = {});
     WorkerMsg(Worker *sender, const QSet<Worker *> &receivers);
     //! Msg Flags

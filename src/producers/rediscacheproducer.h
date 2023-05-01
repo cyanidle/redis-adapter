@@ -6,6 +6,9 @@
 #include "jsondict/jsondict.h"
 #include "async_context/rediscachecontext.h"
 
+namespace Settings {
+struct RedisCacheProducer;
+}
 namespace Redis {
 class RADAPTER_API CacheProducer;
 }

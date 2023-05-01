@@ -1,5 +1,8 @@
 #include "rediscacheconsumer.h"
+#include "formatting/redis/rediscachequeries.h"
 #include "radapterlogging.h"
+#include <QTimer>
+#include "settings/redissettings.h"
 #include "commands/rediscommands.h"
 #include "include/redisconstants.h"
 #include "templates/algorithms.hpp"
@@ -8,22 +11,52 @@ using namespace Redis;
 using namespace Cache;
 using namespace Radapter;
 
+struct CacheConsumer::Private {
+    QString objectKey;
+    Radapter::ContextManager<CacheContext> manager;
+    QTimer *objectRead;
+    bool subscribed{false};
+};
+
 CacheConsumer::CacheConsumer(const Settings::RedisCacheConsumer &config, QThread *thread) :
     Connector(config, thread),
-    m_objectKey(config.object_hash_key)
+    d(new Private{config.object_hash_key, {}, nullptr})
 {
     if (config.object_hash_key.isValid()) {
-        m_objectRead = new QTimer(this);
-        m_objectRead->callOnTimeout(this, &CacheConsumer::requestObjectSimple);
-        m_objectRead->setInterval(config.update_rate);
+        if (config.use_polling) {
+            d->objectRead = new QTimer(this);
+            d->objectRead->callOnTimeout(this, &CacheConsumer::requestObjectSimple);
+            d->objectRead->setInterval(config.update_rate);
+        } else {
+            connect(this, &Connector::connected, this, &CacheConsumer::subscribe);
+            connect(this, &Connector::disconnected, this, [this]{
+                d->subscribed = false;
+            });
+        }
     }
     connect(this, &Connector::disconnected, this, &CacheConsumer::onDisconnect);
 }
 
+CacheConsumer::~CacheConsumer()
+{
+    delete d;
+}
+
+void CacheConsumer::subscribe()
+{
+    if (d->subscribed) return;
+    runAsyncCommand(&CacheConsumer::onEvent, subscribeTo({d->objectKey}));
+}
+
+void CacheConsumer::onEvent(redisReply *)
+{
+    requestObjectSimple();
+}
+
 void CacheConsumer::onDisconnect()
 {
-    m_manager.forEach(&CacheContext::fail, "Disconnected");
-    m_manager.clearAll();
+    d->manager.forEach(&CacheContext::fail, "Disconnected");
+    d->manager.clearAll();
 }
 
 void CacheConsumer::requestObject(const QString &objectKey, CtxHandle handle)
@@ -107,8 +140,8 @@ void CacheConsumer::readSetCallback(redisReply *replyPtr, CtxHandle handle)
 void CacheConsumer::requestObjectSimple()
 {
     if (!isConnected()) return;
-    auto command = QStringLiteral("HGETALL ") + m_objectKey;
-    auto handle = m_manager.create<SimpleMsgContext>(this);
+    auto command = QStringLiteral("HGETALL ") + d->objectKey;
+    auto handle = d->manager.create<SimpleMsgContext>(this);
     if (runAsyncCommand(&CacheConsumer::readObjectCallback, command, handle) != REDIS_OK) {
         getCtx(handle).fail("Object request fail");
     }
@@ -133,25 +166,25 @@ void CacheConsumer::handleCommand(const Radapter::Command *command, CtxHandle ha
 
 CacheContext &CacheConsumer::getCtx(CtxHandle handle)
 {
-    return m_manager.get(handle);
+    return d->manager.get(handle);
 }
 
 void CacheConsumer::onCommand(const WorkerMsg &msg)
 {
     if (msg.command()->is<CommandPack>()) {
-        handleCommand(msg.command()->as<CommandPack>()->first(), m_manager.create<PackContext>(msg, this));
+        handleCommand(msg.command()->as<CommandPack>()->first(), d->manager.create<PackContext>(msg, this));
     } else if (msg.command()->is<CommandTriggerRead>()) {
-        requestObject(m_objectKey, m_manager.create<SimpleMsgContext>(this));
+        requestObject(d->objectKey, d->manager.create<SimpleMsgContext>(this));
     } else {
-        handleCommand(msg.command(), m_manager.create<SimpleContext>(msg, this));
+        handleCommand(msg.command(), d->manager.create<SimpleContext>(msg, this));
     }
-    m_manager.clearDone();
+    d->manager.clearDone();
 }
 
 void CacheConsumer::onRun()
 {
-    if (m_objectRead) {
-        m_objectRead->start();
+    if (d->objectRead) {
+        d->objectRead->start();
     }
     Connector::onRun();
 }

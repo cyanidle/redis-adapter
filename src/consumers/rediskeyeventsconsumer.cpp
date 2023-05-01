@@ -1,5 +1,6 @@
 #include "rediskeyeventsconsumer.h"
 #include "radapterlogging.h"
+#include "settings/redissettings.h"
 
 using namespace Redis;
 

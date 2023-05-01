@@ -1,12 +1,14 @@
 #ifndef WORKERBASE_H
 #define WORKERBASE_H
 
-#include <QSet>
+#include "private/global.h"
 #include "private/workerdebug.h"
 #include "private/workermsg.h"
 
 class RoutedObject;
 class QThread;
+template<class T>
+class QSet;
 class JsonDict;
 namespace Settings {
 struct Worker;
@@ -18,16 +20,15 @@ class Interceptor;
 class WorkerMsg;
 class Command;
 class Reply;
-struct WorkerPrivate;
 //! You can override onCommand(cosnt WorkerMsg &) / onReply(cosnt WorkerMsg &) / onMsg(cosnt WorkerMsg &)
 class RADAPTER_API Worker : public QObject {
     Q_OBJECT
+    struct Private;
 public:
     using WorkerSet = QSet<Worker*>;
     explicit Worker(const Settings::Worker &settings, QThread *thread);
     bool isPrintMsgsEnabled() const;
     bool printEnabled(QtMsgType type) const;
-    WorkerProxy* createPipe(const QList<Interceptor *> &interceptors = {});
     const QString &workerName() const;
     const WorkerSet &consumers() const;
     const WorkerSet &producers() const;
@@ -42,8 +43,8 @@ public:
     template <typename Target> bool is() const;
     template <typename Target> const Target *as() const;
     template <typename Target> Target *as();
-    void addConsumer(Radapter::Worker* consumer, QList<Radapter::Interceptor*> interceptors = {});
-    void addProducer(Radapter::Worker* producer, QList<Radapter::Interceptor*> interceptors = {});
+    void addConsumer(Radapter::Worker* consumer, const QList<Radapter::Interceptor*> &interceptors = {});
+    void addProducer(Radapter::Worker* producer, const QList<Radapter::Interceptor*> &interceptors = {});
     QString printSelf() const;
     virtual ~Worker();
 signals:
@@ -51,12 +52,10 @@ signals:
     void send(const JsonDict &msg);
     void sendKey(const QString &key, const QVariant &value);
     void sendRouted(const RoutedObject &obj, const QString &fieldName = {});
+    void connectedToConsumer(Radapter::Worker *consumer, QPrivateSignal);
+    void connectedToProducer(Radapter::Worker *producer, QPrivateSignal);
 public slots:
     void run();
-    void addConsumers(const QStringList &consumers);
-    void addProducers(const QStringList &producers);
-    void addConsumers(const QSet<Radapter::Worker*> &consumers);
-    void addProducers(const QSet<Radapter::Worker*> &producers);
 protected slots:
     virtual void onRun();
     virtual void onReply(const Radapter::WorkerMsg &msg);
@@ -64,6 +63,7 @@ protected slots:
     virtual void onMsg(const Radapter::WorkerMsg &msg);
     virtual void onBroadcast(const Radapter::WorkerMsg &msg);
 private slots:
+    void privConnectedTo(Radapter::Worker *producer);
     void onWorkerDestroyed(QObject *worker);
     void onSendMsgPriv(const Radapter::WorkerMsg &msg);
     void onMsgFromBroker(const Radapter::WorkerMsg &msg);
@@ -74,7 +74,9 @@ protected:
     WorkerMsg prepareReply(const WorkerMsg &msg, Reply *reply) const;
     WorkerMsg prepareCommand(Command *command) const;
 private:
-    WorkerPrivate *d;
+    WorkerProxy* createPipe(const QList<Interceptor *> &interceptors = {});
+
+    Private *d;
     friend Broker;
 };
 

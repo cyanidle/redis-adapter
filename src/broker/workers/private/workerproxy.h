@@ -19,16 +19,13 @@ public:
     QThread *workerThread() const;
     Worker *worker() const;
 signals:
+    void connectedTo(Radapter::Worker *consumer);
     void msgToConsumers(const Radapter::WorkerMsg &msg);
 public slots:
     void onMsgFromWorker(Radapter::WorkerMsg &msg);
+private slots:
+    void onConnectedTo(Radapter::Worker *consumer);
 private:
-    void addProducers(const QStringList &producers);
-    void addConsumers(const QStringList &producers);
-    void addProducers(const QSet<Worker*> &producers);
-    void addConsumers(const QSet<Worker*> &consumers);
-    void addProducer(Worker* producer);
-    void addConsumer(Worker* consumer);
     friend class Radapter::Worker;
     friend class Radapter::Broker;
     explicit WorkerProxy(Worker *parent);

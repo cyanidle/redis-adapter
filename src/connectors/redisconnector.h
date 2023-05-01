@@ -1,22 +1,21 @@
 #ifndef REDISCONNECTOR_H
 #define REDISCONNECTOR_H
 
-#include <QObject>
-#include <QTimer>
 #include "broker/workers/worker.h"
-#include "settings/redissettings.h"
 #include "lib/hiredis/adapters/qt.h"
 
+namespace Settings {
+struct RedisConnector;
+}
 namespace Redis {
-
 class RADAPTER_API Connector : public Radapter::Worker
 {
     Q_OBJECT
+    struct Private;
 public:
     template <class User, class Data>
                           using MethodCbWithData = void(User::*)(redisReply* reply, Data* optData);
     template <class User> using MethodCb = void(User::*)(redisReply* reply);
-
     enum ReplyTypes {
         Unknown = 0,
         ReplyString = REDIS_REPLY_STRING,
@@ -66,7 +65,8 @@ protected:
     void enablePingKeepalive();
     void disablePingKeepalive();
 
-    const redisAsyncContext* context() const {return m_redisContext;}
+    redisAsyncContext *context();
+    const redisAsyncContext* context() const;
 private:
     template <class User, class Data>
     static void privateCallbackWithData(redisAsyncContext* ctx, void* reply, void* data);
@@ -81,14 +81,7 @@ private:
     template <typename CallbackArgs_t, typename Callback>
     int runAsyncCommandImplementation(Callback callback, const QString &command, CallbackArgs_t* optData, bool needTrackingBypass);
 
-    Settings::RedisConnector m_config;
-    redisAsyncContext* m_redisContext{};
-    QTimer* m_reconnectTimer{};
-    QTimer* m_commandTimeout{};
-    RedisQtAdapter* m_client{};
-    QTimer* m_pingTimer{nullptr};
-    std::atomic<bool> m_isConnected{false};
-    quint8 m_commandTimeoutsCounter{0};
+    Private *d;
     template <class User, class Data>                      
     struct CallbackArgsWithData {
         MethodCbWithData<User, Data> callback;
@@ -131,7 +124,7 @@ int Connector::runAsyncCommandImplementation(Callback callback, const QString &c
         connDealloc(cbData);
         return REDIS_ERR;
     }
-    auto status = redisAsyncCommand(m_redisContext, callback, cbData, command.toStdString().c_str());
+    auto status = redisAsyncCommand(context(), callback, cbData, command.toStdString().c_str());
     if (status != REDIS_OK) {
         connDealloc(cbData);
     } else {

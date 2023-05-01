@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QMap>
 #include <QHash>
+#include <QSet>
 #include <QString>
 #include <QVariant>
 #include <type_traits>

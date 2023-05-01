@@ -41,7 +41,9 @@ public:
     JsonDict(JsonDict &&) = default;
     JsonDict &operator=(JsonDict &&) = default;
     JsonDict(const JsonDict &) = default;
-    JsonDict &operator=(const JsonDict &) = default;
+    JsonDict(JsonDict &&) = default;
+    JsonDict& operator=(const JsonDict &) = default;
+    JsonDict& operator=(JsonDict &&) = default;
     explicit JsonDict(const QVariant& src, bool nest = true, QChar separator = ':');
     explicit JsonDict(const QVariant& src, const QString &separator);
     JsonDict(const QVariantMap& src, bool nest = true, QChar separator = ':');

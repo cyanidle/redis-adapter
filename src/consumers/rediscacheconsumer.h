@@ -4,19 +4,25 @@
 #include "connectors/redisconnector.h"
 #include "async_context/rediscachecontext.h"
 
+namespace Settings {
+struct RedisCacheConsumer;
+}
+
 namespace Redis{
-
-
 class RADAPTER_API CacheConsumer : public Connector
 {
     Q_OBJECT
+    struct Private;
     using CtxHandle = Radapter::ContextBase::Handle;
 public:
     explicit CacheConsumer(const Settings::RedisCacheConsumer &config, QThread *thread);
+    ~CacheConsumer() override;
 public slots:
     void onCommand(const Radapter::WorkerMsg &msg) override;
 private slots:
     void onDisconnect();
+    void subscribe();
+    void onEvent(redisReply *);
 private:
     void onRun() override;
     CacheContext &getCtx(CtxHandle handle);
@@ -40,10 +46,7 @@ private:
     JsonDict parseNestedArrays(const JsonDict &target);
 
     friend CacheContext;
-
-    QString m_objectKey;
-    Radapter::ContextManager<CacheContext> m_manager{};
-    QTimer *m_objectRead{nullptr};
+    Private *d;
 };
 }
 

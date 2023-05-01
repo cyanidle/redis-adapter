@@ -5,6 +5,9 @@
 #include "connectors/redisconnector.h"
 #include "formatting/redis/rediscachequeries.h"
 
+namespace Settings {
+struct RedisKeyEventSubscriber;
+}
 namespace Redis {
 class RADAPTER_API KeyEventsConsumer;
 }
