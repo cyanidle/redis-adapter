@@ -5,7 +5,6 @@
 #include "private/workerdebug.h"
 #include "private/workermsg.h"
 
-class RoutedObject;
 class QThread;
 template<class T>
 class QSet;
@@ -14,6 +13,7 @@ namespace Settings {
 struct Worker;
 }
 namespace Radapter {
+struct JsonState;
 class Broker;
 class WorkerProxy;
 class Interceptor;
@@ -59,7 +59,7 @@ signals:
     void sendMsg(const Radapter::WorkerMsg &msg);
     void send(const JsonDict &msg);
     void sendKey(const QString &key, const QVariant &value);
-    void sendRouted(const RoutedObject &obj, const QString &fieldName = {});
+    void sendState(const Radapter::JsonState &obj, const QString &fieldName = {});
     void connectedToConsumer(Radapter::Worker *consumer, QPrivateSignal);
     void connectedToProducer(Radapter::Worker *producer, QPrivateSignal);
 public slots:

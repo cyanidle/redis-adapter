@@ -4,8 +4,8 @@ SOURCES+= \
    $$PWD/workermsg.cpp \
    $$PWD/workerproxy.cpp
 HEADERS+= \
-   $$PWD/pipestart.h \
-   $$PWD/privfilehelper.h \
    $$PWD/workerdebug.h \
+   $$PWD/workerproxy.h \
    $$PWD/workermsg.h \
-   $$PWD/workerproxy.h
+   $$PWD/pipestart.h \
+   $$PWD/privfilehelper.h

@@ -21,7 +21,6 @@
 #include "radapterlogging.h"
 #include "localization.h"
 #include "localstorage.h"
-#include "routed_object/routesprovider.h"
 #include "settings-parsing/adapters/yaml.hpp"
 #include "broker/workers/mockworker.h"
 #include "broker/workers/fileworker.h"

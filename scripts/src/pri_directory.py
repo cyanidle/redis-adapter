@@ -18,6 +18,10 @@ class PriDirectory:
                 self.headers.append(child)
             if child.is_dir() and not child.name in exc:
                 self.children.append(PriDirectory(child, exc))
+        def sort(src: List[str]):
+            src = list(reversed(sorted(src)))
+        sort(self.headers)
+        sort(self.sources)
     def __repr__(self) -> str:
         return repr(self.dir)
     @property

@@ -105,7 +105,6 @@ struct Sql : public Serializable {
 struct AppConfig : public Serializable {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(Optional<QVariantMap>, json_routes)
     FIELD(Optional<QVariantMap>, log_debug) //not implemented
     FIELD(Optional<Interceptors>, interceptors)
     FIELD(OptionalSequence<Repeater>, repeaters)

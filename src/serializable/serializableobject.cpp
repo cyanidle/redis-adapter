@@ -20,9 +20,10 @@ const QList<QString> &Object::fields() const
 bool Object::update(const QVariantMap &source)
 {
     bool wasUpdated = false;
-    for (auto iter = source.cbegin(); iter != source.cend(); ++iter) {
-        if (auto found = _priv_allFields().value(iter.key())) {
-            wasUpdated |= found->updateWithVariant(this, iter.value()); // stays true once set
+    for (const auto &name: qAsConst(fields()))
+    {
+        if (source.contains(name)) {
+            wasUpdated |= field(name)->updateWithVariant(this, source.value(name)); // stays true once set
         }
     }
     return wasUpdated;

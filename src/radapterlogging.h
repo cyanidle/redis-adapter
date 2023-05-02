@@ -1,9 +1,7 @@
 #ifndef RADAPTERLOGGING_H
 #define RADAPTERLOGGING_H
 
-#include <QLoggingCategory>
-#include <QDebug>
-
+#include "private/global.h"
 
 RADAPTER_API Q_DECLARE_LOGGING_CATEGORY(workersLogging);
 RADAPTER_API Q_DECLARE_LOGGING_CATEGORY(radapter);
@@ -27,9 +25,6 @@ RADAPTER_API Q_DECLARE_LOGGING_CATEGORY(brokerLogging);
 #define brokerInfo() qCInfo(brokerLogging)
 #define brokerWarn() qCWarning(brokerLogging)
 #define brokerError() qCCritical(brokerLogging)
-
-RADAPTER_API Q_DECLARE_LOGGING_CATEGORY(bindingsLogging);
-#define bindingsError() qCCritical(bindingsLogging)
 
 
 #define RADAPTER_CUSTOM_MESSAGE_PATTERN  "[%{time yyyy-MM-dd hh:mm:ss.zzz}] [%{if-debug}D%{endif}%{if-info}I%{endif}%{if-warning}W%{endif}%{if-critical}C%{endif}%{if-fatal}F%{endif}] "\

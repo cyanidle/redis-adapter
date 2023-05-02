@@ -1,14 +1,14 @@
 SOURCES+= \
-   $$PWD/duplicatinginterceptor.cpp \
    $$PWD/metainfopipe.cpp \
-   $$PWD/namespaceunwrapper.cpp \
+   $$PWD/validatinginterceptor.cpp \
    $$PWD/namespacewrapper.cpp \
-   $$PWD/validatinginterceptor.cpp
+   $$PWD/namespaceunwrapper.cpp \
+   $$PWD/duplicatinginterceptor.cpp
 HEADERS+= \
-   $$PWD/duplicatinginterceptor.h \
-   $$PWD/metainfopipe.h \
-   $$PWD/namespaceunwrapper.h \
    $$PWD/namespacewrapper.h \
-   $$PWD/validatinginterceptor.h
+   $$PWD/validatinginterceptor.h \
+   $$PWD/namespaceunwrapper.h \
+   $$PWD/duplicatinginterceptor.h \
+   $$PWD/metainfopipe.h
 
 include($$PWD/settings/settings.pri)

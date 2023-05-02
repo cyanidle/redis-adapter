@@ -1,7 +1,6 @@
 #ifndef WORKERDEBUG_H
 #define WORKERDEBUG_H
 
-#include <QDebug>
 #include "radapterlogging.h"
 
 #define WORKER_LOGGER(level, msgLevel, enabled) \

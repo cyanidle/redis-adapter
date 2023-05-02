@@ -1,6 +1,6 @@
 SOURCES+= \
-    $$PWD/pipeoperation.cpp
+   $$PWD/pipeoperation.cpp
 HEADERS+= \
-   $$PWD/commandreplymacros.h \
+   $$PWD/pipeoperation.h \
    $$PWD/global.h \
-   $$PWD/pipeoperation.h
+   $$PWD/commandreplymacros.h

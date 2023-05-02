@@ -1,8 +1,8 @@
 #ifndef LAUNCHER_H
 #define LAUNCHER_H
 
-#include <QObject>
 #include "settings-parsing/reader.h"
+#include <QObject>
 
 class QCommandLineParser;
 namespace Settings {

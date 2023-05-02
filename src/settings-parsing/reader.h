@@ -1,9 +1,9 @@
 #ifndef SETTINGS_READER_H
 #define SETTINGS_READER_H
 
+#include "settings-parsing/settingsexample.h"
 #include <QObject>
 #include <QVariant>
-#include "settings-parsing/settingsexample.h"
 
 namespace Settings {
 

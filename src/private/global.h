@@ -2,6 +2,8 @@
 #define RADAPTER_BROKER_GLOBAL_H
 
 #include <QObject>
+#include <QLoggingCategory>
+#include <QDebug>
 #include <QMap>
 #include <QHash>
 #include <QSet>

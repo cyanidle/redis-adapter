@@ -8,7 +8,7 @@
 #include "settings/workersettings.h"
 #include "radapterlogging.h"
 #include "private/workerproxy.h"
-#include "routed_object/routed_object.h"
+#include "state/jsonstate.h"
 
 using namespace Radapter;
 
@@ -58,13 +58,13 @@ Worker::Worker(const Settings::Worker &settings, QThread *thread) :
         brokerWarn()<< "=== Worker (" << workerName() << "): Will print Msgs! ===";
     }
     connect(this, &Worker::sendMsg, &Worker::onSendMsgPriv);
-    connect(this, &Worker::send, [this](const JsonDict &data){
+    connect(this, &Worker::send, this, [this](const JsonDict &data){
         emit sendMsg(prepareMsg(data));
     });
-    connect(this, &Worker::sendRouted, [this](const RoutedObject &obj, const QString &fieldName){
+    connect(this, &Worker::sendState, this, [this](const JsonState &obj, const QString &fieldName){
         emit sendMsg(prepareMsg(obj.send(fieldName)));
     });
-    connect(this, &Worker::sendKey, [this](const QString &key, const QVariant &value){
+    connect(this, &Worker::sendKey, this, [this](const QString &key, const QVariant &value){
         emit sendMsg(prepareMsg(JsonDict{{key, value}}));
     });
     connect(thread, &QThread::started, this, &Worker::onRun);
