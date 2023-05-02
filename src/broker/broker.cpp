@@ -233,8 +233,8 @@ void Broker::connectProxyToWorker(WorkerProxy* producerProxy, Worker *consumer)
             consumer->workerThread() == producerProxy->workerThread()
                 ? Qt::DirectConnection
                 : Qt::QueuedConnection);
-    emit producerProxy->worker()->connectedToConsumer(consumer, {});
-    emit consumer->connectedToProducer(producerProxy->worker(), {});
+    emit producerProxy->worker()->connectedToConsumer(consumer, Worker::QPrivateSignal{});
+    emit consumer->connectedToProducer(producerProxy->worker(), Worker::QPrivateSignal{});
     d->connections.append(conn);
     if (!producerProxy->consumers().contains(consumer)) {
         producerProxy->worker()->addConsumer(consumer);
