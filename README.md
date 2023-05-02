@@ -17,3 +17,7 @@ docker push rsk39.tech/redis-adapter:<тэг версии>-amd64
 ```bash
 docker run -it --rm -v $(pwd)/conf:/app/redis-adapter/conf rsk39.tech/redis-adapter:<тэг версии>-amd64 bash
 ```
+
+## Доступные pipe директивы
+Pipe - описание соединения различных рабочих и трафика между ними. 
+TODO!

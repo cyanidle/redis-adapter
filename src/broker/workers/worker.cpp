@@ -61,11 +61,11 @@ Worker::Worker(const Settings::Worker &settings, QThread *thread) :
     connect(this, &Worker::send, this, [this](const JsonDict &data){
         emit sendMsg(prepareMsg(data));
     });
-    connect(this, &Worker::sendState, this, [this](const JsonState &obj, const QString &fieldName){
+    connect(this, &Worker::sendState, this, [this](const State::Json &obj, const QString &fieldName){
         emit sendMsg(prepareMsg(obj.send(fieldName)));
     });
     connect(this, &Worker::sendKey, this, [this](const QString &key, const QVariant &value){
-        emit sendMsg(prepareMsg(JsonDict{{key, value}}));
+        emit sendMsg(prepareMsg(JsonDict(QVariantMap{{key, value}})));
     });
     connect(thread, &QThread::started, this, &Worker::onRun);
     connect(thread, &QThread::destroyed, this, &Worker::deleteLater);

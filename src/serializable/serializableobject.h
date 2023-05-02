@@ -11,6 +11,7 @@ public:
     FieldConcept *field(const QString &fieldName);
     const FieldConcept *field(const QString &fieldName) const;
     const QList<QString> &fields() const;
+    QString findNameOf(const IsFieldCheck &rawField) const;
     virtual bool update(const QVariantMap &source);
     virtual QVariantMap serialize() const;
     QVariantMap schema() const;

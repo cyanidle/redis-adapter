@@ -1,6 +1,7 @@
 #include "serializablesetting.h"
 #include "jsondict/jsondict.h"
 #include "templates/algorithms.hpp"
+#include <QStringBuilder>
 
 namespace Settings {
 
@@ -11,7 +12,7 @@ Serializable::Serializable() :
 
 QString Serializable::print() const
 {
-    return JsonDict{serialize()}.printDebug().replace("Json", metaObject()->className());
+    return QString(metaObject()->className())%' '%JsonDict{serialize()}.print();
 }
 
 void Serializable::checkForExtra(const QVariantMap &src)
@@ -52,6 +53,7 @@ void Serializable::processField(const QString &name, const QVariant &newValue)
 bool Serializable::update(const QVariantMap &src)
 {
     try {
+        allowExtra(m_allowExtra || src.value("__allow_extra").toBool());
         if (!m_allowExtra) {
             checkForExtra(src);
         }

@@ -46,7 +46,7 @@ public:
     explicit JsonDict(const QVariant& src, const QString &separator);
     JsonDict(const QVariantMap& src, bool nest = true, QChar separator = ':');
     JsonDict(const QVariantMap& src, const QString &separator);
-    JsonDict(std::initializer_list<std::pair<QString, QVariant>> initializer);
+    JsonDict(std::initializer_list<std::pair<QString, QVariant>> initializer, bool nest = false, QChar separator = ':');
     explicit JsonDict(QVariantMap&& src, bool nest = true, const QString &separator = ":");
     //! \warning Implicitly covertible to QVariant and QVariantMap
     operator const QVariantMap&() const&;
@@ -81,6 +81,7 @@ public:
     bool isValid(const QStringList& akey) const;
     bool isValid(const QString& akey) const;
     QList<QVariant> values() const;
+    const QVariant value(const QString& akey, const QVariant &adefault, const QString &sep) const;
     const QVariant value(const QString& akey, const QVariant &adefault = QVariant(), QChar sep = ':') const;
     const QVariant value(const QStringList& akey, const QVariant &adefault = QVariant()) const;
     //! Оператор глубокого сравнения словарей
@@ -94,7 +95,7 @@ public:
     //! Заполнение из QJsonObject
     static JsonDict fromJsonObj(const QJsonObject &json);
     static JsonDict fromBytes(const QByteArray &json, QJsonParseError *err = nullptr);
-    bool contains(const QString &key) const;
+    bool contains(const QString &key, QChar sep = ':') const;
     bool contains(const QStringList &key) const;
     bool contains(const JsonDict &src) const;
     static qint64 toIndex(const QString &key);
@@ -126,7 +127,7 @@ public:
     JsonDict::const_iterator end() const;
     JsonDict::const_iterator cbegin() const;
     JsonDict::const_iterator cend() const;
-    QString printDebug() const;
+    QString print() const;
     friend QDebug operator<<(QDebug dbg, const JsonDict &json);
 protected:
     friend struct iterator;

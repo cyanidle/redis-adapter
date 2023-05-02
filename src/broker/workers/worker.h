@@ -9,11 +9,9 @@ class QThread;
 template<class T>
 class QSet;
 class JsonDict;
-namespace Settings {
-struct Worker;
-}
+namespace Settings {struct Worker;}
+namespace State{struct Json;}
 namespace Radapter {
-struct JsonState;
 class Broker;
 class WorkerProxy;
 class Interceptor;
@@ -59,7 +57,7 @@ signals:
     void sendMsg(const Radapter::WorkerMsg &msg);
     void send(const JsonDict &msg);
     void sendKey(const QString &key, const QVariant &value);
-    void sendState(const Radapter::JsonState &obj, const QString &fieldName = {});
+    void sendState(const State::Json &obj, const QString &fieldName = {});
     void connectedToConsumer(Radapter::Worker *consumer, QPrivateSignal);
     void connectedToProducer(Radapter::Worker *producer, QPrivateSignal);
 public slots:

@@ -30,9 +30,9 @@ const QVariantMap &JsonDict::top() const
     return m_dict;
 }
 
-bool JsonDict::contains(const QString &key) const
+bool JsonDict::contains(const QString &key, QChar sep) const
 {
-    return m_dict.contains(key);
+    return contains(key.split(sep));
 }
 
 bool JsonDict::contains(const QStringList &key) const
@@ -583,6 +583,11 @@ QList<QVariant> JsonDict::values() const
     return result;
 }
 
+const QVariant JsonDict::value(const QString &akey, const QVariant &adefault, const QString &sep) const
+{
+    return value(akey.split(sep), adefault);
+}
+
 const QVariant JsonDict::value(const QString &akey, const QVariant &adefault, QChar sep) const
 {
     return value(akey.split(sep), adefault);
@@ -618,10 +623,10 @@ JsonDict::JsonDict(const QVariantMap &src, const QString &separator) :
     if (!isEmpty()) this->nest(separator);
 }
 
-JsonDict::JsonDict(std::initializer_list<std::pair<QString, QVariant> > initializer) :
+JsonDict::JsonDict(std::initializer_list<std::pair<QString, QVariant> > initializer, bool nest, QChar separator) :
     m_dict(initializer)
 {
-    this->nest(':');
+    if (!isEmpty() && nest) this->nest(separator);
 }
 
 JsonDict::JsonDict(QVariantMap &&src, bool nest, const QString &separator) :
@@ -664,9 +669,9 @@ void JsonDict::swap(QVariantMap &dict) noexcept
     m_dict.swap(dict);
 }
 
-QString JsonDict::printDebug() const
+QString JsonDict::print() const
 {
-    auto result = QStringLiteral("Json {");
+    auto result = QStringLiteral("{");
     const auto flat = flatten();
     for (auto iter{flat.begin()}; iter != flat.end(); ++iter) {
         result += QStringLiteral("\n\t%1: %2").arg(iter.key(), iter.value().toString());
@@ -678,7 +683,7 @@ QString JsonDict::printDebug() const
 QDebug operator<<(QDebug dbg, const JsonDict &json)
 {
     QDebugStateSaver saver(dbg);
-    dbg.noquote() << json.printDebug();
+    dbg.noquote() << json.print();
     return dbg;
 }
 

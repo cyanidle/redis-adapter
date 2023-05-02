@@ -9,6 +9,7 @@
 namespace Serializable {
     struct FieldConcept;
     struct Object;
+    struct IsFieldCheck {};
     Q_NAMESPACE_EXPORT(RADAPTER_API)
     enum FieldType {
         FieldInvalid = 0,
@@ -22,6 +23,8 @@ namespace Serializable {
     Q_ENUM_NS(FieldType)
     struct FieldConcept {
         friend Object;
+        virtual const IsFieldCheck *rawField(const Serializable::Object *owner) const = 0;
+        virtual IsFieldCheck *rawField(Serializable::Object *owner) = 0;
         virtual QVariantMap schema(const Serializable::Object *owner) const = 0;
         virtual QVariant readVariant(const Serializable::Object *owner) const = 0;
         virtual bool updateWithVariant(Serializable::Object *owner, const QVariant &source) = 0;
@@ -61,6 +64,14 @@ namespace Private {
 template <typename Class, typename Field>
 struct FieldHolder : FieldConcept {
     FieldHolder(Field Class::*fieldGetter) : m_fieldGetter(fieldGetter) {}
+    const IsFieldCheck *rawField(const Serializable::Object *owner) const override final
+    {
+        return field(owner);
+    }
+    IsFieldCheck *rawField(Serializable::Object *owner) override final
+    {
+        return field(owner);
+    }
     QVariantMap schema(const Serializable::Object *owner) const override final {
         auto result = field(owner)->schema();
         result["attributes"] = field(owner)->attributes();
@@ -125,7 +136,6 @@ FieldConcept* upcastField(Field Class::*fieldGetter) {
 #endif
 
 }
-struct IsFieldCheck {};
 template<typename T>
 struct FieldCommon : IsFieldCheck {
     friend Serializable::Object;

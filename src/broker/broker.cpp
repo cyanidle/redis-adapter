@@ -222,7 +222,7 @@ void Broker::connectProxyToWorker(WorkerProxy* producerProxy, Worker *consumer)
     for (auto inter: conn.producer->pipe(producerProxy)) {
         interceptors.append(inter->objectName());
     }
-    auto interceptorsMsg = "| *" + interceptors.join(" --> *") + '|';
+    auto interceptorsMsg = "|*" + interceptors.join(" --> *") + '|';
     brokerInfo() << "\nConnecting:\n == Producer(" << conn.producer->printSelf()
                  << ") -->\n"
                  << "== Pipe(" << interceptorsMsg

@@ -3,14 +3,14 @@
 
 #include <QObject>
 
-namespace Radapter {
-struct JsonState;
+namespace State {
+struct Json;
 namespace Private {
 class JsonStateQObject : public QObject
 {
     Q_OBJECT
 signals:
-    void wasUpdated(const Radapter::JsonState *state);
+    void wasUpdated(const State::Json *state);
 };
 
 } // namespace Private

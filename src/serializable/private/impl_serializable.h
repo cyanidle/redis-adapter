@@ -49,7 +49,7 @@ QMap<QString, FieldConcept *> fieldsHelper(const Object *who);
     public: field_type name {__VA_ARGS__}; \
     private: \
     QVariant _priv_getFinalPtr_##name () { \
-constexpr auto is_wrapped = ::std::is_base_of<::Serializable::Private::IsFieldCheck, typename std::decay<decltype(name)>::type>(); \
+constexpr auto is_wrapped = ::std::is_base_of<::Serializable::IsFieldCheck, typename std::decay<decltype(name)>::type>(); \
 static_assert(is_wrapped, "Dont use raw types in FIELD() macro"); \
         _has_Is_Serializable(); \
         return QVariant::fromValue(::Serializable::Private::upcastField(& THIS_TYPE :: name)); /* NOLINT*/ \
@@ -66,7 +66,7 @@ static_assert(is_wrapped, "Dont use raw types in FIELD() macro"); \
     Q_PROPERTY(QVariant __field__ ##name READ _priv_getFinalPtr_##name) \
     public:
 
-#define IS_SERIALIZABLE \
+#define IS_SERIALIZABLE_BASE \
     private: \
     static void _has_Is_Serializable () noexcept {}; \
     virtual const QList<QString> &_priv_allFieldsNamesCached() const override { \
@@ -82,5 +82,8 @@ static_assert(is_wrapped, "Dont use raw types in FIELD() macro"); \
         ::Serializable::Private::check_type<THIS_TYPE>(); \
         return &this->staticMetaObject; \
     };
+
+#define IS_SERIALIZABLE \
+    IS_SERIALIZABLE_BASE
 
 #endif // SERIALIZER_H

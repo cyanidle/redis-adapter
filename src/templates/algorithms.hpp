@@ -211,9 +211,9 @@ auto keyVal(Container &map)
 }
 
 template <typename Container>
-auto reversed(Container &&cont)
+auto reversed(const Container &cont)
 {
-    return Container{std::forward<Container>(cont).rbegin(), std::forward<Container>(cont).rend()};
+    return Container{cont.rbegin(), cont.rend()};
 }
 
 }

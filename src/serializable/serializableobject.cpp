@@ -17,6 +17,17 @@ const QList<QString> &Object::fields() const
     return _priv_allFieldsNamesCached();
 }
 
+QString Object::findNameOf(const IsFieldCheck &rawField) const
+{
+    for (const auto &name: qAsConst(fields()))
+    {
+        if (field(name)->rawField(this) == &rawField) {
+            return name;
+        }
+    }
+    return {};
+}
+
 bool Object::update(const QVariantMap &source)
 {
     bool wasUpdated = false;

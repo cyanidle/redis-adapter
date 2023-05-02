@@ -14,7 +14,20 @@ bool hectaPascalsToAtmospheric(QVariant &src, const QVariantList &args, QVariant
     return true;
 }
 
-bool intDivideBy(QVariant &src, const QVariantList &args, QVariant &state)
+bool multiplyBy(QVariant &src, const QVariantList &args, QVariant &state)
+{
+    Q_UNUSED(args)
+    Q_UNUSED(state)
+    bool ok;
+    auto asInt = src.toInt(&ok);
+    if (!ok) return false;
+    auto actual = asInt * args[0].toDouble(&ok);
+    if (!ok) throw std::runtime_error("Args to int_divide_by must be: [<double>]");
+    src.setValue(actual);
+    return true;
+}
+
+bool divideBy(QVariant &src, const QVariantList &args, QVariant &state)
 {
     Q_UNUSED(args)
     Q_UNUSED(state)
@@ -82,6 +95,14 @@ bool roundLast(QVariant &src, const QVariantList &args, QVariant &state)
     return true;
 }
 
+bool invalidate(QVariant &src, const QVariantList &args, QVariant &state)
+{
+    Q_UNUSED(args)
+    Q_UNUSED(state)
+    src.clear();
+    return true;
+}
+
 void Validator::registerAllCommon()
 {
     Validator::Fetched::initialize();
@@ -90,10 +111,12 @@ void Validator::registerAllCommon()
     makeFetchable<Hours12>("hours12");
     makeFetchable<DayOfWeek>("weekday", "day_of_week");
     makeFetchable<LogLevel>("log_level", "loglevel");
+    Validator::Private::add(invalidate, "invalidate", "discard");
     Validator::Private::add(roundLast, "round_last");
     Validator::Private::add(setUnixTimeStamp, "set_unix_timestamp");
     Validator::Private::add(rusWindDirection360, "wind_direction_360_ru");
-    Validator::Private::add(intDivideBy, "int_divide_by");
+    Validator::Private::add(divideBy, "int_divide_by", "divide_by");
+    Validator::Private::add(multiplyBy, "multiply_by");
     Validator::Private::add(hectaPascalsToAtmospheric, "hecta_pascals_to_mm_atmospheric");
 }
 

@@ -91,6 +91,11 @@ void tryCreateInterceptor(const QString &name, QObject *parent)
         auto config = Settings::NamespaceUnwrapper();
         config.unwrap_from = tryExtract<QString>(name, data, 0, "unwrap_from");
         broker->registerInterceptor(name, new NamespaceUnwrapper(config));
+    } else if (func == "block") {
+        auto config = Settings::ValidatingInterceptor();
+        auto validator = QStringLiteral("invalidate");
+        config.by_validator[validator] = data;
+        broker->registerInterceptor(name, new ValidatingInterceptor(config));
     } else if (func == "add_timestamp") {
         auto config = Settings::ValidatingInterceptor();
         config.by_field.value = {{tryExtract<QString>(name, data, 0, "field"), "set_unix_timestamp"}};
@@ -180,9 +185,18 @@ void tryCreateBidirConnect(const QString &left, const QString &right, QStringLis
                 case PipeOp::Inverted: fakePipe.append("wrap("%data.join(',')%')');break;
                 default: throw std::runtime_error("Unreachable");
                 }
+            } else if (func == "block") {
+                switch(dir) {
+                case PipeOp::Normal: fakePipe.append("block("%data.join(',')%')');break;
+                case PipeOp::Inverted: fakePipe.append("block("%data.join(',')%')');break;
+                default: throw std::runtime_error("Unreachable");
+                }
             } else {
                 throw std::runtime_error("Unsupported func in bidirectional branch: " + item.toStdString());
             }
+        }
+        if (dir == PipeOp::Inverted) {
+            fakePipe = reversed(fakePipe);
         }
         tryConnecting(left, right, fakePipe, parent);
     };
@@ -257,9 +271,5 @@ void Radapter::initPipeline(const QString& pipe, QObject *parent)
         throw std::runtime_error("While initializing pipe: " + pipe.toStdString() + " -->\n" + exc.what());
     }
 }
-
-
-
-
 
 
