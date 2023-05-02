@@ -197,7 +197,12 @@ protected:
     }
     bool updateWithVariant(const QVariant &source) {
         if (source.canConvert<T>()) {
-            this->value = source.value<T>();
+            auto copy = source;
+            if (!copy.convert(QMetaType::fromType<T>())) {
+                settingsParsingWarn() << "Type can be converted, but is invalid (e.g. string to int failed)";
+                return false;
+            }
+            this->value = copy.value<T>();
             return true;
         }
         return false;
@@ -339,7 +344,12 @@ protected:
         auto asList = source.toList();
         for (auto &src : asList) {
             if (!src.canConvert<T>()) continue;
-            temp.append(src.value<T>());
+            auto copy = src;
+            if (!copy.convert(QMetaType::fromType<T>())) {
+                settingsParsingWarn() << "Type can be converted, but is invalid (e.g. string to int failed)";
+                continue;
+            }
+            temp.append(copy.value<T>());
         }
         if (!temp.empty()) {
             this->value = temp;
@@ -508,7 +518,12 @@ protected:
         auto asMap = source.toMap();
         for (auto iter = asMap.cbegin(); iter != asMap.cend(); ++iter) {
             if (!iter.value().canConvert<T>()) continue;
-            temp.insert(iter.key(), iter->value<T>());
+            auto copy = iter.value();
+            if (!copy.convert(QMetaType::fromType<T>())) {
+                settingsParsingWarn() << "Type can be converted, but is invalid (example: string to int failed)";
+                continue;
+            }
+            temp.insert(iter.key(), copy.value<T>());
         }
         if (!temp.empty()) {
             this->value = temp;
