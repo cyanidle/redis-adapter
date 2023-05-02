@@ -15,13 +15,19 @@ ENV JOBS=${JOBS}
 WORKDIR /build
 COPY . .
 RUN set -eux; \
+    test -f ${APP_NAME}.pro || (echo "Project is not called ${APP_NAME}.pro" && exit 1); \
+    test -f VERSION || (echo "VERSION file not found" && exit 1); \
+    test -f GIT_COMMIT || (echo "GIT_COMMIT file not found" && exit 1); \
+    echo "VERSION: $(cat VERSION)"; \
+    echo "GIT_COMMIT: $(cat GIT_COMMIT)"; \
+    ls -ll; \
     qmake; \
+    ls -ll; \
     make -j${JOBS}; \
     mkdir -p ${APP_DIR}; \
-    modules=$(cat .qtmodules); \
 # using $QT_DIR, $SYSROOT_DIR and $TOOLCHAIN_PATH from rsk39/qt6-env image
     app_src_libs=$(ls | grep -i radapter-sdk*.so*) || app_src_libs=;\
-    modules="${modules} concurrent test"; \
+    modules="core serialbus serialport sql websockets network httpserver concurrent test"; \
     qt_libs=$(for module in $modules; do ls -d ${QT_DIR}/lib/* | grep -i $module*.so*; done); \
     os_specific="libicui18n libicuuc libicudata libmariadb libbrotlidec libb2 libbrotlicommon libgomp ssl crypto"; \
     os_libs=$(for module in $os_specific; do ls -d ${SYSROOT_DIR}/usr/lib/${TOOLCHAIN_ARCH}/* | grep "$module.*\.so.*"; done); \

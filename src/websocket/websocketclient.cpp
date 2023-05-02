@@ -78,7 +78,7 @@ bool Client::isRunning() const
 
 void Client::doRun()
 {
-    wsockClientDebug() << "Websocket client: connecting to" << m_serverUrl;
+    workerInfo(this) << "Websocket client: connecting to" << m_serverUrl;
     m_sock->open(m_serverUrl);
 }
 
@@ -89,7 +89,7 @@ void Client::doStop()
 
 void Client::onConnected()
 {
-    wsockClientDebug() << "Websocket client: connected successfully!";
+    workerInfo(this) << "Websocket client: connected successfully!";
     stopReconnect();
     resetHeartbeatCounter();
     startHeartbeat();
@@ -97,14 +97,14 @@ void Client::onConnected()
 
 void Client::onDisconnected()
 {
-    wsockClientDebug() << "Websocket client: disconnected";
+    workerInfo(this) << "Websocket client: disconnected";
     stopHeartbeat();
     startReconnect();
 }
 
 void Client::onError()
 {
-    wsockClientDebug() << "Websocket error occured:" << m_sock->error() << m_sock->errorString();
+    workerInfo(this) << "Websocket error occured:" << m_sock->error() << m_sock->errorString();
     if (!isRunning()) {
         startReconnect();
     }
@@ -117,7 +117,7 @@ void Client::doPing()
 
 void Client::onPong(quint64 elapsedTime, const QByteArray &payload)
 {
-    wsockClientDebug() << "Websocket server heartbeat:" << payload << QString("(%1ms)").arg(elapsedTime);
+    workerInfo(this) << "Websocket server heartbeat:" << payload << QString("(%1ms)").arg(elapsedTime);
     if (payload.toInt() == m_heartbeatCounter) {
         m_heartbeatCounter++;
         m_connectionLostTimer->start();
@@ -129,11 +129,11 @@ void Client::onSocketReceived(const QString &message)
     auto parseStatus = QJsonParseError{};
     auto jsonMessage = JsonDict::fromBytes(message.toUtf8(), &parseStatus);
     if (parseStatus.error != parseStatus.NoError) {
-        wsockClientDebug() << "json reply error:" << parseStatus.error << parseStatus.errorString();
+        workerInfo(this) << "json reply error:" << parseStatus.error << parseStatus.errorString();
         return;
     }
     if (jsonMessage.isEmpty()) {
-        wsockClientDebug() << "empty json received";
+        workerInfo(this) << "empty json received";
         return;
     }
     emit send(jsonMessage);
@@ -141,7 +141,7 @@ void Client::onSocketReceived(const QString &message)
 
 void Client::onConnectionLost()
 {
-    wsockClientDebug() << "Websocket server heartbeat has been timed out. Connection lost.";
+    workerInfo(this) << "Websocket server heartbeat has been timed out. Connection lost.";
     m_sock->close(QWebSocketProtocol::CloseCodeNormal, "connection lost");
 }
 

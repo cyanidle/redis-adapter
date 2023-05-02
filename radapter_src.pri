@@ -1,4 +1,14 @@
-QT += serialbus serialport sql websockets network httpserver concurrent
+QT += core \
+    serialbus \
+    serialport \
+    sql \
+    websockets \
+    network \
+    httpserver \
+    concurrent
+QT -= gui
+PRECOMPILED_HEADER += $$PWD/src/private/global.h
+CONFIG += c++17 create_prl
 win32: {
     LIBS += -lws2_32
     g++:{

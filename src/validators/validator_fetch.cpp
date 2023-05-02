@@ -24,7 +24,7 @@ int Validator::Private::add(Function func, const char *alias)
     if (allValidators->contains(QLatin1String(alias))) {
         throw std::runtime_error(std::string("Duplicate validator with name: ") + alias);
     }
-    settingsParsingWarn() << "Adding validator:" << alias;
+    settingsParsingDebug() << "Adding validator:" << alias;
     allValidators->insert(QLatin1String(alias), func);
     return 0;
 }

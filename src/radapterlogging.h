@@ -12,23 +12,16 @@ RADAPTER_API Q_DECLARE_LOGGING_CATEGORY(radapter);
 #define reWarn()    qCWarning(radapter)
 #define reError()   qCCritical(radapter)
 
-RADAPTER_API Q_DECLARE_LOGGING_CATEGORY(modbus);
-#define mbDebug()   qCDebug(modbus)
-
 RADAPTER_API Q_DECLARE_LOGGING_CATEGORY(mysql);
 #define sqlDebug()  qCDebug(mysql)
-
-RADAPTER_API Q_DECLARE_LOGGING_CATEGORY(wsockserver);
-#define wsockServDebug()  qCDebug(wsockserver)
-
-RADAPTER_API Q_DECLARE_LOGGING_CATEGORY(wsockclient);
-#define wsockClientDebug()  qCDebug(wsockclient)
 
 RADAPTER_API Q_DECLARE_LOGGING_CATEGORY(resmon);
 #define resmonDebug() qCDebug(resmon)
 
 RADAPTER_API Q_DECLARE_LOGGING_CATEGORY(settingsParsingLogging);
 #define settingsParsingWarn() qCWarning(settingsParsingLogging)
+#define settingsParsingInfo() qCInfo(settingsParsingLogging)
+#define settingsParsingDebug() qCDebug(settingsParsingLogging)
 
 RADAPTER_API Q_DECLARE_LOGGING_CATEGORY(brokerLogging);
 #define brokerInfo() qCInfo(brokerLogging)

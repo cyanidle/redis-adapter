@@ -37,6 +37,3 @@ qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
-# Docker: getting current Qt modules to automate libraries extraction
-message("used modules: $$QT")
-write_file("../.qtmodules", QT)
