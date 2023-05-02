@@ -85,6 +85,7 @@ void Validator::Fetched::addArgsFor(const QString &name, const QVariantList &arg
     }
     settingsParsingWarn() << "Adding argumets for validator:" << name << '(' << args << ") --> new name:" << newName;
     Validator::Private::add(fetchFunction(name), newName.toLatin1());
+    Validator::Fetched test(newName);
 }
 
 void Validator::Fetched::initialize()

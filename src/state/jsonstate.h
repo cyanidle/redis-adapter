@@ -4,8 +4,20 @@
 #include "serializable/bindable.hpp"
 #include "state/private/privjsonstateqobject.h"
 #include "validators/validator_fetch.h"
+#define STATE_PRIVATE_ATTR "state_private"
 class JsonDict;
 namespace State {
+template <typename Target>
+struct MarkPrivate : Target
+{
+    FIELD_SUPER(Target)
+protected:
+    const QStringList &attributes() const {
+        static const QStringList attrs = Target::attributes() + QStringList{STATE_PRIVATE_ATTR};
+        return attrs;
+    }
+};
+
 struct RADAPTER_API Json : protected Serializable::Object, State::Private::JsonStateQObject {
     Q_GADGET
 public:
@@ -22,6 +34,8 @@ public:
     using Serializable::Object::metaObject;
     void addValidatorTo(const QString &field, const QString &validator, ValidateOn role = Update);
     void addValidatorTo(const Serializable::IsFieldCheck &field, const QString &validator, ValidateOn role = Update);
+    void clearValidators(const QString &field, ValidateOn role);
+    void clearValidators(const Serializable::IsFieldCheck &field, ValidateOn role);
     QString logFields() const;
     JsonDict send(const Serializable::IsFieldCheck &field) const;
     JsonDict send(const QString &fieldName = {}) const;
@@ -32,11 +46,18 @@ public:
         connect(this, &Json::wasUpdated, std::forward<Args>(args)...);
     }
 private:
+    bool update(const QVariantMap &data) override;
     void fillCache() const;
-    QMap<QString, Validator::Fetched> m_updateValidators;
-    QMap<QString, Validator::Fetched> m_sendValidators;
+    QMap<QString, QList<Validator::Fetched>> m_updateValidators;
+    QMap<QString, QList<Validator::Fetched>> m_sendValidators;
     mutable QMap<QString, QStringList> m_nestedFieldsCache;
     mutable bool cacheFilled{false};
+    template <typename T> friend struct Serializable::PlainField;
+    template <typename T> friend struct Serializable::NestedField;
+    template <typename T> friend struct Serializable::PlainSequence;
+    template <typename T> friend struct Serializable::NestedSequence;
+    template <typename T> friend struct Serializable::PlainMapping;
+    template <typename T> friend struct Serializable::NestedMapping;
 };
 using Serializable::Plain;
 using Serializable::Sequence;

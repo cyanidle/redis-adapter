@@ -1,9 +1,10 @@
 #ifndef BINDABLE_HPP
 #define BINDABLE_HPP
 
+#include "common_fields.hpp"
 #include <QObject>
 #include <QSet>
-
+#define BINDABLE_ATTR "bindable"
 namespace Serializable {
 struct Object;
 namespace Private {
@@ -17,11 +18,7 @@ signals:
 
 template<typename Target>
 struct Bindable : protected Private::BindableSignals, public Target {
-    using typename Target::valueType;
-    using typename Target::valueRef;
-    using Target::Target;
-    using Target::operator=;
-    using Target::operator==;
+    FIELD_SUPER(Target)
     template <typename...Args>
     QMetaObject::Connection onUpdate(Args&&...args) {
         return connect(this, &Private::BindableSignals::wasUpdated, std::forward<Args>(args)...);
@@ -33,8 +30,9 @@ struct Bindable : protected Private::BindableSignals, public Target {
     QMetaObject::Connection onUpdate(void(*cb)(valueRef)) {
         return connect(this, &Private::BindableSignals::wasUpdated, [&](){cb(this->value);});
     }
+protected:
     const QStringList &attributes() const {
-        static const QStringList attrs = Target::attributes() + QStringList{"bindable"};
+        static const QStringList attrs = Target::attributes() + QStringList{BINDABLE_ATTR};
         return attrs;
     }
     bool updateWithVariant(const QVariant &source) {

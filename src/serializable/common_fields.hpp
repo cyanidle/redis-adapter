@@ -285,6 +285,8 @@ struct SequenceCommon : public Private::FieldCommon<QList<T>> {
     using Private::FieldCommon<QList<T>>::FieldCommon;
     using Private::FieldCommon<QList<T>>::operator=;
     using Private::FieldCommon<QList<T>>::operator==;
+    using iterator = typename QList<T>::iterator;
+    using const_iterator = typename QList<T>::const_iterator;
     template <typename Class, typename Field>
     friend struct Private::FieldHolder;
     template <typename Key>
@@ -463,6 +465,10 @@ struct MappingCommon : public Private::FieldCommon<QMap<QString, T>> {
     friend struct Private::FieldHolder;
     template <typename Key>
     decltype(auto) operator[](Key &&key) {
+        return value[std::forward<Key>(key)];
+    }
+    template <typename Key>
+    decltype(auto) operator[](Key &&key) const {
         return value[std::forward<Key>(key)];
     }
     typename QMap<QString, T>::key_value_iterator begin() {

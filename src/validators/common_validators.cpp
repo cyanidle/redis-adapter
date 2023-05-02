@@ -103,6 +103,19 @@ bool invalidate(QVariant &src, const QVariantList &args, QVariant &state)
     return true;
 }
 
+bool min_max(QVariant &src, const QVariantList &args, QVariant &state)
+{
+    Q_UNUSED(args)
+    Q_UNUSED(state)
+    bool ok;
+    auto min = args[0].toDouble(&ok);
+    if (!ok) throw std::runtime_error("Signature for 'min_max' is min_max(<double>, <double>)!");
+    auto max = args[1].toDouble(&ok);
+    if (!ok) throw std::runtime_error("Signature for 'min_max' is min_max(<double>, <double>)!");
+    auto asNumb = src.toDouble(&ok);
+    return ok && min <= asNumb && asNumb <= max;
+}
+
 void Validator::registerAllCommon()
 {
     Validator::Fetched::initialize();
@@ -111,6 +124,7 @@ void Validator::registerAllCommon()
     makeFetchable<Hours12>("hours12");
     makeFetchable<DayOfWeek>("weekday", "day_of_week");
     makeFetchable<LogLevel>("log_level", "loglevel");
+    Validator::Private::add(min_max, "min_max");
     Validator::Private::add(invalidate, "invalidate", "discard");
     Validator::Private::add(roundLast, "round_last");
     Validator::Private::add(setUnixTimeStamp, "set_unix_timestamp");

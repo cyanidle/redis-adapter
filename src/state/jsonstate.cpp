@@ -9,16 +9,31 @@ void State::Json::addValidatorTo(const QString &field, const QString &validator,
         return;
     }
     if (role.testFlag(Update)) {
-        m_updateValidators[field] = Validator::Fetched(validator);
+        m_updateValidators[field].append(Validator::Fetched(validator));
     }
     if (role.testFlag(Send)) {
-        m_sendValidators[field] = Validator::Fetched(validator);
+        m_sendValidators[field].append(Validator::Fetched(validator));
     }
 }
 
 void State::Json::addValidatorTo(const Serializable::IsFieldCheck &field, const QString &validator, ValidateOn role)
 {
     addValidatorTo(findNameOf(field), validator, role);
+}
+
+void State::Json::clearValidators(const QString &field, ValidateOn role)
+{
+    if (role.testFlag(Update)) {
+        m_updateValidators.remove(field);
+    }
+    if (role.testFlag(Send)) {
+        m_sendValidators.remove(field);
+    }
+}
+
+void State::Json::clearValidators(const Serializable::IsFieldCheck &field, ValidateOn role)
+{
+    clearValidators(findNameOf(field), role);
 }
 
 QString State::Json::logFields() const
@@ -62,7 +77,9 @@ JsonDict State::Json::send(const QString &fieldName) const
         }
         auto temp = found->readVariant(this);
         if (m_sendValidators.contains(fieldName)) {
-            m_sendValidators[fieldName].validate(temp);
+            for (auto &val: m_sendValidators[fieldName]) {
+                val.validate(temp);
+            }
         }
         result.insert(m_nestedFieldsCache[fieldName], temp);
         return result;
@@ -71,7 +88,9 @@ JsonDict State::Json::send(const QString &fieldName) const
         auto found = field(fieldName);
         auto temp = found->readVariant(this);
         if (m_sendValidators.contains(fieldName)) {
-            m_sendValidators[fieldName].validate(temp);
+            for (auto &val: m_sendValidators[fieldName]) {
+                val.validate(temp);
+            }
         }
         result.insert(m_nestedFieldsCache[fieldName], temp);
     }
@@ -87,13 +106,20 @@ bool State::Json::updateWith(const JsonDict &data)
         if (data.contains(m_nestedFieldsCache[name])) {
             auto temp = data.value(m_nestedFieldsCache[name]);
             if (m_updateValidators.contains(name)) {
-                m_updateValidators[name].validate(temp);
+                for (auto &val: m_sendValidators[name]) {
+                    val.validate(temp);
+                }
             }
             status |= field(name)->updateWithVariant(this, temp); // stays true once set
         }
     }
     if (status) emit wasUpdated(this);
     return status;
+}
+
+bool State::Json::update(const QVariantMap &data)
+{
+    return updateWith(data);
 }
 
 void State::Json::fillCache() const

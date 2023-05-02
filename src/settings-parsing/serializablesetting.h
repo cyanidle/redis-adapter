@@ -75,7 +75,7 @@ template<typename T> using OptionalSequence = MarkOptional<Serializable::Sequenc
 template<typename T> using RequiredMapping = MarkRequired<Serializable::Mapping<T>>;
 template<typename T> using MappingHasDefault = MarkHasDefault<Serializable::Mapping<T>>;
 template<typename T> using OptionalMapping = MarkOptional<Serializable::Mapping<T>>;
-
+template<typename T> using Validated = ::Serializable::Validated<T>;
 using RequiredValidator = Required<Validator::Fetched>;
 using OptionalValidator = Optional<Validator::Fetched>;
 
@@ -105,6 +105,7 @@ private:
     FieldExample getExamplePlain(const ::Serializable::FieldConcept *field) const;
     FieldExample getExampleNested(const ::Serializable::FieldConcept *field) const;
 };
-
+#define IS_SETTING \
+    IS_SERIALIZABLE_BASE
 } // namespace Settings
 #endif // SETTINGS_SERIALIZABLESETTINGS_H

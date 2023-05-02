@@ -14,6 +14,7 @@ struct ZipIterator {
     using first_value_type = typename first_iter::value_type;
     using second_value_type = typename second_iter::value_type;
     using val_refs_pair = QPair<first_value_type&, second_value_type&>;
+    using value_type = val_refs_pair;
 
     ZipIterator(first_iter first, second_iter second) :
         m_first(first),
@@ -59,6 +60,7 @@ struct ZipConstIterator {
     using first_value_type = typename first_iter::value_type;
     using second_value_type = typename second_iter::value_type;
     using val_refs_pair = QPair<const first_value_type&, const second_value_type&>;
+    using value_type = val_refs_pair;
 
     ZipConstIterator(first_iter first, second_iter second) :
         m_first(first),
