@@ -215,7 +215,7 @@ void initPipeline(const QList<PipeOp> &ops, QObject *parent)
 
 void Radapter::initPipeline(const QString& pipe, QObject *parent)
 {
-    static QRegularExpression splitter("(?: +< +| +> +| +<(?:=[^<>= ]*)*=> +)");
+    static QRegularExpression splitter("(?: +< +| +> +| +<(?:=[^<=>]*)*=> +)");
     //      example: a < b > *pipe() > c <=> d <=func(data)=> e
     // will capture:  _^_ _^_       _^_ __^__ _^______________
     // capture groups indicate a bidirectional pipe (empty or =pipe=pipe=) or left/right op (> or < symbols)
