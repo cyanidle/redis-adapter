@@ -20,7 +20,7 @@ public:
     static Broker* instance();
     template <class Target> Target* getWorker(const QString &workerName);
     template <typename Target> QSet<Target*> getAll();
-    QSet<Worker*> getAll(const QMetaObject *mobj);
+    QSet<Worker *> getAll(const QMetaObject *mobj);
     bool exists(const QString &workerName) const;
     void registerWorker(Worker *worker);
     Worker* getWorker(const QString &workerName);

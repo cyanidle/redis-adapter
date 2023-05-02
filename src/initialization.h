@@ -7,8 +7,7 @@
 
 namespace Radapter {
 
-void initPipelines(const QStringList &pipelines, QObject *parent);
-void initPipe(const QString& pipe, QObject *parent);
+void initPipeline(const QString& pipe, QObject *parent);
 
 template <typename Callable, typename...Args>
 void tryInit(Callable callable, const QString &moduleName, Args&&...args) {

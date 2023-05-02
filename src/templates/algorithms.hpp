@@ -210,5 +210,11 @@ auto keyVal(Container &map)
     return KeyValWrapper(map);
 }
 
+template <typename Container>
+auto reversed(Container &&cont)
+{
+    return Container{std::forward<Container>(cont).rbegin(), std::forward<Container>(cont).rend()};
+}
+
 }
 #endif

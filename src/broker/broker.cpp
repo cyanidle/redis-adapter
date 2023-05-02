@@ -100,7 +100,7 @@ void Broker::registerWorker(Worker* worker)
 void Broker::runAll()
 {
     QMutexLocker locker(&d->mutex);
-    for (auto worker : d->workers) {
+    for (auto worker : qAsConst(d->workers)) {
         if (!worker->wasStarted()) worker->run();
     }
     for (auto &worker : d->workers) {
@@ -222,7 +222,7 @@ void Broker::connectProxyToWorker(WorkerProxy* producerProxy, Worker *consumer)
     for (auto inter: conn.producer->pipe(producerProxy)) {
         interceptors.append(inter->objectName());
     }
-    auto interceptorsMsg = '|' + interceptors.join("| --> |") + '|';
+    auto interceptorsMsg = "| *" + interceptors.join(" --> *") + '|';
     brokerInfo() << "\nConnecting:\n == Producer(" << conn.producer->printSelf()
                  << ") -->\n"
                  << "== Pipe(" << interceptorsMsg
@@ -252,7 +252,7 @@ Broker *Radapter::Broker::instance() {
 QSet<Worker *> Broker::getAll(const QMetaObject *mobj)
 {
     QSet<Worker *> result;
-    for (auto worker: d->workers) {
+    for (auto worker: qAsConst(d->workers)) {
         if (worker->metaObject()->inherits(mobj)){
             result.insert(worker);
         }

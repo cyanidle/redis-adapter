@@ -23,10 +23,12 @@
 #include "raw_sockets/udpproducer.h"
 #include "validators/validator_fetch.h"
 #include "templates/algorithms.hpp"
+#include "private/pipeoperation.h"
 
 Q_GLOBAL_STATIC(QRecursiveMutex, staticMutex)
 
 using namespace Radapter;
+using PipeOp = Private::PipeOperation;
 
 struct FuncResult {
     QString func;
@@ -165,132 +167,94 @@ void tryConnecting(const QString &producer, const QString &consumer, const QStri
     broker->connectTwo(producer, consumer, pipe);
 }
 
-enum Dir {
-    Normal,
-    Flipped
-};
-
-void tryCreateBidirConnect(QString left, QString right, QString pipe, Dir dir, QObject *parent)
+void tryCreateBidirConnect(const QString &left, const QString &right, QStringList subpipe, QObject *parent)
 {
-    if (dir == Flipped) {
-        std::swap(left, right);
-    }
-    auto realPipe = pipe.replace('<', "")
-                        .replace('>', "")
-                        .replace('=', "")
-                        .simplified()
-                        .split(' ');
-    for (auto &item: realPipe) {
-        item = item.simplified();
-    }
-    QStringList fakePipe;
-    for (auto &item: realPipe) {
-        if (item.isEmpty()) continue;
-        auto [func, data] = parseFunc(item);
-        if (func == "branch") {
-            switch(dir) {
-            case Normal: fakePipe.append("unwrap("%data.join(',')%')');break;
-            case Flipped: fakePipe.append("wrap("%data.join(',')%')');break;
+    auto init = [&](const QString &left, const QString &right, PipeOp::Direction dir){
+        QStringList fakePipe;
+        for (auto &item: subpipe) {
+            if (item.isEmpty()) continue;
+            auto [func, data] = parseFunc(item);
+            if (func == "branch") {
+                switch(dir) {
+                case PipeOp::Normal: fakePipe.append("unwrap("%data.join(',')%')');break;
+                case PipeOp::Inverted: fakePipe.append("wrap("%data.join(',')%')');break;
+                default: throw std::runtime_error("Unreachable");
+                }
+            } else {
+                throw std::runtime_error("Unsupported func in bidirectional branch: " + item.toStdString());
             }
-        } else {
-            throw std::runtime_error("Unsupported func in bidirectional branch: " + item.toStdString());
         }
-    }
-    tryConnecting(left, right, fakePipe, parent);
+        tryConnecting(left, right, fakePipe, parent);
+    };
+    init(left, right, PipeOp::Normal);
+    init(right, left, PipeOp::Inverted);
 }
 
-static bool isInterceptor (const QString &worker) {
+static bool isInterceptor(const QString &worker) {
     return worker.startsWith('*');
 };
 
-bool handleReverse(QStringList &source, QObject *parent)
+void initPipeline(const QList<PipeOp> &ops, QObject *parent)
 {
-    auto hadReverse = false;
-    for (auto &point: source) {
-        if (!point.contains(" < ")) continue;
-        hadReverse = true;
-        auto realPipe = point.split(" < ");
-        std::reverse(realPipe.begin(), realPipe.end());
-        initPipe(realPipe.join(" > "), parent);
-        point = realPipe.first();
-    }
-    return hadReverse;
-}
-
-bool handleBidirectional(QStringList &source, QObject *parent)
-{
-    static auto bidirSplitter = QRegularExpression(" <=.*> ");
-    auto hadBidirect = false;
-    for (auto &point: source) {
-        if (!point.contains(bidirSplitter)) continue;
-        hadBidirect = true;
-        auto pairs = point.split(bidirSplitter);
-        auto match = bidirSplitter.match(point);
-        if (pairs.size() < 2) {
-            throw std::runtime_error("Cannot have bidirectional pair (<=...=>) with only one worker!");
-        }
-        if (isInterceptor(pairs.first()) || isInterceptor(pairs.last())) {
-            throw std::runtime_error("Cannot have bidirectional pipe (<=...=>) starting or ending with interceptors!");
-        }
-        for (int i = 1; i < pairs.size(); ++i) {
-            tryCreateBidirConnect(pairs[i-1], pairs[i], match.captured(i-1), Normal, parent);
-            tryCreateBidirConnect(pairs[i-1], pairs[i], match.captured(i-1), Flipped, parent);
-            point = pairs[i];
-        }
-    }
-    return hadBidirect;
-}
-
-void Radapter::initPipe(const QString& pipe, QObject *parent)
-{
-    QMutexLocker lock(&(*staticMutex));
-    try{
-    auto split = pipe.split(" > ");
-    auto hadReverse = handleReverse(split, parent);
-    auto hadBidirect = handleBidirectional(split, parent);
-    if (split.size() < 2) {
-        if (!hadBidirect && !hadReverse) {
-            throw std::runtime_error("Pipeline length must be more than 2!");
-        } else {
-            return;
-        }
-    }
-    auto prevWorker = split.takeFirst().simplified();
-    auto lastWorker = split.constLast().simplified();
-    if (isInterceptor(prevWorker)) {
-        throw std::runtime_error("Pipeline cannot begin with an interceptor: " + prevWorker.toStdString());
-    }
-    if (isInterceptor(lastWorker)) {
-        throw std::runtime_error("Pipeline cannot end with an interceptor: " + lastWorker.toStdString());
-    }
-    QList<QPair<QString, QString>> workers;
-    QList<QStringList> interceptors;
-    QStringList currentInterceptors;
-    for (const auto &point : split) {
-        auto current = point.simplified();
-        if (isInterceptor(current)) {
-            currentInterceptors.append(current.remove(0, 1).simplified());
+    for (auto &op: ops) {
+        switch(op.type) {
+        case PipeOp::Normal:
+            tryConnecting(op.left, op.right, op.subpipe, parent);
             continue;
+        case PipeOp::Inverted:
+            tryConnecting(op.right, op.left, reversed(op.subpipe), parent);
+            continue;
+        case PipeOp::Bidirectional:
+            tryCreateBidirConnect(op.left, op.right, op.subpipe, parent);
+            continue;
+        default:
+            throw std::runtime_error("Unreachable!");
         }
-        workers.append({prevWorker, current});
-        interceptors.append(currentInterceptors);
-        currentInterceptors.clear();
-        prevWorker = point.simplified();
-    }
-    for (auto [pair, interceptorNames]: zip(workers, interceptors)) {
-        auto [sourceName, targetName] = pair;
-        tryConnecting(sourceName, targetName, interceptorNames, parent);
-    }
-    } catch(std::exception &exc) {
-        throw std::runtime_error("While initializing pipe: " + pipe.toStdString() + " --> \n" + exc.what());
     }
 }
 
-void Radapter::initPipelines(const QStringList &pipelines, QObject *parent)
+void Radapter::initPipeline(const QString& pipe, QObject *parent)
 {
-    for (const auto &pipe: pipelines) {
-        settingsParsingWarn() << "Initializing pipeline:" << pipe;
-        initPipe(pipe, parent);
+    static QRegularExpression splitter("(?: +< +| +> +| +<(?:=[^<>= ]*)*=> +)");
+    //      example: a < b > *pipe() > c <=> d <=func(data)=> e
+    // will capture:  _^_ _^_       _^_ __^__ _^______________
+    // capture groups indicate a bidirectional pipe (empty or =pipe=pipe=) or left/right op (> or < symbols)
+    QMutexLocker lock(&(*staticMutex));
+    settingsParsingWarn() << "Initializing pipeline:" << pipe;
+    try{
+        auto globalMatch = splitter.globalMatch(pipe);
+        QList<PipeOp> ops;
+        auto split = pipe.split(splitter, Qt::SkipEmptyParts);
+        if (split.size() < 2) {
+            throw std::runtime_error("Pipeline length must be more than 2!\n"
+                                     "Do not forget spaces and '=' in separators: ' < ', ' > ', ' <=...=> '");
+        }
+        auto firstWorker = split.constFirst();
+        auto lastWorker = split.constLast();
+        if (isInterceptor(firstWorker)) {
+            throw std::runtime_error("Pipeline cannot begin with an interceptor: " + firstWorker.toStdString());
+        }
+        if (isInterceptor(lastWorker)) {
+            throw std::runtime_error("Pipeline cannot end with an interceptor: " + lastWorker.toStdString());
+        }
+        PipeOp currentOp;
+        currentOp.left = firstWorker;
+        for (int i = 1; i < split.size(); ++i) {
+            auto currentSplitter = globalMatch.next().captured();
+            currentOp.handleSplitter(currentSplitter);
+            auto &current = split[i];
+            if (isInterceptor(current)) {
+                currentOp.subpipe.append(current.replace('*', ""));
+                continue;
+            }
+            currentOp.right = current;
+            ops.append(currentOp);
+            currentOp.reset();
+            currentOp.left = current;
+        }
+        initPipeline(ops, parent);
+    } catch(std::exception &exc) {
+        throw std::runtime_error("While initializing pipe: " + pipe.toStdString() + " -->\n" + exc.what());
     }
 }
 

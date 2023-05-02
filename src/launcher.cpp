@@ -218,9 +218,11 @@ void Launcher::run()
     resmonThr->start(QThread::LowPriority);
 #endif
     for (const auto &pipe: d->argsParser.positionalArguments()) {
-        initPipe(pipe, this);
+        initPipeline(pipe, this);
     }
-    initPipelines(d->config.pipelines.value, this);
+    for (const auto &pipe: d->config.pipelines.value) {
+        initPipeline(pipe, this);
+    }
     Broker::instance()->runAll();
     emit started();
 }
@@ -243,7 +245,7 @@ QCommandLineParser &Launcher::commandLineParser()
 
 void Launcher::createPipe(const QString &pipe)
 {
-    Radapter::initPipe(pipe, this);
+    Radapter::initPipeline(pipe, this);
 }
 
 Launcher::~Launcher()

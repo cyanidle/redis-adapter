@@ -30,7 +30,7 @@ void FileHelper::mainloop()
     QJsonParseError err;
     while ( true )
     {
-        f->waitForReadyRead(500);
+        f->waitForReadyRead(1000);
         auto count = f->read(buf, sizeof(buf));
         if (!count) continue;
         if (count == -1) {
