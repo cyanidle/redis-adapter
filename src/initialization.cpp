@@ -11,8 +11,10 @@
 #include "interceptors/metainfopipe.h"
 #include "interceptors/namespaceunwrapper.h"
 #include "interceptors/namespacewrapper.h"
+#include "interceptors/renamingpipe.h"
 #include "interceptors/settings/namespaceunwrappersettings.h"
 #include "interceptors/settings/namespacewrappersettings.h"
+#include "interceptors/settings/renamingpipesettings.h"
 #include "interceptors/settings/validatinginterceptorsettings.h"
 #include "interceptors/validatinginterceptor.h"
 #include <QStringBuilder>
@@ -24,42 +26,20 @@
 #include "validators/validator_fetch.h"
 #include "templates/algorithms.hpp"
 #include "private/pipeoperation.h"
+#include "private/parsing_private.h"
 
 Q_GLOBAL_STATIC(QRecursiveMutex, staticMutex)
 
 using namespace Radapter;
+using namespace Radapter::Private;
 using PipeOp = Private::PipeOperation;
 
-struct FuncResult {
-    QString func;
-    QStringList data;
-};
 
 bool isFunc(const QString &what)
 {
     auto split = what.split('(');
     if (split.size() < 2) return false;
     return split.last().endsWith(')');
-}
-
-FuncResult parseFunc(const QString &rawFunc)
-{
-    static auto splitter = QRegularExpression("\\(.*\\)");
-    if (rawFunc.size() < 2) {
-        throw std::runtime_error("Attempt to parse invalid pipe function: " + rawFunc.toStdString());
-    }
-    if (!rawFunc.contains(splitter)) {
-        return {rawFunc, {}};
-    }
-    auto func = rawFunc.split(splitter)[0];
-    auto data = splitter
-                    .match(rawFunc) // func(data, data)
-                    .captured().remove(0, 1).chopped(1) // data, data
-                    .split(','); // [data, data]
-    for (auto &item: data){
-        item = item.simplified();
-    };
-    return {func, data};
 }
 
 template<typename T>
@@ -96,6 +76,11 @@ void tryCreateInterceptor(const QString &name, QObject *parent)
         auto validator = QStringLiteral("invalidate");
         config.by_validator[validator] = data;
         broker->registerInterceptor(name, new ValidatingInterceptor(config));
+    } else if (func == "rename") {
+        auto config = Settings::RenamingPipe();
+        auto to = tryExtract<QString>(name, data, 0, "rename_from");
+        config.renames[to] = tryExtract<QString>(name, data, 1, "rename_to");
+        broker->registerInterceptor(name, new RenamingPipe(config));
     } else if (func == "add_timestamp") {
         auto config = Settings::ValidatingInterceptor();
         config.by_field.value = {{tryExtract<QString>(name, data, 0, "field"), "set_unix_timestamp"}};

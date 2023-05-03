@@ -12,11 +12,10 @@ namespace Settings {
 struct RADAPTER_API FileWorker : public Serializable
 {
     Q_GADGET
-    IS_SERIALIZABLE
+    IS_SETTING
     FIELD(Required<Worker>, worker)
     FIELD(Settings::Required<QString>, filepath)
-    using NonRequiredJsonFormat = ::Serializable::Validated<Settings::HasDefault<QJsonDocument::JsonFormat>>::With<Settings::ChooseJsonFormat>;
-    FIELD(NonRequiredJsonFormat, format, QJsonDocument::Indented)
+    FIELD(VALIDATED(HasDefault<QJsonDocument::JsonFormat>, ChooseJsonFormat), format, QJsonDocument::Indented)
     FIELD(HasDefault<quint32>, reopen_each, 0)
 
 };

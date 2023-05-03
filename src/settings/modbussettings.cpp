@@ -65,10 +65,8 @@ void ModbusMaster::postUpdate()
     device = devicesMap->value(device_name);
 }
 
-bool Validator::ByteWordOrder::validate(QVariant &value, const QVariantList &args, QVariant &state)
+bool Validator::ByteWordOrder::validate(QVariant &value)
 {
-    Q_UNUSED(args)
-    Q_UNUSED(state)
     auto asStr = value.toString().toLower();
     if (asStr.isEmpty()) return true;
     bool wordsBig = false;
@@ -98,9 +96,7 @@ void RegisterInfo::postUpdate()
     }
 }
 
-bool Validator::RegValueType::validate(QVariant &value, const QVariantList &args, QVariant &state) {
-    Q_UNUSED(args)
-    Q_UNUSED(state)
+bool Validator::RegValueType::validate(QVariant &value) {
     static QMap<QString, QMetaType::Type>
         map{{"uint16", QMetaType::UShort},
             {"word", QMetaType::UShort},
@@ -113,9 +109,7 @@ bool Validator::RegValueType::validate(QVariant &value, const QVariantList &args
     return map.contains(asStr);
 }
 
-bool Validator::RegisterTable::validate(QVariant &value, const QVariantList &args, QVariant &state) {
-    Q_UNUSED(args)
-    Q_UNUSED(state)
+bool Validator::RegisterTable::validate(QVariant &value) {
     static QMap<QString, QModbusDataUnit::RegisterType>
         map{{"holding",QModbusDataUnit::HoldingRegisters},
             {"input",QModbusDataUnit::InputRegisters},

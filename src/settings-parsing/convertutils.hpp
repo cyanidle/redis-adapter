@@ -41,4 +41,14 @@ QList<T> convertQList(const QVariantList &src)
     return result;
 }
 
+template<typename T>
+QVariantList convertToQList(const QList<T> &src)
+{
+    static_assert(QMetaTypeId2<T>::Defined, "Convertion to non-registered type prohibited!");
+    QVariantList result;
+    for (auto iter = src.constBegin(); iter != src.constEnd(); ++iter) {
+        result.append(QVariant::fromValue(*iter));
+    }
+    return result;
+}
 #endif // CONVERTUTILS_H

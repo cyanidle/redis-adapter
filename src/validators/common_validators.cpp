@@ -2,10 +2,8 @@
 #include "qdatetime.h"
 #include "validator_fetch.h"
 
-bool hectaPascalsToAtmospheric(QVariant &src, const QVariantList &args, QVariant &state)
+bool hectaPascalsToAtmospheric(QVariant &src)
 {
-    Q_UNUSED(args)
-    Q_UNUSED(state)
     bool ok;
     auto asDouble = src.toDouble(&ok);
     if (!ok) return false;
@@ -14,36 +12,28 @@ bool hectaPascalsToAtmospheric(QVariant &src, const QVariantList &args, QVariant
     return true;
 }
 
-bool multiplyBy(QVariant &src, const QVariantList &args, QVariant &state)
+bool multiplyBy(QVariant &src, double by)
 {
-    Q_UNUSED(args)
-    Q_UNUSED(state)
     bool ok;
     auto asInt = src.toInt(&ok);
     if (!ok) return false;
-    auto actual = asInt * args[0].toDouble(&ok);
-    if (!ok) throw std::runtime_error("Args to int_divide_by must be: [<double>]");
+    auto actual = asInt * by;
     src.setValue(actual);
     return true;
 }
 
-bool divideBy(QVariant &src, const QVariantList &args, QVariant &state)
+bool divideBy(QVariant &src, double by)
 {
-    Q_UNUSED(args)
-    Q_UNUSED(state)
     bool ok;
     auto asInt = src.toInt(&ok);
     if (!ok) return false;
-    auto actual = asInt / args[0].toDouble(&ok);
-    if (!ok) throw std::runtime_error("Args to int_divide_by must be: [<double>]");
+    auto actual = asInt / by;
     src.setValue(actual);
     return true;
 }
 
-bool rusWindDirection360(QVariant &src, const QVariantList &args, QVariant &state)
+bool rusWindDirection360(QVariant &src)
 {
-    Q_UNUSED(args)
-    Q_UNUSED(state)
     constexpr auto halfSectorSize = 23;
     static const QMap<int, QString> dirs {
         {0, "С"},
@@ -69,75 +59,64 @@ bool rusWindDirection360(QVariant &src, const QVariantList &args, QVariant &stat
     return false;
 }
 
-bool setUnixTimeStamp(QVariant &src, const QVariantList &args, QVariant &state)
+bool setUnixTimeStamp(QVariant &src)
 {
-    Q_UNUSED(args)
-    Q_UNUSED(state)
     src.setValue(QDateTime::currentSecsSinceEpoch());
     return true;
 }
 
-bool roundLast(QVariant &src, const QVariantList &args, QVariant &state)
+bool roundLast(QVariant &src, QList<int> &state, int sampleLength)
 {
     bool ok;
-    auto sampleLength = args[0].toInt(&ok);
-    if (!ok) throw std::runtime_error("round_last args must be: [<int>]");
-    auto asList = state.value<QList<double>>();
     auto asDouble = src.toDouble(&ok);
     if (!ok) return false;
-    asList.append(asDouble);
-    while (asList.size() > sampleLength) {
-        asList.pop_front();
+    state.append(asDouble);
+    while (state.size() > sampleLength) {
+        state.pop_front();
     }
-    auto sum = std::accumulate(asList.cbegin(), asList.cend(), 0);
-    src.setValue(sum/asList.size());
-    state.setValue(std::move(asList));
+    auto sum = std::accumulate(state.cbegin(), state.cend(), 0);
+    src.setValue(sum/state.size());
     return true;
 }
 
-bool invalidate(QVariant &src, const QVariantList &args, QVariant &state)
+bool invalidate(QVariant &src)
 {
-    Q_UNUSED(args)
-    Q_UNUSED(state)
+    Q_UNUSED(src);
+    return false;
+}
+
+bool clear(QVariant &src)
+{
     src.clear();
     return true;
 }
 
-bool min_max(QVariant &src, const QVariantList &args, QVariant &state)
+bool min_max(QVariant &src, double min, double max)
 {
-    Q_UNUSED(args)
-    Q_UNUSED(state)
     bool ok;
-    auto min = args[0].toDouble(&ok);
-    if (!ok) throw std::runtime_error("Signature for 'min_max' is min_max(<double>, <double>)!");
-    auto max = args[1].toDouble(&ok);
-    if (!ok) throw std::runtime_error("Signature for 'min_max' is min_max(<double>, <double>)!");
     auto asNumb = src.toDouble(&ok);
     return ok && min <= asNumb && asNumb <= max;
 }
 
 void Validator::registerAllCommon()
 {
-    Validator::Fetched::initialize();
-    makeFetchable<Minute>("minutes", "minute");
-    makeFetchable<Hour24>("hours24", "hours");
-    makeFetchable<Hour12>("hours12");
-    makeFetchable<DayOfWeek>("weekday", "day_of_week");
-    makeFetchable<LogLevel>("log_level", "loglevel");
-    Validator::Private::add(min_max, "min_max");
-    Validator::Private::add(invalidate, "invalidate", "discard");
-    Validator::Private::add(roundLast, "round_last");
-    Validator::Private::add(setUnixTimeStamp, "set_unix_timestamp");
-    Validator::Private::add(rusWindDirection360, "wind_direction_360_ru");
-    Validator::Private::add(divideBy, "int_divide_by", "divide_by");
-    Validator::Private::add(multiplyBy, "multiply_by");
-    Validator::Private::add(hectaPascalsToAtmospheric, "hecta_pascals_to_mm_atmospheric");
+    registerValidator(Minute::validate, {"minutes", "minute"});
+    registerValidator(Hour24::validate, {"hours24", "hours"});
+    registerValidator(Hour12::validate, {"hours12"});
+    registerValidator(DayOfWeek::validate, {"weekday", "day_of_week"});
+    registerValidator(LogLevel::validate, {"log_level", "loglevel"});
+    registerValidator(min_max, {"min_max"});
+    registerValidator(invalidate, {"invalidate", "discard"});
+    registerValidator(setUnixTimeStamp, {"set_unix_timestamp"});
+    registerValidator(rusWindDirection360, {"wind_direction_360_ru"});
+    registerValidator(divideBy, {"int_divide_by", "divide_by"});
+    registerValidator(multiplyBy, {"multiply_by"});
+    registerValidator(hectaPascalsToAtmospheric, {"hecta_pascals_to_mm_atmospheric"});
+    registerStatefulValidator(roundLast, {"round_last"});
 }
 
-bool Validator::LogLevel::validate(QVariant &target, const QVariantList &args, QVariant &state)
+bool Validator::LogLevel::validate(QVariant &target)
 {
-    Q_UNUSED(args)
-    Q_UNUSED(state)
     static QMap<QString, QtMsgType> lvls{
         {"debug", QtMsgType::QtDebugMsg},
         {"info", QtMsgType::QtInfoMsg},

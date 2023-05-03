@@ -4,12 +4,9 @@
 #include <QVariant>
 Q_DECLARE_METATYPE(QtMsgType)
 namespace Validator {
-using Function = bool (*)(QVariant &target, const QVariantList &args, QVariant& state);
 template<int min, int max>
 struct IntMinMax {
-    static bool validate(QVariant &target, const QVariantList &args, QVariant& state) {
-        Q_UNUSED(args)
-        Q_UNUSED(state)
+    static bool validate(QVariant &target) {
         bool ok;
         auto asInt = target.toInt(&ok);
         auto wereSame = asInt == target;
@@ -21,7 +18,7 @@ using Hour24 = IntMinMax<0, 24>;
 using Hour12 = IntMinMax<0, 12>;
 using DayOfWeek = IntMinMax<1, 7>;
 struct LogLevel {
-    static bool validate(QVariant &target, const QVariantList &args, QVariant &state);
+    static bool validate(QVariant &target);
 };
 
 void registerAllCommon();

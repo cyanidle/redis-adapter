@@ -9,13 +9,13 @@ Q_DECLARE_METATYPE(QMetaType::Type)
 
 namespace Validator {
     struct ByteWordOrder {
-        static bool validate(QVariant &value, const QVariantList &args, QVariant &state);
+        static bool validate(QVariant &value);
     };
     struct RegValueType {
-        static bool validate(QVariant& value, const QVariantList &args, QVariant &state);
+        static bool validate(QVariant& value);
     };
     struct RegisterTable {
-        static bool validate(QVariant& value, const QVariantList &args, QVariant &state);
+        static bool validate(QVariant& value);
     };
 }
 

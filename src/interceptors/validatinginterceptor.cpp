@@ -6,11 +6,10 @@ using namespace Radapter;
 
 struct Radapter::ValidatingInterceptorPrivate {
     Settings::ValidatingInterceptor settings;
-    JsonDict validatorsState;
 };
 
 ValidatingInterceptor::ValidatingInterceptor(const Settings::ValidatingInterceptor &settings) :
-    d(new ValidatingInterceptorPrivate{settings, {}})
+    d(new ValidatingInterceptorPrivate{settings})
 {
     d->settings.init();
 }
@@ -38,9 +37,8 @@ void ValidatingInterceptor::validate(WorkerMsg &msg)
     for (auto iter = d->settings.final_by_validator.cbegin(); iter != d->settings.final_by_validator.cend(); ++iter) {
         auto &validator = iter.key();
         for (const auto &field: iter.value()) {
-            auto &state = d->validatorsState[field];
             if (!msg.contains(field)) continue;
-            validator.validate(msg[field], state);
+            validator.validate(msg[field]);
         }
     }
     for (auto iter = d->settings.final_by_validator_glob.cbegin(); iter != d->settings.final_by_validator_glob.cend(); ++iter) {
@@ -49,9 +47,8 @@ void ValidatingInterceptor::validate(WorkerMsg &msg)
             auto keyJoined = msgIter.key().join(':');
             auto shouldValidate = iter.value().match(keyJoined).hasMatch();
             if (shouldValidate) {
-                auto &state = d->validatorsState[keyJoined];
                 if (!msg.contains(keyJoined)) continue;
-                validator.validate(msg[keyJoined], state);
+                validator.validate(msg[keyJoined]);
             }
         }
     }

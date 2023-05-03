@@ -219,15 +219,34 @@ const QVariant JsonDict::value(const QStringList &akey, const QVariant &adefault
 int JsonDict::remove(const QStringList &akey)
 {
     auto val = recurseTo(akey, 1);
-    if (!val || val->typeId() != QMetaType::QVariantMap) return 0;
-    return reinterpret_cast<QVariantMap*>(val->data())->remove(akey.constLast());
+    if (val && val->typeId() != QMetaType::QVariantMap) {
+        return reinterpret_cast<QVariantMap*>(val->data())->remove(akey.constLast());
+    } else if (val && val->typeId() != QMetaType::QVariantList) {
+        auto ind = toIndex(akey.constLast());
+        if (ind == -1) return {};
+        auto asList = reinterpret_cast<QVariantList*>(val->data());
+        if (asList->size() <= ind) return {};
+        asList->removeAt(ind);
+        return 1;
+    } else {
+        return {};
+    }
 }
 
 QVariant JsonDict::take(const QStringList &akey)
 {
     auto val = recurseTo(akey, 1);
-    if (!val || val->typeId() != QMetaType::QVariantMap) return {};
-    return reinterpret_cast<QVariantMap*>(val->data())->take(akey.constLast());
+    if (val && val->typeId() != QMetaType::QVariantMap) {
+        return reinterpret_cast<QVariantMap*>(val->data())->take(akey.constLast());
+    } else if (val && val->typeId() != QMetaType::QVariantList) {
+        auto ind = toIndex(akey.constLast());
+        if (ind == -1) return {};
+        auto asList = reinterpret_cast<QVariantList*>(val->data());
+        if (asList->size() <= ind) return {};
+        return asList->takeAt(ind);
+    } else {
+        return {};
+    }
 }
 
 QVariant JsonDict::take(const QString &akey, const QString &separator)

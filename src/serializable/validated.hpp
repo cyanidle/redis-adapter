@@ -10,19 +10,20 @@
 namespace Serializable {
 
 template <typename Validator>
-void validate(QVariant &target, const QVariantList &args, QVariant &state) {
-    static_assert(std::is_same<bool, decltype(Validator::validate(target, args, state))>(),
-            "Validators must implement 'static bool validate(QVariant& value, const QVariantList &args, QVariant &state)'. True = ok / False = invalid");
+void validate(QVariant &target) {
+    static_assert(std::is_same<bool, decltype(Validator::validate(target))>(),
+            "Validators must implement 'static bool validate(QVariant& value)' -> True = ok / False = invalid");
     if (!target.isValid()) return;
-    if (!Validator::validate(target, args, state)) {
-        target = QVariant();
+    if (!Validator::validate(target)) {
+        target.clear();
     }
 }
 
 template <typename Validator, typename...Validators>
-void validate(QVariant &target, const QVariantList &args, QVariant &state, typename std::enable_if<sizeof...(Validators)>::type* = nullptr) {
-    validate<Validator>(target, args, state);
-    validate<Validators...>(target, args, state);
+std::enable_if_t<sizeof...(Validators)>
+validate(QVariant &target) {
+    validate<Validator>(target);
+    validate<Validators...>(target);
 }
 
 template <typename Target, typename Validator, typename...Validators>
@@ -41,20 +42,17 @@ protected:
         if constexpr (is_sequence) {
             auto asList = copy.toList();
             for (auto &val: asList) {
-                auto nullState = QVariant{};
-                validate<Validator, Validators...>(val, {}, nullState);
+                validate<Validator, Validators...>(val);
             }
             copy.setValue(asList);
         } else if constexpr (is_mapping) {
             auto asMap = copy.toMap();
             for (auto &val: asMap) {
-                auto nullState = QVariant{};
-                validate<Validator, Validators...>(val, {}, nullState);
+                validate<Validator, Validators...>(val);
             }
             copy.setValue(asMap);
         } else {
-            auto nullState = QVariant{};
-            validate<Validator, Validators...>(copy, {}, nullState);
+            validate<Validator, Validators...>(copy);
         }
         return Target::updateWithVariant(copy);
     }

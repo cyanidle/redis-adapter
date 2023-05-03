@@ -1,8 +1,6 @@
 #include "settings_validators.h"
 
-bool Settings::ChooseJsonFormat::validate(QVariant &src, const QVariantList &args, QVariant &state) {
-    Q_UNUSED(args)
-    Q_UNUSED(state)
+bool Settings::ChooseJsonFormat::validate(QVariant &src) {
     static QMap<QString, QJsonDocument::JsonFormat> map {
         {"compact", QJsonDocument::Compact},
         {"indented", QJsonDocument::Indented}
@@ -12,9 +10,7 @@ bool Settings::ChooseJsonFormat::validate(QVariant &src, const QVariantList &arg
     return map.contains(asStr);
 }
 
-bool Settings::StringToFileSize::validate(QVariant &src, const QVariantList &args, QVariant &state) {
-    Q_UNUSED(args)
-    Q_UNUSED(state)
+bool Settings::StringToFileSize::validate(QVariant &src) {
     auto asStr = src.toString().toUpper();
     if (asStr.isEmpty()) return true;
     auto letter = asStr.at(asStr.length() - 1);

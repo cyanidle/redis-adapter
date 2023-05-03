@@ -6,7 +6,7 @@ namespace Settings {
 
     struct RADAPTER_API RedisServer : ServerInfo {
         Q_GADGET
-        IS_SERIALIZABLE
+        IS_SETTING
         FIELD(Required<QString>, name)
 
         void postUpdate() override;
@@ -14,7 +14,7 @@ namespace Settings {
 
     struct RADAPTER_API RedisConnector : Serializable {
         Q_GADGET
-        IS_SERIALIZABLE
+        IS_SETTING
         FIELD(Required<Worker>, worker)
         FIELD(Required<QString>, server_name)
         FIELD(HasDefault<quint16>, db_index, 0)
@@ -30,13 +30,13 @@ namespace Settings {
 
     struct RADAPTER_API RedisKeyEventSubscriber : RedisConnector {
         Q_GADGET
-        IS_SERIALIZABLE
+        IS_SETTING
         FIELD(RequiredSequence<QString>, keyEvents)
     };
 
     struct RADAPTER_API RedisStreamBase : RedisConnector {
         Q_GADGET
-        IS_SERIALIZABLE
+        IS_SETTING
         FIELD(Required<QString>, stream_key)
         FIELD(HasDefault<quint32>, stream_size, 1000000u)
     };
@@ -48,27 +48,25 @@ namespace Settings {
             StartFromFirst
         };
         Q_ENUM(StartMode)
-        static bool validate(QVariant &target, const QVariantList &args, QVariant &state);
-        using StartFrom = ::Serializable::Validated<HasDefault<StartMode>>::With<RedisStreamConsumer>;
-
+        static bool validate(QVariant &target);
         Q_GADGET
-        IS_SERIALIZABLE
-        FIELD(StartFrom, start_from, StartPersistentId)
+        IS_SETTING
+        FIELD(VALIDATED(HasDefault<StartMode>, RedisStreamConsumer), start_from, StartPersistentId)
     };
     struct RADAPTER_API RedisStreamGroupConsumer : RedisStreamConsumer {
         Q_GADGET
-        IS_SERIALIZABLE
+        IS_SETTING
         FIELD(Required<QString>, consumer_group_name)
         FIELD(HasDefault<bool>, start_from_last_unread, true)
     };
     struct RADAPTER_API RedisStreamProducer : RedisStreamBase {
         Q_GADGET
-        IS_SERIALIZABLE
+        IS_SETTING
     };
 
     struct RADAPTER_API RedisCacheConsumer : RedisConnector {
         Q_GADGET
-        IS_SERIALIZABLE
+        IS_SETTING
         FIELD(Optional<QString>, object_hash_key)
         FIELD(HasDefault<bool>, use_polling, true)
         FIELD(HasDefault<quint32>, update_rate, 600)
@@ -76,7 +74,7 @@ namespace Settings {
 
     struct RADAPTER_API RedisCacheProducer : RedisConnector {
         Q_GADGET
-        IS_SERIALIZABLE
+        IS_SETTING
         FIELD(Optional<QString>, object_hash_key)
     };
 }

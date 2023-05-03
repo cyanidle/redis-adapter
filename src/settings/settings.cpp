@@ -1,8 +1,6 @@
 #include "settings.h"
 
-bool Validator::ByteOrder::validate(QVariant &src, const QVariantList &args, QVariant &state) {
-    Q_UNUSED(args)
-    Q_UNUSED(state)
+bool Validator::ByteOrder::validate(QVariant &src) {
     typedef QMap<QString, QDataStream::ByteOrder> Map;
     static Map map{
         {"little",  QDataStream::LittleEndian},
@@ -15,9 +13,7 @@ bool Validator::ByteOrder::validate(QVariant &src, const QVariantList &args, QVa
     return map.contains(asStr);
 }
 
-bool Validator::TimeZone::validate(QVariant &target, const QVariantList &args, QVariant &state) {
-    Q_UNUSED(args)
-    Q_UNUSED(state)
+bool Validator::TimeZone::validate(QVariant &target) {
     auto time_zone = QTimeZone(target.toString().toStdString().c_str());
     target.setValue(time_zone);
     return time_zone.isValid();
