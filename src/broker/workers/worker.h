@@ -57,7 +57,7 @@ signals:
     void sendMsg(const Radapter::WorkerMsg &msg);
     void send(const JsonDict &msg);
     void sendKey(const QString &key, const QVariant &value);
-    void sendState(const State::Json &obj, const QString &fieldName = {});
+    void sendState(const State::Json &obj);
     void connectedToConsumer(Radapter::Worker *consumer, QPrivateSignal);
     void connectedToProducer(Radapter::Worker *producer, QPrivateSignal);
 public slots:

@@ -28,10 +28,34 @@ void validate(QVariant &target, const QVariantList &args, QVariant &state, typen
 template <typename Target, typename Validator, typename...Validators>
 struct PreValidator : public Target {
     FIELD_SUPER(Target)
+protected:
+    using ft = ::Serializable::FieldType;
+    enum {
+        type = static_cast<ft>(Target::thisFieldType),
+        is_sequence = type == ft::FieldSequence || type == ft::FieldSequenceOfNested,
+        is_mapping = type == ft::FieldSequence || type == ft::FieldSequenceOfNested,
+        is_plain = type == ft::FieldPlain || type == ft::FieldNested,
+    };
     bool updateWithVariant(const QVariant &source) {
         auto copy = source;
-        auto nullState = QVariant{};
-        validate<Validator, Validators...>(copy, {}, nullState);
+        if constexpr (is_sequence) {
+            auto asList = copy.toList();
+            for (auto &val: asList) {
+                auto nullState = QVariant{};
+                validate<Validator, Validators...>(val, {}, nullState);
+            }
+            copy.setValue(asList);
+        } else if constexpr (is_mapping) {
+            auto asMap = copy.toMap();
+            for (auto &val: asMap) {
+                auto nullState = QVariant{};
+                validate<Validator, Validators...>(val, {}, nullState);
+            }
+            copy.setValue(asMap);
+        } else {
+            auto nullState = QVariant{};
+            validate<Validator, Validators...>(copy, {}, nullState);
+        }
         return Target::updateWithVariant(copy);
     }
     const QStringList &attributes() const {
@@ -45,6 +69,12 @@ struct Validated {
     template <typename...Validators>
     using With = PreValidator<Target, Validators...>;
 };
+
+template <typename Target, typename...Validators>
+using Validate = PreValidator<Target, Validators...>;
+
+#define VALIDATED(T, ...) \
+::Serializable::Validate<T, __VA_ARGS__>
 
 }
 

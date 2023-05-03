@@ -119,9 +119,9 @@ bool min_max(QVariant &src, const QVariantList &args, QVariant &state)
 void Validator::registerAllCommon()
 {
     Validator::Fetched::initialize();
-    makeFetchable<Minutes>("minutes", "minute");
-    makeFetchable<Hours24>("hours24", "hours");
-    makeFetchable<Hours12>("hours12");
+    makeFetchable<Minute>("minutes", "minute");
+    makeFetchable<Hour24>("hours24", "hours");
+    makeFetchable<Hour12>("hours12");
     makeFetchable<DayOfWeek>("weekday", "day_of_week");
     makeFetchable<LogLevel>("log_level", "loglevel");
     Validator::Private::add(min_max, "min_max");

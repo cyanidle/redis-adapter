@@ -63,7 +63,9 @@ namespace Serializable {
 namespace Private {
 template <typename Class, typename Field>
 struct FieldHolder : FieldConcept {
-    FieldHolder(Field Class::*fieldGetter) : m_fieldGetter(fieldGetter) {}
+    FieldHolder(Field Class::*fieldGetter) :
+            m_fieldGetter(fieldGetter)
+        {}
     const IsFieldCheck *rawField(const Serializable::Object *owner) const override final
     {
         return field(owner);
