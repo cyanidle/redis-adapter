@@ -5,7 +5,12 @@
 
 ## Сборка Docker-контейнера
 ```bash
-docker build --load --platform=linux/amd64 --build-arg TARGET_DEVICE=amd64 --build-arg JOBS=<потоков на сборку> -t rsk39.tech/redis-adapter:<тэг версии>-amd64 .
+./scripts/generate_version.sh
+docker build --load --platform=linux/amd64 \
+    --build-arg TARGET_DEVICE=amd64 \
+    --build-arg JOBS=<потоков на сборку> \
+    --build-arg APP_NAME=<имя .pro файла> \
+    -t rsk39.tech/redis-adapter:<тэг версии>-amd64 .
 ```
 Загрузка в Docker Hub:
 ```bash
