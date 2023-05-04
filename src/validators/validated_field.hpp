@@ -1,11 +1,11 @@
-#ifndef VALIDATED_H
-#define VALIDATED_H
+#ifndef VALIDATED_FIELD_H
+#define VALIDATED_FIELD_H
 
 #include <QObject>
 #include <QVariant>
 #include <QSet>
 #include "serializable/common_fields.hpp"
-#include "field_super.h"
+#include "serializable/field_super.h"
 #define PRE_VALIDATER_ATTR "pre_validated"
 namespace Serializable {
 
@@ -13,8 +13,12 @@ template <typename Validator>
 void validate(QVariant &target) {
     static_assert(std::is_same<bool, decltype(Validator::validate(target))>(),
             "Validators must implement 'static bool validate(QVariant& value)' -> True = ok / False = invalid");
+    static_assert(std::is_same<const QString &, decltype(Validator::name())>(),
+            "Validators must implement 'static const QString &name()'");
     if (!target.isValid()) return;
+    auto copy = target;
     if (!Validator::validate(target)) {
+        reWarn()<<"Value:"<<copy<<"invalidated by:"<<Validator::name();
         target.clear();
     }
 }
@@ -38,23 +42,29 @@ protected:
         is_plain = type == ft::FieldPlain || type == ft::FieldNested,
     };
     bool updateWithVariant(const QVariant &source) {
-        auto copy = source;
         if constexpr (is_sequence) {
-            auto asList = copy.toList();
+            auto asList = source.toList();
             for (auto &val: asList) {
                 validate<Validator, Validators...>(val);
+                if (!val.isValid()) {
+                    return Target::updateWithVariant(QVariant{});
+                }
             }
-            copy.setValue(asList);
+            return Target::updateWithVariant(asList);
         } else if constexpr (is_mapping) {
-            auto asMap = copy.toMap();
+            auto asMap = source.toMap();
             for (auto &val: asMap) {
                 validate<Validator, Validators...>(val);
+                if (!val.isValid()) {
+                    return Target::updateWithVariant(QVariant{});
+                }
             }
-            copy.setValue(asMap);
+            return Target::updateWithVariant(asMap);
         } else {
+            auto copy = source;
             validate<Validator, Validators...>(copy);
+            return Target::updateWithVariant(copy);
         }
-        return Target::updateWithVariant(copy);
     }
     const QStringList &attributes() const {
         static const QStringList attrs = Target::attributes() + QStringList{PRE_VALIDATER_ATTR};
@@ -76,4 +86,4 @@ using Validate = PreValidator<Target, Validators...>;
 
 }
 
-#endif // VALIDATED_H
+#endif // VALIDATED_FIELD_H

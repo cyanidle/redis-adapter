@@ -19,9 +19,6 @@ public:
         Ok,
         Fail,
         Json,
-        WithJson,
-        WithJsonOk,
-        WithJsonFail,
         Pack = 100,
 
         User = 500,

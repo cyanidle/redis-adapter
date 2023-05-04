@@ -26,14 +26,18 @@ void Validator::Private::registerImpl(IFactory *factory, const QStringList &name
 Validator::IExecutor *Validator::Private::fetchImpl(const QString &name)
 {
     QMutexLocker lock(&(*staticMutex));
-    if (cache->contains(name)) {
-        return cache->value(name);
-    } else {
-        auto [func, data] = Radapter::Private::parseFunc(name);
-        if (!all->contains(func)) {
-            throw std::runtime_error("Validator with name: ("+name.toStdString()+") does not exist!");
+    try{
+        if (cache->contains(name)) {
+            return cache->value(name);
+        } else {
+            auto [func, data] = Radapter::Private::parseFunc(name);
+            if (!all->contains(func)) {
+                throw std::runtime_error("Validator with name: ("+name.toStdString()+") does not exist!");
+            }
+            auto fac = all->value(func);
+            return fac->create(convertToQList(data));
         }
-        auto fac = all->value(func);
-        return fac->create(convertToQList(data));
+    } catch (std::exception &exc) {
+        throw std::runtime_error("While fetching validator: "+name.toStdString()+" --> "+exc.what());
     }
 }

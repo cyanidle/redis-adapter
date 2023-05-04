@@ -16,6 +16,7 @@ void registerStatefulValidator(StatefulFunction<State, Args...> func, const QStr
 }
 
 struct Fetched {
+    static void initializeVariantFetching();
     Fetched() = default;
     Fetched(const QString &name);
     Fetched(const Fetched &other);

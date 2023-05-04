@@ -18,10 +18,12 @@ Q_DECLARE_METATYPE(QDataStream::ByteOrder)
 
 namespace Validator {
 struct ByteOrder {
+    static const QString &name();
     static bool validate(QVariant &src);
 };
 
 struct TimeZone {
+    static const QString &name();
     static bool validate(QVariant& target);
 };
 }

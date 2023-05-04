@@ -10,29 +10,31 @@ class IExecutor;
 namespace Private {
 void registerImpl(IFactory *factory, const QStringList &names);
 IExecutor *fetchImpl(const QString &name);
+template <typename...Args>
+using DecTuple = std::tuple<std::decay_t<Args>...>;
 template<int index, typename...Args>
-void tryPopulate(std::tuple<Args...> &tup, const QVariantList &args) {
+void tryPopulate(DecTuple<Args...> &tup, const QVariantList &args) {
     if constexpr (index == sizeof...(Args)) {
         return;
     } else {
-        using T = std::decay_t<std::tuple_element_t<index, std::tuple<Args...>>>;
+        using T = std::tuple_element_t<index, DecTuple<Args...>>;
         auto copy = args.at(index);
         if (!copy.convert(QMetaType::fromType<T>())) {
-            throw std::runtime_error("Could not convert argument ["+std::to_string(index)+"] to type: "+typeid(T).name());
+            throw std::runtime_error("Could not convert argument ["+std::to_string(index)+"] to type: "+QMetaType::fromType<T>().name());
         }
         std::get<index>(tup) = copy.value<T>();
         tryPopulate<index + 1, Args...>(tup, args);
     }
 }
 template <typename...Args>
-std::tuple<Args...> unpackArgs(const QVariantList &args) {
+DecTuple<Args...> unpackArgs(const QVariantList &args) {
     constexpr auto wantedCount = sizeof...(Args);
     if (wantedCount != args.size()) {
         throw std::runtime_error(std::string("Arguments list invalid! Wanted: ")
                                  + std::to_string(wantedCount)
                                  + ". Actual: " + std::to_string(args.size()));
     }
-    std::tuple<Args...> result;
+    DecTuple<Args...> result;
     tryPopulate<0, Args...>(result, args);
     return result;
 }
@@ -56,6 +58,7 @@ public:
 class IFactory
 {
 public:
+    virtual const QString &signature() const = 0;
     virtual IExecutor* create(const QVariantList &args) = 0;
     virtual ~IFactory() = default;
 };
@@ -73,6 +76,10 @@ class Factory : public IFactory
 public:
     Factory(Func func) : func(func)
     {}
+    const QString &signature() const override {
+        static QString sig(typeid(Func).name());
+        return sig;
+    }
     IExecutor* create(const QVariantList &args) override
     {
         return new Exec(func, args);
@@ -102,7 +109,7 @@ public:
     }
 private:
     Function<Args...> func;
-    std::tuple<std::decay_t<Args>...> args;
+    Private::DecTuple<Args...> args;
     QVariantList raw;
 };
 
@@ -128,7 +135,7 @@ public:
     }
 private:
     StatefulFunction<State, Args...> func;
-    std::tuple<std::decay_t<Args>...> args;
+    Private::DecTuple<Args...> args;
     State state;
     QVariantList raw;
 };

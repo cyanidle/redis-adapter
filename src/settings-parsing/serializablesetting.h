@@ -3,7 +3,7 @@
 
 #include <QJsonDocument>
 #include "serializable/serializableobject.h"
-#include "serializable/validated.hpp"
+#include "validators/validated_field.hpp"
 #include "validators/common_validators.h"
 #include "private/impl_settingscomment.h"
 #include "validators/validator_fetch.h"
@@ -78,10 +78,6 @@ template<typename T> using OptionalMapping = MarkOptional<Serializable::Mapping<
 template<typename T> using Validated = ::Serializable::Validated<T>;
 using RequiredValidator = Required<Validator::Fetched>;
 using OptionalValidator = Optional<Validator::Fetched>;
-
-using RequiredLogLevel = Serializable::Validated<Required<QtMsgType>>::With<Validator::LogLevel>;
-using NonRequiredLogLevel = MarkHasDefault<RequiredLogLevel>;
-
 
 struct Serializable : public ::Serializable::Object
 {

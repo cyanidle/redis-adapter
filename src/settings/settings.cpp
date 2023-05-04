@@ -1,5 +1,11 @@
 #include "settings.h"
 
+const QString &Validator::ByteOrder::name()
+{
+    static QString stName = "Byte Order: little/big/littleendian/bigendian";
+    return stName;
+}
+
 bool Validator::ByteOrder::validate(QVariant &src) {
     typedef QMap<QString, QDataStream::ByteOrder> Map;
     static Map map{
@@ -11,6 +17,12 @@ bool Validator::ByteOrder::validate(QVariant &src) {
     auto asStr = src.toString().toLower();
     src.setValue(map.value(asStr));
     return map.contains(asStr);
+}
+
+const QString &Validator::TimeZone::name()
+{
+    static QString stName = "Time Zone String";
+    return stName;
 }
 
 bool Validator::TimeZone::validate(QVariant &target) {

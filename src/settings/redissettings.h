@@ -48,6 +48,7 @@ namespace Settings {
             StartFromFirst
         };
         Q_ENUM(StartMode)
+        static const QString &name();
         static bool validate(QVariant &target);
         Q_GADGET
         IS_SETTING

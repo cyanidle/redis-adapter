@@ -1,5 +1,11 @@
 #include "redissettings.h"
 using namespace Settings;
+const QString &RedisStreamConsumer::name()
+{
+    static QString stName = "Redis Stream StartMode: persistent_id/from_top/from_first";
+    return stName;
+}
+
 bool RedisStreamConsumer::validate(QVariant &target) {
     auto asStr = target.toString().toLower();
     if (asStr == "persistent_id") {

@@ -5,6 +5,22 @@
 #include <QMetaProperty>
 #include <QString>
 
+void Validator::Fetched::initializeVariantFetching()
+{
+    auto converter = [](const QString& name){
+        return Fetched(name);
+    };
+    auto backConverter = [](const Fetched& conv){
+        return conv.m_name;
+    };
+    if (!QMetaType::registerConverter<QString, Fetched>(converter)) {
+        throw std::runtime_error("Could not register Validator converter!");
+    }
+    if (!QMetaType::registerConverter<Fetched, QString>(backConverter)) {
+        throw std::runtime_error("Could not register Validator back converter!");
+    }
+}
+
 Validator::Fetched::Fetched(const QString &name) :
     m_executor(Private::fetchImpl(name)),
     m_name(name)

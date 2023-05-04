@@ -5,9 +5,11 @@
 
 namespace Settings {
 struct ChooseJsonFormat {
+    static const QString &name();
     static bool validate(QVariant &src);
 };
 struct StringToFileSize {
+    static const QString &name();
     static bool validate(QVariant &src);
 };
 using NonRequiredFileSize = ::Serializable::Validated<Settings::HasDefault<quint64>>::With<Settings::StringToFileSize>;

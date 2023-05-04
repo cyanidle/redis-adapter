@@ -9,8 +9,11 @@
 #include <QSet>
 #include <QString>
 #include <QVariant>
-#include <type_traits>
 #include <stdexcept>
+#include <functional>
+#include <type_traits>
+#include <tuple>
+#include <QMetaObject>
 
 #define RADAPTER_VERSION "0.9"
 

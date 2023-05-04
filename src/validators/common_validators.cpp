@@ -100,6 +100,7 @@ bool min_max(QVariant &src, double min, double max)
 
 void Validator::registerAllCommon()
 {
+    Fetched::initializeVariantFetching();
     registerValidator(Minute::validate, {"minutes", "minute"});
     registerValidator(Hour24::validate, {"hours24", "hours"});
     registerValidator(Hour12::validate, {"hours12"});
@@ -113,6 +114,12 @@ void Validator::registerAllCommon()
     registerValidator(multiplyBy, {"multiply_by"});
     registerValidator(hectaPascalsToAtmospheric, {"hecta_pascals_to_mm_atmospheric"});
     registerStatefulValidator(roundLast, {"round_last"});
+}
+
+const QString &Validator::LogLevel::name()
+{
+    static QString stName = "Log level: debug/info/warning/critical/fatal";
+    return stName;
 }
 
 bool Validator::LogLevel::validate(QVariant &target)

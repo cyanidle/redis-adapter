@@ -65,6 +65,12 @@ void ModbusMaster::postUpdate()
     device = devicesMap->value(device_name);
 }
 
+const QString &Validator::ByteWordOrder::name()
+{
+    static QString stName = "ByteOrder: abcd/badc/cdab/dcba";
+    return stName;
+}
+
 bool Validator::ByteWordOrder::validate(QVariant &value)
 {
     auto asStr = value.toString().toLower();
@@ -96,6 +102,12 @@ void RegisterInfo::postUpdate()
     }
 }
 
+const QString &Validator::RegValueType::name()
+{
+    static QString stName = "Register Value Type: uint16/word/uint32/dword/float/float32";
+    return stName;
+}
+
 bool Validator::RegValueType::validate(QVariant &value) {
     static QMap<QString, QMetaType::Type>
         map{{"uint16", QMetaType::UShort},
@@ -107,6 +119,12 @@ bool Validator::RegValueType::validate(QVariant &value) {
     auto asStr = value.toString().toLower();
     value.setValue(map.value(asStr));
     return map.contains(asStr);
+}
+
+const QString &Validator::RegisterTable::name()
+{
+    static QString stName = "Register Table Type: holding/input/coils/discrete_inputs/holding_registers/input_registers/coils/di/do";
+    return stName;
 }
 
 bool Validator::RegisterTable::validate(QVariant &value) {
