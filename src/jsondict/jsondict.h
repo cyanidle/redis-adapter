@@ -171,7 +171,7 @@ struct JsonDict::const_iterator {
     const_iterator &operator*();
     const QVariant *operator->();
     template<std::size_t Index>
-    std::tuple_element_t<Index, ::JsonDict::const_iterator>& get()
+    decltype(auto) get()
     {
         if constexpr (Index == 0) return key();
         if constexpr (Index == 1) return value();
@@ -209,7 +209,7 @@ struct JsonDict::iterator {
     iterator &operator*();
     QVariant *operator->();
     template<std::size_t Index>
-    std::tuple_element_t<Index, ::JsonDict::iterator>& get()
+    decltype(auto) get()
     {
         if constexpr (Index == 0) return key();
         if constexpr (Index == 1) return value();

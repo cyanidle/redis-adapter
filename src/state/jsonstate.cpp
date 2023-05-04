@@ -1,14 +1,21 @@
 #include "jsonstate.h"
 #include "jsondict/jsondict.h"
+#include "settings-parsing/serializablesetting.h"
 #include <QStringBuilder>
 
-QString State::Json::logFields() const
+State::Json::Json() :
+    d(new Private::JsonStateQObject)
 {
-    JsonDict all;
-    for (const auto &name: qAsConst(fields()))
-    {
-        all[name] = field(name)->typeName(this);
-    }
+}
+
+State::Json::~Json()
+{
+    delete d;
+}
+
+QString State::Json::logInfo() const
+{
+    JsonDict all(structure());
     return QStringLiteral("\nJsonState: ")%this->metaObject()->className()%": Expected --> "%all.print();
 }
 
@@ -20,6 +27,11 @@ JsonDict State::Json::send() const
 JsonDict State::Json::send(const Serializable::IsFieldCheck &field) const
 {
     return send(findNameOf(field));
+}
+
+bool State::Json::updateWith(const Settings::Serializable &setting)
+{
+    return update(setting.serialize());
 }
 
 JsonDict State::Json::send(const QString &fieldName) const
@@ -34,14 +46,14 @@ JsonDict State::Json::send(const QString &fieldName) const
         result.insert(fieldName, found->readVariant(this));
         return result;
     } else {
-        reError() << "#### Attempt to send field with empty name!" << fieldName;
+        reError() << "#### Attempt to send field with empty name!";
         return {};
     }
 }
 
 bool State::Json::updateWith(const JsonDict &data)
 {
-    emit beforeUpdateSig(data, this);
+    emit d->beforeUpdate(data, this);
     bool status = false;
     for (const auto &name: qAsConst(fields()))
     {
@@ -50,7 +62,10 @@ bool State::Json::updateWith(const JsonDict &data)
             status |= field(name)->updateWithVariant(this, temp); // stays true once set
         }
     }
-    if (status) emit wasUpdated(this);
+    if (status) {
+        postUpdate();
+        emit d->wasUpdated(this);
+    }
     return status;
 }
 

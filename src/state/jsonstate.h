@@ -7,6 +7,7 @@
 #include "validators/validator_fetch.h"
 #define STATE_PRIVATE_ATTR "state_private"
 class JsonDict;
+namespace Settings{struct Serializable;}
 namespace State {
 
 template <typename T, typename Func>
@@ -33,41 +34,37 @@ void callIfValid(const JsonDict &data, const QString &path, const User *user, Me
     (user->*method)(copy.value<T>());
 }
 
-template <typename Target>
-struct MarkPrivate : Target
-{
-    FIELD_SUPER(Target)
-protected:
-    const QStringList &attributes() const {
-        static const QStringList attrs = Target::attributes() + QStringList{STATE_PRIVATE_ATTR};
-        return attrs;
-    }
-};
-
-struct RADAPTER_API Json : public State::Private::JsonStateQObject, protected Serializable::Object {
+struct RADAPTER_API Json : protected Serializable::Object {
     Q_GADGET
 public:
+    Q_DISABLE_COPY_MOVE(Json)
+    Json();
+    ~Json();
     using Serializable::Object::field;
     using Serializable::Object::fields;
     using Serializable::Object::schema;
+    using Serializable::Object::structure;
     using Serializable::Object::metaObject;
-    QString logFields() const;
+    QString logInfo() const;
     JsonDict send() const;
     JsonDict send(const Serializable::IsFieldCheck &field) const;
+    bool updateWith(const Settings::Serializable &setting);
     bool updateWith(const JsonDict &data);
     //! Will call a callback after update with
     /// possible args (State::Json *state)
     template <typename...Args>
     void afterUpdate(Args&&...args) {
-        connect(this, &Json::wasUpdated, std::forward<Args>(args)...);
+        d->connect(d, &Private::JsonStateQObject::wasUpdated, std::forward<Args>(args)...);
     }
     //! Will call a callback before update with
     /// possible args (const JsonDict &data, State::Json *state)
     template <typename...Args>
     void beforeUpdate(Args&&...args) {
-        connect(this, &Json::beforeUpdateSig, std::forward<Args>(args)...);
+        d->connect(d, &Private::JsonStateQObject::beforeUpdate, std::forward<Args>(args)...);
     }
 private:
+    Private::JsonStateQObject *d;
+
     bool update(const QVariantMap &data) override;
     JsonDict send(const QString &fieldName) const;
     template <typename T> friend struct Serializable::PlainField;
@@ -77,17 +74,13 @@ private:
     template <typename T> friend struct Serializable::PlainMapping;
     template <typename T> friend struct Serializable::NestedMapping;
 };
-using Serializable::Plain;
-using Serializable::Sequence;
-using Serializable::Mapping;
-using Serializable::Bindable;
 } // namespace State
 #define IS_STATE \
-    IS_SERIALIZABLE_BASE \
-template <typename T> using Plain = ::State::Plain<T>; \
-template <typename T> using Sequence = ::State::Sequence<T>; \
-template <typename T> using Mapping = ::State::Mapping<T>; \
-template <typename T> using Bindable = ::State::Bindable<T>;
+    IS_SERIALIZABLE_BASE
+template <typename T> using Plain = ::Serializable::Plain<T>; \
+template <typename T> using Sequence = ::Serializable::Sequence<T>; \
+template <typename T> using Mapping = ::Serializable::Mapping<T>; \
+template <typename T> using Bindable = ::Serializable::Bindable<T>;
 
 
 #endif //RADAPTER_JSON_STATE_H

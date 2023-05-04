@@ -66,15 +66,15 @@ private:
     bool m_valid{false};
 };
 
-template<typename T> using Required = MarkRequired<Serializable::Plain<T>>;
-template<typename T> using HasDefault = MarkHasDefault<Serializable::Plain<T>>;
-template<typename T> using Optional = MarkOptional<Serializable::Plain<T>>;
-template<typename T> using RequiredSequence = MarkRequired<Serializable::Sequence<T>>;
-template<typename T> using SequenceHasDefault = MarkHasDefault<Serializable::Sequence<T>>;
-template<typename T> using OptionalSequence = MarkOptional<Serializable::Sequence<T>>;
-template<typename T> using RequiredMapping = MarkRequired<Serializable::Mapping<T>>;
-template<typename T> using MappingHasDefault = MarkHasDefault<Serializable::Mapping<T>>;
-template<typename T> using OptionalMapping = MarkOptional<Serializable::Mapping<T>>;
+template<typename T> using Required = MarkRequired<::Serializable::Plain<T>>;
+template<typename T> using HasDefault = MarkHasDefault<::Serializable::Plain<T>>;
+template<typename T> using Optional = MarkOptional<::Serializable::Plain<T>>;
+template<typename T> using RequiredSequence = MarkRequired<::Serializable::Sequence<T>>;
+template<typename T> using SequenceHasDefault = MarkHasDefault<::Serializable::Sequence<T>>;
+template<typename T> using OptionalSequence = MarkOptional<::Serializable::Sequence<T>>;
+template<typename T> using RequiredMapping = MarkRequired<::Serializable::Mapping<T>>;
+template<typename T> using MappingHasDefault = MarkHasDefault<::Serializable::Mapping<T>>;
+template<typename T> using OptionalMapping = MarkOptional<::Serializable::Mapping<T>>;
 template<typename T> using Validated = ::Serializable::Validated<T>;
 using RequiredValidator = Required<Validator::Fetched>;
 using OptionalValidator = Optional<Validator::Fetched>;

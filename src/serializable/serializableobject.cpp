@@ -31,7 +31,8 @@ QString Object::findNameOf(const IsFieldCheck &rawField) const
 {
     for (const auto &name: qAsConst(fields()))
     {
-        if (field(name)->rawField(this) == &rawField) {
+        auto asRaw = field(name)->rawField(this);
+        if (asRaw == &rawField) {
             return name;
         }
     }
@@ -68,6 +69,15 @@ QVariantMap Object::schema() const
     }
     return result;
 
+}
+
+QVariantMap Object::structure() const
+{
+    QVariantMap result;
+    for (auto iter = _priv_allFields().cbegin(); iter != _priv_allFields().cend(); ++iter) {
+        result.insert(iter.key(), iter.value()->structure(this));
+    }
+    return result;
 }
 
 bool Object::is(const QMetaObject *mobj) const

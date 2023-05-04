@@ -16,7 +16,10 @@ public:
     QString findNameOf(const IsFieldCheck &rawField) const;
     virtual bool update(const QVariantMap &source);
     virtual QVariantMap serialize() const;
+    // full reflection info
     QVariantMap schema() const;
+    // consice info, allows accessing schema() with keys. Values are type names
+    QVariantMap structure() const;
     virtual const QMetaObject *metaObject() const = 0;
     virtual ~Object() = default;
     bool is(const QMetaObject *mobj) const;
@@ -30,7 +33,6 @@ protected:
 private:
     virtual const QMap<QString, FieldConcept*> &_priv_allFields() const = 0;
     virtual const QList<QString> &_priv_allFieldsNamesCached() const = 0;
-    mutable QMap<IsFieldCheck*, FieldConcept*> m_cache;
 };
 
 template<class T>

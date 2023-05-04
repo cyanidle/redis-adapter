@@ -32,7 +32,7 @@ void Serializable::processField(const QString &name, const QVariant &newValue)
     auto found = field(name);
     auto hasDefault = found->attributes(this).contains(HAS_DEFAULT_ATTR);
     auto isOptional = found->attributes(this).contains(OPTION_ATTR);
-    auto fieldTypeName = found->fieldRepr(this);
+    auto fieldRepr = found->fieldRepr(this);
     if (!newValue.isValid()) {
         if (hasDefault || isOptional) {
             return;
@@ -41,12 +41,12 @@ void Serializable::processField(const QString &name, const QVariant &newValue)
                                      + ": Missing value for: "
                                      + name.toStdString()
                                      + "; Of Type: "
-                                     + fieldTypeName.toStdString());
+                                     + fieldRepr.toStdString());
         }
     }
     auto wasUpdated = found->updateWithVariant(this, newValue);
     if (wasUpdated) return;
-    auto msg = QStringLiteral("Field '%1': Wanted: %2; Received: %3").arg(name, fieldTypeName, newValue.typeName());
+    auto msg = QStringLiteral("Field '%1': Wanted: %2; Received: %3").arg(name, fieldRepr, newValue.typeName());
     throw std::runtime_error(std::string(metaObject()->className()) + ": Value type missmatch: " + msg.toStdString());
 }
 

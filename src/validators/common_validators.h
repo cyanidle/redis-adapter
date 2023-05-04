@@ -1,13 +1,14 @@
 #ifndef COMMON_VALIDATORS_H
 #define COMMON_VALIDATORS_H
 
-#include <QVariant>
+#include "private/global.h"
+
 Q_DECLARE_METATYPE(QtMsgType)
 namespace Validator {
 template<int min, int max>
 struct IntMinMax {
     static const QString &name() {
-        static QString stName = "Int: Min("+QString::number(min)+") Max("+QString::number(max)+')';
+        static QString stName = "Min("+QString::number(min)+") Max("+QString::number(max)+')';
         return stName;
     }
     static bool validate(QVariant &target) {

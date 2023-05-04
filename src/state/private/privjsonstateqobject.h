@@ -10,7 +10,7 @@ class JsonStateQObject : public QObject
 {
     Q_OBJECT
 signals:
-    void beforeUpdateSig(const JsonDict &data, State::Json *state);
+    void beforeUpdate(const JsonDict &data, State::Json *state);
     void wasUpdated(State::Json *state);
 };
 

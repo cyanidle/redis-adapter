@@ -30,13 +30,23 @@ validate(QVariant &target) {
     validate<Validators...>(target);
 }
 
-template <typename Target, typename Validator, typename...Validators>
-struct PreValidator : public Target {
-    FIELD_SUPER(Target)
+
+template <typename Validator, typename...Validators>
+QString joinedNames() {
+    if constexpr (!sizeof...(Validators)) {
+        return Validator::name();
+    } else {
+        return Validator::name()+QStringLiteral(" + ")+joinedNames<Validators...>();
+    }
+}
+
+template <typename Super, typename Validator, typename...Validators>
+struct PreValidator : public Super {
+    FIELD_SUPER(Super)
 protected:
     using ft = ::Serializable::FieldType;
     enum {
-        type = static_cast<ft>(Target::thisFieldType),
+        type = static_cast<ft>(Super::thisFieldType),
         is_sequence = type == ft::FieldSequence || type == ft::FieldSequenceOfNested,
         is_mapping = type == ft::FieldSequence || type == ft::FieldSequenceOfNested,
         is_plain = type == ft::FieldPlain || type == ft::FieldNested,
@@ -47,28 +57,32 @@ protected:
             for (auto &val: asList) {
                 validate<Validator, Validators...>(val);
                 if (!val.isValid()) {
-                    return Target::updateWithVariant(QVariant{});
+                    return Super::updateWithVariant(QVariant{});
                 }
             }
-            return Target::updateWithVariant(asList);
+            return Super::updateWithVariant(asList);
         } else if constexpr (is_mapping) {
             auto asMap = source.toMap();
             for (auto &val: asMap) {
                 validate<Validator, Validators...>(val);
                 if (!val.isValid()) {
-                    return Target::updateWithVariant(QVariant{});
+                    return Super::updateWithVariant(QVariant{});
                 }
             }
-            return Target::updateWithVariant(asMap);
+            return Super::updateWithVariant(asMap);
         } else {
             auto copy = source;
             validate<Validator, Validators...>(copy);
-            return Target::updateWithVariant(copy);
+            return Super::updateWithVariant(copy);
         }
     }
     const QStringList &attributes() const {
-        static const QStringList attrs = Target::attributes() + QStringList{PRE_VALIDATER_ATTR};
+        static const QStringList attrs = Super::attributes() + QStringList{PRE_VALIDATER_ATTR};
         return attrs;
+    }
+    const QString &typeName() const {
+        static QString res = Super::typeName()+QStringLiteral(" --> ")+joinedNames<Validator, Validators...>();
+        return res;
     }
 };
 

@@ -25,7 +25,8 @@ namespace Serializable {
         friend Object;
         virtual const IsFieldCheck *rawField(const Serializable::Object *owner) const = 0;
         virtual IsFieldCheck *rawField(Serializable::Object *owner) = 0;
-        virtual QVariantMap schema(const Serializable::Object *owner) const = 0;
+        virtual const QVariantMap &schema(const Serializable::Object *owner) const = 0;
+        virtual const QVariant &structure(const Serializable::Object *owner) const = 0;
         virtual QVariant readVariant(const Serializable::Object *owner) const = 0;
         virtual bool updateWithVariant(Serializable::Object *owner, const QVariant &source) = 0;
         virtual FieldType fieldType(const Serializable::Object *owner) const = 0;
@@ -36,8 +37,8 @@ namespace Serializable {
         virtual const QStringList &attributes(const Serializable::Object *owner) const = 0;
         virtual const NestedIntrospection introspect(const Serializable::Object *owner) const = 0;
         virtual NestedIntrospection introspect(Serializable::Object *owner) = 0;
-        virtual const QString &fieldRepr(const Serializable::Object *owner) const = 0;
         virtual const QString &typeName(const Serializable::Object *owner) const = 0;
+        virtual const QString &fieldRepr(const Serializable::Object *owner) const = 0;
         bool isNested(const Serializable::Object *owner) const {
             auto res = fieldType(owner);
             return res == FieldNested
@@ -74,10 +75,35 @@ struct FieldHolder : FieldConcept {
     {
         return field(owner);
     }
-    QVariantMap schema(const Serializable::Object *owner) const override final {
-        auto result = field(owner)->schema();
-        result["attributes"] = field(owner)->attributes();
-        return result;
+    const QVariantMap &schema(const Serializable::Object *owner) const override final {
+        static QVariantMap res = [this, owner] {
+            auto result = field(owner)->schema();
+            result["__attributes__"] = field(owner)->attributes();
+            result["__type_name__"] = typeName(owner);
+            result["__field_repr__"] = fieldRepr(owner);
+            auto nestedSchema = result.take("__nested_schema__").toMap();
+            for (auto iter = nestedSchema.cbegin(); iter != nestedSchema.cend(); ++iter) {
+                result.insert(iter.key(), iter.value());
+            }
+            return result;
+        }();
+        return res;
+    }
+    const QVariant &structure(const Serializable::Object *owner) const override final {
+        static QVariant res = [this, owner] {
+            auto &full = schema(owner);
+            QVariantMap result;
+            for (auto iter = full.cbegin(); iter != full.cend(); ++iter) {
+                if (!iter.key().startsWith(QStringLiteral("__"))) {
+                    result.insert(iter.key(), iter.value().toMap().value(QStringLiteral("__type_name__")));
+                }
+            }
+            if (result.isEmpty()) {
+                return full.value("__type_name__");
+            }
+            return QVariant(result);
+        }();
+        return res;
     }
     QVariant readVariant(const Serializable::Object *owner) const override final {
         return field(owner)->readVariant();
@@ -109,11 +135,13 @@ struct FieldHolder : FieldConcept {
     const NestedIntrospection introspect(const Serializable::Object *owner) const override final {
         return field(owner)->introspect();
     }
-    const QString &fieldRepr(const Serializable::Object *owner) const override final {
-        return field(owner)->fieldRepr();
-    }
     const QString &typeName(const Serializable::Object *owner) const override final {
         return field(owner)->typeName();
+    }
+    const QString &fieldRepr(const Serializable::Object *owner) const override final{
+        static QString res =
+            QMetaEnum::fromType<FieldType>().valueToKey(fieldType(owner)) + QStringLiteral("<")+typeName(owner)+'>';
+        return res;
     }
 protected:
     const Field *field(const Serializable::Object *owner) const {
@@ -164,13 +192,37 @@ struct FieldCommon : IsFieldCheck {
     void update(const T& newVal) {this->value = newVal;}
     T value;
 protected:
+    static int valueMetaTypeId() {return QMetaType::fromType<T>().id();}
+    const QString &typeName() const {
+        static QString res = QMetaType(valueMetaTypeId()).name();
+        return res;
+    }
     Object* constructNested() const {return nullptr;}
-    const QString &typeName() const {static QString res{QMetaType::fromType<T>().name()}; return res;}
     void *rawValue() {return &value;}
     const QStringList &attributes() const {static QStringList attrs; return attrs;}
     const NestedIntrospection introspect() const {return NestedIntrospection();}
     NestedIntrospection introspect() {return NestedIntrospection();}
     const void *rawValue() const {return &value;}
+};
+template<typename T>
+struct NestedCommon : FieldCommon<T> {
+    using typename Private::FieldCommon<T>::valueType;
+    using typename Private::FieldCommon<T>::valueRef;
+    using Private::FieldCommon<T>::FieldCommon;
+    using Private::FieldCommon<T>::operator=;
+    using Private::FieldCommon<T>::operator==;
+    using Private::FieldCommon<T>::value;
+    template <typename Class, typename Field>
+    friend struct Private::FieldHolder;
+    static int valueMetaTypeId() {
+        static auto mobj = T().metaObject();
+        static auto id = mobj->metaType().id();
+        return id;
+    }
+    const QString &typeName() const {
+        static QString res = QMetaType(valueMetaTypeId()).name();
+        return res;
+    }
 };
 }
 
@@ -186,21 +238,13 @@ struct PlainField : public Private::FieldCommon<T>
     template <typename Class, typename Field>
     friend struct Private::FieldHolder;
 protected:
-    static int staticValueMetaTypeId() {return QMetaType::fromType<T>().id();}
-    const QString &fieldRepr() const {
-        static QString res = QString{"Plain<"} + this->typeName() + '>';
-        return res;
-    }
-    int valueMetaTypeId() const {return staticValueMetaTypeId();}
     enum {thisFieldType = FieldPlain};
     FieldType fieldType() const {return static_cast<FieldType>(thisFieldType);}
     QVariantMap schema() const {
         static QVariantMap actual_schema {
-            {"type_id", QMetaType::fromType<T>().id()},
-            {"type_name", QMetaType::fromType<T>().name()},
-            {"field_type", thisFieldType},
-            {"is_nested", false},
-            {"field_type_name", QMetaEnum::fromType<FieldType>().valueToKey(thisFieldType)},
+            {"__field_type__", thisFieldType},
+            {"__is_nested__", false},
+            {"__field_type_name__", QMetaEnum::fromType<FieldType>().valueToKey(thisFieldType)},
         };
         return actual_schema;
     }
@@ -232,31 +276,17 @@ struct NestedField : public Private::FieldCommon<T> {
     template <typename Class, typename Field>
     friend struct Private::FieldHolder;
 protected:
-    static int staticValueMetaTypeId() {return -1;}
     Object* constructNested() const {return new T;}
-    int valueMetaTypeId() const {return staticValueMetaTypeId();}
     enum {thisFieldType = FieldNested};
     FieldType fieldType() const {return static_cast<FieldType>(thisFieldType);}
-    const QString &typeName() const {
-        static QString res{typeid(T).name()};
-        return res;
-    }
-    const QString &fieldRepr() const {
-        static QString res = QString{"Nested<"} + this->typeName() + '>';
-        return res;
-    }
     QVariantMap schema() const {
         static QVariantMap actual_schema = [&]{
-            QVariantMap merged;
-            for (const auto &field : this->value.fields()) {
-                merged.insert(field, this->value.field(field)->schema(&this->value));
-            }
             return QVariantMap {
-                {"type_name", value.metaObject()->className()},
-                {"field_type", thisFieldType},
-                {"is_nested", true},
-                {"field_type_name", QMetaEnum::fromType<FieldType>().valueToKey(thisFieldType)},
-                {"schema", merged},
+                {"__nested_fields__", this->value.fields()},
+                {"__nested_schema__", this->value.schema()},
+                {"__field_type__", thisFieldType},
+                {"__is_nested__", true},
+                {"__field_type_name__", QMetaEnum::fromType<FieldType>().valueToKey(thisFieldType)},
             };
         }();
         return actual_schema;
@@ -327,22 +357,13 @@ struct PlainSequence : public Private::SequenceCommon<T> {
     template <typename Class, typename Field>
     friend struct Private::FieldHolder;
 protected:
-    static int staticValueMetaTypeId() {return QMetaType::fromType<T>().id();}
-    int valueMetaTypeId() const {return staticValueMetaTypeId();}
-    const QString &fieldRepr() const {
-        static QString res = QString{"Sequence<"} + this->typeName() + '>';
-        return res;
-    }
     enum {thisFieldType = FieldSequence};
     FieldType fieldType() const {return static_cast<FieldType>(thisFieldType);}
     QVariantMap schema() const {
         static QVariantMap actual_schema {
-            {"type_name", QMetaType::fromType<QList<T>>().name()},
-            {"nested_type_name", QMetaType::fromType<T>().name()},
-            {"nested_type_id", QMetaType::fromType<T>().id()},
-            {"field_type", thisFieldType},
-            {"is_nested", false},
-            {"field_type_name", QMetaEnum::fromType<FieldType>().valueToKey(thisFieldType)},
+            {"__field_type__", thisFieldType},
+            {"__is_nested__", false},
+            {"__field_type_name__", QMetaEnum::fromType<FieldType>().valueToKey(thisFieldType)},
         };
         return actual_schema;
     }
@@ -384,30 +405,23 @@ struct NestedSequence : public Private::SequenceCommon<T> {
     friend struct Private::FieldHolder;
 protected:
     Object* constructNested() const {return new T;}
-    static int staticValueMetaTypeId() {return -1;}
-    const QString &typeName() const {
-        static QString res{typeid(T).name()};
-        return res;
+    static int valueMetaTypeId() {
+        static auto mobj = T().metaObject();
+        static auto id = mobj->metaType().id();
+        return id;
     }
-    const QString &fieldRepr() const {
-        static QString res = QString{"Sequence<"} + this->typeName() + '>';
-        return res;
-    }
-    int valueMetaTypeId() const {return staticValueMetaTypeId();}
     enum {thisFieldType = FieldSequenceOfNested};
     FieldType fieldType() const {return static_cast<FieldType>(thisFieldType);}
     QVariantMap schema() const {
         static QVariantMap actual_schema = [&]{
-            auto nestedSchema = this->value.isEmpty() ? T().schema() : this->value.constFirst().schema();
-            auto mobj = this->value.isEmpty() ? T().metaObject() : this->value.constFirst().metaObject();
-            QString fullName = QStringLiteral("sequence<%1>").arg(QString(mobj->className()));
+            const auto &nested = this->value.isEmpty() ? T() : this->value.constFirst();
             return QVariantMap {
-                {"type_name", fullName},
-                {"nested_schema", nestedSchema},
-                {"field_type", thisFieldType},
-                {"is_nested", true},
-                {"field_type_name", QMetaEnum::fromType<FieldType>().valueToKey(thisFieldType)},
-                               };
+                {"__nested_fields__", nested.fields()},
+                {"__nested_schema__", nested.schema()},
+                {"__field_type__", thisFieldType},
+                {"__is_nested__", true},
+                {"__field_type_name__", QMetaEnum::fromType<FieldType>().valueToKey(thisFieldType)},
+            };
         }();
         return actual_schema;
     }
@@ -505,22 +519,13 @@ struct PlainMapping : public Private::MappingCommon<T> {
     template <typename Class, typename Field>
     friend struct Private::FieldHolder;
 protected:
-    static int staticValueMetaTypeId() {return QMetaType::fromType<T>().id();}
-    int valueMetaTypeId() const {return staticValueMetaTypeId();}
-    const QString &fieldRepr() const {
-        static QString res = QString{"Mapping<"} + this->typeName() + '>';
-        return res;
-    }
     enum {thisFieldType = FieldMapping};
     FieldType fieldType() const {return static_cast<FieldType>(thisFieldType);}
     QVariantMap schema() const {
         static QVariantMap actual_schema {
-            {"type_name", QMetaType::fromType<QMap<QString, T>>().name()},
-            {"nested_type_name", QMetaType::fromType<T>().name()},
-            {"nested_type_id", QMetaType::fromType<T>().id()},
-            {"field_type", thisFieldType},
-            {"is_nested", false},
-            {"field_type_name", QMetaEnum::fromType<FieldType>().valueToKey(thisFieldType)}
+            {"__field_type__", thisFieldType},
+            {"__is_nested__", false},
+            {"__field_type_name__", QMetaEnum::fromType<FieldType>().valueToKey(thisFieldType)}
         };
         return actual_schema;
     }
@@ -562,30 +567,23 @@ struct NestedMapping : public Private::MappingCommon<T> {
     friend struct Private::FieldHolder;
 protected:
     Object* constructNested() const {return new T;}
-    static int staticValueMetaTypeId() {return -1;}
-    const QString &typeName() const {
-        static QString res{typeid(T).name()};
-        return res;
+    static int valueMetaTypeId() {
+        static auto mobj = T().metaObject();
+        static auto id = mobj->metaType().id();
+        return id;
     }
-    const QString &fieldRepr() const {
-        static QString res = QString{"Mapping<"} + this->typeName() + '>';
-        return res;
-    }
-    int valueMetaTypeId() const {return staticValueMetaTypeId();}
     enum {thisFieldType = FieldMappingOfNested};
     FieldType fieldType() const {return static_cast<FieldType>(thisFieldType);}
     QVariantMap schema() const {
         static QVariantMap actual_schema = [&]{
-            auto nestedSchema = this->value.isEmpty() ? T().schema() : this->value.first().schema();
-            auto mobj = this->value.isEmpty() ? T().metaObject() : this->value.first().metaObject();
+            const auto &nested = this->value.isEmpty() ? T() : this->value.first();
             return QVariantMap {
-               {"type_name", QMetaType::fromType<QMap<QString, T>>().name()},
-               {"nested_type_name", QStringLiteral("mapping<string, %1>").arg(QString(mobj->className()))},
-               {"nested_schema", nestedSchema},
-               {"field_type", thisFieldType},
-               {"is_nested", true},
-               {"field_type_name", QMetaEnum::fromType<FieldType>().valueToKey(thisFieldType)},
-                               };
+               {"__nested_fields__", nested.fields()},
+               {"__nested_schema__", nested.schema()},
+               {"__field_type__", thisFieldType},
+               {"__is_nested__", true},
+               {"__field_type_name__", QMetaEnum::fromType<FieldType>().valueToKey(thisFieldType)},
+            };
         }();
         return actual_schema;
     }
