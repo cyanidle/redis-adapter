@@ -19,6 +19,7 @@ struct Fetched {
     static void initializeVariantFetching();
     Fetched() = default;
     Fetched(const QString &name);
+    Fetched(const QString &name, const QVariantList &args);
     Fetched(const Fetched &other);
     Fetched& operator=(const Fetched &other);
     Fetched(Fetched &&other);

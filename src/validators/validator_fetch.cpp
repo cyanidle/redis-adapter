@@ -28,6 +28,13 @@ Validator::Fetched::Fetched(const QString &name) :
 
 }
 
+Validator::Fetched::Fetched(const QString &name, const QVariantList &args) :
+    m_executor(Private::fetchImpl(name, args)),
+    m_name(name)
+{
+
+}
+
 Validator::Fetched::Fetched(const Fetched &other) :
     m_executor(other.m_executor->newCopy()),
     m_name(other.m_name)

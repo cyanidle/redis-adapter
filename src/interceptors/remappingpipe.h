@@ -1,18 +1,19 @@
-#ifndef RADAPTER_RENAMINGPIPE_H
-#define RADAPTER_RENAMINGPIPE_H
+#ifndef RADAPTER_REMAPPINGPIPE_H
+#define RADAPTER_REMAPPINGPIPE_H
 
 #include "broker/interceptor/interceptor.h"
-namespace Settings {struct RenamingPipe;}
+
+namespace Settings {struct RemappingPipe;}
 namespace Radapter {
 
-class RenamingPipe : public Radapter::Interceptor
+class RemappingPipe : public Radapter::Interceptor
 {
     Q_OBJECT
     struct Private;
 public:
     Interceptor *newCopy() const override;
-    RenamingPipe(const Settings::RenamingPipe &settings);
-    ~RenamingPipe() override;
+    RemappingPipe(const Settings::RemappingPipe &settings);
+    ~RemappingPipe();
 public slots:
     void onMsgFromWorker(Radapter::WorkerMsg &msg) override;
 private:
@@ -21,4 +22,4 @@ private:
 
 } // namespace Radapter
 
-#endif // RADAPTER_RENAMINGPIPE_H
+#endif // RADAPTER_REMAPPINGPIPE_H

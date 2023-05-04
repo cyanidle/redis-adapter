@@ -11,9 +11,11 @@
 #include "interceptors/metainfopipe.h"
 #include "interceptors/namespaceunwrapper.h"
 #include "interceptors/namespacewrapper.h"
+#include "interceptors/remappingpipe.h"
 #include "interceptors/renamingpipe.h"
 #include "interceptors/settings/namespaceunwrappersettings.h"
 #include "interceptors/settings/namespacewrappersettings.h"
+#include "interceptors/settings/remappingpipesettings.h"
 #include "interceptors/settings/renamingpipesettings.h"
 #include "interceptors/settings/validatinginterceptorsettings.h"
 #include "interceptors/validatinginterceptor.h"
@@ -78,9 +80,17 @@ void tryCreateInterceptor(const QString &name, QObject *parent)
         broker->registerInterceptor(name, new ValidatingInterceptor(config));
     } else if (func == "rename") {
         auto config = Settings::RenamingPipe();
-        auto to = tryExtract<QString>(name, data, 0, "rename_from");
-        config.renames[to] = tryExtract<QString>(name, data, 1, "rename_to");
+        auto from = tryExtract<QString>(name, data, 0, "rename_from");
+        config.renames[from] = tryExtract<QString>(name, data, 1, "rename_to");
         broker->registerInterceptor(name, new RenamingPipe(config));
+    }  else if (func == "remap") {
+        auto config = Settings::RemappingPipe();
+        auto field = tryExtract<QString>(name, data, 0, "field");
+        auto remap = Settings::FieldRemap();
+        remap.from = tryExtract<QString>(name, data, 1, "remap_to");
+        remap.to = tryExtract<QString>(name, data, 2, "remap_to");
+        config.remaps[field] = remap;
+        broker->registerInterceptor(name, new RemappingPipe(config));
     } else if (func == "add_timestamp") {
         auto config = Settings::ValidatingInterceptor();
         config.by_field.value = {{tryExtract<QString>(name, data, 0, "field"), "set_unix_timestamp"}};

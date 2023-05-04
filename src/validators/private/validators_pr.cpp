@@ -23,9 +23,10 @@ void Validator::Private::registerImpl(IFactory *factory, const QStringList &name
     }
 }
 
-Validator::IExecutor *Validator::Private::fetchImpl(const QString &name)
+Validator::IExecutor *Validator::Private::fetchImpl(const QString &rawName)
 {
     QMutexLocker lock(&(*staticMutex));
+    auto name = Radapter::Private::normalizeFunc(rawName);
     try{
         if (cache->contains(name)) {
             return cache->value(name);
@@ -40,4 +41,10 @@ Validator::IExecutor *Validator::Private::fetchImpl(const QString &name)
     } catch (std::exception &exc) {
         throw std::runtime_error("While fetching validator: "+name.toStdString()+" --> "+exc.what());
     }
+}
+
+IExecutor *Private::fetchImpl(const QString &name, const QVariantList &args)
+{
+    auto asStr = convertQList<QString>(args);
+    return fetchImpl(name%'('%asStr.join(',')%')');
 }

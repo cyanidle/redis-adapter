@@ -1,5 +1,6 @@
 SOURCES+= \
    $$PWD/metainfopipe.cpp \
+   $$PWD/remappingpipe.cpp \
    $$PWD/renamingpipe.cpp \
    $$PWD/validatinginterceptor.cpp \
    $$PWD/namespacewrapper.cpp \
@@ -7,6 +8,7 @@ SOURCES+= \
    $$PWD/duplicatinginterceptor.cpp
 HEADERS+= \
    $$PWD/namespacewrapper.h \
+   $$PWD/remappingpipe.h \
    $$PWD/renamingpipe.h \
    $$PWD/validatinginterceptor.h \
    $$PWD/namespaceunwrapper.h \

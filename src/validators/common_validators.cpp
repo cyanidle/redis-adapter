@@ -12,10 +12,30 @@ bool hectaPascalsToAtmospheric(QVariant &src)
     return true;
 }
 
+bool sub(QVariant &src, double val)
+{
+    bool ok;
+    auto asInt = src.toDouble(&ok);
+    if (!ok) return false;
+    auto actual = asInt - val;
+    src.setValue(actual);
+    return true;
+}
+
+bool add(QVariant &src, double val)
+{
+    bool ok;
+    auto asInt = src.toDouble(&ok);
+    if (!ok) return false;
+    auto actual = asInt + val;
+    src.setValue(actual);
+    return true;
+}
+
 bool multiplyBy(QVariant &src, double by)
 {
     bool ok;
-    auto asInt = src.toInt(&ok);
+    auto asInt = src.toDouble(&ok);
     if (!ok) return false;
     auto actual = asInt * by;
     src.setValue(actual);
@@ -25,7 +45,7 @@ bool multiplyBy(QVariant &src, double by)
 bool divideBy(QVariant &src, double by)
 {
     bool ok;
-    auto asInt = src.toInt(&ok);
+    auto asInt = src.toDouble(&ok);
     if (!ok) return false;
     auto actual = asInt / by;
     src.setValue(actual);
@@ -98,6 +118,13 @@ bool min_max(QVariant &src, double min, double max)
     return ok && min <= asNumb && asNumb <= max;
 }
 
+bool map(QVariant &src, const QVariant &from, const QVariant &to)
+{
+    if (src != from) return false;
+    src.setValue(to);
+    return false;
+}
+
 void Validator::registerAllCommon()
 {
     Fetched::initializeVariantFetching();
@@ -107,13 +134,17 @@ void Validator::registerAllCommon()
     registerValidator(DayOfWeek::validate, {"weekday", "day_of_week"});
     registerValidator(LogLevel::validate, {"log_level", "loglevel"});
     registerValidator(min_max, {"min_max"});
-    registerValidator(invalidate, {"invalidate", "discard"});
+    registerValidator(clear, {"clear", "очистить"});
+    registerValidator(invalidate, {"invalidate", "discard", "инвалидация"});
     registerValidator(setUnixTimeStamp, {"set_unix_timestamp"});
     registerValidator(rusWindDirection360, {"wind_direction_360_ru"});
-    registerValidator(divideBy, {"int_divide_by", "divide_by"});
-    registerValidator(multiplyBy, {"multiply_by"});
-    registerValidator(hectaPascalsToAtmospheric, {"hecta_pascals_to_mm_atmospheric"});
-    registerStatefulValidator(roundLast, {"round_last"});
+    registerValidator(divideBy, {"int_divide_by", "divide_by", "делить"});
+    registerValidator(multiplyBy, {"multiply_by", "умножить"});
+    registerValidator(add, {"add", "плюс"});
+    registerValidator(sub, {"sub", "substract", "минус"});
+    registerValidator(map, {"remap", "переназначить"});
+    registerValidator(hectaPascalsToAtmospheric, {"hecta_pascals_to_mm_atmospheric", "гектапаскали_в_атмосферное"});
+    registerStatefulValidator(roundLast, {"round_last", "округлить_последние"});
 }
 
 const QString &Validator::LogLevel::name()

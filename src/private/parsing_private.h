@@ -1,6 +1,7 @@
 #ifndef PARSING_PRIVATE_H
 #define PARSING_PRIVATE_H
 #include "private/global.h"
+#include <QStringBuilder>
 namespace Radapter{ namespace Private {
 
 struct FuncResult {

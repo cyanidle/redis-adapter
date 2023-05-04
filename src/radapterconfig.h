@@ -10,6 +10,8 @@
 #include "interceptors/settings/duplicatinginterseptorsettings.h"
 #include "interceptors/settings/namespaceunwrappersettings.h"
 #include "interceptors/settings/namespacewrappersettings.h"
+#include "interceptors/settings/remappingpipesettings.h"
+#include "interceptors/settings/renamingpipesettings.h"
 #include "interceptors/settings/validatinginterceptorsettings.h"
 #include "raw_sockets/udpconsumer.h"
 #include "raw_sockets/udpproducer.h"
@@ -47,6 +49,8 @@ struct Interceptors : public Serializable {
     FIELD(OptionalMapping<ValidatingInterceptor>, validating)
     FIELD(Optional<NamespaceInterceptors>, namespaces)
     FIELD(OptionalMapping<ProducerFilter>, filters)
+    FIELD(OptionalMapping<RenamingPipe>, renaming)
+    FIELD(OptionalMapping<RemappingPipe>, remapping)
 
 };
 
@@ -117,7 +121,7 @@ struct AppConfig : public Serializable {
     FIELD(Optional<Sockets>, sockets)
     FIELD(Optional<Websocket>, websocket)
     FIELD(OptionalSequence<QString>, pipelines)
-    COMMENT(pipelines, "Example: 'worker.name > |interceptor| > worker.2.name'")
+    COMMENT(pipelines, "Example: 'worker.name > *interceptor > worker.2.name'")
     FIELD(HasDefault<RadapterApi>, api)
     void postUpdate() override;
 };

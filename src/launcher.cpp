@@ -10,6 +10,8 @@
 #include "interceptors/duplicatinginterceptor.h"
 #include "interceptors/namespaceunwrapper.h"
 #include "interceptors/namespacewrapper.h"
+#include "interceptors/remappingpipe.h"
+#include "interceptors/renamingpipe.h"
 #include "interceptors/validatinginterceptor.h"
 #include "modbus/modbusmaster.h"
 #include "radapterlogging.h"
@@ -134,6 +136,12 @@ void Launcher::initConfig()
     }
     for (auto [name, config]: d->config.interceptors->namespaces->wrappers) {
         addInterceptor(name, new NamespaceWrapper(config));
+    }
+    for (auto [name, config]: d->config.interceptors->remapping) {
+        addInterceptor(name, new RemappingPipe(config));
+    }
+    for (auto [name, config]: d->config.interceptors->renaming) {
+        addInterceptor(name, new RenamingPipe(config));
     }
     if (d->config.api->enabled) {
         addWorker(new ApiServer(d->config.api, newThread(), this));

@@ -10,6 +10,7 @@ class IExecutor;
 namespace Private {
 void registerImpl(IFactory *factory, const QStringList &names);
 IExecutor *fetchImpl(const QString &name);
+IExecutor *fetchImpl(const QString &name, const QVariantList &args);
 template <typename...Args>
 using DecTuple = std::tuple<std::decay_t<Args>...>;
 template<int index, typename...Args>
