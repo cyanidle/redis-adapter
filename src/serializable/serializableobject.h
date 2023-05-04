@@ -10,6 +10,8 @@ struct RADAPTER_API Object {
 public:
     FieldConcept *field(const QString &fieldName);
     const FieldConcept *field(const QString &fieldName) const;
+    FieldConcept *field(const IsFieldCheck &field);
+    const FieldConcept *field(const IsFieldCheck &field) const;
     const QList<QString> &fields() const;
     QString findNameOf(const IsFieldCheck &rawField) const;
     virtual bool update(const QVariantMap &source);
@@ -28,6 +30,7 @@ protected:
 private:
     virtual const QMap<QString, FieldConcept*> &_priv_allFields() const = 0;
     virtual const QList<QString> &_priv_allFieldsNamesCached() const = 0;
+    mutable QMap<IsFieldCheck*, FieldConcept*> m_cache;
 };
 
 template<class T>

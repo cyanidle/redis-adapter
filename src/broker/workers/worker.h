@@ -4,11 +4,11 @@
 #include "private/global.h"
 #include "private/workerdebug.h"
 #include "private/workermsg.h"
-
 class QThread;
 template<class T>
 class QSet;
 class JsonDict;
+namespace Serializable {struct IsFieldCheck;}
 namespace Settings {struct Worker;}
 namespace State{struct Json;}
 namespace Radapter {
@@ -58,6 +58,8 @@ signals:
     void send(const JsonDict &msg);
     void sendKey(const QString &key, const QVariant &value);
     void sendState(const State::Json &obj);
+    void sendStatePart(const State::Json &obj, const Serializable::IsFieldCheck &field);
+
     void connectedToConsumer(Radapter::Worker *consumer, QPrivateSignal);
     void connectedToProducer(Radapter::Worker *producer, QPrivateSignal);
 public slots:

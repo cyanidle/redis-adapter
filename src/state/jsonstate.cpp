@@ -2,7 +2,6 @@
 #include "jsondict/jsondict.h"
 #include <QStringBuilder>
 
-
 QString State::Json::logFields() const
 {
     JsonDict all;
@@ -34,16 +33,15 @@ JsonDict State::Json::send(const QString &fieldName) const
         }
         result.insert(fieldName, found->readVariant(this));
         return result;
+    } else {
+        reError() << "#### Attempt to send field with empty name!" << fieldName;
+        return {};
     }
-    for (const auto &fieldName: fields()) {
-        auto found = field(fieldName);
-        result.insert(fieldName, found->readVariant(this));
-    }
-    return result;
 }
 
 bool State::Json::updateWith(const JsonDict &data)
 {
+    emit beforeUpdateSig(data, this);
     bool status = false;
     for (const auto &name: qAsConst(fields()))
     {

@@ -2,7 +2,7 @@
 #define RADAPTER_PRIVATE_JSONSTATEQOBJECT_H
 
 #include <QObject>
-
+class JsonDict;
 namespace State {
 struct Json;
 namespace Private {
@@ -10,7 +10,8 @@ class JsonStateQObject : public QObject
 {
     Q_OBJECT
 signals:
-    void wasUpdated(const State::Json *state);
+    void beforeUpdateSig(const JsonDict &data, State::Json *state);
+    void wasUpdated(State::Json *state);
 };
 
 } // namespace Private

@@ -64,6 +64,9 @@ Worker::Worker(const Settings::Worker &settings, QThread *thread) :
     connect(this, &Worker::sendState, this, [this](const State::Json &obj){
         emit sendMsg(prepareMsg(obj.send()));
     });
+    connect(this, &Worker::sendStatePart, this, [this](const State::Json &obj, const Serializable::IsFieldCheck &field){
+        emit sendMsg(prepareMsg(obj.send(field)));
+    });
     connect(this, &Worker::sendKey, this, [this](const QString &key, const QVariant &value){
         emit sendMsg(prepareMsg(JsonDict(QVariantMap{{key, value}})));
     });

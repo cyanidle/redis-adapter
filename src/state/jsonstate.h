@@ -2,7 +2,7 @@
 #define RADAPTER_JSON_STATE_H
 #include "jsondict/jsondict.h"
 #include "serializable/serializableobject.h"
-#include "serializable/bindable.hpp"
+#include "serializable/bindable_field.hpp"
 #include "state/private/privjsonstateqobject.h"
 #include "validators/validator_fetch.h"
 #define STATE_PRIVATE_ATTR "state_private"
@@ -44,7 +44,7 @@ protected:
     }
 };
 
-struct RADAPTER_API Json : protected Serializable::Object, State::Private::JsonStateQObject {
+struct RADAPTER_API Json : public State::Private::JsonStateQObject, protected Serializable::Object {
     Q_GADGET
 public:
     using Serializable::Object::field;
@@ -54,11 +54,18 @@ public:
     QString logFields() const;
     JsonDict send() const;
     JsonDict send(const Serializable::IsFieldCheck &field) const;
-    //! \warning fields like speed__vent get treated as nested (speed:vent)
     bool updateWith(const JsonDict &data);
+    //! Will call a callback after update with
+    /// possible args (State::Json *state)
     template <typename...Args>
     void afterUpdate(Args&&...args) {
         connect(this, &Json::wasUpdated, std::forward<Args>(args)...);
+    }
+    //! Will call a callback before update with
+    /// possible args (const JsonDict &data, State::Json *state)
+    template <typename...Args>
+    void beforeUpdate(Args&&...args) {
+        connect(this, &Json::beforeUpdateSig, std::forward<Args>(args)...);
     }
 private:
     bool update(const QVariantMap &data) override;

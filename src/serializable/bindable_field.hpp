@@ -1,5 +1,5 @@
-#ifndef BINDABLE_HPP
-#define BINDABLE_HPP
+#ifndef BINDABLE_FIELD_H
+#define BINDABLE_FIELD_H
 
 #include "common_fields.hpp"
 #include <QObject>
@@ -11,6 +11,7 @@ namespace Private {
 struct BindableSignals : public QObject {
     Q_OBJECT
 signals:
+    void beforeUpdate(const QVariant &source);
     void wasUpdated();
     void updateFailed();
 };
@@ -20,15 +21,30 @@ template<typename Target>
 struct Bindable : protected Private::BindableSignals, public Target {
     FIELD_SUPER(Target)
     template <typename...Args>
-    QMetaObject::Connection onUpdate(Args&&...args) {
+    QMetaObject::Connection afterUpdate(Args&&...args) {
         return connect(this, &Private::BindableSignals::wasUpdated, std::forward<Args>(args)...);
     }
     template<typename User>
-    QMetaObject::Connection onUpdate(User *user, void(User::*cb)(valueRef)) {
+    QMetaObject::Connection afterUpdate(User *user, void(User::*cb)(valueRef)) {
         return connect(this, &Private::BindableSignals::wasUpdated, user, [&](){(user->*cb)(this->value);});
     }
-    QMetaObject::Connection onUpdate(void(*cb)(valueRef)) {
+    QMetaObject::Connection afterUpdate(void(*cb)(valueRef)) {
         return connect(this, &Private::BindableSignals::wasUpdated, [&](){cb(this->value);});
+    }
+    template <typename...Args>
+    QMetaObject::Connection beforeUpdate(Args&&...args) {
+        return connect(this, &Private::BindableSignals::beforeUpdate, std::forward<Args>(args)...);
+    }
+    template<typename User>
+    QMetaObject::Connection beforeUpdate(User *user, void(User::*cb)(valueRef, const QVariant &wanted)) {
+        return connect(this, &Private::BindableSignals::wasUpdated, user, [&](const QVariant &wanted){
+            (user->*cb)(this->value, wanted);
+        });
+    }
+    QMetaObject::Connection beforeUpdate(void(*cb)(valueRef, const QVariant &wanted)) {
+        return connect(this, &Private::BindableSignals::wasUpdated, [&](const QVariant &wanted){
+            cb(this->value, wanted);
+        });
     }
 protected:
     const QStringList &attributes() const {
@@ -48,4 +64,4 @@ protected:
 
 }
 
-#endif // BINDABLE_HPP
+#endif // BINDABLE_FIELD_H

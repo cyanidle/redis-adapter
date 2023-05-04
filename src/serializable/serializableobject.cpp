@@ -12,6 +12,16 @@ const FieldConcept *Object::field(const QString &fieldName) const
     return _priv_allFields().value(fieldName);
 }
 
+FieldConcept *Object::field(const IsFieldCheck &field)
+{
+    return _priv_allFields().value(findNameOf(field));
+}
+
+const FieldConcept *Object::field(const IsFieldCheck &field) const
+{
+    return _priv_allFields().value(findNameOf(field));
+}
+
 const QList<QString> &Object::fields() const
 {
     return _priv_allFieldsNamesCached();
