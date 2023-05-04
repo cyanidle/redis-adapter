@@ -6,8 +6,8 @@ namespace Settings {
 struct FieldRemap : Serializable {
     Q_GADGET
     IS_SETTING
-    FIELD(Required<QString>, from)
-    FIELD(Required<QString>, to)
+    FIELD(Required<QVariant>, from)
+    FIELD(Required<QVariant>, to)
 };
 
 struct RemappingPipe : Serializable {
