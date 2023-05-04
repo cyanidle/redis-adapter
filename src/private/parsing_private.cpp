@@ -1,30 +1,44 @@
 #include "parsing_private.h"
 #include <QRegularExpression>
-#define PATTERN "\\(.*\\)"
 Radapter::Private::FuncResult Radapter::Private::parseFunc(const QString &rawFunc)
 {
-    static auto splitter = QRegularExpression(PATTERN);
-    if (rawFunc.size() < 2) {
+    if (!isFunc(rawFunc)) {
         throw std::runtime_error("Attempt to parse invalid pipe function: " + rawFunc.toStdString());
     }
-    if (!rawFunc.contains(splitter)) {
-        return {rawFunc, {}};
+    auto split = rawFunc.split('(');
+    auto func = split.takeFirst();
+    auto rawData = split.join('(');
+    auto data = QStringList();
+    auto openCount = 1;
+    auto closeCount = 0;
+    QString current;
+    current.reserve(16);
+    for (auto &ch: rawData) {
+        if (ch == ' ') continue;
+        else if (ch == '(') {
+            openCount++;
+        } else if (ch == ')') {
+            closeCount++;
+            if (openCount == closeCount) {
+                data.append(current);
+                current.clear();
+            }
+        } else if(ch == ',') {
+            if (openCount - closeCount == 1) {
+                data.append(current);
+                current.clear();
+                continue;
+            }
+        }
+        current+=ch;
     }
-    auto func = rawFunc.split(splitter)[0];
-    auto data = splitter
-                    .match(rawFunc) // func(data, data)
-                    .captured().remove(0, 1).chopped(1) // data, data
-                    .split(','); // [data, data]
-    for (auto &item: data){
-        item = item.simplified();
-    };
     return {func, data};
 }
 
 bool Radapter::Private::isFunc(const QString &rawFunc)
 {
-    static auto splitter = QRegularExpression(PATTERN);
-    return splitter.match(rawFunc).hasMatch();
+    static auto tester = QRegularExpression("\\w+(?:\\(.*\\))?");
+    return tester.match(rawFunc).hasMatch();
 }
 
 QString Radapter::Private::normalizeFunc(const QString &rawFunc)

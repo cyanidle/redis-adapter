@@ -29,14 +29,16 @@ Validator::IExecutor *Validator::Private::fetchImpl(const QString &rawName)
     auto name = Radapter::Private::normalizeFunc(rawName);
     try{
         if (cache->contains(name)) {
-            return cache->value(name);
+            return cache->value(name)->newCopy();
         } else {
             auto [func, data] = Radapter::Private::parseFunc(name);
             if (!all->contains(func)) {
                 throw std::runtime_error("Validator with name: ("+name.toStdString()+") does not exist!");
             }
             auto fac = all->value(func);
-            return fac->create(convertToQList(data));
+            auto res = fac->create(convertToQList(data));
+            cache->insert(name, res);
+            return res->newCopy();
         }
     } catch (std::exception &exc) {
         throw std::runtime_error("While fetching validator: "+name.toStdString()+" --> "+exc.what());

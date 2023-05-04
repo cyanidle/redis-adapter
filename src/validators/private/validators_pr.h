@@ -51,6 +51,16 @@ struct CheckArgs {
 class IExecutor
 {
 public:
+    enum Flag {
+        None = 0,
+        IsStateful = 1 << 1
+    };
+    Q_DECLARE_FLAGS(Flags, Flag)
+    IExecutor(Flags flags = {}) : flags(flags) {}
+    constexpr bool isStateful() const {
+        return flags.testFlag(IsStateful);
+    }
+    const Flags flags;
     virtual IExecutor *newCopy() const = 0;
     virtual bool validate(QVariant &target) = 0;
     virtual ~IExecutor() = default;
@@ -95,12 +105,15 @@ class Executor : public IExecutor
 public:
     static_assert(Private::CheckArgs<Args...>::MetaDefined, "Arguments must be registered with Q_DECLARE_METATYPE()");
     IExecutor *newCopy() const override {
-        return new Executor(func, raw);
+        return new Executor(func, args);
     }
-    Executor(Function<Args...> func, const QVariantList &args) :
+    Executor(Function<Args...> func, const Private::DecTuple<Args...> &args) :
+        IExecutor(),
         func(func),
-        args(Private::unpackArgs<Args...>(args)),
-        raw(args)
+        args(args)
+    {}
+    Executor(Function<Args...> func, const QVariantList &args) :
+        Executor(func, Private::unpackArgs<Args...>(args))
     {}
     bool validate(QVariant &target) override final {
         auto proxy = [&target, this](Args...args){
@@ -111,7 +124,6 @@ public:
 private:
     Function<Args...> func;
     Private::DecTuple<Args...> args;
-    QVariantList raw;
 };
 
 template <typename State, typename...Args>
@@ -120,13 +132,16 @@ class StatefulExecutor : public IExecutor
 public:
     static_assert(Private::CheckArgs<Args...>::MetaDefined, "Arguments must be registered with Q_DECLARE_METATYPE()");
     IExecutor *newCopy() const override {
-        return new StatefulExecutor(func, raw);
+        return new StatefulExecutor(func, args);
     }
-    StatefulExecutor(StatefulFunction<State, Args...> func, const QVariantList &args) :
+    StatefulExecutor(StatefulFunction<State, Args...> func, const Private::DecTuple<Args...> &args) :
+        IExecutor(IExecutor::IsStateful),
         func(func),
-        args(Private::unpackArgs<Args...>(args)),
-        state{},
-        raw(args)
+        args(args),
+        state{}
+    {}
+    StatefulExecutor(StatefulFunction<State, Args...> func, const QVariantList &args) :
+        StatefulExecutor(func, Private::unpackArgs<Args...>(args))
     {}
     bool validate(QVariant &target) override final {
         auto proxy = [&target, this](Args...args){
@@ -138,7 +153,6 @@ private:
     StatefulFunction<State, Args...> func;
     Private::DecTuple<Args...> args;
     State state;
-    QVariantList raw;
 };
 }
 #endif
