@@ -25,7 +25,6 @@ void FileHelper::mainloop()
 {
     auto f = m_target;
     QByteArray arr;
-    quint64 currentEnd = 0;
     arr.reserve(2048);
     char buf[2048];
     QJsonParseError err;
@@ -39,6 +38,7 @@ void FileHelper::mainloop()
             return;
         }
         arr.append(buf, count);
+        quint64 currentEnd = 0;
         auto openCount = 0;
         auto closeCount = 0;
         auto startPos = 0;
@@ -64,7 +64,6 @@ void FileHelper::mainloop()
             }
         }
         arr = arr.mid(currentEnd + 1);
-        currentEnd = 0;
     }
 }
 
