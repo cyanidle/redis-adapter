@@ -8,8 +8,15 @@ namespace Radapter {
 class PythonModuleWorker : public Radapter::Worker
 {
     Q_OBJECT
+    struct Private;
 public:
     PythonModuleWorker(const Settings::PythonModuleWorker &settings, QThread *thread);
+    void onRun() override;
+public slots:
+    void onMsg(const Radapter::WorkerMsg &msg) override;
+private:
+
+    Private *d;
 };
 
 } // namespace Radapter

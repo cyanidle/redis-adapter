@@ -2,6 +2,7 @@
 #include <QCommandLineParser>
 #include "broker/broker.h"
 #include "broker/workers/processworker.h"
+#include "broker/workers/pythonmoduleworker.h"
 #include "broker/workers/repeaterworker.h"
 #include "consumers/rediscacheconsumer.h"
 #include "consumers/rediskeyeventsconsumer.h"
@@ -30,6 +31,7 @@
 #include "filters/producerfilter.h"
 #include "radapterconfig.h"
 #include "websocket/websocketclient.h"
+#include <QStringBuilder>
 #include "websocket/websocketserver.h"
 #ifdef Q_OS_UNIX
 #include "utils/resourcemonitor.h"
@@ -129,6 +131,10 @@ void Launcher::initConfig()
     for (const auto& config: d->config.processes) {
         addWorker(new ProcessWorker(config, newThread()));
     }
+    for (auto config: d->config.python) {
+        config.module_path = d->argsParser.value("modules-path")%'/'%config.module_path.value;
+        addWorker(new PythonModuleWorker(config, newThread()));
+    }
     for (auto [name, config]: d->config.interceptors->duplicating) {
         addInterceptor(name, new DuplicatingInterceptor(config));
     }
@@ -167,6 +173,8 @@ void Launcher::parseCommandlineArgs()
                     "Config will be read from <.parser_format> files (available: yaml) (default: yaml).", "parser", "yaml"},
                   {{"f", "file"},
                     "File to read settings from (default: <directory>/config.<parser-extension>).", "file", "config"},
+                  {QString{"modules-path"},
+                   "File to read python modules from.", "modules-path", "modules"},
                   {{"c", "config"},
                     "Add/Override config value (use ':' for nesting, '=' for assignment). Example: api:enabled=false", "config", ""},
                   //{{QString("plugins-dir")},

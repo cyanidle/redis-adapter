@@ -13,7 +13,9 @@ GIT_COMMIT
 !**/*.md
 !**/*.yaml
 !**/*.pro
+!**/*.qrc
 !**/*.template
 !.dockerignore
 !Dockerfile
 !README
+!radapter.qrc

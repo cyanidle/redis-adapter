@@ -262,7 +262,7 @@ class Worker(ABC):
             super().__init__(logger, extra)
             self.worker = worker
         def process(self, msg, kwargs):
-            return (f"[{self.worker.__class__.__name__}: {self.worker.name}]: {msg}", kwargs) if self.worker.name else (msg, kwargs)
+            return (f"[{self.worker.__class__.__name__}]: {msg}", kwargs) if self.worker.name else (msg, kwargs)
 
 JsonKey = Union[Sequence[str], str]
 JsonItem = Union[str, None, int, float, list, dict, Any]
@@ -721,7 +721,7 @@ def _boot_init_logging():
     log = logging.getLogger()
     log.handlers.clear()
     stderr = logging.StreamHandler()
-    format_str = '%(levelname)-7s %(lineno)-5s %(message)s'
+    format_str = '%(levelname)-5s %(filename)-5s %(lineno)-4s%(message)s'
     stderr.setFormatter(logging.Formatter(format_str))
     log.addHandler(stderr)
     log.setLevel(logging.DEBUG)
@@ -747,9 +747,11 @@ async def _boot_stream_writing(worker: Worker):
         r: asyncio.StreamReader = streams[0]
         w: asyncio.StreamWriter = streams[1]
         async def wr(msg: JsonDict):
+            logging.getLogger().info("Flushing")
             w.write(msg.as_bytes())
             w.write(b"\r\n")
             await w.drain()
+            logging.getLogger().info("Flushiied")
         worker.msgs.receive_with(wr)
         buf = str()
         while True:
@@ -778,6 +780,7 @@ async def _boot_stream_writing(worker: Worker):
 
 def _boot_exec(params: BootParams):
     import importlib.util
+    sys.modules["bootstrap"] = sys.modules["__main__"]
     spec = importlib.util.spec_from_file_location(params.worker_name, params.file)
     module = importlib.util.module_from_spec(spec)  #type: ignore
     sys.modules[params.worker_name] = module
@@ -788,16 +791,17 @@ def _boot_exec(params: BootParams):
     if hasattr(module, "main"):
         assert callable(module.main)
         main_params_count = len(inspect.signature(module.main).parameters)
-        assert main_params_count == 1
         if inspect.iscoroutinefunction(module.main):
             async def _wrap():
                 try:
-                    await module.main(params)
+                    if main_params_count >= 1: await module.main(params)
+                    else: module.main()
                 except Exception as e:
                     raise _BootException(e)
             params.ioloop.create_task(_wrap())
         else:
-            module.main(params)
+            if main_params_count >= 1: module.main(params)
+            else: module.main()
     if hasattr(module, "worker"):
         worker: 'Worker' = module.worker(params)
         assert inspect.iscoroutinefunction(worker.on_msg)
@@ -846,7 +850,7 @@ def _boot_main():
     args = parser.parse_args()
     params = BootParams(
         args.file,
-        json.loads(args.settings) if hasattr(args, "settings") else {},
+        json.loads(args.settings) if args.settings else {},
         args.name,
         asyncio.get_event_loop()
     )

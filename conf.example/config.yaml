@@ -1,15 +1,7 @@
-pipelines:
-  - meteo.data > *meteo.divide > *meteo.round_wind_direction > *meteo.duplicate > *meteo.format > meteo.redis.cache.writer
-  - meteo.modbus > meteo.data
-  #- test.data > meteo.data
+python: 
+  - worker:
+      name: test
+      print_msgs: true
+    module_path: test.py
 
-#mocks:
-# - name: test.data
-#   json_file_path: /home/alexej/repos/redis-adapter/mocks/data.json
 
-repeaters:
-  - name: meteo.data
-  
-redis: !include redis.yaml
-interceptors: !include interceptors.yaml
-modbus: !include modbus.yaml

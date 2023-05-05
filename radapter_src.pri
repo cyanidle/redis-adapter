@@ -28,4 +28,4 @@ include($$PWD/headers.pri)
 include($$PWD/src/lib/lib.pri)
 
 RESOURCES += \
-    $$PWD/redis-adapter.qrc
+    $$PWD/radapter.qrc

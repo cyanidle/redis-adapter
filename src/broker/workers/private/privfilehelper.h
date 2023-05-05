@@ -4,24 +4,24 @@
 #include <QObject>
 #include "jsondict/jsondict.h"
 
-class QIODevice;
 namespace Radapter {
 namespace Private {
 
 class FileHelper : public QObject
 {
     Q_OBJECT
+    struct Private;
 public:
     explicit FileHelper(QIODevice *target, QObject *parent);
     void start();
+    ~FileHelper();
 signals:
     void jsonRead(const JsonDict &json);
     void error(const QString &reason);
 private:
     void mainloop();
 
-    QIODevice *m_target;
-    QThread *m_thread;
+    Private *d;
 };
 
 } // namespace Private

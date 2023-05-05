@@ -52,6 +52,8 @@ public:
     void addProducer(Radapter::Worker* producer, const QList<Radapter::Interceptor*> &interceptors = {});
     Role getRole() const;
     QString printSelf() const;
+    void prepareForNested();
+    void nestedRun();
     virtual ~Worker();
 signals:
     void sendMsg(const Radapter::WorkerMsg &msg);

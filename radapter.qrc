@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/py">
+        <file alias="bootstrap">py_bootstrap/bootstrap.py</file>
+    </qresource>
+</RCC>

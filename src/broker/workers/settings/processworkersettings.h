@@ -13,6 +13,8 @@ struct ProcessWorker : Serializable {
     COMMENT(extra_paths, "Additional directories to seek for executable")
     FIELD(OptionalSequence<QString>, arguments)
     COMMENT(arguments, "Arguments in format of [-v, --verbose, positional_arg, -f, file, etc...]")
+    FIELD(HasDefault<bool>, read, true)
+    FIELD(HasDefault<bool>, write, true)
 };
 }
 #endif // PROCESSWORKERSETTINGS_H

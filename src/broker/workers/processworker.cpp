@@ -22,6 +22,9 @@ ProcessWorker::ProcessWorker(const Settings::ProcessWorker &settings, QThread *t
     }
     addPaths(d->proc);
     connect(d->proc, &QProcess::stateChanged, this, [this](QProcess::ProcessState st){
+        if (st == QProcess::ProcessState::Running) {
+            emit processStarted();
+        }
         workerInfo(this) << "new process state:" << st;
     });
     d->proc->setReadChannel(QProcess::StandardOutput);
@@ -37,11 +40,17 @@ ProcessWorker::ProcessWorker(const Settings::ProcessWorker &settings, QThread *t
             workerError(this) << "Process finished abnormally! Code:" << code << "Stderr:" << d->proc->readAllStandardError();
         }
     });
+    connect(d->proc, &QProcess::readyReadStandardError, this, &ProcessWorker::onStderrReady);
 }
 
 ProcessWorker::~ProcessWorker()
 {
     delete d;
+}
+
+QProcess *ProcessWorker::underlying()
+{
+    return d->proc;
 }
 
 bool ProcessWorker::exists(QString proc)
@@ -73,6 +82,7 @@ bool ProcessWorker::exists(QString proc)
 void ProcessWorker::onRun()
 {
     d->proc->start(d->settings.process, d->settings.arguments);
+    d->outHelp->start();
 }
 
 void ProcessWorker::onMsg(const WorkerMsg &msg)
@@ -82,7 +92,7 @@ void ProcessWorker::onMsg(const WorkerMsg &msg)
 
 void ProcessWorker::addPaths(QProcess *proc)
 {
-    auto was = proc->processEnvironment();
+    auto was = QProcessEnvironment::systemEnvironment();
     auto wasPath = was.value("PATH");
     QString toPrepend;
 #ifdef Q_OS_UNIX
@@ -94,4 +104,26 @@ void ProcessWorker::addPaths(QProcess *proc)
 #endif
     was.insert("PATH", toPrepend + wasPath);
     proc->setProcessEnvironment(was);
+}
+
+void ProcessWorker::onStderrReady()
+{
+    auto data = d->proc->readAllStandardError();
+    data.resize(data.length() - 1);
+    workerInfo(this) << data;
+}
+
+void ProcessWorker::onProcStarted()
+{
+    QIODevice::OpenMode mode;
+    if (d->settings.read) {
+        mode |= QIODevice::ReadOnly;
+    }
+    if (d->settings.write) {
+        mode |= QIODevice::WriteOnly;
+    }
+    if (!d->proc->open(mode)) {
+        workerError(this) << "Could not open process pipes! Open Mode:" << mode;
+    }
+    d->outHelp->start();
 }

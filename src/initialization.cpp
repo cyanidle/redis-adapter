@@ -3,9 +3,11 @@
 #include "broker/interceptor/interceptor.h"
 #include "broker/workers/fileworker.h"
 #include "broker/workers/mockworker.h"
+#include "broker/workers/pythonmoduleworker.h"
 #include "broker/workers/repeaterworker.h"
 #include "broker/workers/settings/fileworkersettings.h"
 #include "broker/workers/settings/mockworkersettings.h"
+#include "broker/workers/settings/pythonmoduleworkersettings.h"
 #include "broker/workers/settings/repeatersettings.h"
 #include "broker/workers/worker.h"
 #include "interceptors/metainfopipe.h"
@@ -27,6 +29,7 @@
 #include "raw_sockets/udpproducer.h"
 #include "validators/validator_fetch.h"
 #include "templates/algorithms.hpp"
+#include <QCommandLineParser>
 #include "private/pipeoperation.h"
 #include "private/parsing_private.h"
 
@@ -131,6 +134,22 @@ void tryCreateWorker(const QString &name, QObject *parent)
         config.worker->name = name;
         config.filepath = tryExtract<QString>(name, data, 0, "filepath");
         broker->registerWorker(new FileWorker(config, new QThread(parent)));
+    } else if (func == "py") {
+        auto launcher = qobject_cast<Launcher*>(parent);
+        if (!launcher) {
+            throw std::runtime_error("Cannot create .py workers without launcher as parent!");
+        }
+        auto config = Settings::PythonModuleWorker();
+        config.worker->name = name;
+        auto prefix = launcher->commandLineParser().value("modules-path");
+        config.module_path = prefix%'/'%tryExtract<QString>(name, data, 0, "filepath")%".py";
+        auto settingsPath = tryExtract<QString>(name, data, 1, "settings_path");
+        auto raw = launcher->reader()->get(settingsPath);
+        if (!raw.canConvert<QVariantMap>()) {
+            throw std::runtime_error("Could not fetch config with key: "+settingsPath.toStdString()+" for worker: "+name.toStdString());
+        }
+        config.module_settings = raw.toMap();
+        broker->registerWorker(new PythonModuleWorker(config, new QThread(parent)));
     } else if (func == "udp.in") {
         auto config = Udp::ConsumerSettings();
         config.worker->name = name;

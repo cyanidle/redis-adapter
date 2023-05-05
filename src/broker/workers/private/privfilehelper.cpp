@@ -3,67 +3,45 @@
 #include <QJsonDocument>
 #include <QThread>
 #include <QFile>
+#include <QStringBuilder>
 
 namespace Radapter {
 namespace Private {
+struct FileHelper::Private {
+    QIODevice *target;
+    QByteArray arr;
+    QJsonParseError err;
+};
 
 FileHelper::FileHelper(QIODevice *target, QObject *parent) :
-    QObject{},
-    m_target(target),
-    m_thread(new QThread(parent))
+    QObject{parent},
+    d(new Private{})
 {
-    connect(m_thread, &QThread::started, this, &FileHelper::mainloop);
-    connect(m_thread, &QThread::finished, this, &QObject::deleteLater);
-    moveToThread(m_thread);
+    d->arr.reserve(2048);
+    d->target = target;
 }
 
 void FileHelper::start()
 {
-    m_thread->start();
+    connect(d->target, &QIODevice::readyRead, this, &FileHelper::mainloop);
+    mainloop();
 }
+
+FileHelper::~FileHelper()
+{
+    delete d;
+}
+
 void FileHelper::mainloop()
 {
-    auto f = m_target;
-    QByteArray arr;
-    arr.reserve(2048);
-    char buf[2048];
-    QJsonParseError err;
-    while ( true )
-    {
-        f->waitForReadyRead(1000);
-        auto count = f->read(buf, sizeof(buf));
-        if (!count) continue;
-        if (count == -1) {
-            emit error("File permissions/File size/Unknown");
-            return;
+    while (d->target->bytesAvailable()) {
+        d->arr = d->target->readLine();
+        auto json = JsonDict::fromBytes(d->arr, &d->err);
+        if (d->err.error != QJsonParseError::NoError) {
+            emit error("Json Parsing. Details: "%d->err.errorString()%". Full: "%d->arr);
+        } else {
+            emit jsonRead(json);
         }
-        arr.append(buf, count);
-        quint64 currentEnd = 0;
-        auto openCount = 0;
-        auto closeCount = 0;
-        auto startPos = 0;
-        for (int i = 0; i < arr.size(); ++i) {
-            auto &byte = arr[i];
-            if (byte == '{') {
-                if (!openCount) {
-                    startPos = i;
-                }
-                openCount++;
-            }
-            if (byte == '}') closeCount++;
-            if (openCount && openCount == closeCount) {
-                openCount = closeCount = 0;
-                auto currentObj = arr.mid(startPos, i - startPos + 1);
-                auto json = JsonDict::fromBytes(currentObj, &err);
-                if (err.error != QJsonParseError::NoError) {
-                    emit error("Json Parsing. Details: " + err.errorString());
-                } else {
-                    emit jsonRead(json);
-                }
-                currentEnd = i;
-            }
-        }
-        arr = arr.mid(currentEnd + 1);
     }
 }
 

@@ -85,8 +85,6 @@ void FileWorker::appendToFile(const JsonDict &info)
         return;
     }
     QTextStream out(d->file);
-    bool prependComma = d->file->size() != 2;
-    if (prependComma) out << ',' << '\n';
     out << info.toBytes(d->settings.format);
 }
 

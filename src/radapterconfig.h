@@ -5,6 +5,7 @@
 #include "broker/brokersettings.h"
 #include "broker/workers/settings/mockworkersettings.h"
 #include "broker/workers/settings/processworkersettings.h"
+#include "broker/workers/settings/pythonmoduleworkersettings.h"
 #include "broker/workers/settings/repeatersettings.h"
 #include "filters/producerfiltersettings.hpp"
 #include "httpserver/radapterapisettings.h"
@@ -118,6 +119,7 @@ struct AppConfig : public Serializable {
     FIELD(OptionalSequence<FileWorker>, files)
     FIELD(OptionalSequence<MockWorker>, mocks)
     FIELD(OptionalSequence<ProcessWorker>, processes)
+    FIELD(OptionalSequence<PythonModuleWorker>, python)
     FIELD(Optional<Redis>, redis)
     FIELD(Optional<Modbus>, modbus)
     FIELD(Optional<Sockets>, sockets)

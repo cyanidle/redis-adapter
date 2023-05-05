@@ -70,9 +70,9 @@ Worker::Worker(const Settings::Worker &settings, QThread *thread) :
     connect(this, &Worker::sendKey, this, [this](const QString &key, const QVariant &value){
         emit sendMsg(prepareMsg(JsonDict(QVariantMap{{key, value}})));
     });
-    connect(thread, &QThread::started, this, &Worker::onRun);
     connect(thread, &QThread::destroyed, this, &Worker::deleteLater);
     connect(thread, &QThread::finished, thread, &QThread::deleteLater);
+    connect(thread, &QThread::started, this, &Worker::onRun);
 }
 
 bool Worker::isPrintMsgsEnabled() const
@@ -103,6 +103,21 @@ bool Worker::is(const QMetaObject *mobj) const
 QString Worker::printSelf() const
 {
     return QStringLiteral("%2 (%1)").arg(metaObject()->className(), workerName());
+}
+
+void Worker::prepareForNested()
+{
+    disconnect(workerThread(), &QThread::started, this, &Worker::onRun);
+    moveToThread(workerThread());
+}
+
+void Worker::nestedRun()
+{
+    QMutexLocker locker(&(*staticMutex));
+    if (d->wasRun) throw std::runtime_error("WorkerBase::onRun() called multiple times for: " + printSelf().toStdString());
+    workerThread()->start();
+    onRun();
+    d->wasRun = true;
 }
 
 Worker::~Worker()
