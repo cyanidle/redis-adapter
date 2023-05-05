@@ -7,12 +7,13 @@
 namespace Radapter {
 namespace Private {
 
-FileHelper::FileHelper(QFile *target, QObject *parent) :
+FileHelper::FileHelper(QIODevice *target, QObject *parent) :
     QObject{},
     m_target(target),
     m_thread(new QThread(parent))
 {
     connect(m_thread, &QThread::started, this, &FileHelper::mainloop);
+    connect(m_thread, &QThread::finished, this, &QObject::deleteLater);
     moveToThread(m_thread);
 }
 

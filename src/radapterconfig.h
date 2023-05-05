@@ -4,6 +4,7 @@
 #include "broker/workers/settings/fileworkersettings.h"
 #include "broker/brokersettings.h"
 #include "broker/workers/settings/mockworkersettings.h"
+#include "broker/workers/settings/processworkersettings.h"
 #include "broker/workers/settings/repeatersettings.h"
 #include "filters/producerfiltersettings.hpp"
 #include "httpserver/radapterapisettings.h"
@@ -116,6 +117,7 @@ struct AppConfig : public Serializable {
     FIELD(Optional<LocalizationInfo>, localization)
     FIELD(OptionalSequence<FileWorker>, files)
     FIELD(OptionalSequence<MockWorker>, mocks)
+    FIELD(OptionalSequence<ProcessWorker>, processes)
     FIELD(Optional<Redis>, redis)
     FIELD(Optional<Modbus>, modbus)
     FIELD(Optional<Sockets>, sockets)

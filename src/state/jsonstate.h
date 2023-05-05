@@ -76,7 +76,7 @@ private:
 };
 } // namespace State
 #define IS_STATE \
-    IS_SERIALIZABLE_BASE
+    _BASE_IS_SERIALIZABLE
 template <typename T> using Plain = ::Serializable::Plain<T>; \
 template <typename T> using Sequence = ::Serializable::Sequence<T>; \
 template <typename T> using Mapping = ::Serializable::Mapping<T>; \

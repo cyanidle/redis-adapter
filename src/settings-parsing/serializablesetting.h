@@ -102,6 +102,6 @@ private:
     FieldExample getExampleNested(const ::Serializable::FieldConcept *field) const;
 };
 #define IS_SETTING \
-    IS_SERIALIZABLE_BASE
+    _BASE_IS_SERIALIZABLE
 } // namespace Settings
 #endif // SETTINGS_SERIALIZABLESETTINGS_H

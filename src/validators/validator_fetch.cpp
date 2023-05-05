@@ -36,7 +36,7 @@ Validator::Fetched::Fetched(const QString &name, const QVariantList &args) :
 }
 
 Validator::Fetched::Fetched(const Fetched &other) :
-    m_executor(other.m_executor->newCopy()),
+    m_executor(other.m_executor ? other.m_executor->newCopy() : nullptr),
     m_name(other.m_name)
 {
 
@@ -45,7 +45,7 @@ Validator::Fetched::Fetched(const Fetched &other) :
 Validator::Fetched &Validator::Fetched::operator=(const Fetched &other)
 {
     if (this == &other) return *this;
-    m_executor.reset(other.m_executor->newCopy());
+    m_executor.reset(other.m_executor ? other.m_executor->newCopy() : nullptr);
     m_name = other.m_name;
     return *this;
 }

@@ -19,7 +19,6 @@ struct Radapter::FileWorker::Private
 {
     QFile *file;
     Settings::FileWorker settings;
-    quint32 writeCount;
     bool writeEnabled;
     bool readEnabled;
     ::Radapter::Private::FileHelper *helper;
@@ -32,7 +31,6 @@ FileWorker::FileWorker(const Settings::FileWorker &settings, QThread *thread) :
         /*.settings*/ settings,
         /*.writeCount*/ 0,
         /*.writeEnabled*/ false,
-        /*.readEnabled*/ false,
         /*.helper*/ nullptr
     })
 {
@@ -90,10 +88,6 @@ void FileWorker::appendToFile(const JsonDict &info)
     bool prependComma = d->file->size() != 2;
     if (prependComma) out << ',' << '\n';
     out << info.toBytes(d->settings.format);
-    if (d->settings.reopen_each && ++d->writeCount > d->settings.reopen_each) {
-        d->writeCount = 0;
-        d->file->close();
-    }
 }
 
 bool FileWorker::checkOpened()

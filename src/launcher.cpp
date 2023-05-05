@@ -1,6 +1,7 @@
 #include <QLibrary>
 #include <QCommandLineParser>
 #include "broker/broker.h"
+#include "broker/workers/processworker.h"
 #include "broker/workers/repeaterworker.h"
 #include "consumers/rediscacheconsumer.h"
 #include "consumers/rediskeyeventsconsumer.h"
@@ -124,6 +125,9 @@ void Launcher::initConfig()
     }
     for (const auto& config: d->config.repeaters) {
         addWorker(new Repeater(config, newThread()));
+    }
+    for (const auto& config: d->config.processes) {
+        addWorker(new ProcessWorker(config, newThread()));
     }
     for (auto [name, config]: d->config.interceptors->duplicating) {
         addInterceptor(name, new DuplicatingInterceptor(config));

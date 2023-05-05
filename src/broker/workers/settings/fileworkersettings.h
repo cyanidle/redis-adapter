@@ -16,7 +16,6 @@ struct RADAPTER_API FileWorker : public Serializable
     FIELD(Required<Worker>, worker)
     FIELD(Settings::Required<QString>, filepath)
     FIELD(VALIDATED(HasDefault<QJsonDocument::JsonFormat>, ChooseJsonFormat), format, QJsonDocument::Indented)
-    FIELD(HasDefault<quint32>, reopen_each, 0)
 
 };
 

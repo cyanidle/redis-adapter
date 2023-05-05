@@ -4,7 +4,7 @@
 #include <QObject>
 #include "jsondict/jsondict.h"
 
-struct QFile;
+class QIODevice;
 namespace Radapter {
 namespace Private {
 
@@ -12,7 +12,7 @@ class FileHelper : public QObject
 {
     Q_OBJECT
 public:
-    explicit FileHelper(QFile *target, QObject *parent);
+    explicit FileHelper(QIODevice *target, QObject *parent);
     void start();
 signals:
     void jsonRead(const JsonDict &json);
@@ -20,7 +20,7 @@ signals:
 private:
     void mainloop();
 
-    QFile *m_target;
+    QIODevice *m_target;
     QThread *m_thread;
 };
 

@@ -66,7 +66,7 @@ static_assert(is_wrapped, "Dont use raw types in FIELD() macro"); \
     Q_PROPERTY(QVariant __field__ ##name READ _priv_getFinalPtr_##name) \
     public:
 
-#define IS_SERIALIZABLE_BASE \
+#define _BASE_IS_SERIALIZABLE \
     private: \
     static void _has_Is_Serializable () noexcept {}; \
     virtual const QList<QString> &_priv_allFieldsNamesCached() const override { \
@@ -84,6 +84,6 @@ static_assert(is_wrapped, "Dont use raw types in FIELD() macro"); \
     };
 
 #define IS_SERIALIZABLE \
-    IS_SERIALIZABLE_BASE
+    _BASE_IS_SERIALIZABLE
 
 #endif // SERIALIZER_H
