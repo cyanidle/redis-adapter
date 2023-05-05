@@ -729,7 +729,7 @@ _boot_init_logging()
 class _BootException(Exception):
     pass
 
-async def _boot_stream_writing(worker: Worker):
+async def _connect_to_worker(worker: Worker):
     try:
         streams = await get_standard_streams()
     except Exception as e:
@@ -747,35 +747,26 @@ async def _boot_stream_writing(worker: Worker):
         r: asyncio.StreamReader = streams[0]
         w: asyncio.StreamWriter = streams[1]
         async def wr(msg: JsonDict):
-            logging.getLogger().info("Flushing")
             w.write(msg.as_bytes())
             w.write(b"\r\n")
             await w.drain()
-            logging.getLogger().info("Flushiied")
         worker.msgs.receive_with(wr)
-        buf = str()
+        sleep = 1
+        max_sleep = 5
         while True:
-            buf += (await r.read(100)).decode("utf-8").replace("'", '"')
-            current_end = 0
-            open_count = 0
-            close_count = 0
-            start_pos = 0
-            for i, ch in enumerate(buf):
-                if ch == '{':
-                    if not open_count: start_pos = i
-                    open_count+=1
-                elif ch == '}':
-                    close_count+=1
-                if open_count and open_count == close_count:
-                    current_obj = buf[start_pos:i - start_pos + 1]
-                    try:
-                        attempt = JsonDict(json.loads(current_obj))
-                        queue.put_nowait(attempt)
-                    except Exception as e:
-                        worker.log.error(f"Error parsing Json: {e.__class__.__name__}:{e}")
-                    current_end = i
-            buf = buf[current_end + 1:]
+            if r.at_eof(): 
+                logging.getLogger().error(f"Stdin EOF!")
+                await asyncio.sleep(sleep)
+                if sleep < max_sleep: sleep += 1
+                continue
+            buf = await r.readline()
+            try:
+                attempt = JsonDict(json.loads(buf.decode("utf-8")))
+                queue.put_nowait(attempt)
+            except Exception as e:
+                worker.log.error(f"Error parsing Json: {e.__class__.__name__}:{e}")
     asyncio.get_running_loop().create_task(_flusher())
+    worker.run()
     await _impl()
 
 def _boot_exec(params: BootParams):
@@ -805,8 +796,7 @@ def _boot_exec(params: BootParams):
     if hasattr(module, "worker"):
         worker: 'Worker' = module.worker(params)
         assert inspect.iscoroutinefunction(worker.on_msg)
-        params.ioloop.create_task(_boot_stream_writing(worker))
-        worker.run()
+        params.ioloop.create_task(_connect_to_worker(worker))
     else:
         raise RuntimeWarning("Could not find 'worker = MyWorkerClass'")
     

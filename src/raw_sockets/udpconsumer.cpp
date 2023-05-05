@@ -26,6 +26,7 @@ void Consumer::readReady()
         workerDebug(this) << "Receiving from: Host:" << info.senderAddress() << "Port:" << info.senderPort();
         QJsonParseError err;
         auto asJson = JsonDict::fromBytes(info.data(), &err);
+        asJson.nest();
         if (err.error != QJsonParseError::NoError) {
             workerError(this) << "Json Parse error!";
             return;

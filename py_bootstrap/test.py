@@ -12,14 +12,10 @@ class TestWorker(Worker):
     def on_run(self) -> None:
         self.create_task(self.spin)
     async def spin(self):
-        self.log.info("OK")
-        self.log.info("OK")
         while True:
-            self.log.info("emit")
-            await self.msgs.emit(JsonDict({"a": 1}))
-            self.log.info("done")
+            #await self.msgs.emit(JsonDict({"a": 1}))
             await sleep(1)
-            self.log.info("OK")
+            #self.log.info("OK")
             await sleep(1)
 
 worker = TestWorker

@@ -88,6 +88,7 @@ void ProcessWorker::onRun()
 void ProcessWorker::onMsg(const WorkerMsg &msg)
 {
     d->proc->write(msg.json().toBytes());
+    d->proc->write("\r\n");
 }
 
 void ProcessWorker::addPaths(QProcess *proc)

@@ -1,7 +1,9 @@
+pipelines:
+  - udp.in(3333) > test
+
 python: 
   - worker:
       name: test
-      print_msgs: true
     module_path: test.py
 
 
