@@ -20,7 +20,7 @@ PythonModuleWorker::PythonModuleWorker(const Settings::PythonModuleWorker &setti
 {
     d->bootstrap = new QFile(":/py/bootstrap", this);
     if (!d->bootstrap->open(QIODevice::ReadOnly)) {
-        throw std::runtime_error("Could not load bootstrap! Do not forget to Q_INIT_RESOURCE(radapter) in main if linking!");
+        throw std::runtime_error("Could not load python bootstrap!");
     }
     Settings::ProcessWorker config;
     config.worker = settings.worker;
@@ -32,6 +32,12 @@ PythonModuleWorker::PythonModuleWorker(const Settings::PythonModuleWorker &setti
                             "--settings", JsonDict(d->settings.module_settings.value).toBytes(),
                             "--name", d->settings.worker->name,
                             "--file", d->settings.module_path};
+    if (d->settings.debug_port.isValid()) {
+        config.arguments->append({"--debug_port", QString::number(d->settings.debug_port)});
+    }
+    if (d->settings.wait_for_debug) {
+        config.arguments->append("--wait_for_debug_client");
+    }
     d->proc = new ProcessWorker(config, thread);
     connect(d->proc, &ProcessWorker::sendMsg, this, &PythonModuleWorker::sendMsg);
     d->proc->prepareForNested();

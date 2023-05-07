@@ -1,9 +1,10 @@
 pipelines:
-  - udp.in(3333) > test
+  - udp.in(3333) > fountain
 
 python: 
   - worker:
-      name: test
-    module_path: test.py
-
+      name: fountain
+    module_path: fountain.py
+    module_settings: 
+      name: asd
 

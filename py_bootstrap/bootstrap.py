@@ -17,15 +17,22 @@ import os
 import traceback
 from aioconsole import get_standard_streams
 from types import CodeType
-from typing import TYPE_CHECKING, AbstractSet, Any, Awaitable, Callable, Deque, Dict, Generic, Iterator, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
-from typing_extensions import ParamSpec
+from typing import (TYPE_CHECKING, AbstractSet, Any, 
+                    Awaitable, Callable, ClassVar, Deque,
+                      Dict, Generic, Iterator,
+                        List, Mapping, MutableMapping,
+                          Optional, Sequence, Tuple,
+                            Type, TypeVar, Union, cast, get_origin, overload)
+from typing_extensions import ParamSpec, TypeVarTuple, dataclass_transform, Self
+import debugpy
 
-from pydantic import BaseModel, Extra, Field, validate_model
+from pydantic import BaseModel, Extra, Field, validate_model, validator
+import pydantic
 from pydantic.fields import Undefined
 assert sys.version_info.major >= 3
 assert sys.version_info.minor >= 9
 
-__all__=("BootParams", "Signal", "JsonDict", "Timer", "Worker", "JsonState", "merge_flat_dicts", "routes", "BindField")
+__all__=("BootParams", "Signal", "JsonDict", "Timer", "Worker", "JsonState", "merge_flat_dicts", "execute_universal", "execute_universal_or_argless")
 _T = TypeVar("_T")
 
 @dataclass
@@ -61,23 +68,23 @@ async def execute_universal_or_argless(func: UniversalOrArgless, *args, **kwargs
     else:
         await execute_universal(func, *args, **kwargs) # type: ignore
 
-class _boot_CbTypes(IntEnum):
+class _CbTypes(IntEnum):
     CORO = auto()
     CORO_FUNC = auto()
     PLAIN = auto()
 
-class _boot_SignalMeta(Generic[_T]):
+class _SignalMeta(Generic[_T]):
     __slots__ = ("_cb", "_argless", "_type")
     def __init__(self, cb: UniversalOrArgless[_T]) -> None:
         self._cb = cb
         if inspect.iscoroutine(cb):
-            self._type = _boot_CbTypes.CORO
+            self._type = _CbTypes.CORO
             self._argless = True
             return
         if inspect.iscoroutinefunction(cb):
-            self._type = _boot_CbTypes.CORO_FUNC
+            self._type = _CbTypes.CORO_FUNC
         elif callable(cb):
-            self._type = _boot_CbTypes.PLAIN
+            self._type = _CbTypes.PLAIN
         else:
             raise TypeError(f"Invalid type is passed as callback to Signal!")
         sign = inspect.signature(cb)
@@ -85,11 +92,11 @@ class _boot_SignalMeta(Generic[_T]):
     async def invoke(self, *args):
         if self._argless:
             args = tuple()
-        if self._type == _boot_CbTypes.CORO:
+        if self._type == _CbTypes.CORO:
             if args:
                 raise RuntimeError(f"Signal emit on coroutine: {self._cb} with args (Was already wrapped)")
             await self._cb # type: ignore
-        elif self._type == _boot_CbTypes.CORO_FUNC:
+        elif self._type == _CbTypes.CORO_FUNC:
             await self._cb(*args) # type: ignore
         else:
             self._cb(*args) # type: ignore
@@ -97,21 +104,21 @@ class _boot_SignalMeta(Generic[_T]):
 class Signal(Generic[_T]):
     __slots__ = ("__targets", )
     def __init__(self) -> None:
-        self.__targets: Dict[UniversalOrArgless[_T], _boot_SignalMeta[_T]] = {}
+        self.__targets: Dict[UniversalOrArgless[_T], _SignalMeta[_T]] = {}
     @property
     def callbacks(self):
         return tuple(self.__targets.keys())
     async def emit(self, *args: _T):
         await asyncio.gather(*(cb.invoke(*args) for cb in self.__targets.values()))
     def receive_with(self, callback: UniversalOrArgless[_T]):
-        self.__targets[callback] = _boot_SignalMeta(callback)
-    def remove_subscriber(self, callback: UniversalOrArgless[_T]):
+        self.__targets[callback] = _SignalMeta(callback)
+    def remove(self, callback: UniversalOrArgless[_T]):
         if callback in self.__targets:
             del self.__targets[callback]
-    def remove_all(self):
+    def clear(self):
         self.__targets.clear()
-    def forward_from(self, target: 'Signal[_T]'):
-        target.receive_with(self.emit)
+    def __del__(self):
+        self.clear()
 
 
 class Timer:
@@ -120,7 +127,7 @@ class Timer:
         self._signal: Signal[None] = Signal()
         self._interval: int = 0
         self._single_shot = False
-        self._ioloop = ioloop or asyncio.get_event_loop_policy().get_event_loop()
+        self._ioloop = ioloop or asyncio.get_running_loop()
         self._task: Optional[asyncio.Task] = None # type: ignore
         self._start_time = 0.
         self._active = False
@@ -132,6 +139,8 @@ class Timer:
     @property
     def interval(self):
         return self._interval
+    def clear_callbacks(self):
+        self.timeout.clear()
     def call_on_timeout(self, target: ArglessCallback):
         self.timeout.receive_with(target)
     def set_interval(self, interval_ms: int):
@@ -167,8 +176,20 @@ class Worker(ABC):
         self.__logger = logging.getLogger()
         self.__ioloop = params.ioloop
         self.__jsons: Signal[JsonDict] = Signal()
-        self.__was_shutdown: Signal[Worker] = Signal()
-        self.__was_shutdown.receive_with(self.__jsons.remove_all)
+    @overload
+    async def send(self, prefix: str, state: 'JsonState') -> None: ...
+    @overload
+    async def send(self, prefix: str, state: 'JsonItem') -> None: ...
+    @overload
+    async def send(**kwargs) -> None: ...
+    async def send(self, prefix = None, state = None, **kwargs):
+        if isinstance(state, JsonState):
+            await self.msgs.emit(JsonDict({prefix: state.send()}))
+        elif isinstance(state, JsonItem):
+            await self.msgs.emit(JsonDict({prefix: state}))
+        elif kwargs:
+            await self.msgs.emit(JsonDict(**kwargs))
+        else: raise TypeError(f"Unsupported type in send({state}): {state.__class__.__name__}")
     def run(self):
         self.on_run()
     @abstractmethod
@@ -180,9 +201,6 @@ class Worker(ABC):
     @abstractmethod
     def on_shutdown(self) -> None:
         raise NotImplementedError
-    @property
-    def was_shutdown(self):
-        return self.__was_shutdown
     @property
     def msgs(self):
         return self.__jsons
@@ -198,8 +216,6 @@ class Worker(ABC):
             self.log.exception(e)
         for task in self.tasks:
             task.cancel()
-        _remove_all = self.create_task(self.__was_shutdown.emit(self))
-        _remove_all.add_done_callback(lambda x: self.__was_shutdown.remove_all())
     @property
     def is_busy(self) -> bool:
         return bool(self.tasks)
@@ -330,14 +346,17 @@ class _JsonDictKey:
     def __iter__(self) -> Iterator[_JsonDictKeyPart]:
         return self.subkeys.__iter__()
 
-class JsonDict(MutableMapping[JsonKey, JsonItem]):
+class JsonDict(MutableMapping[str, JsonItem]):
     __slots__ = ["_dict"]
-    def __init__(self, src_dict: Union[FlatDict, dict, Any] = None, **kwargs) -> None:
-        if src_dict is None: src_dict = kwargs
+    def __init__(self, src_dict: Union[FlatDict, dict, None] = None, *, nest = True, **kwargs) -> None:
+        if src_dict is None: 
+            src_dict = kwargs
+        if isinstance(src_dict, JsonDict):
+            src_dict = src_dict.top
         if not isinstance(src_dict, dict):
-            raise TypeError("Can only construct JsonDict from dict!")
+            raise TypeError(f"Can only construct JsonDict from dict! Passed: {src_dict.__class__.__name__}({src_dict})")
         self._dict = src_dict
-        if self._dict:
+        if self._dict and nest:
             self.nest()
     @property
     def top(self):
@@ -394,11 +413,15 @@ class JsonDict(MutableMapping[JsonKey, JsonItem]):
             del cast(list, current)[last.as_index]
         else:
             del cast(dict, current)[last.key]
-    def get(self, key: Union[JsonKey, 'JsonDictIterator'], default:_T = None) -> Union[JsonItem, _T]:
+    def get(self, *keys: Union[JsonKey, 'JsonDictIterator', Tuple[JsonKey]], default:_T = None) -> Union[JsonItem, _T]:
         try:
-            if isinstance(key, JsonDictIterator):
-                return self.get(key.key())
-            return self.__getitem__(key)
+            if isinstance(keys, Sequence):
+                if not keys: raise ValueError("Empty JsonDict key!")
+                return self.get(':'.join(keys)) #type: ignore
+            elif isinstance(keys, JsonDictIterator):
+                return self.get(keys.key())
+            else:
+                return self.__getitem__(keys)
         except:
             return default
     def __getitem__(self, key: Union[JsonKey, 'JsonDictIterator']) -> JsonItem:
@@ -507,7 +530,7 @@ class JsonDictIterator(Iterator[JsonItem]):
                 self.__next__()
         except StopIteration:
             if not self._history:
-                raise StopIteration
+                raise
             else:
                 self.__pop_state()
                 self.__next__()
@@ -518,204 +541,120 @@ class JsonDictIteratorSimple(JsonDictIterator):
         super().__next__()
         return str(self)
 
-BIND_RULES_ATTR = "__bind_rules__"
-FIELD_CB_ATTR = "_callback"
-FIELD_ROUTE_ATTR = "_route"
 
-class JsonBinding:
-    __slots__ = ["rules"]
-    def __init__(self, rules: Dict[str, str], **mappings) -> None:
-        self.rules = rules
-        check = re.compile(r"\{.*\}")
-        for rule in self.rules:
-            try:
-                self.rules[rule] = self.rules[rule].format_map(mappings)
-            except KeyError as e:
-                raise KeyError(f"Missing route rule for mapping {e}")
-        for mapping in self.rules.values():
-            found = check.findall(":".join(mapping))
-            if found:
-                raise KeyError(
-                    f"Binding did not receive mapping for these placeholders: {found}. Rules: {self.rules}. Got: {mappings}")
-        self.rules = {k:v.split(":") for k,v in self.rules.items()}
+def _fetch_field_info(name: str, namespaces: dict) -> Optional[pydantic.fields.FieldInfo]:
+    if name in namespaces: 
+        if isinstance(namespaces[name], pydantic.fields.FieldInfo):
+            return namespaces[name]
+        else:
+            return Field(default=namespaces.get(name, pydantic.fields.Undefined))
+    else:
+        return None
 
-    async def receive(self, source: JsonDict, *, strict=False) -> FlatDict:
-        result = dict()
-        for rule, mapped in self.rules.items():
-            if strict:
-                result[rule] = source[mapped]
-            elif mapped in source:
-                result[rule] = source[mapped]
-        return result
+@dataclass_transform(kw_only_default=True, field_specifiers=(Field,))
+class _JsonStateMeta(pydantic.main.ModelMetaclass):
+    def __new__(cls, name: str, bases: Tuple[type], namespaces: Dict[str, Any], **kwargs):
+        if name == "JsonState":
+            return super().__new__(cls, name, bases, namespaces, **kwargs)
+        annotations: dict = namespaces.get('__annotations__', {})
+        for base in bases:
+            for base_ in base.__mro__:
+                if base_ is BaseModel or base_ is JsonState:
+                    break
+                annotations.update(base_.__annotations__)
+        for field, ann in annotations.items():
+            if field.startswith('__'): continue
+            field_info = _fetch_field_info(field, namespaces)
+            stripped = get_origin(ann) or ann
+            if not issubclass(stripped, object):
+                raise _BootException(f"JsonState cannot use fields annotated with non-types! Field: {field}. Annotation: {stripped}")
+            # check if field default constructible
+            if not issubclass(stripped, JsonState) and namespaces.get(field) is None:
+                try:
+                    stripped()
+                except:
+                    raise _BootException(f"Cannot infer default value for field '{field}' of type '{stripped}' inside of {name}. Please provide default value!")
+            if field_info is not None:
+                if field_info.default is pydantic.fields.Undefined and not field_info.default_factory:
+                    namespaces[field].default_factory=stripped
+            else:
+                namespaces[field] = Field(default_factory=stripped)    
+        namespaces['__annotations__'] = annotations
+        return super().__new__(cls, name, bases, namespaces, **kwargs)
 
-    def send(self, source: FlatDict, *, strict=False) -> JsonDict:
-        result = JsonDict()
-        for rule, mapped in self.rules.items():
-            result[mapped] = source[rule] if strict else source.get(rule)
-        return result
+if not TYPE_CHECKING:
+    class JsonState(BaseModel, metaclass=_JsonStateMeta, extra=Extra.allow):
+        __slots__ = ("_before", "_after")
+        def __init__(self, **data):
+            super().__init__(**data)
+            object.__setattr__(self, "_after", {})
+            self._after: Dict[str, Signal]
+        @classmethod
+        def default(cls) -> Self: 
+            return cls()
+        async def update_with(self, data:Union[JsonDict, dict]) -> bool: 
+            if isinstance(data, JsonDict):
+                return await self.__refresh(**data.top)
+            elif isinstance(data, dict):
+                return await self.__refresh(**data)
+            else: raise TypeError("JsonState can obly be updated with dict or JsonDict")
+        def send(self) -> JsonDict: 
+            return JsonDict(self.dict())
+        def after_update(self, part: _T, cb: UniversalOrArgless[_T]):
+            for k, v in self.__dict__.items():
+                if v is part:
+                    self.__sig(k).receive_with(cb)
+                    return
+                elif isinstance(v, JsonState):
+                    try:
+                        v.after_update(part, cb)
+                        return
+                    except: 
+                        pass
+            raise ValueError(f"Field {part} does not belong to {self!r}")
+        def __sig(self, name: str):
+            if not name in self._after: self._after[name] = Signal()
+            return self._after[name]
+        async def __refresh(self, **data):
+            """Refresh the internal attributes with new data."""
+            values, fields, error = validate_model(self.__class__, data)
+            if error:
+                logging.getLogger("json_state").exception(error)
+                return False
+            for name in fields:
+                value = values[name]
+                was = getattr(self, name)
+                if isinstance(was, JsonState):
+                    value: JsonState
+                    await was.__refresh(**value.dict(exclude_unset=True))
+                else:
+                    setattr(self, name, value)
+                    sig = self._after.get(name)
+                    try:
+                        if sig is not None: await sig.emit(getattr(self, name))
+                    except Exception as e:
+                        logging.getLogger("json_state").error(f"{self}: While updating {name}:")
+                        logging.getLogger("json_state").exception(e)
+            return bool(fields)
+else:
+    class JsonState(metaclass=_JsonStateMeta):
+        @classmethod
+        def default(cls) -> Self: ...
+        # True means was updated at least one field(nested or not)
+        async def update_with(self, data: JsonDict) -> bool: ...
+        def send(self) -> JsonDict: ...
+        def after_update(self, part: _T, cb: UniversalOrArgless[_T]): ...
 
-class JsonState(BaseModel, extra=Extra.allow):
-    def __init__(self, binding: Optional[JsonBinding] = None, **mappings) -> None:
-        super().__init__()
-        self._callbacks: Dict[str, Tuple[UniversalCallback]] = {}
-        for name, field in self.__fields__.items():
-            if FIELD_ROUTE_ATTR in field.field_info.extra:
-                new_path = field.field_info.extra[FIELD_ROUTE_ATTR]
-                if new_path is not None:
-                    was = getattr(self.__class__, BIND_RULES_ATTR, {})
-                    setattr(self.__class__, BIND_RULES_ATTR, {**was, name: new_path})
-            if FIELD_CB_ATTR in field.field_info.extra:
-                if not name in self._callbacks:
-                    self._callbacks[name] = tuple()    
-                self._callbacks[name] = (field.field_info.extra[FIELD_CB_ATTR], ) + self._callbacks[name] # type: ignore
-        self._binding = binding or JsonBinding(self._bind_rules(), **mappings)
-        if self._binding is None:
-            raise TypeError("Binding not provided!")
-        for field_name in self.dict():
-            if not field_name in self._binding.rules:
-                raise KeyError(f"Field '{field_name}' not provided by binding!")
-    async def update(self, source: JsonDict):
-        received = await self._binding.receive(source)
-        await self.__refresh(**received)
-
-    def send(self) -> JsonDict:
-        return self._binding.send(self.dict())
-
-    @classmethod
-    def _bind_rules(cls) -> Dict[str, str]:
-        res = getattr(cls, BIND_RULES_ATTR, None)
-        if res is None:
-            raise TypeError(
-                f"Attempt to create Bindable without provided JsonBinding or Rules")
-        return res
-    
-    async def __refresh(self, **data):
-        """Refresh the internal attributes with new data."""
-        values, fields, error = validate_model(self.__class__, data)
-        if error:
-            logging.getLogger("bindings").exception(error)
-            return
-        for name in fields:
-            value = values[name]
-            setattr(self, name, value)
-            if name in self._callbacks:
-                await asyncio.gather(*(execute_universal_or_argless(cb, value) for cb in self._callbacks[name]))
-
-    def bind(self, field_name: str, callback: UniversalOrArgless):
-        if not field_name in self.dict().keys():
-            raise KeyError(
-                f"Field {field_name} does not exist in Bindable:{self.__class__.__name__}")
-        if not field_name in self._callbacks:
-            self._callbacks[field_name] = tuple()    
-        self._callbacks[field_name] = self._callbacks[field_name] + (callback,)  # type: ignore
-
-    def json(self, *, include=None,
-             exclude=None,
-             by_alias: bool = False,
-             skip_defaults: Optional[bool] = None,
-             exclude_unset: bool = False,
-             exclude_defaults: bool = False,
-             exclude_none: bool = False,
-             encoder: Optional[Callable[[Any], Any]] = None,
-             models_as_dict: bool = True,
-             **dumps_kwargs: Any) -> str:
-        return super().json(
-            include=include,
-            exclude=set(exclude if exclude is not None else []).union({"_binding", "_callbacks"}),
-            by_alias=by_alias,
-            skip_defaults=skip_defaults,
-            exclude_unset=exclude_unset,
-            exclude_defaults=exclude_defaults,
-            exclude_none=exclude_none,
-            encoder=encoder,
-            models_as_dict=models_as_dict,
-            **dumps_kwargs)
-
-    def dict(self, *, include=None,
-            exclude=None,
-            by_alias: bool = False,
-            skip_defaults: Optional[bool] = None,
-            exclude_unset: bool = False,
-            exclude_defaults: bool = False,
-            exclude_none: bool = False) -> Dict[str, Any]:
-        return super().dict(
-            include=include,
-            exclude=set(exclude if exclude is not None else []).union({"_binding", "_callbacks"}),
-            by_alias=by_alias,
-            skip_defaults=skip_defaults,
-            exclude_unset=exclude_unset,
-            exclude_defaults=exclude_defaults,
-            exclude_none=exclude_none)
-
-
-def routes(**bind_paths: str) -> Callable[[Type[_T]], Type[_T]]:
-    def routes_impl(bindable: Type[_T]) -> Type[_T]:
-        was = JsonDict(getattr(bindable, BIND_RULES_ATTR, {}))
-        setattr(bindable, BIND_RULES_ATTR, {**was, **bind_paths})
-        return bindable
-    return routes_impl
-
-def BindField (
-    route: Optional[str] = None,
-    *,
-    default: Any = Undefined,
-    on_update: Optional[UniversalOrArgless] = None,
-    default_factory: Optional[Callable] = None,
-    alias: Optional[str] = None,
-    title: Optional[str] = None,
-    description: Optional[str] = None,
-    exclude: Optional[AbstractSet[Union[str, int]]] = None,
-    include: Optional[AbstractSet[Union[str, int]]] = None,
-    const: Optional[bool] = None,
-    gt: Optional[float] = None,
-    ge: Optional[float] = None,
-    lt: Optional[float] = None,
-    le: Optional[float] = None,
-    multiple_of: Optional[float] = None,
-    allow_inf_nan: Optional[bool] = None,
-    max_digits: Optional[int] = None,
-    decimal_places: Optional[int] = None,
-    min_items: Optional[int] = None,
-    max_items: Optional[int] = None,
-    unique_items: Optional[bool] = None,
-    min_length: Optional[int] = None,
-    max_length: Optional[int] = None,
-    allow_mutation: bool = True,
-    regex: Optional[str] = None,
-    discriminator: Optional[str] = None,
-    repr: bool = True,
-    **extra: Any,
-):
-    kwargs = {
-        "default_factory": default_factory,
-        "alias": alias,
-        "title": title,
-        "description": description,
-        "exclude": exclude,
-        "include": include,
-        "const": const,
-        "gt": gt,
-        "ge": ge,
-        "lt": lt,
-        "le": le,
-        "multiple_of": multiple_of,
-        "allow_inf_nan": allow_inf_nan,
-        "max_digits": max_digits,
-        "decimal_places": decimal_places,
-        "min_items": min_items,
-        "max_items": max_items,
-        "unique_items": unique_items,
-        "min_length": min_length,
-        "max_length": max_length,
-        "allow_mutation": allow_mutation,
-        "regex": regex,
-        "discriminator": discriminator,
-        "repr": repr,
-        **extra,
-        FIELD_ROUTE_ATTR: route, 
-        FIELD_CB_ATTR: on_update
-    }
-    return Field (default, **kwargs) 
+class Weekday(IntEnum):
+    MONDAY = 1
+    TUESDAY = 2
+    WEDNESDAY = 3
+    THURSDAY = 4
+    FRIDAY = 5
+    SATURDAY = 6
+    SUNDAY = 7
+Hour24 = partial(Field, ge=0, le=24)
+Minute = partial(Field, ge=0, le=60)
 
 def _boot_init_logging():
     log = logging.getLogger()
@@ -725,7 +664,7 @@ def _boot_init_logging():
     stderr.setFormatter(logging.Formatter(format_str))
     log.addHandler(stderr)
     log.setLevel(logging.DEBUG)
-_boot_init_logging()
+
 class _BootException(Exception):
     pass
 
@@ -769,7 +708,11 @@ async def _connect_to_worker(worker: Worker):
     worker.run()
     await _impl()
 
-def _boot_exec(params: BootParams):
+async def _boot_test(worker: Worker, json: JsonDict):
+    await asyncio.sleep(2)
+    await worker.on_msg(json)
+
+def _boot_exec(params: BootParams, test_data: Optional[str]):
     import importlib.util
     sys.modules["bootstrap"] = sys.modules["__main__"]
     spec = importlib.util.spec_from_file_location(params.worker_name, params.file)
@@ -778,7 +721,7 @@ def _boot_exec(params: BootParams):
     spec.loader.exec_module(module)  #type: ignore
     def _err(*args, **kwargs):
         raise RuntimeError("Use of print() function is forbidden")
-    module.print = _err
+    module.print = _err #type: ignore
     if hasattr(module, "main"):
         assert callable(module.main)
         main_params_count = len(inspect.signature(module.main).parameters)
@@ -786,7 +729,7 @@ def _boot_exec(params: BootParams):
             async def _wrap():
                 try:
                     if main_params_count >= 1: await module.main(params)
-                    else: module.main()
+                    else: await module.main()
                 except Exception as e:
                     raise _BootException(e)
             params.ioloop.create_task(_wrap())
@@ -808,13 +751,17 @@ def _boot_exec(params: BootParams):
             loop.stop()
 
     params.ioloop.set_exception_handler(custom_exception_handler)
+    if not test_data is None:
+        as_json = JsonDict(json.loads(test_data))
+        params.ioloop.create_task(_boot_test(worker, as_json))
     params.ioloop.run_forever()
 
 def _boot_main():
     """
     Radapter Python Modules Bootstrapper
     """
-    parser = ArgumentParser(
+    _boot_init_logging()
+    parser = ArgumentParser (
         prog='bootstrap.py',
         description=_boot_main.__doc__,
         epilog='Bereg foreva'
@@ -837,6 +784,26 @@ def _boot_main():
         required=True,
         dest="name"
         )
+    parser.add_argument(
+        "--wait_for_debug_client",
+        help="Before start wait for debugpy clients",
+        required=False,
+        dest="wait_for_debug_client",
+        type=int
+        )
+    parser.add_argument(
+        "--debug_port",
+        help="Listen for debugpy clients",
+        required=False,
+        dest="debug_port",
+        type=int
+        )
+    parser.add_argument(
+        "--test_data",
+        help="Test data to pass to module",
+        required=False,
+        dest="test_data"
+        )
     args = parser.parse_args()
     params = BootParams(
         args.file,
@@ -844,7 +811,13 @@ def _boot_main():
         args.name,
         asyncio.get_event_loop()
     )
-    _boot_exec(params)
+    if args.debug_port is not None:
+        logging.getLogger().warn(f"Accepting clients to connect to debugging port: {args.debug_port}")
+        debugpy.listen(args.debug_port)
+        if args.wait_for_debug_client:
+            logging.getLogger().warn("Waiting for connection!")
+            debugpy.wait_for_client()
+    _boot_exec(params, args.test_data)
 
 if __name__ == "__main__":
     _boot_main()

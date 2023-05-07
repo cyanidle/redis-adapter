@@ -14,8 +14,14 @@ GIT_COMMIT
 !**/*.yaml
 !**/*.pro
 !**/*.qrc
+!**/*.txt
 !**/*.template
 !.dockerignore
 !Dockerfile
 !README
 !radapter.qrc
+
+#all modules
+py_bootstrap
+#not bootstrap 
+!py_bootstrap/bootstrap.py
