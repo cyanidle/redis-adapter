@@ -6,3 +6,4 @@ typing_extensions>=4.2.0
 pyyaml>=6.0
 pydantic>=1.10.4
 debugpy>=1.6.6
+aioconsole>=0.6.1

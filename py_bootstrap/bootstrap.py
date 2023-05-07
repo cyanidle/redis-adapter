@@ -309,7 +309,7 @@ class _JsonDictKeyPart:
     @property
     def wanted_container(self) -> type:
         return list if self.is_index else dict
-    def is_in(self, target: dict | list):
+    def is_in(self, target: Union[dict, list]):
         if isinstance(target, dict):
             if self.is_index:
                 raise KeyError("Attempt to get by index in dict!")
@@ -320,7 +320,7 @@ class _JsonDictKeyPart:
             return self.as_index < len(target)
         else:
             return TypeError("Attempt to shadow already existing value")
-    def set_in(self, target: dict | list, value: Any):
+    def set_in(self, target: Union[dict, list], value: Any):
         if isinstance(target, dict):
             if self.is_index:
                 raise KeyError("Attempt to set by index in dict!")
@@ -333,7 +333,7 @@ class _JsonDictKeyPart:
             target[self.as_index] = value
         else:
             raise TypeError
-    def get_from(self, target: dict | list):
+    def get_from(self, target: Union[dict, list]):
         if isinstance(target, dict) and not self.is_index:
             return target[self.key]
         elif isinstance(target, list) and self.is_index:
@@ -472,13 +472,15 @@ class JsonDict(MutableMapping[str, JsonItem]):
     def __repr__(self) -> str:
         return repr(self._dict)
 
-@dataclass(slots=True)
+
 class _TraverseState:
-    iter: Union[Iterator[str], Iterator[JsonItem]]
-    key: Optional[str]
-    container: Union[dict, list]
-    count: int
-    value: JsonItem
+    __slots__ = ("iter", "key", "container", "count", "value")
+    def __init__(self, iter, key, container, count, value) -> None:
+        self.iter: Union[Iterator[str], Iterator[JsonItem]] = iter
+        self.key: Optional[str] = key
+        self.container: Union[dict, list] = container
+        self.count: int = count
+        self.value: JsonItem = value
 
 class JsonDictIterator(Iterator[JsonItem]):
     __slots__ = ["_history", "_state"]
