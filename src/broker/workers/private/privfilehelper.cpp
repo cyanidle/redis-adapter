@@ -23,7 +23,7 @@ FileHelper::FileHelper(QIODevice *target, QObject *parent) :
 
 void FileHelper::start()
 {
-    connect(d->target, &QIODevice::readyRead, this, &FileHelper::mainloop);
+    connect(d->target, &QIODevice::readyRead, this, &FileHelper::mainloop, Qt::UniqueConnection);
     mainloop();
 }
 

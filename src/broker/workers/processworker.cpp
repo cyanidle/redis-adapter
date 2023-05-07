@@ -3,6 +3,7 @@
 #include <QProcess>
 #include <QFile>
 #include <QFileInfo>
+#include <QTimer>
 #include "private/privfilehelper.h"
 
 using namespace Radapter;
@@ -36,11 +37,27 @@ ProcessWorker::ProcessWorker(const Settings::ProcessWorker &settings, QThread *t
     connect(d->proc, &QProcess::finished, this, [this](int code, QProcess::ExitStatus st) {
         if (!code && st == QProcess::NormalExit) {
             workerInfo(this) << "Process finished with exit code: 0";
+            emit finished(true);
+            if (d->settings.restart_on_ok) {
+                restart();
+            }
         } else {
             workerError(this) << "Process finished abnormally! Code:" << code << "Stderr:" << d->proc->readAllStandardError();
+            emit finished(false);
+            if (d->settings.restart_on_fail) {
+                restart();
+            }
         }
     });
     connect(d->proc, &QProcess::readyReadStandardError, this, &ProcessWorker::onStderrReady);
+}
+
+void ProcessWorker::restart()
+{
+    workerWarn(this) << "Restarting in" << d->settings.restart_delay_ms / 1000. << "...";
+    QTimer::singleShot(d->settings.restart_delay_ms, this, [this]{
+        d->proc->start(d->settings.process, d->settings.arguments);
+    });
 }
 
 ProcessWorker::~ProcessWorker()
@@ -82,7 +99,6 @@ bool ProcessWorker::exists(QString proc)
 void ProcessWorker::onRun()
 {
     d->proc->start(d->settings.process, d->settings.arguments);
-    d->outHelp->start();
 }
 
 void ProcessWorker::onMsg(const WorkerMsg &msg)

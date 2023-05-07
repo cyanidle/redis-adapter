@@ -16,6 +16,7 @@ public:
     bool exists(QString proc);
     void onRun() override;
 signals:
+    void finished(bool ok);
     void processStarted();
 public slots:
     void onMsg(const Radapter::WorkerMsg &msg) override;
@@ -24,6 +25,7 @@ protected:
 private slots:
     void onStderrReady();
     void onProcStarted();
+    void restart();
 private:
     Private *d;
 };

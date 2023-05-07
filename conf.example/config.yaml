@@ -6,5 +6,16 @@ python:
       name: fountain
     module_path: fountain.py
     module_settings: 
-      name: asd
+      scripts:
+        default:
+          data: [10, 20, 30]
+          time_per_step_ms: 5000
+      max_speed_value: 1000
+      uptime:
+        days: [1, 2, 3, 4, 5]
+        start_hour: 9
+        stop_hour: 0
+        start_minute: 17
+        stop_minute: 0
+
 
