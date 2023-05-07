@@ -749,6 +749,7 @@ def _boot_exec(params: BootParams, test_data: Optional[str]):
         if isinstance(exception, _BootException):
             logging.getLogger().error("Critical error on boot")
             loop.stop()
+            sys.exit(-1)
 
     params.ioloop.set_exception_handler(custom_exception_handler)
     if not test_data is None:
