@@ -11,6 +11,7 @@ import inspect
 import json
 import logging
 import re
+import signal
 import sys
 import pathlib
 import os
@@ -176,6 +177,7 @@ class Worker(ABC):
         self.__logger = logging.getLogger()
         self.__ioloop = params.ioloop
         self.__jsons: Signal[JsonDict] = Signal()
+        self._sync_sender: Optional[Callable[[JsonDict], None]] = None
     @overload
     async def send(self, prefix: str, state: 'JsonState') -> None: ...
     @overload
@@ -190,6 +192,11 @@ class Worker(ABC):
         elif kwargs:
             await self.msgs.emit(JsonDict(**kwargs))
         else: raise TypeError(f"Unsupported type in send({state}): {state.__class__.__name__}")
+    def send_sync(self, msg: 'JsonDict'):
+        if self._sync_sender is not None:
+            self._sync_sender(msg)
+        else:
+            self.log.warn(f"Sync send not available!")
     def run(self):
         self.on_run()
     @abstractmethod
@@ -628,6 +635,7 @@ if not TYPE_CHECKING:
                     value: JsonState
                     await was.__refresh(**value.dict(exclude_unset=True))
                 else:
+                    logging.getLogger("json_state").info(f"Updating {name}: {was!r} --> {value!r}")
                     setattr(self, name, value)
                     sig = self._after.get(name)
                     try:
@@ -682,6 +690,9 @@ async def _connect_to_worker(worker: Worker):
             except Exception as e:
                 worker.log.error(f"Error while calling on_msg(): {e.__class__.__name__}:{e}")
             queue.task_done()
+    def _sync_send(msg: JsonDict):
+        print(msg.as_bytes() + b"\r\n")
+    worker._sync_sender = _sync_send
     async def _impl():
         r: asyncio.StreamReader = streams[0]
         w: asyncio.StreamWriter = streams[1]
@@ -750,11 +761,14 @@ def _boot_exec(params: BootParams, test_data: Optional[str]):
             logging.getLogger().error("Critical error on boot")
             loop.stop()
             sys.exit(-1)
-
     params.ioloop.set_exception_handler(custom_exception_handler)
     if not test_data is None:
         as_json = JsonDict(json.loads(test_data))
         params.ioloop.create_task(_boot_test(worker, as_json))
+    if not sys.platform.startswith("win32"):
+        params.ioloop.add_signal_handler(signal.SIGTERM, worker.on_shutdown)  
+        params.ioloop.add_signal_handler(signal.SIGQUIT, worker.on_shutdown)  
+        params.ioloop.add_signal_handler(signal.SIGKILL, worker.on_shutdown)    
     params.ioloop.run_forever()
 
 def _boot_main():

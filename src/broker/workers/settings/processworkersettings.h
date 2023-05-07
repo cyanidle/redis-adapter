@@ -17,7 +17,7 @@ struct ProcessWorker : Serializable {
     FIELD(HasDefault<bool>, write, true)
     FIELD(HasDefault<bool>, restart_on_ok, false)
     FIELD(HasDefault<bool>, restart_on_fail, true)
-    FIELD(HasDefault<quint32>, restart_delay_ms, 2000)
+    FIELD(HasDefault<quint32>, restart_delay_ms, 5000)
 };
 }
 #endif // PROCESSWORKERSETTINGS_H

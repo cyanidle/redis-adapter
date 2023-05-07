@@ -3,6 +3,7 @@
 #include <QProcess>
 #include <QFile>
 #include <QFileInfo>
+#include <QCoreApplication>
 #include <QTimer>
 #include "private/privfilehelper.h"
 
@@ -31,6 +32,7 @@ ProcessWorker::ProcessWorker(const Settings::ProcessWorker &settings, QThread *t
     connect(this, &ProcessWorker::processStarted, &ProcessWorker::onProcStarted);
     d->proc->setReadChannel(QProcess::StandardOutput);
     d->outHelp = new ::Radapter::Private::FileHelper(d->proc, this);
+    connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, d->proc, &QProcess::terminate, Qt::QueuedConnection);
     connect(d->outHelp, &::Radapter::Private::FileHelper::jsonRead, this, &ProcessWorker::send);
     connect(d->outHelp, &::Radapter::Private::FileHelper::error, this, [this](const QString &reason){
         workerError(this) << "Error reading process stdout, reason:" << reason;
@@ -55,7 +57,7 @@ ProcessWorker::ProcessWorker(const Settings::ProcessWorker &settings, QThread *t
 
 void ProcessWorker::restart()
 {
-    workerWarn(this) << "Restarting in" << d->settings.restart_delay_ms / 1000. << "...";
+    workerWarn(this) << "Restarting in" << d->settings.restart_delay_ms / 1000. << "seconds...";
     QTimer::singleShot(d->settings.restart_delay_ms, this, [this]{
         d->proc->start(d->settings.process, d->settings.arguments);
     });
@@ -139,9 +141,6 @@ void ProcessWorker::onProcStarted()
     }
     if (d->settings.write) {
         mode |= QIODevice::WriteOnly;
-    }
-    if (!d->proc->open(mode)) {
-        workerError(this) << "Could not open process pipes! Open Mode:" << mode;
     }
     d->outHelp->start();
 }
