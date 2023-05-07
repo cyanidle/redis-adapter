@@ -53,7 +53,7 @@ void Serializable::processField(const QString &name, const QVariant &newValue)
 bool Serializable::update(const QVariantMap &src)
 {
     try {
-        allowExtra(m_allowExtra || src.value("__allow_extra").toBool());
+        allowExtra(m_allowExtra || src.value("__allow_extra__").toBool());
         if (!m_allowExtra) {
             checkForExtra(src);
         }

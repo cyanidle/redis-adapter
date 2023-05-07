@@ -55,6 +55,10 @@ struct convert<QVariant>
             rhs = node.as<QVariantList>();
             return true;
         }
+        else if (node.IsNull()) {
+            rhs.clear();
+            return true;
+        }
         else {
             return false;
         }

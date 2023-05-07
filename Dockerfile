@@ -43,8 +43,14 @@ RUN set -eux; \
     cd ${APP_DIR}; \
     mkdir sqldrivers; \
     cp ${QT_DIR}/plugins/sqldrivers/libqsqlmysql.so sqldrivers/ ; \
-    cp -dr ${QT_DIR}/plugins/tls tls/ 
+    cp -dr ${QT_DIR}/plugins/tls tls/
 WORKDIR ${APP_DIR}
+CMD ["bash"]
+
+FROM --platform=${TARGETPLATFORM} debian:bullseye-slim as py_install
+RUN apt update && apt install -y --no-install-recommends python3 python3-pip
+COPY requirements.txt /requirements.txt
+RUN pip3 install -r /requirements.txt
 CMD ["bash"]
 
 FROM --platform=${TARGETPLATFORM} debian:bullseye-slim as runner
@@ -56,6 +62,11 @@ ARG TARGET_DEVICE
 ENV TARGET_DEVICE=${TARGET_DEVICE}
 ARG TARGETPLATFORM
 ENV TARGET_PLATFORM=${TARGETPLATFORM}
+COPY --from=py_install /usr/lib/python3 /usr/lib/python3
+COPY --from=py_install /usr/lib/python3.9 /usr/lib/python3.9
+COPY --from=py_install /usr/local/lib/python3.9 /usr/local/lib/python3.9
+COPY --from=py_install /lib/*/libexpat* /usr/lib/
+COPY --from=py_install /usr/bin/python* /usr/bin/
 COPY --from=builder ${APP_DIR}/ ${APP_DIR}/
 COPY --from=builder /starter.sh ${APP_DIR}/${APP_NAME}.sh
 COPY --from=builder /docker-entrypoint.sh /usr/local/bin/

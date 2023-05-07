@@ -1,15 +1,45 @@
+__allow_extra__: true
 devices:
   - tcp:
-      name: meteo.device
-      host: localhost
-      port: 502
-masters:
-  - worker: 
-      name: meteo.modbus
-    register_names: [meteo]
-    device_name: meteo.device
-    slave_id: 1
-    queries: 
-      - {type: holding, reg_index: 1, reg_count: 6}
+      name: mcon
+      host: # mcon host
+      port: # mcon port
 
-registers: !include registers.yaml
+fountain_queries: &fountain_queries
+  - {reg_index: 12289, reg_count: 1, type: "holding"}
+  - {reg_index: 12294, reg_count: 1, type: "holding"}
+  - {reg_index: 12300, reg_count: 1, type: "holding"}
+  - {reg_index: 4097, reg_count: 1, type: "holding"}
+  - {reg_index: 8192, reg_count: 2, type: "holding"}
+
+masters:
+  - worker:
+      name: fountain.thin.modbus
+    device_name: mcon
+    slave_id: 1
+    response_time_ms: 500  # (150). [has_default] 
+    register_names: [fountain]
+    queries: *fountain_queries
+
+
+registers: 
+  holding_registers:
+    fountain:
+      frequency_setting: {index: 8192}
+      pressure_setting: {index: 8193}
+      state: {index: 4097}
+      running_frequency: {index: 12289}
+      uptime: {index: 12290}
+      bus_voltage: {index: 12291}
+      output_voltage: {index: 12292}
+      output_current: {index: 12293}
+      speed: {index: 12294}
+      error_code: {index: 12295}
+      ai_1: {index: 12298}
+      ai_2: {index: 12299}
+      set_frequency: {index: 12300}
+      output_power: {index: 12301}
+      output_torque: {index: 12302}
+      spd_temperature: {index: 12303}
+      feedback_pressure: {index: 12304}
+      given_pressure: {index: 12305}

@@ -14,3 +14,4 @@
 !VERSION
 !.dockerignore
 !Dockerfile
+!requirements.txt

@@ -1,22 +1,33 @@
 pipelines:
-  - udp.in(3333) > fountain
+  - api.websocket <=> repeater(api)
+  - fountain.thin > *unwrap(modbus) > fountain.thin.modbus 
+  - fountain.thin.modbus > *rename(running_frequency, speed) > *wrap(modbus) > fountain.thin
+  - repeater(api) <=branch(fountains:0)=> fountain.thin
 
-python: 
+fountain_settings_common: &fountain_settings
+  max_speed_value: 5000
+  uptime:
+    days: [1, 2, 3, 4, 5]
+    start_hour: 9
+    start_minute: 0
+    stop_hour: 17
+    stop_minute: 0
+  scripts:
+    default:
+      time_per_step_ms: 3000
+      data: [10, 40, 50, 60]
+
+python:
   - worker:
-      name: fountain
-      print_msgs: True
+      name: fountain.thin
+      print_msgs: true
     module_path: fountain.py
-    module_settings: 
-      scripts:
-        default:
-          data: [10, 20, 30]
-          time_per_step_ms: 5000
-      max_speed_value: 1000
-      uptime:
-        days: [1, 2, 3, 4, 5]
-        start_hour: 9
-        stop_hour: 0
-        start_minute: 17
-        stop_minute: 0
+    module_settings: *fountain_settings
 
+modbus: !include modbus.yaml
 
+websocket:
+  servers:
+    - worker:
+        name: api.websocket
+      port: 1234
