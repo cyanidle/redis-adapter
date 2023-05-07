@@ -768,7 +768,6 @@ def _boot_exec(params: BootParams, test_data: Optional[str]):
     if not sys.platform.startswith("win32"):
         params.ioloop.add_signal_handler(signal.SIGTERM, worker.on_shutdown)  
         params.ioloop.add_signal_handler(signal.SIGQUIT, worker.on_shutdown)  
-        params.ioloop.add_signal_handler(signal.SIGKILL, worker.on_shutdown)    
     params.ioloop.run_forever()
 
 def _boot_main():
