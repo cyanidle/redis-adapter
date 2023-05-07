@@ -15,7 +15,7 @@
 #include <tuple>
 #include <QMetaObject>
 
-#define RADAPTER_VERSION "0.9"
+#define RADAPTER_VERSION "1.0"
 
 #ifndef RADAPTER_API
 #define RADAPTER_API
