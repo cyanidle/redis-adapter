@@ -28,6 +28,7 @@ ProcessWorker::ProcessWorker(const Settings::ProcessWorker &settings, QThread *t
         }
         workerInfo(this) << "new process state:" << st;
     });
+    connect(this, &ProcessWorker::processStarted, &ProcessWorker::onProcStarted);
     d->proc->setReadChannel(QProcess::StandardOutput);
     d->outHelp = new ::Radapter::Private::FileHelper(d->proc, this);
     connect(d->outHelp, &::Radapter::Private::FileHelper::jsonRead, this, &ProcessWorker::send);

@@ -4,6 +4,7 @@ pipelines:
 python: 
   - worker:
       name: fountain
+      print_msgs: True
     module_path: fountain.py
     module_settings: 
       scripts:
