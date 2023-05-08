@@ -828,10 +828,10 @@ def _boot_main():
         asyncio.get_event_loop()
     )
     if args.debug_port is not None:
-        logging.getLogger().warn(f"Accepting clients to connect to debugging port: {args.debug_port}")
-        debugpy.listen(args.debug_port)
+        logging.getLogger().warning(f"Accepting clients to connect to debugging port: {args.debug_port}")
+        debugpy.listen(("0.0.0.0", args.debug_port))
         if args.wait_for_debug_client:
-            logging.getLogger().warn("Waiting for connection!")
+            logging.getLogger().warning("Waiting for connection!")
             debugpy.wait_for_client()
     _boot_exec(params, args.test_data)
 
