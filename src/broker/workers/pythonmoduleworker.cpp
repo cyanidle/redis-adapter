@@ -36,7 +36,7 @@ PythonModuleWorker::PythonModuleWorker(const Settings::PythonModuleWorker &setti
         config.arguments->append({"--debug_port", QString::number(d->settings.debug_port)});
     }
     if (d->settings.wait_for_debug) {
-        config.arguments->append("--wait_for_debug_client");
+        config.arguments->append({"--wait_for_debug_client", "true"});
     }
     d->proc = new ProcessWorker(config, thread);
     connect(d->proc, &ProcessWorker::sendMsg, this, &PythonModuleWorker::sendMsg);

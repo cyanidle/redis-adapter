@@ -805,7 +805,7 @@ def _boot_main():
         help="Before start wait for debugpy clients",
         required=False,
         dest="wait_for_debug_client",
-        type=int
+        type=bool
         )
     parser.add_argument(
         "--debug_port",
