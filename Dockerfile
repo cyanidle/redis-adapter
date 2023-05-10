@@ -48,7 +48,7 @@ WORKDIR ${APP_DIR}
 CMD ["bash"]
 
 FROM --platform=${TARGETPLATFORM} debian:bullseye-slim as py_install
-RUN apt update && apt install -y --no-install-recommends python3 python3-pip
+RUN apt update && apt install -y --no-install-recommends python3.9-dev python3-pip build-essential libffi-dev
 COPY requirements.txt /requirements.txt
 RUN pip3 install -r /requirements.txt
 CMD ["bash"]
