@@ -4,7 +4,7 @@
 #include "broker/workers/settings/pythonmoduleworkersettings.h"
 #include <QFile>
 #include <QProcess>
-#include<QResource>
+#include <QResource>
 
 using namespace Radapter;
 
@@ -28,10 +28,14 @@ PythonModuleWorker::PythonModuleWorker(const Settings::PythonModuleWorker &setti
     config.worker->print_msgs = false;
     config.process = "python3";
     config.extra_paths = settings.extra_paths;
-    config.arguments.value = {"-c", d->bootstrap->readAll(),
-                            "--settings", JsonDict(d->settings.module_settings.value).toBytes(),
-                            "--name", d->settings.worker->name,
-                            "--file", d->settings.module_path};
+    if (settings.override_bootstrap_with.isValid()) {
+        config.arguments.value.append(settings.override_bootstrap_with);
+    } else {
+        config.arguments.value.append({"-c", d->bootstrap->readAll()});
+    }
+    config.arguments.value.append({"--settings", JsonDict(d->settings.module_settings.value).toBytes(),
+                                   "--name", d->settings.worker->name,
+                                   "--file", d->settings.module_path});
     if (d->settings.debug->enabled) {
         config.arguments->append({"--debug_port", QString::number(d->settings.debug->port)});
     }

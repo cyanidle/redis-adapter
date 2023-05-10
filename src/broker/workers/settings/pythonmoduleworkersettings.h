@@ -20,6 +20,7 @@ struct PythonModuleWorker : Serializable {
     FIELD(Optional<QVariantMap>, module_settings)
     FIELD(OptionalSequence<QString>, extra_paths)
     FIELD(Optional<PyDebug>, debug)
+    FIELD(Optional<QString>, override_bootstrap_with)
 };
 }
 #endif // PYTHONMODULEWORKERSETTINGS_H

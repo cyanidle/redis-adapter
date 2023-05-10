@@ -23,7 +23,7 @@ from typing import (TYPE_CHECKING, AbstractSet, Any,
                       Dict, Generic, Iterator,
                         List, Mapping, MutableMapping,
                           Optional, Sequence, Tuple,
-                            Type, TypeVar, Union, cast, get_origin, overload)
+                            Type, TypeVar, Union, cast, get_args, get_origin, overload)
 from typing_extensions import ParamSpec, TypeVarTuple, dataclass_transform, Self
 import debugpy
 
@@ -193,7 +193,7 @@ class Worker(ABC):
     async def send(self, prefix = None, state = None, **kwargs):
         if isinstance(state, JsonState):
             await self.msgs.emit(JsonDict({prefix: state.send()}))
-        elif isinstance(state, JsonItem):
+        elif isinstance(state, get_args(JsonItem)):
             await self.msgs.emit(JsonDict({prefix: state}))
         elif kwargs:
             await self.msgs.emit(JsonDict(**kwargs))
