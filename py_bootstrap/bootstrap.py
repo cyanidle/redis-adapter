@@ -174,7 +174,6 @@ class Timer:
 
 class Worker(ABC):
     def __init__(self, params: BootParams) -> None:
-        self.__logger = logging.getLogger(params.worker_name)
         self.__tasks: List[asyncio.Task] = []
         self.__name = params.worker_name
         self.__logger = logging.getLogger(f"worker.{params.worker_name}")
@@ -649,7 +648,7 @@ if not TYPE_CHECKING:
             """Refresh the internal attributes with new data."""
             values, fields, error = validate_model(self.__class__, data)
             if error:
-                logging.getLogger("json_state").exception(error)
+                logging.getLogger("bootstrap").exception(error)
                 return False
             for name in fields:
                 if not hasattr(self, name): continue
@@ -659,14 +658,14 @@ if not TYPE_CHECKING:
                     value: JsonState
                     await was.__refresh(**value.dict(exclude_unset=True))
                 else:
-                    logging.getLogger("json_state").info(f"Updating {name}: {was!r} --> {value!r}")
+                    logging.getLogger("bootstrap").info(f"Updating {name}: {was!r} --> {value!r}")
                     setattr(self, name, value)
                     sig = self._after.get(name)
                     try:
                         if sig is not None: await sig.emit(getattr(self, name))
                     except Exception as e:
-                        logging.getLogger("json_state").error(f"{self}: While updating {name}:")
-                        logging.getLogger("json_state").exception(e)
+                        logging.getLogger("bootstrap").error(f"{self}: While updating {name}:")
+                        logging.getLogger("bootstrap").exception(e)
             return bool(fields)
 else:
     class JsonState(metaclass=_JsonStateMeta):
