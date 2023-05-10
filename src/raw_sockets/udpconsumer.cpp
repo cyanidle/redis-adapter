@@ -13,6 +13,7 @@ Consumer::Consumer(const ConsumerSettings &settings, QThread *thread) :
     connect(m_socket, &QAbstractSocket::connected, this, &Consumer::onConnected);
     connect(m_socket, &QAbstractSocket::disconnected, this, &Consumer::onDisconnected);
     connect(m_socket, &QAbstractSocket::readyRead, this, &Consumer::readReady);
+    workerInfo(this) << "Binding to:" << settings.bind_to << ":" << settings.port;
     auto bindOk = m_socket->bind(QHostAddress(settings.bind_to), settings.port);
     if (!bindOk) {
         throw std::runtime_error("Could not bind to port: " + QString::number(settings.port).toStdString());

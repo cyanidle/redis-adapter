@@ -32,6 +32,8 @@
 #include <QCommandLineParser>
 #include "private/pipeoperation.h"
 #include "private/parsing_private.h"
+#include "websocket/websocketclient.h"
+#include "websocket/websocketserver.h"
 
 Q_GLOBAL_STATIC(QRecursiveMutex, staticMutex)
 
@@ -161,6 +163,17 @@ void tryCreateWorker(const QString &name, QObject *parent)
         config.server->host = tryExtract<QString>(name, data, 0, "host");
         config.server->port = tryExtract<quint16>(name, data, 1, "port");
         broker->registerWorker(new Udp::Producer(config, new QThread(parent)));
+    } else if (func == "websocket.in") {
+        auto config = Settings::WebsocketServer();
+        config.worker->name = name;
+        config.port = tryExtract<quint16>(name, data, 0, "port");
+        broker->registerWorker(new Websocket::Server(config, new QThread(parent)));
+    } else if (func == "websocket.out") {
+        auto config = Settings::WebsocketClient();
+        config.worker->name = name;
+        config.host = tryExtract<QString>(name, data, 0, "host");
+        config.port = tryExtract<quint16>(name, data, 1, "port");
+        broker->registerWorker(new Websocket::Client(config, new QThread(parent)));
     } else {
         throw std::runtime_error("(" + name.toStdString() + ") is not supported in pipe!");
     }
