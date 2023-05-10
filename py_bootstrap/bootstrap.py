@@ -177,7 +177,7 @@ class Worker(ABC):
         self.__logger = logging.getLogger(params.worker_name)
         self.__tasks: List[asyncio.Task] = []
         self.__name = params.worker_name
-        self.__logger = logging.getLogger()
+        self.__logger = logging.getLogger(f"worker.{params.worker_name}")
         self.__ioloop = params.ioloop
         self.__params = params
         self.__jsons: Signal[JsonDict] = Signal()
@@ -688,13 +688,15 @@ Hour24 = partial(Field, ge=0, le=24)
 Minute = partial(Field, ge=0, le=60)
 
 def _boot_init_logging():
-    log = logging.getLogger()
-    log.handlers.clear()
-    stderr = logging.StreamHandler()
-    format_str = '%(levelname)-5s %(filename)-5s %(lineno)-4s%(message)s'
-    stderr.setFormatter(logging.Formatter(format_str))
-    log.addHandler(stderr)
-    log.setLevel(logging.DEBUG)
+    def _apply(log: logging.Logger, format: str, level):
+        log.handlers.clear()
+        stderr = logging.StreamHandler()
+        format_str = format
+        stderr.setFormatter(logging.Formatter(format_str))
+        log.addHandler(stderr)
+        log.setLevel(level)
+    _apply(logging.getLogger(), '%(levelname)-5s %(message)s', logging.INFO)
+    _apply(logging.getLogger("worker"), '%(levelname)-5s %(filename)-5s %(lineno)-4s%(message)s', logging.DEBUG)
 
 class _BootException(Exception):
     pass
@@ -745,7 +747,6 @@ async def _connect_to_worker(worker: Worker):
 
 async def _watchdog():
     while True:
-        logging.getLogger().info(f"Async OK")
         await asyncio.sleep(10)
 
 async def _boot_test(worker: Worker, json: JsonDict):

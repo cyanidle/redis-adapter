@@ -3,7 +3,7 @@ pipelines:
   - repeater(api) <=branch(fancoils:floor:2:switch:0)=block(regulators:1)=> fancoil.worker.floor.2.switch.0
   - fancoil.modbus.floor.2.switch.0 <=> fancoil.worker.floor.2.switch.0
   - fancoil.worker.floor.2.switch.0 > mock(plc.modbus) 
-  - websocket.server(1235) > fancoil.worker.floor.2.switch.0
+  - udp.in(3333) > fancoil.worker.floor.2.switch.0
 
 fancoil_common: &fancoil_common
   plc: 
@@ -15,10 +15,6 @@ fancoil_common: &fancoil_common
 python:
   - worker:
       name: fancoil.worker.floor.2.switch.0
-    debug:
-      enabled: true
-      port: 5680
-      wait: true
     module_path: fancoil.py
     module_settings: *fancoil_common
 
