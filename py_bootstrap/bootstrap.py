@@ -720,8 +720,7 @@ async def _connect_to_worker(worker: Worker):
     worker._sync_sender = _sync_send
     w: asyncio.StreamWriter = streams[1]
     async def wr(msg: JsonDict):
-        w.write(msg.as_bytes())
-        w.write(b"\r\n")
+        w.write(msg.as_bytes() + b"\r\n")
         await w.drain()
     worker.msgs.receive_with(wr)
     async def _impl():

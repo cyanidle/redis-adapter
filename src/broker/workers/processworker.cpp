@@ -17,11 +17,18 @@ struct ProcessWorker::Private {
     std::atomic<bool> hadStderr;
     QList<WorkerMsg> buffer;
     QTimer *periodic;
+    std::atomic<bool> logOwn;
 };
 
 ProcessWorker::ProcessWorker(const Settings::ProcessWorker &settings, QThread *thread) :
     Worker(settings.worker, thread),
-    d(new Private{settings, new QProcess(this), nullptr, false, false, {}, new QTimer(this)})
+    d(new Private{settings,
+                    new QProcess(this),
+                    nullptr, false,
+                    false,
+                    {},
+                    new QTimer(this),
+                    true})
 {
     d->periodic->callOnTimeout(this, &ProcessWorker::rewrite);
     d->periodic->setInterval(1000);
@@ -118,6 +125,11 @@ void ProcessWorker::onRun()
     startProc();
 }
 
+void ProcessWorker::ownLogEnable(bool state)
+{
+    d->logOwn = state;
+}
+
 void ProcessWorker::startProc()
 {
     QIODevice::OpenMode mode;
@@ -176,7 +188,10 @@ void ProcessWorker::onStderrReady()
     auto data = d->proc->readAllStandardError().split('\n');
     for (auto &line: data) {
         if (line.isEmpty()) continue;
-        workerInfo(this) << line;
+        emit stdErrLine(line);
+        if (d->logOwn) {
+            workerInfo(this) << line;
+        }
     }
 }
 

@@ -16,7 +16,9 @@ public:
     bool exists(QString proc);
     bool isRunning() const;
     void onRun() override;
+    void ownLogEnable(bool state = true);
 signals:
+    void stdErrLine(const QByteArray &data);
     void finished(bool ok);
     void processStarted();
 public slots:
