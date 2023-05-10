@@ -3,6 +3,15 @@
 #include "settings-parsing/serializablesetting.h"
 #include "workersettings.h"
 namespace Settings {
+
+struct PyDebug : Serializable {
+    Q_GADGET
+    IS_SETTING
+    FIELD(HasDefault<bool>, enabled, false)
+    FIELD(HasDefault<quint32>, port, 5678)
+    FIELD(HasDefault<bool>, wait, false)
+};
+
 struct PythonModuleWorker : Serializable {
     Q_GADGET
     IS_SETTING
@@ -10,8 +19,7 @@ struct PythonModuleWorker : Serializable {
     FIELD(Required<QString>, module_path)
     FIELD(Optional<QVariantMap>, module_settings)
     FIELD(OptionalSequence<QString>, extra_paths)
-    FIELD(Optional<quint32>, debug_port)
-    FIELD(HasDefault<bool>, wait_for_debug, false)
+    FIELD(Optional<PyDebug>, debug)
 };
 }
 #endif // PYTHONMODULEWORKERSETTINGS_H

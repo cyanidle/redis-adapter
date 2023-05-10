@@ -14,6 +14,7 @@ public:
     ~ProcessWorker() override;
     QProcess *underlying();
     bool exists(QString proc);
+    bool isRunning() const;
     void onRun() override;
 signals:
     void finished(bool ok);
@@ -23,10 +24,13 @@ public slots:
 protected:
     void addPaths(QProcess *proc);
 private slots:
+    bool tryWrite(const Radapter::WorkerMsg &msg);
+    void rewrite();
     void onStderrReady();
     void onProcStarted();
     void restart();
 private:
+    void startProc();
     Private *d;
 };
 

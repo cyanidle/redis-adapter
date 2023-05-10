@@ -15,7 +15,6 @@ public:
 public slots:
     void onMsg(const Radapter::WorkerMsg &msg) override;
 private:
-
     Private *d;
 };
 

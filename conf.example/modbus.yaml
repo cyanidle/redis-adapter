@@ -1,45 +1,66 @@
 __allow_extra__: true
+
 devices:
   - tcp:
-      name: mcon
-      host: # mcon host
-      port: # mcon port
-
-fountain_queries: &fountain_queries
-  - {reg_index: 12289, reg_count: 1, type: "holding"}
-  - {reg_index: 12294, reg_count: 1, type: "holding"}
-  - {reg_index: 12300, reg_count: 1, type: "holding"}
-  - {reg_index: 4097, reg_count: 1, type: "holding"}
-  - {reg_index: 8192, reg_count: 2, type: "holding"}
+      name: plc
+      host: 192.168.10.76
+      port: 502
+  - tcp:
+      name: mcon.cityron
+      host: 192.168.11.162
+      port: 502
+      
+cityron_queries: &cityron_queries
+  - {type: holding, reg_index: 0, reg_count: 10}
+  - {type: holding, reg_index: 17, reg_count: 1}
+  - {type: holding, reg_index: 20, reg_count: 3}
 
 masters:
   - worker:
-      name: fountain.thin.modbus
-    device_name: mcon
-    slave_id: 1
-    response_time_ms: 500  # (150). [has_default] 
-    register_names: [fountain]
-    queries: *fountain_queries
+      name: fancoil.modbus.floor.2.switch.0
+    device_name: mcon.cityron 
+    slave_id: 11
+    register_names: [cityron]
+    queries: *cityron_queries
 
+  - worker:
+      name: plc.modbus
+    device_name: plc
+    slave_id: 11
+    response_time_ms: 500  # (150). [has_default] 
+    register_names: [plc]
+    queries:
+      - {type: holding, reg_index: 3000, reg_count: 8}
 
 registers: 
   holding_registers:
-    fountain:
-      frequency_setting: {index: 8192}
-      pressure_setting: {index: 8193}
-      state: {index: 4097}
-      running_frequency: {index: 12289}
-      uptime: {index: 12290}
-      bus_voltage: {index: 12291}
-      output_voltage: {index: 12292}
-      output_current: {index: 12293}
-      speed: {index: 12294}
-      error_code: {index: 12295}
-      ai_1: {index: 12298}
-      ai_2: {index: 12299}
-      set_frequency: {index: 12300}
-      output_power: {index: 12301}
-      output_torque: {index: 12302}
-      spd_temperature: {index: 12303}
-      feedback_pressure: {index: 12304}
-      given_pressure: {index: 12305}
+    cityron:
+      temperature:
+        current: {index: 0, writable: false}
+        target: {index: 1}   
+        min_target: {index: 5}
+        max_target: {index: 6}
+        external: {index: 9}
+      is_on: {index: 2}
+      mode: 
+        current: {index: 3}
+        available_mask: {index: 17}
+      speed: 
+        vent: {index: 4}
+      error:
+        filter: {index: 7}
+        not_displayed: {index: 8}
+      time:
+        hour: {index: 20, validator: hours}
+        minute: {index: 21, validator: minutes}
+        weekday: {index: 22, validator: weekday}
+    plc:
+      regulators: 
+        1: {index: 3000}
+        2: {index: 3001}
+        3: {index: 3002}
+        4: {index: 3003}
+        5: {index: 3004}
+        6: {index: 3005}
+        7: {index: 3006}
+        8: {index: 3007} 

@@ -13,25 +13,35 @@ struct ProcessWorker::Private {
     Settings::ProcessWorker settings;
     QProcess *proc;
     ::Radapter::Private::FileHelper *outHelp;
+    std::atomic<bool> isRunning;
+    std::atomic<bool> hadStderr;
+    QList<WorkerMsg> buffer;
+    QTimer *periodic;
 };
 
 ProcessWorker::ProcessWorker(const Settings::ProcessWorker &settings, QThread *thread) :
     Worker(settings.worker, thread),
-    d(new Private{settings, new QProcess(this), nullptr})
+    d(new Private{settings, new QProcess(this), nullptr, false, false, {}, new QTimer(this)})
 {
+    d->periodic->callOnTimeout(this, &ProcessWorker::rewrite);
+    d->periodic->setInterval(1000);
     if (!exists(d->settings.process)) {
         throw std::runtime_error("Cannot find programm: " + d->settings.process->toStdString());
     }
     addPaths(d->proc);
     connect(d->proc, &QProcess::stateChanged, this, [this](QProcess::ProcessState st){
         if (st == QProcess::ProcessState::Running) {
+            d->isRunning = true;
             emit processStarted();
+        } else {
+            d->isRunning = false;
+            workerInfo(this) << "new process state:" << st;
         }
-        workerInfo(this) << "new process state:" << st;
     });
     connect(this, &ProcessWorker::processStarted, &ProcessWorker::onProcStarted);
     d->proc->setReadChannel(QProcess::StandardOutput);
     d->outHelp = new ::Radapter::Private::FileHelper(d->proc, this);
+    connect(this, &ProcessWorker::processStarted, this, &ProcessWorker::rewrite);
     connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, d->proc, &QProcess::terminate, Qt::QueuedConnection);
     connect(d->outHelp, &::Radapter::Private::FileHelper::jsonRead, this, &ProcessWorker::send);
     connect(d->outHelp, &::Radapter::Private::FileHelper::error, this, [this](const QString &reason){
@@ -58,9 +68,7 @@ ProcessWorker::ProcessWorker(const Settings::ProcessWorker &settings, QThread *t
 void ProcessWorker::restart()
 {
     workerWarn(this) << "Restarting in" << d->settings.restart_delay_ms / 1000. << "seconds...";
-    QTimer::singleShot(d->settings.restart_delay_ms, this, [this]{
-        d->proc->start(d->settings.process, d->settings.arguments);
-    });
+    QTimer::singleShot(d->settings.restart_delay_ms, this, &ProcessWorker::startProc);
 }
 
 ProcessWorker::~ProcessWorker()
@@ -99,15 +107,34 @@ bool ProcessWorker::exists(QString proc)
         return false; // Not found!
 }
 
+bool ProcessWorker::isRunning() const
+{
+    return d->isRunning;
+}
+
 void ProcessWorker::onRun()
 {
-    d->proc->start(d->settings.process, d->settings.arguments);
+    d->periodic->start();
+    startProc();
+}
+
+void ProcessWorker::startProc()
+{
+    QIODevice::OpenMode mode;
+    if (d->settings.read) {
+        mode |= QIODevice::ReadOnly;
+    }
+    if (d->settings.write) {
+        mode |= QIODevice::WriteOnly;
+    }
+    d->proc->start(d->settings.process, d->settings.arguments, mode);
 }
 
 void ProcessWorker::onMsg(const WorkerMsg &msg)
 {
-    d->proc->write(msg.json().toBytes());
-    d->proc->write("\r\n");
+    if (!tryWrite(msg)) {
+        d->buffer.append(msg);
+    }
 }
 
 void ProcessWorker::addPaths(QProcess *proc)
@@ -126,21 +153,34 @@ void ProcessWorker::addPaths(QProcess *proc)
     proc->setProcessEnvironment(was);
 }
 
+bool ProcessWorker::tryWrite(const WorkerMsg &msg)
+{
+    if (d->isRunning) {
+        d->proc->write(msg.json().toBytes());
+        d->proc->write("\r\n");
+        return true;
+    }
+    return false;
+}
+
+void ProcessWorker::rewrite()
+{
+    if (!d->buffer.count()) return;
+    if (tryWrite(d->buffer.last())) {
+        d->buffer.pop_back();
+    }
+}
+
 void ProcessWorker::onStderrReady()
 {
-    auto data = d->proc->readAllStandardError();
-    data.resize(data.length() - 1);
-    workerInfo(this) << data;
+    auto data = d->proc->readAllStandardError().split('\n');
+    for (auto &line: data) {
+        if (line.isEmpty()) continue;
+        workerInfo(this) << line;
+    }
 }
 
 void ProcessWorker::onProcStarted()
 {
-    QIODevice::OpenMode mode;
-    if (d->settings.read) {
-        mode |= QIODevice::ReadOnly;
-    }
-    if (d->settings.write) {
-        mode |= QIODevice::WriteOnly;
-    }
     d->outHelp->start();
 }

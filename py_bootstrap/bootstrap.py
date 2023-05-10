@@ -204,7 +204,10 @@ class Worker(ABC):
         else:
             self.log.warn(f"Sync send not available!")
     def run(self):
-        self.on_run()
+        try:
+            self.on_run()
+        except Exception as e:
+            raise _BootException(f"{e.__class__.__name__}:{e}")
     @abstractmethod
     def on_run(self) -> None:
         raise NotImplementedError
@@ -648,6 +651,7 @@ if not TYPE_CHECKING:
                 logging.getLogger("json_state").exception(error)
                 return False
             for name in fields:
+                if not hasattr(self, name): continue
                 value = values[name]
                 was = getattr(self, name)
                 if isinstance(was, JsonState):
@@ -712,14 +716,15 @@ async def _connect_to_worker(worker: Worker):
     def _sync_send(msg: JsonDict):
         print(msg.as_bytes() + b"\r\n")
     worker._sync_sender = _sync_send
+    w: asyncio.StreamWriter = streams[1]
+    async def wr(msg: JsonDict):
+        w.write(msg.as_bytes())
+        w.write(b"\r\n")
+        await w.drain()
+    worker.msgs.receive_with(wr)
     async def _impl():
+        logging.getLogger().info("Started read")
         r: asyncio.StreamReader = streams[0]
-        w: asyncio.StreamWriter = streams[1]
-        async def wr(msg: JsonDict):
-            w.write(msg.as_bytes())
-            w.write(b"\r\n")
-            await w.drain()
-        worker.msgs.receive_with(wr)
         sleep = 1
         max_sleep = 5
         while True:
@@ -735,7 +740,13 @@ async def _connect_to_worker(worker: Worker):
             except Exception as e:
                 worker.log.error(f"Error parsing Json: {e.__class__.__name__}:{e}")
     worker.run()
-    await _impl()
+    logging.getLogger().info(f"Connected stdin/stdout to worker!")
+    await asyncio.gather(_impl(), _flusher())
+
+async def _watchdog():
+    while True:
+        logging.getLogger().info(f"Async OK")
+        await asyncio.sleep(10)
 
 async def _boot_test(worker: Worker, json: JsonDict):
     await asyncio.sleep(2)
@@ -796,6 +807,7 @@ def _boot_exec(params: BootParams, internal: _boot_internal_params):
     if not sys.platform.startswith("win32"):
         params.ioloop.add_signal_handler(signal.SIGTERM, worker.shutdown)  
         params.ioloop.add_signal_handler(signal.SIGQUIT, worker.shutdown)  
+    params.ioloop.create_task(_watchdog())
     params.ioloop.run_forever()
 
 def _boot_main():
@@ -862,6 +874,8 @@ def _boot_main():
         if args.wait_for_debug_client:
             logging.getLogger().warning("Waiting for connection!")
             debugpy.wait_for_client()
+            logging.getLogger().warning(f"Debug client attached!")
+    logging.getLogger().info("Starting boot sequence!")
     _boot_exec(params, internal)
 
 if __name__ == "__main__":

@@ -32,10 +32,10 @@ PythonModuleWorker::PythonModuleWorker(const Settings::PythonModuleWorker &setti
                             "--settings", JsonDict(d->settings.module_settings.value).toBytes(),
                             "--name", d->settings.worker->name,
                             "--file", d->settings.module_path};
-    if (d->settings.debug_port.isValid()) {
-        config.arguments->append({"--debug_port", QString::number(d->settings.debug_port)});
+    if (d->settings.debug->enabled) {
+        config.arguments->append({"--debug_port", QString::number(d->settings.debug->port)});
     }
-    if (d->settings.wait_for_debug) {
+    if (d->settings.debug->wait) {
         config.arguments->append({"--wait_for_debug_client", "true"});
     }
     d->proc = new ProcessWorker(config, thread);
