@@ -47,7 +47,7 @@ PythonModuleWorker::PythonModuleWorker(const Settings::PythonModuleWorker &setti
     connect(d->proc, &ProcessWorker::sendMsg, this, &PythonModuleWorker::sendMsg);
     d->proc->ownLogEnable(false);
     connect(d->proc, &ProcessWorker::stdErrLine, this, [this](const QByteArray &line) {
-        qInfo(workersLogging()) << '['%workerName()%".py]:" << line;
+        qInfo(workersLogging()).noquote().nospace() << '['%workerName()%".py]: " << line;
     });
     d->proc->prepareForNested();
 }
