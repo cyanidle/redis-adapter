@@ -72,7 +72,7 @@ bool rusWindDirection360(QVariant &src)
     if (!(0 <= asInt && asInt <=360)) return false;
     for (auto iter = dirs.begin(); iter != dirs.end(); ++iter) {
         if (asInt - iter.key() < halfSectorSize) {
-            src = iter.value();
+            src.setValue(iter.value());
             return true;
         }
     }

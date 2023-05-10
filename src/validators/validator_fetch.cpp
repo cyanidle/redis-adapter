@@ -1,16 +1,18 @@
 #include "validator_fetch.h"
 #include "qmutex.h"
 #include "radapterlogging.h"
+#include "settings-parsing/convertutils.hpp"
 #include "templates/algorithms.hpp"
 #include <QMetaProperty>
+#include <QStringBuilder>
 #include <QString>
 
 void Validator::Fetched::initializeVariantFetching()
 {
-    auto converter = [](const QString& name){
+    static auto converter = [](const QString& name){
         return Fetched(name);
     };
-    auto backConverter = [](const Fetched& conv){
+    static auto backConverter = [](const Fetched& conv){
         return conv.m_name;
     };
     if (!QMetaType::registerConverter<QString, Fetched>(converter)) {
@@ -30,7 +32,7 @@ Validator::Fetched::Fetched(const QString &name) :
 
 Validator::Fetched::Fetched(const QString &name, const QVariantList &args) :
     m_executor(Private::fetchImpl(name, args)),
-    m_name(name)
+    m_name(name%'('%convertQList<QString>(args).join(',')%')')
 {
 
 }
@@ -48,6 +50,21 @@ Validator::Fetched &Validator::Fetched::operator=(const Fetched &other)
     m_executor.reset(other.m_executor ? other.m_executor->newCopy() : nullptr);
     m_name = other.m_name;
     return *this;
+}
+
+bool Validator::Fetched::operator<(const Fetched &other) const
+{
+    return m_name < other.m_name;
+}
+
+bool Validator::Fetched::operator==(const Fetched &other) const
+{
+    return m_name == other.m_name;
+}
+
+bool Validator::Fetched::operator!=(const Fetched &other) const
+{
+    return m_name != other.m_name;
 }
 
 Validator::Fetched &Validator::Fetched::operator=(Fetched &&other)

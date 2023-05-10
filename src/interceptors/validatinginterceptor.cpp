@@ -27,6 +27,7 @@ Radapter::Interceptor *ValidatingInterceptor::newCopy() const
 void ValidatingInterceptor::onMsgFromWorker(WorkerMsg &msg)
 {
     validate(msg);
+    msg.json() = msg.sanitized();
     if (!msg.isEmpty()) {
         emit msgFromWorker(msg);
     }
@@ -38,7 +39,10 @@ void ValidatingInterceptor::validate(WorkerMsg &msg)
         auto &validator = iter.key();
         for (const auto &field: iter.value()) {
             if (!msg.contains(field)) continue;
-            validator.validate(msg[field]);
+            auto &current = msg[field];
+            if (!validator.validate(current)) {
+                current.clear();
+            }
         }
     }
     for (auto iter = d->settings.final_by_validator_glob.cbegin(); iter != d->settings.final_by_validator_glob.cend(); ++iter) {
@@ -46,9 +50,11 @@ void ValidatingInterceptor::validate(WorkerMsg &msg)
         for (auto &msgIter: msg) {
             auto keyJoined = msgIter.key().join(':');
             auto shouldValidate = iter.value().match(keyJoined).hasMatch();
-            if (shouldValidate) {
-                if (!msg.contains(keyJoined)) continue;
-                validator.validate(msg[keyJoined]);
+            if (!shouldValidate) continue;
+            if (!msg.contains(keyJoined)) continue;
+            auto &current = msg[keyJoined];
+            if (!validator.validate(current)) {
+                current.clear();
             }
         }
     }

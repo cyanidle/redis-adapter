@@ -74,6 +74,8 @@ public:
     void insert(const QString& akey, QVariant &&value, QChar sep = ':');
     void insert(const QString& akey, QVariantMap &&value, QChar sep = ':');
     size_t depth() const;
+    //! Возвращает копию без пустых значений, вложенных словарей и списков
+    [[nodiscard]] JsonDict sanitized() const;
     void swap(QVariantMap &dict) noexcept;
     const QVariant operator[](const QStringList& akey) const;
     const QVariant operator[](const QString& akey) const;
@@ -90,8 +92,8 @@ public:
     void clear();
     int deepCount() const;
     //! Конвертация в QJsonObject
-    QJsonObject toJsonObj() const;
-    QByteArray toBytes(QJsonDocument::JsonFormat format = QJsonDocument::Compact) const;
+    [[nodiscard]] QJsonObject toJsonObj() const;
+    [[nodiscard]] QByteArray toBytes(QJsonDocument::JsonFormat format = QJsonDocument::Compact) const;
     //! Заполнение из QJsonObject
     static JsonDict fromJsonObj(const QJsonObject &json);
     static JsonDict fromBytes(const QByteArray &json, QJsonParseError *err = nullptr);
@@ -113,14 +115,14 @@ public:
     JsonDict diff(const JsonDict &other) const;
     JsonDict &nest(QChar separator = ':');
     JsonDict &nest(const QString &separator);
-    JsonDict nest(const QString &separator) const;
+    [[nodiscard]] JsonDict nest(const QString &separator) const;
     JsonDict &operator+=(const JsonDict &src);
-    JsonDict operator+(const JsonDict &src) const;
-    JsonDict operator-(const JsonDict &src) const;
+    [[nodiscard]] JsonDict operator+(const JsonDict &src) const;
+    [[nodiscard]] JsonDict operator-(const JsonDict &src) const;
     JsonDict &operator-=(const JsonDict &src);
     JsonDict &merge(const JsonDict &src, bool overwrite = true);
-    JsonDict merge(const JsonDict &src) const;
-    QVariantMap flatten(const QString &separator = ":") const;
+    [[nodiscard]] JsonDict merge(const JsonDict &src) const;
+    [[nodiscard]] QVariantMap flatten(const QString &separator = ":") const;
     JsonDict::iterator begin();
     JsonDict::iterator end();
     JsonDict::const_iterator begin() const;

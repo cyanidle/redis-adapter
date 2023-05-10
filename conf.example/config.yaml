@@ -1,33 +1,63 @@
 pipelines:
-  - api.websocket <=> repeater(api)
-  - fountain.thin > *unwrap(modbus) > fountain.thin.modbus 
-  - fountain.thin.modbus > *rename(running_frequency, speed) > *wrap(modbus) > fountain.thin
-  - repeater(api) <=branch(fountains:0)=> fountain.thin
+  - udp.in(3333) > *meteo.divide > *meteo.round_wind_direction > *meteo.duplicate > *meteo.format > meteo.redis.cache
 
-fountain_settings_common: &fountain_settings
-  max_speed_value: 5000
-  uptime:
-    days: [1, 2, 3, 4, 5]
-    start_hour: 9
-    start_minute: 0
-    stop_hour: 17
-    stop_minute: 0
-  scripts:
-    default:
-      time_per_step_ms: 3000
-      data: [10, 40, 50, 60]
-
-python:
-  - worker:
-      name: fountain.thin
-      print_msgs: true
-    module_path: fountain.py
-    module_settings: *fountain_settings
-
-modbus: !include modbus.yaml
-
-websocket:
+redis:
   servers:
-    - worker:
-        name: api.websocket
-      port: 1234
+    - name: local
+      host: redis
+      port: 6379
+  cache:
+    producers:
+      - worker:
+          name: meteo.redis.cache
+          print_msgs: true
+        server_name: local
+        object_hash_key: meteo
+
+interceptors:
+  duplicating:
+    meteo.duplicate:
+      by_field:
+        "wind_direction": [wind_direction_raw]
+        "atmospheric_pressure": [atmospheric_pressure_raw]
+  validating:
+    meteo.format:
+      by_field:
+        "wind_direction": wind_direction_360_ru
+        "atmospheric_pressure": hecta_pascals_to_mm_atmospheric
+        "last_update": set_unix_timestamp
+    meteo.round_wind_direction:
+      by_field:
+        "wind_direction": round_last(60)
+        "wind_speed": round_last(60)
+    meteo.divide:
+      by_validator:
+        int_divide_by(10): [
+          wind_speed,
+          air_temperature,
+          air_humidity,
+          atmospheric_pressure,
+        ]
+modbus:
+  devices:
+    - tcp:
+        name: meteo.device
+        host: localhost
+        port: 502
+  masters:
+    - worker: 
+        name: meteo.modbus
+      register_names: [meteo]
+      device_name: meteo.device
+      slave_id: 1
+      queries: 
+        - {type: holding, reg_index: 1, reg_count: 6}
+
+  registers: 
+    holding_registers:
+      meteo:
+        wind_direction: {index: 1}
+        wind_speed: {index: 4}
+        air_temperature: {index: 6}
+        air_humidity: {index: 7}
+        atmospheric_pressure: {index: 8}

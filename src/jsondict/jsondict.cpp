@@ -683,6 +683,15 @@ size_t JsonDict::depth() const {
     return maxDepth;
 }
 
+JsonDict JsonDict::sanitized() const
+{
+    JsonDict result;
+    for(auto &[k, v] :*this) {
+        result[k] = v;
+    }
+    return result;
+}
+
 void JsonDict::swap(QVariantMap &dict) noexcept
 {
     m_dict.swap(dict);

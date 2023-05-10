@@ -24,6 +24,9 @@ struct Fetched {
     Fetched& operator=(const Fetched &other);
     Fetched(Fetched &&other);
     Fetched &operator=(Fetched &&other);
+    bool operator<(const Fetched &other) const;
+    bool operator==(const Fetched &other) const;
+    bool operator!=(const Fetched &other) const;
     bool validate(QVariant &target) const;
     const QString &name() const;
     bool isValid() const;
