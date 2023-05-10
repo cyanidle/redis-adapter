@@ -56,6 +56,7 @@ public:
     void nestedRun();
     virtual ~Worker();
 signals:
+    void forwardMsg(const Radapter::WorkerMsg &msg);
     void sendMsg(const Radapter::WorkerMsg &msg);
     void send(const JsonDict &msg);
     void sendKey(const QString &key, const QVariant &value);

@@ -44,7 +44,7 @@ PythonModuleWorker::PythonModuleWorker(const Settings::PythonModuleWorker &setti
         config.arguments->append({"--wait_for_debug_client", "true"});
     }
     d->proc = new ProcessWorker(config, thread);
-    connect(d->proc, &ProcessWorker::sendMsg, this, &PythonModuleWorker::sendMsg);
+    connect(d->proc, &ProcessWorker::sendMsg, this, &PythonModuleWorker::forwardMsg);
     d->proc->ownLogEnable(false);
     connect(d->proc, &ProcessWorker::stdErrLine, this, [this](const QByteArray &line) {
         qInfo(workersLogging()).noquote().nospace() << '['%workerName()%".py]: " << line;

@@ -58,6 +58,9 @@ Worker::Worker(const Settings::Worker &settings, QThread *thread) :
         brokerWarn()<< "=== Worker (" << workerName() << "): Will print Msgs! ===";
     }
     connect(this, &Worker::sendMsg, &Worker::onSendMsgPriv);
+    connect(this, &Worker::forwardMsg, this, [this](const WorkerMsg &msg){
+        emit sendMsg(prepareMsg(msg));
+    });
     connect(this, &Worker::send, this, [this](const JsonDict &data){
         emit sendMsg(prepareMsg(data));
     });
