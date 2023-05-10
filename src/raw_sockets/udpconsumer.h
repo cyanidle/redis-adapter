@@ -15,6 +15,7 @@ struct ConsumerSettings : Settings::Serializable
     IS_SERIALIZABLE
     FIELD(Settings::Required<Settings::Worker>, worker)
     FIELD(Settings::Required<quint16>, port)
+    FIELD(Settings::HasDefault<QString>, bind_to, "0.0.0.0")
 };
 
 class Consumer : public Radapter::Worker
