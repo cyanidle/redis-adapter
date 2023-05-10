@@ -38,10 +38,13 @@ _T = TypeVar("_T")
 
 @dataclass
 class BootParams:
-    file: str
-    settings: dict
+    settings: Optional[dict]
     worker_name: str
     ioloop: asyncio.AbstractEventLoop
+@dataclass
+class _boot_internal_params:
+    file: str
+    test_data: Optional[str]
 
 UniversalCallback = Union[Callable[[_T], Any], Callable[[_T], Awaitable]]
 ArglessCallback = Union[Callable[[], Any], Callable[[], Awaitable], Awaitable, partial]
@@ -176,7 +179,10 @@ class Worker(ABC):
         self.__name = params.worker_name
         self.__logger = logging.getLogger()
         self.__ioloop = params.ioloop
+        self.__params = params
         self.__jsons: Signal[JsonDict] = Signal()
+        self.__was_shutdown: Signal['Worker'] = Signal()
+        self._with_error = False
         self._sync_sender: Optional[Callable[[JsonDict], None]] = None
     @overload
     async def send(self, prefix: str, state: 'JsonState') -> None: ...
@@ -209,20 +215,31 @@ class Worker(ABC):
     def on_shutdown(self) -> None:
         raise NotImplementedError
     @property
+    def worker_params(self):
+        return self.__params
+    @property
+    def was_shutdown(self):
+        return self.__was_shutdown
+    @property
     def msgs(self):
         return self.__jsons
     @property
     def name(self):
         return self.__name
-    def shutdown(self, reason: str = 'Not Given'):
+    def shutdown(self, reason: str = 'Not Given', *, with_error = False):
+        self._with_error = with_error
         self.log.warn(f"Shutting down... Reason: {reason}")
         try:
+            was_tasks = len(self.tasks)
             self.on_shutdown()
+            if len(self.tasks) > was_tasks:
+                self.log.warning(f"### Do not create tasks inside of on_shutdown() handler!")
         except Exception as e:
             self.log.error("While shutting down:")
             self.log.exception(e)
         for task in self.tasks:
             task.cancel()
+        self.create_task(partial(self.__was_shutdown.emit, self))
     @property
     def is_busy(self) -> bool:
         return bool(self.tasks)
@@ -717,7 +734,6 @@ async def _connect_to_worker(worker: Worker):
                 queue.put_nowait(attempt)
             except Exception as e:
                 worker.log.error(f"Error parsing Json: {e.__class__.__name__}:{e}")
-    asyncio.get_running_loop().create_task(_flusher())
     worker.run()
     await _impl()
 
@@ -725,10 +741,10 @@ async def _boot_test(worker: Worker, json: JsonDict):
     await asyncio.sleep(2)
     await worker.on_msg(json)
 
-def _boot_exec(params: BootParams, test_data: Optional[str]):
+def _boot_exec(params: BootParams, internal: _boot_internal_params):
     import importlib.util
     sys.modules["bootstrap"] = sys.modules["__main__"]
-    spec = importlib.util.spec_from_file_location(params.worker_name, params.file)
+    spec = importlib.util.spec_from_file_location(params.worker_name, internal.file)
     module = importlib.util.module_from_spec(spec)  #type: ignore
     sys.modules[params.worker_name] = module
     spec.loader.exec_module(module)  #type: ignore
@@ -764,12 +780,22 @@ def _boot_exec(params: BootParams, test_data: Optional[str]):
             loop.stop()
             sys.exit(-1)
     params.ioloop.set_exception_handler(custom_exception_handler)
-    if not test_data is None:
-        as_json = JsonDict(json.loads(test_data))
+    async def _was_shutdown():
+        logging.getLogger().warning(f"Worker is shutting down! Waiting 5 seconds before quitting")
+        await asyncio.sleep(5)
+        params.ioloop.stop()
+        params.ioloop.close()
+        if worker._with_error:
+            sys.exit(-1)
+        else:
+            sys.exit(0)
+    worker.was_shutdown.receive_with(_was_shutdown)
+    if not internal.test_data is None:
+        as_json = JsonDict(json.loads(internal.test_data))
         params.ioloop.create_task(_boot_test(worker, as_json))
     if not sys.platform.startswith("win32"):
-        params.ioloop.add_signal_handler(signal.SIGTERM, worker.on_shutdown)  
-        params.ioloop.add_signal_handler(signal.SIGQUIT, worker.on_shutdown)  
+        params.ioloop.add_signal_handler(signal.SIGTERM, worker.shutdown)  
+        params.ioloop.add_signal_handler(signal.SIGQUIT, worker.shutdown)  
     params.ioloop.run_forever()
 
 def _boot_main():
@@ -822,10 +848,13 @@ def _boot_main():
         )
     args = parser.parse_args()
     params = BootParams(
-        args.file,
         json.loads(args.settings) if args.settings else {},
         args.name,
         asyncio.get_event_loop()
+    )
+    internal = _boot_internal_params(
+        args.file,
+        args.test_data
     )
     if args.debug_port is not None:
         logging.getLogger().warning(f"Accepting clients to connect to debugging port: {args.debug_port}")
@@ -833,7 +862,7 @@ def _boot_main():
         if args.wait_for_debug_client:
             logging.getLogger().warning("Waiting for connection!")
             debugpy.wait_for_client()
-    _boot_exec(params, args.test_data)
+    _boot_exec(params, internal)
 
 if __name__ == "__main__":
     _boot_main()
