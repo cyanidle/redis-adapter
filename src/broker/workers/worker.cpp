@@ -59,7 +59,9 @@ Worker::Worker(const Settings::Worker &settings, QThread *thread) :
     }
     connect(this, &Worker::sendMsg, &Worker::onSendMsgPriv);
     connect(this, &Worker::forwardMsg, this, [this](const WorkerMsg &msg){
-        emit sendMsg(prepareMsg(msg));
+        auto wrapped = d->baseMsg;
+        wrapped.setJson(msg);
+        emit sendMsg(wrapped);
     });
     connect(this, &Worker::send, this, [this](const JsonDict &data){
         emit sendMsg(prepareMsg(data));
