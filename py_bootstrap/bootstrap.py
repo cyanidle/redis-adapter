@@ -272,7 +272,8 @@ class Worker(ABC):
             task.cancel()
     @property
     def log(self) -> logging.LoggerAdapter:
-        return self.__WorkerLogAdapter(self.__logger, worker = self)
+        return self.__logger #type: ignore
+        #return self.__WorkerLogAdapter(self.__logger, worker = self)
     @property
     def tasks(self) -> List[asyncio.Task]:
         return self.__tasks
@@ -305,7 +306,7 @@ class Worker(ABC):
             super().__init__(logger, extra)
             self.worker = worker
         def process(self, msg, kwargs):
-            return (f"[{self.worker.__class__.__name__}]: {msg}", kwargs) if self.worker.name else (msg, kwargs)
+            return (f"{msg}", kwargs) if self.worker.name else (msg, kwargs)
 
 JsonKey = Union[Sequence[str], str]
 JsonItem = Union[str, None, int, float, list, dict, Any]
@@ -695,7 +696,7 @@ def _boot_init_logging():
         stderr.setFormatter(logging.Formatter(format_str))
         log.addHandler(stderr)
         log.setLevel(level)
-    _apply(logging.getLogger(), '%(levelname)-5s %(message)s', logging.INFO)
+    _apply(logging.getLogger("bootstrap"), '%(levelname)-5s %(message)s', logging.INFO)
     _apply(logging.getLogger("worker"), '%(levelname)-5s %(filename)-5s %(lineno)-4s%(message)s', logging.DEBUG)
 
 class _BootException(Exception):
@@ -724,13 +725,13 @@ async def _connect_to_worker(worker: Worker):
         await w.drain()
     worker.msgs.receive_with(wr)
     async def _impl():
-        logging.getLogger().info("Started read")
+        logging.getLogger("bootstrap").info("Started read")
         r: asyncio.StreamReader = streams[0]
         sleep = 1
         max_sleep = 5
         while True:
             if r.at_eof(): 
-                logging.getLogger().error(f"Stdin EOF!")
+                logging.getLogger("bootstrap").error(f"Stdin EOF!")
                 await asyncio.sleep(sleep)
                 if sleep < max_sleep: sleep += 1
                 continue
@@ -741,7 +742,7 @@ async def _connect_to_worker(worker: Worker):
             except Exception as e:
                 worker.log.error(f"Error parsing Json: {e.__class__.__name__}:{e}")
     worker.run()
-    logging.getLogger().info(f"Connected stdin/stdout to worker!")
+    logging.getLogger("bootstrap").info(f"Connected stdin/stdout to worker!")
     await asyncio.gather(_impl(), _flusher())
 
 async def _watchdog():
@@ -787,12 +788,12 @@ def _boot_exec(params: BootParams, internal: _boot_internal_params):
         loop.default_exception_handler(context)
         exception = context.get('exception')
         if isinstance(exception, _BootException):
-            logging.getLogger().error("Critical error on boot")
+            logging.getLogger("bootstrap").error("Critical error on boot")
             loop.stop()
             sys.exit(-1)
     params.ioloop.set_exception_handler(custom_exception_handler)
     async def _was_shutdown():
-        logging.getLogger().warning(f"Worker is shutting down! Waiting 5 seconds before quitting")
+        logging.getLogger("bootstrap").warning(f"Worker is shutting down! Waiting 5 seconds before quitting")
         await asyncio.sleep(5)
         params.ioloop.stop()
         params.ioloop.close()
@@ -869,13 +870,13 @@ def _boot_main():
         args.test_data
     )
     if args.debug_port is not None:
-        logging.getLogger().warning(f"Accepting clients to connect to debugging port: {args.debug_port}")
+        logging.getLogger("bootstrap").warning(f"Accepting clients to connect to debugging port: {args.debug_port}")
         debugpy.listen(("0.0.0.0", args.debug_port))
         if args.wait_for_debug_client:
-            logging.getLogger().warning("Waiting for connection!")
+            logging.getLogger("bootstrap").warning("Waiting for connection!")
             debugpy.wait_for_client()
-            logging.getLogger().warning(f"Debug client attached!")
-    logging.getLogger().info("Starting boot sequence!")
+            logging.getLogger("bootstrap").warning(f"Debug client attached!")
+    logging.getLogger("bootstrap").info("Starting boot sequence!")
     _boot_exec(params, internal)
 
 if __name__ == "__main__":
