@@ -36,6 +36,7 @@ void FileHelper::mainloop()
 {
     while (d->target->bytesAvailable()) {
         d->arr = d->target->readLine();
+        if (d->arr.isEmpty()) continue;
         auto json = JsonDict::fromBytes(d->arr, &d->err);
         if (d->err.error != QJsonParseError::NoError) {
             emit error("Json Parsing. Details: "%d->err.errorString()%". Full: "%d->arr);

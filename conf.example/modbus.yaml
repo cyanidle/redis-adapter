@@ -25,6 +25,7 @@ masters:
 
   - worker:
       name: plc.modbus
+      print_msgs: true
     device_name: plc
     slave_id: 11
     response_time_ms: 500  # (150). [has_default] 
