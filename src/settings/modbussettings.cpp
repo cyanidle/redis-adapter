@@ -1,6 +1,7 @@
 #include "modbussettings.h"
 #include "jsondict/jsondict.h"
-#include "templates/algorithms.hpp"
+#include "modbus/modbusparsing.h"
+#include <QStringBuilder>
 
 using namespace Settings;
 using namespace Serializable;
@@ -21,19 +22,47 @@ void ModbusSlave::postUpdate() {
             registers[name] = reg;
         }
     }
+    auto errRange = [](const RegisterInfo &info){
+        throw std::runtime_error(QString(
+            "Register ("%Modbus::printTable(info.table)%'['%QString::number(info.index)%"]) "
+            "out of range for slave: all regs must be from 0 to n without gaps").toStdString());
+    };
+    counts.reset();
+    for (auto &reg : registers) {
+        switch (reg.table.value) {
+        case QModbusDataUnit::InputRegisters: counts.input_registers++; continue;
+        case QModbusDataUnit::Coils: counts.coils++; continue;
+        case QModbusDataUnit::HoldingRegisters: counts.holding_registers++; continue;
+        case QModbusDataUnit::DiscreteInputs: counts.di++; continue;
+        default:
+            throw std::runtime_error("Unkown registers error");
+        }
+    }
     for (auto &reg : registers) {
         auto wordSize = QMetaType(reg.type).sizeOf() / 2;
         switch (reg.table.value) {
         case QModbusDataUnit::InputRegisters:
+            if (reg.index > counts.input_registers) {
+                errRange(reg);
+            }
             counts.input_registers+=wordSize;
             continue;
         case QModbusDataUnit::Coils:
+            if (reg.index > counts.coils) {
+                errRange(reg);
+            }
             counts.coils+=wordSize;
             continue;
         case QModbusDataUnit::HoldingRegisters:
+            if (reg.index > counts.holding_registers) {
+                errRange(reg);
+            }
             counts.holding_registers+=wordSize;
             continue;
         case QModbusDataUnit::DiscreteInputs:
+            if (reg.index > counts.di) {
+                errRange(reg);
+            }
             counts.di+=wordSize;
             continue;
         default:
@@ -60,6 +89,26 @@ void ModbusMaster::postUpdate()
                 throw std::invalid_argument("Register name collision: " + name.toStdString());
             }
             registers[name] = reg;
+        }
+    }
+    for (auto &query: queries) {
+        auto &table = query.type;
+        auto start = query.reg_index;
+        auto end = query.reg_count + start;
+        auto hitCount = 0;
+        for (auto &reg: registers) {
+            if (reg.table == table && reg.index >= start && reg.index < end) {
+                hitCount++;
+            }
+        }
+        if (hitCount < query.reg_count || hitCount > query.reg_count) {
+            throw std::runtime_error(QString("Query: reg_index: "%
+                                             QString::number(query.reg_index)%
+                                             ". reg_count: "%
+                                             QString::number(query.reg_count)%
+                                             ". table: "%
+                                             Modbus::printTable(query.type)%
+                                             ": not all registers found!").toStdString());
         }
     }
     device = devicesMap->value(device_name);
@@ -185,4 +234,9 @@ void Registers::postUpdate()
     parse(coils, "coils");
     parse(di, "discrete_inputs");
     parse(discrete_inputs, "discrete_inputs");
+}
+
+void RegisterCounts::reset()
+{
+    coils = di = input_registers = holding_registers = 0;
 }

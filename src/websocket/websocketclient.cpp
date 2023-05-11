@@ -49,7 +49,7 @@ void Client::init()
     m_sock = new QWebSocket{QStringLiteral("radapter:%1").arg(workerName()), QWebSocketProtocol::VersionLatest, this };
     connect(m_sock, &QWebSocket::connected, this, &Client::onConnected);
     connect(m_sock, &QWebSocket::disconnected, this, &Client::onDisconnected);
-    connect(m_sock, QOverload<QAbstractSocket::SocketError>::of(&QWebSocket::error),
+    connect(m_sock, QOverload<QAbstractSocket::SocketError>::of(&QWebSocket::errorOccurred),
             this, &Client::onError);
     connect(m_sock, &QWebSocket::textMessageReceived, this, &Client::onSocketReceived);
     connect(m_sock, &QWebSocket::pong, this, &Client::onPong);

@@ -67,10 +67,13 @@ bool Serializable::update(const QVariantMap &src)
         }
         for (auto &name: fields()) {
             if (field(name)->isSequence(this)) {
-                allFields.replace(name, name + "[]");
-            }
-            if (field(name)->isMapping(this)) {
-                allFields.replace(name, name + "{}");
+                allFields.replace(name, name%"[]");
+            } else if (field(name)->isMapping(this)) {
+                allFields.replace(name, name%"{}");
+            } else {
+                auto asStr = src[name].toString();
+                if (asStr.isEmpty()) continue;
+                allFields.replace(name, name%'('%asStr%')');
             }
         }
         throw std::runtime_error(err.what()

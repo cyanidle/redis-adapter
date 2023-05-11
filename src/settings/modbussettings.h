@@ -68,10 +68,11 @@ namespace Settings {
         void postUpdate() override;
     };
     struct RegisterCounts {
-        quint16 coils{};
-        quint16 di{};
-        quint16 holding_registers{};
-        quint16 input_registers{};
+        quint16 coils;
+        quint16 di;
+        quint16 holding_registers;
+        quint16 input_registers;
+        void reset();
     };
 
     //! Common Modbus worker params
