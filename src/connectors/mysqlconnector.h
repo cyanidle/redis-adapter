@@ -1,10 +1,8 @@
 #ifndef MYSQLCONNECTOR_H
 #define MYSQLCONNECTOR_H
 
-#include <QObject>
-#include "jsondict/jsondict.h"
 #include "mysql/mysqlclient.h"
-
+class JsonDict;
 namespace MySql {
 class RADAPTER_API Connector : public QObject
 {

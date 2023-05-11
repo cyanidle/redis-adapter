@@ -1,8 +1,7 @@
 #ifndef RESOURCEMONITOR_H
 #define RESOURCEMONITOR_H
 
-#include <QObject>
-#include <QTimer>
+#include "private/global.h"
 
 class RADAPTER_API ResourceMonitor : public QObject
 {

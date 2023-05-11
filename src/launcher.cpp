@@ -32,6 +32,7 @@
 #include "radapterconfig.h"
 #include "websocket/websocketclient.h"
 #include <QStringBuilder>
+#include <QThread>
 #include "websocket/websocketserver.h"
 #ifdef Q_OS_UNIX
 #include "utils/resourcemonitor.h"

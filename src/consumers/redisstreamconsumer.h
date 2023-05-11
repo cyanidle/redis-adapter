@@ -1,8 +1,6 @@
 #ifndef REDISSTREAMCONSUMER_H
 #define REDISSTREAMCONSUMER_H
 
-#include <QObject>
-#include <QTimer>
 #include "connectors/redisconnector.h"
 #include "settings/redissettings.h"
 

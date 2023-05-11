@@ -1,5 +1,6 @@
 #include "producerfilter.h"
 #include "filters/producerfiltersettings.hpp"
+#include "broker/workers/private/workermsg.h"
 
 using namespace Radapter;
 

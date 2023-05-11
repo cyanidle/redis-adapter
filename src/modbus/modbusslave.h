@@ -1,12 +1,13 @@
 #ifndef MODBUS_SLAVEWORKER_H
 #define MODBUS_SLAVEWORKER_H
 
-#include <QModbusDevice>
-#include <QTimer>
 #include "broker/workers/worker.h"
-#include "jsondict/jsondict.h"
-#include "settings/modbussettings.h"
+#include <QModbusDataUnit>
+#include <QModbusDevice>
 
+namespace Settings{
+struct ModbusSlave;
+}
 class QModbusServer;
 namespace Modbus {
 

@@ -1,7 +1,6 @@
 #ifndef REDISKEYEVENTSCONSUMER_H
 #define REDISKEYEVENTSCONSUMER_H
 
-#include <QObject>
 #include "connectors/redisconnector.h"
 #include "formatting/redis/rediscachequeries.h"
 

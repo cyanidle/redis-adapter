@@ -1,11 +1,9 @@
 #ifndef VALIDATED_FIELD_H
 #define VALIDATED_FIELD_H
 
-#include <QObject>
-#include <QVariant>
-#include <QSet>
 #include "serializable/common_fields.hpp"
 #include "serializable/field_super.h"
+
 #define PRE_VALIDATER_ATTR "pre_validated"
 namespace Serializable {
 

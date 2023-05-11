@@ -2,8 +2,7 @@
 #define BROKER_H
 
 #include "private/global.h"
-#include <QMap>
-#include <QHash>
+
 namespace Settings {
 struct Broker;
 }

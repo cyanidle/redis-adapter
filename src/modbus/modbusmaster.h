@@ -2,16 +2,14 @@
 #define MODBUS_MASTER_H
 
 #include "broker/workers/worker.h"
-#include "jsondict/jsondict.h"
-#include "settings/modbussettings.h"
-#include "modbusparsing.h"
-#include <QModbusReply>
+#include <QModbusDataUnit>
 #include <QModbusDevice>
-#include <QQueue>
-#include <QObject>
 
 class QTimer;
 class QModbusClient;
+namespace Settings {
+struct ModbusMaster;
+}
 namespace Redis {
 class CacheProducer;
 class CacheConsumer;

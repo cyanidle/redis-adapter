@@ -1,5 +1,6 @@
 #include "sqlkeyvaultconsumer.h"
 #include "radapterlogging.h"
+#include <QTimer>
 
 using namespace MySql;
 

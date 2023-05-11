@@ -1,17 +1,9 @@
 #ifndef SETTINGS_H
 #define SETTINGS_H
 
-#include <QObject>
-#include <QSerialPort>
-#include <QVariant>
-#include <QDataStream>
-#include <QVector>
-#include <QTime>
-#include <QModbusDataUnit>
-#include <QTimeZone>
 #include "broker/workers/settings/workersettings.h"
-#include "settings-parsing/serializablesetting.h"
-#include <QJsonDocument>
+#include <QSerialPort>
+#include <QTimeZone>
 
 Q_DECLARE_METATYPE(QTimeZone)
 Q_DECLARE_METATYPE(QDataStream::ByteOrder)

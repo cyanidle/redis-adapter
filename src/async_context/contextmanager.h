@@ -1,10 +1,8 @@
 #ifndef CONTEXTMANAGER_H
 #define CONTEXTMANAGER_H
 
-#include <QHash>
-#include "radapterlogging.h"
 #include "private/global.h"
-#include <stdexcept>
+#include "radapterlogging.h"
 
 namespace Radapter {
 

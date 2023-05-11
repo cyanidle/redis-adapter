@@ -1,10 +1,8 @@
 #ifndef CONTAINERFILTER_HPP
 #define CONTAINERFILTER_HPP
 
-#include <iterator>
-#include <type_traits>
+#include "private/global.h"
 #include "metaprogramming.hpp"
-#include <QtGlobal>
 
 namespace Radapter {
 template <typename Iter_T, typename Filter>

@@ -1,7 +1,7 @@
 #ifndef UTILS_SIGNALHANDLER_H
 #define UTILS_SIGNALHANDLER_H
 
-#include <QObject>
+#include "private/global.h"
 
 namespace Utils {
 

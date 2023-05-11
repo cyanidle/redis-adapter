@@ -1,10 +1,9 @@
 #ifndef SQLKEYVAULTCONSUMER_H
 #define SQLKEYVAULTCONSUMER_H
 
-#include <QObject>
+#include "broker/workers/worker.h"
 #include "connectors/mysqlconnector.h"
 #include "settings/settings.h"
-#include "broker/workers/worker.h"
 
 namespace MySql {
 class RADAPTER_API KeyVaultConsumer : public Radapter::Worker

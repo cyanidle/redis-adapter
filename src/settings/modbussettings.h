@@ -1,12 +1,11 @@
 #ifndef MODBUSSETTINGS_H
 #define MODBUSSETTINGS_H
 
-#include "broker/sync/channel.h"
-#include "qthread.h"
 #include "settings.h"
+#include <QModbusDataUnit>
 
 Q_DECLARE_METATYPE(QMetaType::Type)
-
+namespace Radapter{namespace Sync{class Channel;}}
 namespace Validator {
     struct ByteWordOrder {
         static const QString &name();

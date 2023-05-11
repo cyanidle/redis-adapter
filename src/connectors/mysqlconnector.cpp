@@ -1,5 +1,6 @@
 #include "mysqlconnector.h"
 #include "formatting/sql/sqlresults.h"
+#include "jsondict/jsondict.h"
 using namespace MySql;
 Connector::Connector(const Settings::SqlClientInfo &clientInfo, QObject *parent)
     : QObject(parent),

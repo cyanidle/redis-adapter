@@ -2,6 +2,7 @@
 #define MODBUS_PARSING_H
 
 #include "settings/modbussettings.h"
+
 namespace Modbus {
 
 QVariant parseModbusType(quint16* words, const Settings::RegisterInfo &regInfo, int sizeWords);

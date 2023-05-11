@@ -1,8 +1,7 @@
 #ifndef TIMEUTILS_H
 #define TIMEUTILS_H
 
-#include <QtGlobal>
-#include <QDateTime>
+#include "private/global.h"
 
 namespace Utils {
 namespace Time {

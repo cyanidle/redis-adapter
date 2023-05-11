@@ -1,5 +1,6 @@
 #ifndef REDISSETTINGS_H
 #define REDISSETTINGS_H
+
 #include "settings.h"
 
 namespace Settings {
