@@ -322,12 +322,12 @@ JsonDict JsonDict::operator+(const JsonDict &src) const
 
 JsonDict JsonDict::operator-(const JsonDict &src) const
 {
-    return diff(src);
+    return diff(src, false);
 }
 
 JsonDict &JsonDict::operator-=(const JsonDict &src)
 {
-    return (*this) = diff(src);
+    return (*this) = diff(src, false);
 }
 
 bool JsonDict::update(const JsonDict &src, bool overwrite)

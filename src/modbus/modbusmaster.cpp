@@ -9,6 +9,7 @@
 #include <QModbusReply>
 #include "broker/sync/syncjson.h"
 #include <QModbusClient>
+#include <QStringBuilder>
 #include <QModbusTcpClient>
 
 using namespace Modbus;
@@ -55,6 +56,11 @@ Master::Master(const Settings::ModbusMaster &settings, QThread *thread) :
     }
     connect(this, &Master::connected, [this](){d->connected=true;});
     connect(this, &Master::disconnected, [this](){d->connected=false;});
+    if (!d->settings.read_only && d->settings.queries->isEmpty()) {
+        throw std::runtime_error(
+            QString(printSelf()%": Empty queries while not read_only. If you wanted to forbid reading set 'read_only: true'")
+                .toStdString());
+    }
 }
 
 void Master::initClient()
@@ -254,7 +260,8 @@ void Master::onReadReady()
     auto table = reply->result().registerType();
     JsonDict resultJson;
     for (int i = 0; i < words.size();) {
-        if (!d->reverseRegisters[table].contains(reply->result().startAddress() + i)) {
+        auto startAddr = reply->result().startAddress();
+        if (!d->reverseRegisters[table].contains(startAddr + i)) {
             ++i;
             continue;
         }
@@ -318,6 +325,7 @@ void Master::updateCurrent(const JsonDict &json)
             toRewrite[key] = val;
         } else {
             d->state.updateCurrent(key, val);
+            d->state.updateTarget(key, val);
             rewriteAttempts = 0;
         }
     }
