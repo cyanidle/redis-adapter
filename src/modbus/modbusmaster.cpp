@@ -7,6 +7,7 @@
 #include "consumers/rediscacheconsumer.h"
 #include "producers/rediscacheproducer.h"
 #include <QModbusReply>
+#include "broker/sync/syncjson.h"
 #include <QModbusClient>
 #include <QModbusTcpClient>
 
@@ -18,8 +19,7 @@ struct Master::Private{
     QHash<QModbusDataUnit::RegisterType, QHash<int, QString>> reverseRegisters;
     QQueue<QModbusDataUnit> readQueue;
     QQueue<QModbusDataUnit> writeQueue;
-    JsonDict state;
-    JsonDict wantedState;
+    Sync::Json state;
     QMap<QString, quint8> rewriteAttempts;
     QTimer *reconnectTimer;
     QTimer *readTimer;
@@ -27,6 +27,7 @@ struct Master::Private{
     std::atomic<bool> connected{false};
     Redis::CacheProducer *stateWriter{nullptr};
     Redis::CacheConsumer *stateReader{nullptr};
+    int currentRead{0};
 };
 
 Master::Master(const Settings::ModbusMaster &settings, QThread *thread) :
@@ -144,9 +145,8 @@ void Master::fetchState()
     if (d->stateReader) {
         auto command = prepareCommand(new Redis::Cache::ReadObject(workerName()));
         command.setCallback(this, [this](const ReplyJson *reply){
-            d->state.merge(reply->json());
-            d->wantedState.merge(d->state);
-            emit send(d->state);
+            d->state.updateTarget(reply->json());
+            d->state.updateCurrent(reply->json());
         });
         command.receivers() = {d->stateReader};
         emit sendMsg(command);
@@ -155,6 +155,10 @@ void Master::fetchState()
 
 void Master::onMsg(const Radapter::WorkerMsg &msg)
 {
+    if (d->settings.read_only) {
+        workerWarn(this) << "Attempt to write while read-only! See config.";
+        return;
+    }
     write(msg);
 }
 
@@ -164,31 +168,28 @@ void Master::write(const JsonDict &data)
         reDebug() << printSelf() << "Write while not connected!";
     }
     QList<QModbusDataUnit> results;
-    for (auto& iter : data) {
-        if (!iter.value().isValid()) continue;
-        auto fullKeyJoined = iter.key().join(":");
+    for (auto&[key, value] : data) {
+        if (!value.isValid()) continue;
+        auto fullKeyJoined = key.join(":");
         if (!d->settings.registers.contains(fullKeyJoined)) continue;
         const auto &regInfo = d->settings.registers[fullKeyJoined];
         if (!regInfo.writable) {
             workerInfo(this) << "Attempt to write to protected register: " << regInfo.print();
             continue;
         }
-        auto value = iter.value();
-        if (regInfo.validator.isValid() && !regInfo.validator->validate(value)) {
+        auto valCopy = value;
+        if (regInfo.validator.isValid() && !regInfo.validator->validate(valCopy)) {
             workerWarn(this, .nospace())
                 << "Property: '" << fullKeyJoined
                 << "' was invalidated by Validator[" << regInfo.validator.value.name()
                 << "] --> value: " << value;
             continue;
         }
-        if (value.canConvert(QMetaType(regInfo.type))) {
-            d->wantedState[iter.key()] = value;
-            if (d->state[iter.key()] == value) {
-                continue;
-            }
-            results.append(parseValueToDataUnit(value, regInfo));
+        if (valCopy.canConvert(QMetaType(regInfo.type))) {
+            if (!d->state.updateTarget(key, valCopy)) continue;
+            results.append(parseValueToDataUnit(valCopy, regInfo));
         } else {
-            workerError(this) << "Incompatible value under:" << fullKeyJoined << " --> " << value << "; Wanted: " << regInfo.type.value;
+            workerError(this) << "Incompatible value under:" << fullKeyJoined << " --> " << valCopy << "; Wanted: " << regInfo.type.value;
         }
     }
     for (const auto &state : mergeDataUnits(results)) {
@@ -268,7 +269,7 @@ void Master::onReadReady()
         i += sizeWords;
         resultJson.insert(registersName.split(':'), result);
     }
-    formatAndSendJson(resultJson);
+    updateCurrent(resultJson);
 }
 
 void Master::onWriteReady()
@@ -290,44 +291,40 @@ void Master::onWriteReady()
 
 void Master::doRead()
 {
-    if (!d->connected) {
+    if (!d->connected || !config().queries->size()) {
         return;
     }
-    for (auto &query : config().queries) {
-        auto unit = QModbusDataUnit(query.type, query.reg_index, query.reg_count);
-        enqeueRead(unit);
+    auto &query = config().queries[d->currentRead++];
+    auto unit = QModbusDataUnit(query.type, query.reg_index, query.reg_count);
+    enqeueRead(unit);
+    if (d->currentRead >= config().queries->size()) {
+        d->currentRead = 0;
     }
 }
 
-void Master::formatAndSendJson(const JsonDict &json)
+void Master::updateCurrent(const JsonDict &json)
 {
-    JsonDict result;
-    JsonDict toRewrite;
-    for (auto &newJson : json) {
-        auto key = newJson.key();
-        auto joinedKey = key.join(':');
-        auto &lastVal = d->state[key];
-        auto &wantedVal = d->wantedState[key];
-        auto &newVal = newJson.value();
-        auto &rewriteAttempts = d->rewriteAttempts[joinedKey];
-        if (newVal != lastVal) {
-            lastVal = newVal;
-            wantedVal = newVal;
-            result[key] = newVal;
-        } else if (newVal != wantedVal && rewriteAttempts < d->settings.retries) {
+    auto last = d->state.current();
+    d->state.updateCurrent(json);
+    auto toRewrite = d->state.missingToTarget();
+    for (auto &[key, val] : toRewrite) {
+        auto joined = key.join(':');
+        auto &rewriteAttempts = d->rewriteAttempts[joined];
+        if (rewriteAttempts < d->settings.retries) {
             rewriteAttempts++;
-            workerWarn(this) << "Rewriting property:" << joinedKey
-                             << "; Value:" << wantedVal
+            workerWarn(this) << "Rewriting property:" << joined
+                             << "; Value:" << val.toString()
                              << "; Attemtps:" << rewriteAttempts;
-            toRewrite[key] = wantedVal;
+            toRewrite[key] = val;
         } else {
-            wantedVal = newVal;
+            d->state.updateCurrent(key, val);
             rewriteAttempts = 0;
         }
     }
-    if (!result.isEmpty()) {
-        saveState(result);
-        emit send(result);
+    saveState(d->state.current());
+    auto diff = d->state.current() - last;
+    if (!diff.isEmpty()) {
+        emit send(diff);
     }
     if (!toRewrite.isEmpty()) {
         QTimer::singleShot(d->settings.response_time_ms, this, [this, toRewrite]{

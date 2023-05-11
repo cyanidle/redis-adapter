@@ -95,11 +95,11 @@ public:
     [[nodiscard]] QJsonObject toJsonObj() const;
     [[nodiscard]] QByteArray toBytes(QJsonDocument::JsonFormat format = QJsonDocument::Compact) const;
     //! Заполнение из QJsonObject
-    static JsonDict fromJsonObj(const QJsonObject &json);
-    static JsonDict fromBytes(const QByteArray &json, QJsonParseError *err = nullptr);
-    bool contains(const QString &key, QChar sep = ':') const;
-    bool contains(const QStringList &key) const;
-    bool contains(const JsonDict &src) const;
+    [[nodiscard]] static JsonDict fromJsonObj(const QJsonObject &json);
+    [[nodiscard]] static JsonDict fromBytes(const QByteArray &json, QJsonParseError *err = nullptr);
+    [[nodiscard]] bool contains(const QString &key, QChar sep = ':') const;
+    [[nodiscard]] bool contains(const QStringList &key) const;
+    [[nodiscard]] bool contains(const JsonDict &src) const;
     static qint64 toIndex(const QString &key);
     QStringList firstKey() const;
     QVariant &first();
@@ -108,11 +108,11 @@ public:
     QVariantMap &top();
     const QVariantMap &top() const;
     int remove(const QStringList &akey);
-    QVariant take(const QStringList &akey);
-    QVariant take(const QString &akey, QChar separator = ':');
-    QVariant take(const QString &akey, const QString &separator);
+    [[nodiscard]] QVariant take(const QStringList &akey);
+    [[nodiscard]] QVariant take(const QString &akey, QChar separator = ':');
+    [[nodiscard]] QVariant take(const QString &akey, const QString &separator);
     bool isEmpty() const;
-    JsonDict diff(const JsonDict &other) const;
+    JsonDict diff(const JsonDict &other, bool full = true) const;
     JsonDict &nest(QChar separator = ':');
     JsonDict &nest(const QString &separator);
     [[nodiscard]] JsonDict nest(const QString &separator) const;
@@ -120,6 +120,7 @@ public:
     [[nodiscard]] JsonDict operator+(const JsonDict &src) const;
     [[nodiscard]] JsonDict operator-(const JsonDict &src) const;
     JsonDict &operator-=(const JsonDict &src);
+    bool update(const JsonDict &src, bool overwrite = true);
     JsonDict &merge(const JsonDict &src, bool overwrite = true);
     [[nodiscard]] JsonDict merge(const JsonDict &src) const;
     [[nodiscard]] QVariantMap flatten(const QString &separator = ":") const;

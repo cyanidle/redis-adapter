@@ -83,6 +83,7 @@ namespace Settings {
         FIELD(Required<quint16>, slave_id)
         FIELD(RequiredSequence<QString>, register_names)
         FIELD(HasDefault<quint32>, reconnect_timeout_ms, 3000)
+        FIELD(HasDefault<bool>, read_only, false)
     };
 
     struct RADAPTER_API ModbusSlave : ModbusWorker {
@@ -99,7 +100,7 @@ namespace Settings {
     struct RADAPTER_API ModbusMaster : ModbusWorker {
         Q_GADGET
         IS_SERIALIZABLE
-        FIELD(RequiredSequence<ModbusQuery>, queries)
+        FIELD(OptionalSequence<ModbusQuery>, queries)
 
         FIELD(HasDefault<quint32>, poll_rate, 500)
         FIELD(HasDefault<quint32>, response_time_ms, 150)

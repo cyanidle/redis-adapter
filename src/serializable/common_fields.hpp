@@ -175,10 +175,10 @@ struct FieldCommon : IsFieldCheck {
     using valueRef = T&;
     FieldCommon() = default;
     template<typename U>
-    FieldCommon(U&&other) : value(std::forward<U>(other)) {}
+    explicit FieldCommon(U&&other) : value(std::forward<U>(other)) {}
     FieldCommon(const FieldCommon &other) = default;
     template<typename U>
-    FieldCommon &operator=(U&&other){value = std::forward<U>(other); return *this;}
+    FieldCommon &operator=(const U&other) {value = other; return *this;}
     FieldCommon &operator=(const FieldCommon &other) = default;
     bool operator==(const T& other) const {return value == other;}
     bool operator==(const FieldCommon &other) const {return value == other.value;}
@@ -323,6 +323,10 @@ struct SequenceCommon : public Private::FieldCommon<QList<T>> {
     friend struct Private::FieldHolder;
     template <typename Key>
     decltype(auto) operator[](Key &&key) {
+        return value[std::forward<Key>(key)];
+    }
+    template <typename Key>
+    decltype(auto) operator[](Key &&key) const {
         return value[std::forward<Key>(key)];
     }
     typename QList<T>::iterator begin() {

@@ -1,4 +1,6 @@
 SOURCES+= \
-   $$PWD/channel.cpp
+   $$PWD/channel.cpp \
+   $$PWD/syncjson.cpp
 HEADERS+= \
-   $$PWD/channel.h
+   $$PWD/channel.h \
+   $$PWD/syncjson.h

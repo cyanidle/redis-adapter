@@ -17,6 +17,7 @@ GIT_COMMIT
 !**/*.txt
 !**/*.template
 !.dockerignore
+conf
 Dockerfile
 !README
 !radapter.qrc

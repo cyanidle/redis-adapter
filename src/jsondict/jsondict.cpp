@@ -294,10 +294,11 @@ JsonDict &JsonDict::nest(const QString &separator)
 
 JsonDict &JsonDict::merge(const JsonDict &src, bool overwrite)
 {
-    for (auto &iter : src) {
-        auto key = iter.key();
-        if (overwrite || !contains(key)) {
-            insert(key, iter.value());
+    for (auto &[key, val] : src) {
+        const auto &thisVal = value(key);
+        if (overwrite || !thisVal.isValid()) {
+            if (thisVal == val) continue;
+            insert(key, val);
         }
     }
     return *this;
@@ -327,6 +328,20 @@ JsonDict JsonDict::operator-(const JsonDict &src) const
 JsonDict &JsonDict::operator-=(const JsonDict &src)
 {
     return (*this) = diff(src);
+}
+
+bool JsonDict::update(const JsonDict &src, bool overwrite)
+{
+    bool wasUpdated = false;
+    for (auto &[key, val] : src) {
+        const auto &thisVal = value(key);
+        if (overwrite || !thisVal.isValid()) {
+            if (thisVal == val) continue;
+            wasUpdated = true;
+            insert(key, val);
+        }
+    }
+    return wasUpdated;
 }
 
 JsonDict JsonDict::merge(const JsonDict &src) const
@@ -459,19 +474,21 @@ bool JsonDict::isEmpty() const
     return !deepCount();
 }
 
-JsonDict JsonDict::diff(const JsonDict &other) const
+JsonDict JsonDict::diff(const JsonDict &other, bool full) const
 {
     JsonDict result;
-    for (auto &iter : other) {
-        auto key = iter.key();
-        if (!contains(key)) {
-            result.insert(key, iter.value());
+    if (full) {
+        for (auto &[key, otherVal] : other) {
+            const auto &thisVal = value(key);
+            if (thisVal != otherVal) {
+                result.insert(key, otherVal);
+            }
         }
     }
-    for (auto &iter : *this) {
-        auto key = iter.key();
-        if (!other.contains(key)) {
-            result.insert(key, iter.value());
+    for (auto &[key, thisVal] : *this) {
+        const auto &otherVal = other.value(key);
+        if (otherVal != thisVal) {
+            result.insert(key, thisVal);
         }
     }
     return result;

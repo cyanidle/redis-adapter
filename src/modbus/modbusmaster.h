@@ -45,7 +45,7 @@ private slots:
     void onStateChanged(QModbusDevice::State state);
     void reconnect();
 private:
-    void formatAndSendJson(const JsonDict &json);
+    void updateCurrent(const JsonDict &json);
     void enqeueRead(const QModbusDataUnit &unit);
     void enqeueWrite(const QModbusDataUnit &unit);
     void executeNext();

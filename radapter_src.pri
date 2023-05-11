@@ -11,6 +11,7 @@ PRECOMPILED_HEADER += $$PWD/src/private/global.h
 CONFIG += c++17 create_prl
 win32: {
     LIBS += -lws2_32
+    QMAKE_CXXFLAGS += /bigobj
     g++:{
         ENV_PATH = $$(PATH)
         ENV_PATH_DIRS = $$split(ENV_PATH, ;)

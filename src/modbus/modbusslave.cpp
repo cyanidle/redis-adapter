@@ -183,6 +183,10 @@ void Slave::onStateChanged(QModbusDevice::State state)
 
 void Slave::onMsg(const Radapter::WorkerMsg &msg)
 {
+    if (d->settings.read_only) {
+        workerWarn(this) << "Attempt to write while read-only! See config.";
+        return;
+    }
     QList<QModbusDataUnit> results;
     for (auto& iter : msg) {
         auto fullKeyJoined = iter.key().join(":");
