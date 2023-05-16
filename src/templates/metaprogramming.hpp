@@ -13,6 +13,13 @@ template<bool...> struct bool_pack;
 template<bool... bs>
 using all_true = std::is_same<bool_pack<bs..., true>, bool_pack<true, bs...>>;
 
+template <typename...Args>
+struct CheckAll {
+    static constexpr bool Empty() {return !sizeof...(Args);};
+    static constexpr bool Copyable() {return Radapter::all_true<std::is_copy_constructible<Args>::value...>();}
+    static constexpr bool MetaDefined() {return Empty() || Radapter::all_true<QMetaTypeId2<Args>::Defined...>();}
+};
+
 template <typename T>
 using stripped_this = typename std::decay<typename std::remove_pointer<T>::type>::type;
 

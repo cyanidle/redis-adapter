@@ -44,6 +44,7 @@ private slots:
     void onErrorOccurred(QModbusDevice::Error error);
     void onStateChanged(QModbusDevice::State state);
     void reconnect();
+    void doFrame();
 private:
     void updateCurrent(const JsonDict &json);
     void enqeueRead(const QModbusDataUnit &unit);

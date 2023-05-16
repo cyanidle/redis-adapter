@@ -78,12 +78,13 @@ void tryCreateInterceptor(const QString &name, QObject *parent)
         auto config = Settings::NamespaceUnwrapper();
         config.unwrap_from = tryExtract<QString>(name, data, 0, "unwrap_from");
         broker->registerInterceptor(name, new NamespaceUnwrapper(config));
-    } else if (func == "block") {
+    } else if (func == "block" || func == "allow") {
         auto config = Settings::ValidatingInterceptor();
+        if (func == "allow") config.inverse = true;
         auto validator = QStringLiteral("invalidate");
         config.by_validator[validator] = data;
         broker->registerInterceptor(name, new ValidatingInterceptor(config));
-    } else if (func == "rename") {
+    }else if (func == "rename") {
         auto config = Settings::RenamingPipe();
         auto from = tryExtract<QString>(name, data, 0, "rename_from");
         config.renames[from] = tryExtract<QString>(name, data, 1, "rename_to");
@@ -216,6 +217,12 @@ void tryCreateBidirConnect(const QString &left, const QString &right, QStringLis
                 switch(dir) {
                 case PipeOp::Normal: fakePipe.append("block("%data.join(',')%')');break;
                 case PipeOp::Inverted: fakePipe.append("block("%data.join(',')%')');break;
+                default: throw std::runtime_error("Unreachable");
+                }
+            } else if (func == "allow") {
+                switch(dir) {
+                case PipeOp::Normal: fakePipe.append("allow("%data.join(',')%')');break;
+                case PipeOp::Inverted: fakePipe.append("allow("%data.join(',')%')');break;
                 default: throw std::runtime_error("Unreachable");
                 }
             } else {

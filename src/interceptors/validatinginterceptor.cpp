@@ -33,29 +33,33 @@ void ValidatingInterceptor::onMsgFromWorker(WorkerMsg &msg)
     }
 }
 
-void ValidatingInterceptor::validate(WorkerMsg &msg)
+void ValidatingInterceptor::checkKeyVal(const QStringList &key, QVariant& val)
 {
+    auto joined = key.join(':');
     for (auto iter = d->settings.final_by_validator.cbegin(); iter != d->settings.final_by_validator.cend(); ++iter) {
         auto &validator = iter.key();
         for (const auto &field: iter.value()) {
-            if (!msg.contains(field)) continue;
-            auto &current = msg[field];
-            if (!validator.validate(current)) {
-                current.clear();
+            if (field == joined ^ d->settings.inverse) {
+                if (!validator.validate(val)) {
+                    val.clear();
+                }
             }
         }
     }
     for (auto iter = d->settings.final_by_validator_glob.cbegin(); iter != d->settings.final_by_validator_glob.cend(); ++iter) {
         auto validator = iter.key();
-        for (auto &msgIter: msg) {
-            auto keyJoined = msgIter.key().join(':');
-            auto shouldValidate = iter.value().match(keyJoined).hasMatch();
-            if (!shouldValidate) continue;
-            if (!msg.contains(keyJoined)) continue;
-            auto &current = msg[keyJoined];
-            if (!validator.validate(current)) {
-                current.clear();
+        auto globHit = iter.value().match(joined).hasMatch();
+        if (globHit ^ d->settings.inverse) {
+            if (!validator.validate(val)) {
+                val.clear();
             }
         }
+    }
+}
+
+void ValidatingInterceptor::validate(WorkerMsg &msg)
+{
+    for (auto &[key, val]: msg.json()) {
+        checkKeyVal(key, val);
     }
 }

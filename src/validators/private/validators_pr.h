@@ -39,14 +39,6 @@ DecTuple<Args...> unpackArgs(const QVariantList &args) {
     tryPopulate<0, Args...>(result, args);
     return result;
 }
-template <typename...Args>
-struct CheckArgs {
-    enum {
-        Empty = !sizeof...(Args),
-        Copyable = Empty || Radapter::all_true<std::is_copy_constructible<Args>::value...>(),
-        MetaDefined = Empty || Radapter::all_true<QMetaTypeId2<Args>::Defined...>(),
-    };
-};
 }
 class IExecutor
 {
@@ -103,7 +95,7 @@ template <typename...Args>
 class Executor : public IExecutor
 {
 public:
-    static_assert(Private::CheckArgs<Args...>::MetaDefined, "Arguments must be registered with Q_DECLARE_METATYPE()");
+    static_assert(Radapter::CheckAll<Args...>::MetaDefined(), "Arguments must be registered with Q_DECLARE_METATYPE()");
     IExecutor *newCopy() const override {
         return new Executor(func, args);
     }
@@ -130,7 +122,7 @@ template <typename State, typename...Args>
 class StatefulExecutor : public IExecutor
 {
 public:
-    static_assert(Private::CheckArgs<Args...>::MetaDefined, "Arguments must be registered with Q_DECLARE_METATYPE()");
+    static_assert(Radapter::CheckAll<Args...>::MetaDefined(), "Arguments must be registered with Q_DECLARE_METATYPE()");
     IExecutor *newCopy() const override {
         return new StatefulExecutor(func, args);
     }

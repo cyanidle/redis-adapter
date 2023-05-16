@@ -28,7 +28,8 @@ struct Master::Private{
     std::atomic<bool> connected{false};
     Redis::CacheProducer *stateWriter{nullptr};
     Redis::CacheConsumer *stateReader{nullptr};
-    int currentRead{0};
+    int currentReadFrame{0};
+    QTimer *interframeTimer;
 };
 
 Master::Master(const Settings::ModbusMaster &settings, QThread *thread) :
@@ -38,6 +39,9 @@ Master::Master(const Settings::ModbusMaster &settings, QThread *thread) :
     d->settings = settings;
     d->reconnectTimer = new QTimer(this);
     d->readTimer = new QTimer(this);
+    d->interframeTimer = new QTimer(this);
+    d->interframeTimer->setInterval(settings.interframe_gap);
+    d->interframeTimer->callOnTimeout(this, &Master::doFrame);
     d->reconnectTimer->setInterval(settings.reconnect_timeout_ms);
     d->reconnectTimer->callOnTimeout(this, &Master::connectDevice);
     d->reconnectTimer->setSingleShot(true);
@@ -301,11 +305,17 @@ void Master::doRead()
     if (!d->connected || !config().queries->size()) {
         return;
     }
-    auto &query = config().queries[d->currentRead++];
+    d->interframeTimer->start();
+}
+
+void Master::doFrame()
+{
+    auto &query = config().queries[d->currentReadFrame++];
     auto unit = QModbusDataUnit(query.type, query.reg_index, query.reg_count);
     enqeueRead(unit);
-    if (d->currentRead >= config().queries->size()) {
-        d->currentRead = 0;
+    if (d->currentReadFrame >= config().queries->size()) {
+        d->currentReadFrame = 0;
+        d->interframeTimer->stop();
     }
 }
 

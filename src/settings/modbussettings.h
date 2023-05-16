@@ -104,6 +104,9 @@ namespace Settings {
         FIELD(OptionalSequence<ModbusQuery>, queries)
 
         FIELD(HasDefault<quint32>, poll_rate, 500)
+        COMMENT(poll_rate, "Poll rate is the time between two full updates")
+        FIELD(HasDefault<quint32>, interframe_gap, 50)
+        COMMENT(interframe_gap, "Interframe gap is the timeout between queries")
         FIELD(HasDefault<quint32>, response_time_ms, 150)
         FIELD(HasDefault<quint32>, retries, 3)
 

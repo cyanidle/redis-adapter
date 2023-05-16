@@ -20,6 +20,7 @@ public slots:
     virtual void onMsgFromWorker(Radapter::WorkerMsg &msg) override;
 private:
     void validate(WorkerMsg &msg);
+    void checkKeyVal(const QStringList &key, QVariant &val);
 
     ValidatingInterceptorPrivate *d;
 };

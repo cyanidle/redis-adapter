@@ -8,9 +8,11 @@ namespace Settings {
 struct ValidatingInterceptor : public Serializable {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(MappingHasDefault<QString>, by_field)
-    FIELD(MappingHasDefault<QStringList>, by_validator)
-    FIELD(MappingHasDefault<QString>, by_glob)
+    FIELD(OptionalMapping<QString>, by_field)
+    FIELD(OptionalMapping<QStringList>, by_validator)
+    FIELD(OptionalMapping<QString>, by_glob)
+    FIELD(HasDefault<bool>, inverse, false)
+    COMMENT(inverse, "'Inverse mode' applies validators to all field EXCEPT ones defined in other fields")
 
     QMap<Validator::Fetched, QStringList> final_by_validator;
     QMap<Validator::Fetched, QRegularExpression> final_by_validator_glob;
