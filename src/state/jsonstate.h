@@ -1,5 +1,6 @@
 #ifndef RADAPTER_JSON_STATE_H
 #define RADAPTER_JSON_STATE_H
+#include "broker/workers/worker.h"
 #include "jsondict/jsondict.h"
 #include "serializable/serializableobject.h"
 #include "serializable/bindable_field.hpp"
@@ -36,9 +37,10 @@ void callIfValid(const JsonDict &data, const QString &path, const User *user, Me
 
 struct RADAPTER_API Json : protected Serializable::Object {
     Q_GADGET
+    struct Private;
 public:
     Q_DISABLE_COPY_MOVE(Json)
-    Json();
+    Json(Radapter::Worker *parent = nullptr);
     ~Json();
     using Serializable::Object::field;
     using Serializable::Object::fields;
@@ -54,16 +56,17 @@ public:
     /// possible args (State::Json *state)
     template <typename...Args>
     void afterUpdate(Args&&...args) {
-        d->connect(d, &Private::JsonStateQObject::wasUpdated, std::forward<Args>(args)...);
+        obj->connect(d, &State::Private::JsonStateQObject::wasUpdated, std::forward<Args>(args)...);
     }
     //! Will call a callback before update with
     /// possible args (const JsonDict &data, State::Json *state)
     template <typename...Args>
     void beforeUpdate(Args&&...args) {
-        d->connect(d, &Private::JsonStateQObject::beforeUpdate, std::forward<Args>(args)...);
+        obj->connect(d, &State::Private::JsonStateQObject::beforeUpdate, std::forward<Args>(args)...);
     }
 private:
-    Private::JsonStateQObject *d;
+    State::Private::JsonStateQObject *obj;
+    Private *d;
 
     bool update(const QVariantMap &data) override;
     JsonDict send(const QString &fieldName) const;

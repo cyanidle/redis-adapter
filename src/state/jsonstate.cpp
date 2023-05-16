@@ -1,16 +1,24 @@
 #include "jsonstate.h"
 #include "jsondict/jsondict.h"
 #include "settings-parsing/serializablesetting.h"
+#include "templates/algorithms.hpp"
 #include <QStringBuilder>
 
-State::Json::Json() :
-    d(new Private::JsonStateQObject)
+struct State::Json::Private {
+    Radapter::Worker *parent;
+};
+
+State::Json::Json(Radapter::Worker *parent) :
+    obj(new State::Private::JsonStateQObject),
+    d(new Private{parent})
 {
+
 }
 
 State::Json::~Json()
 {
     delete d;
+    delete obj;
 }
 
 QString State::Json::logInfo() const
@@ -53,18 +61,25 @@ JsonDict State::Json::send(const QString &fieldName) const
 
 bool State::Json::updateWith(const JsonDict &data)
 {
-    emit d->beforeUpdate(data, this);
+    using Radapter::keyVal;
+    emit obj->beforeUpdate(data, this);
     bool status = false;
-    for (const auto &name: qAsConst(fields()))
-    {
-        if (data.contains(name)) {
-            auto temp = data.value(name);
-            status |= field(name)->updateWithVariant(this, temp); // stays true once set
+    const auto &asMap = QVariantMap(data);
+    for (auto [key, val]: keyVal(asMap)) {
+        auto found = field(key);
+        if (found) {
+            status |= field(key)->updateWithVariant(this, val); // stays true once set
+        } else {
+            if (!d->parent) {
+                reWarn() << metaObject()->className() << ": Extra property passed:" << key;
+            } else {
+                workerWarn(d->parent) << ": Extra property passed to state:" << key;
+            }
         }
     }
     if (status) {
         postUpdate();
-        emit d->wasUpdated(this);
+        emit obj->wasUpdated(this);
     }
     return status;
 }

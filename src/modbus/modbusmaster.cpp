@@ -64,8 +64,13 @@ Master::Master(const Settings::ModbusMaster &settings, QThread *thread) :
         }
         d->reverseRegisters[regIter->table][regIter->index] = regIter.key();
     }
-    connect(this, &Master::connected, [this](){d->connected=true;});
-    connect(this, &Master::disconnected, [this](){d->connected=false;});
+    connect(this, &Master::connected, [this]{
+        d->connected=true;
+        doRead();
+    });
+    connect(this, &Master::disconnected, [this]{
+        d->connected=false;
+    });
     if (!d->settings.read_only && d->settings.queries->isEmpty()) {
         throw std::runtime_error(
             QString(printSelf()%": Empty queries while not read_only. If you wanted to forbid reading set 'read_only: true'")
@@ -187,7 +192,10 @@ void Master::write(const JsonDict &data)
     for (auto&[key, value] : data) {
         if (!value.isValid()) continue;
         auto fullKeyJoined = key.join(":");
-        if (!d->settings.registers.contains(fullKeyJoined)) continue;
+        if (!d->settings.registers.contains(fullKeyJoined)) {
+            workerWarn(this) << "Extra property passed: " << fullKeyJoined;
+            continue;
+        }
         const auto &regInfo = d->settings.registers[fullKeyJoined];
         if (!regInfo.writable) {
             workerInfo(this) << "Attempt to write to protected register: " << regInfo.print();

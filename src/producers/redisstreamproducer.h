@@ -2,7 +2,7 @@
 #define REDISSTREAMPRODUCER_H
 
 #include "connectors/redisconnector.h"
-
+class QTimer;
 namespace Settings {
 struct RedisStreamProducer;
 }

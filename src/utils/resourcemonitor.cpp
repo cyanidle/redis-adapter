@@ -1,7 +1,7 @@
 #include "resourcemonitor.h"
 #include <QFile>
 #include "radapterlogging.h"
-
+#include <QTimer>
 #ifndef _MSC_VER
 #define GET_USAGE_TIMEOUT_MS    10000
 #define CPU_IDLE_INDEX          3

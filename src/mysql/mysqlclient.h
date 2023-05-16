@@ -2,7 +2,7 @@
 #define MYSQLCLIENT_H
 
 #include "settings/settings.h"
-
+class QTimer;
 class QSqlDatabase;
 class QSqlQuery;
 namespace MySql {
