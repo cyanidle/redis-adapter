@@ -1,7 +1,8 @@
 #ifndef REDIS_STREAM_QUIERIES
 #define REDIS_STREAM_QUIERIES
 
-#include <QString>
+#include "private/global.h"
+
 class JsonDict;
 
 namespace Redis {

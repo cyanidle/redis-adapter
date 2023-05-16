@@ -1,6 +1,8 @@
 #include "modbussettings.h"
 #include "jsondict/jsondict.h"
 #include "modbus/modbusparsing.h"
+#include "sync/channel.h"
+#include <QThread>
 #include <QStringBuilder>
 
 using namespace Settings;

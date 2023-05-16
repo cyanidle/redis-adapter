@@ -1,5 +1,11 @@
 #include "mysqlclient.h"
 #include "radapterlogging.h"
+#include <QSqlDatabase>
+#include <QTimer>
+#include <QSqlQuery>
+#include <QSqlRecord>
+#include <QSqlError>
+#include <QThread>
 
 using namespace MySql;
 
@@ -12,12 +18,12 @@ Client::Client(const Settings::SqlClientInfo &clientInfo, QObject *parent)
     : QObject(parent),
       m_isConnected(false)
 {
-    m_db = QSqlDatabase::addDatabase("QMYSQL", clientInfo.name);
-    m_db.setHostName(clientInfo.host);
-    m_db.setPort(clientInfo.port);
-    m_db.setDatabaseName(clientInfo.database);
-    m_db.setUserName(clientInfo.username);
-    m_db.setPassword(usernameMap().value(clientInfo.username));
+    m_db.reset(new QSqlDatabase{QSqlDatabase::addDatabase("QMYSQL", clientInfo.name)});
+    m_db->setHostName(clientInfo.host);
+    m_db->setPort(clientInfo.port);
+    m_db->setDatabaseName(clientInfo.database);
+    m_db->setUserName(clientInfo.username);
+    m_db->setPassword(usernameMap().value(clientInfo.username));
 
     m_reconnectTimer = new QTimer(this);
     m_reconnectTimer->setInterval(REOPEN_DELAY_MS);
@@ -29,10 +35,10 @@ Client::Client(const Settings::SqlClientInfo &clientInfo, QObject *parent)
 
 MySql::Client::~Client()
 {
-    if (m_db.isOpen()) {
-        m_db.close();
+    if (m_db->isOpen()) {
+        m_db->close();
     }
-    m_db.removeDatabase(m_db.connectionName());
+    m_db->removeDatabase(m_db->connectionName());
 }
 
 QMap<QString, QString> MySql::Client::usernameMap()
@@ -46,12 +52,12 @@ QMap<QString, QString> MySql::Client::usernameMap()
 
 bool MySql::Client::open()
 {
-    auto opened = m_db.open();
-    sqlDebug() << "MYSQL:" << QString("%1@%2").arg(m_db.databaseName(), m_db.hostName())
+    auto opened = m_db->open();
+    sqlDebug() << "MYSQL:" << QString("%1@%2").arg(m_db->databaseName(), m_db->hostName())
               << "is opened:" << opened;
     setConnected(opened);
 
-    if (!m_db.isOpen()) {
+    if (!m_db->isOpen()) {
         reopen();
     }
     return opened;
@@ -66,13 +72,13 @@ void MySql::Client::reopen()
 
 void MySql::Client::doReopen()
 {
-    m_db.close();
+    m_db->close();
     open();
 }
 
 bool MySql::Client::isOpened() const
 {
-    return m_db.isOpen();
+    return m_db->isOpen();
 }
 
 void MySql::Client::setConnected(bool state)
@@ -91,7 +97,7 @@ void MySql::Client::setConnected(bool state)
 bool MySql::Client::doSelectQuery(const QString &tableName, QueryRecordList &recordList, const QString &conditions)
 {
     auto header = recordList.takeFirst();
-    auto queryString = createSelectString(m_db.databaseName(), tableName, header, conditions);
+    auto queryString = createSelectString(m_db->databaseName(), tableName, header, conditions);
 
     bool isOk = false;
     auto recordValuesMap = execSelectQuery(queryString, isOk);
@@ -107,7 +113,7 @@ bool MySql::Client::doSelectQuery(const QString &tableName, QueryRecordList &rec
 
 bool MySql::Client::doUpdateQuery(const QString &tableName, const QueryRecord &updateRecord, const QString &conditions)
 {
-    auto queryString = QString("UPDATE `%1`.`%2` SET ").arg(m_db.databaseName(), tableName);
+    auto queryString = QString("UPDATE `%1`.`%2` SET ").arg(m_db->databaseName(), tableName);
     auto separator = QString(", ");
     for (auto field : updateRecord) {
         auto fieldSetString = QString("`%1`=%2").arg(field.name, field.toString());
@@ -122,7 +128,7 @@ bool MySql::Client::doUpdateQuery(const QString &tableName, const QueryRecord &u
 
 bool MySql::Client::doInsertQuery(const QString &tableName, const QueryRecord &insertRecord, bool updateOnDuplicate)
 {
-    auto queryString = QString("INSERT INTO `%1`.`%2` (").arg(m_db.databaseName(), tableName);
+    auto queryString = QString("INSERT INTO `%1`.`%2` (").arg(m_db->databaseName(), tableName);
     auto separator = QString(", ");
     for (auto &field : insertRecord) {
         auto fieldName = QString("`%1`").arg(field.name);
@@ -153,7 +159,7 @@ bool MySql::Client::doInsertQuery(const QString &tableName, const QueryRecord &i
 bool MySql::Client::doDeleteQuery(const QString &tableName, const QueryRecord &deleteRecord)
 {
     auto queryString = QString("DELETE FROM `%1`.`%2` WHERE ")
-            .arg(m_db.databaseName(), tableName);
+            .arg(m_db->databaseName(), tableName);
     auto separator = QString("AND ");
     for (auto &field : deleteRecord) {
         auto fieldString = QString("`%1` = %2 ").arg(field.name, field.toString());
@@ -200,7 +206,7 @@ RecordValuesMap MySql::Client::readResultRecords(QSqlQuery &finishedQuery)
 RecordValuesMap MySql::Client::execSelectQuery(const QString &query, bool &isOk)
 {
     sqlDebug() << query;
-    auto sqlQuery = QSqlQuery(query, m_db);
+    auto sqlQuery = QSqlQuery(query, *m_db);
     isOk = sqlQuery.isActive();
     sqlDebug() << QThread::currentThreadId() << Q_FUNC_INFO << "query is active:" << isOk;
     if (!isOk) {
@@ -226,7 +232,7 @@ RecordValuesMap MySql::Client::execSelectQuery(const QString &query, bool &isOk)
 bool MySql::Client::execQuery(const QString &query)
 {
     sqlDebug() << query;
-    auto sqlQuery = QSqlQuery(m_db);
+    auto sqlQuery = QSqlQuery(*m_db);
     bool isOk = sqlQuery.exec(query);
     if (!isOk) {
         sqlDebug() << sqlQuery.lastQuery() << ": query failed " << sqlQuery.lastError();

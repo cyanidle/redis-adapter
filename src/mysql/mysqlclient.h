@@ -1,10 +1,10 @@
 #ifndef MYSQLCLIENT_H
 #define MYSQLCLIENT_H
 
-#include <QObject>
-#include <QtSql>
 #include "settings/settings.h"
 
+class QSqlDatabase;
+class QSqlQuery;
 namespace MySql {
     struct RADAPTER_API QueryField {
         QString name{};
@@ -69,7 +69,7 @@ private:
     bool execQuery(const QString &query);
     static MySql::QueryRecordList makeRecordList(const MySql::QueryRecord &fieldNames, const MySql::RecordValuesMap valuesMap);
 
-    QSqlDatabase m_db;
+    QSharedPointer<QSqlDatabase> m_db;
     QMap<QString, QString> m_usernameMap;
     QTimer* m_reconnectTimer;
     bool m_isConnected;

@@ -1,7 +1,7 @@
 #ifndef METATYPES_H
 #define METATYPES_H
 
-#include <QMetaType>
+#include "private/global.h"
 
 template <typename T>
 constexpr bool metaIsRegistered() {

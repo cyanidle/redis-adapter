@@ -1,9 +1,8 @@
 #ifndef RADAPTER_BASICREPLIES_H
 #define RADAPTER_BASICREPLIES_H
 
-#include <QSet>
-#include "jsondict/jsondict.h"
 #include "private/reply.h"
+#include "jsondict/jsondict.h"
 
 namespace Radapter {
 

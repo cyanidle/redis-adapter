@@ -1,7 +1,7 @@
 SOURCES+= \
-   $$PWD/producerfilter.cpp \
-   $$PWD/namespacefilter.cpp
+   $$PWD/namespacefilter.cpp \
+   $$PWD/producerfilter.cpp
 HEADERS+= \
-   $$PWD/producerfiltersettings.hpp \
+   $$PWD/namespacefilter.h \
    $$PWD/producerfilter.h \
-   $$PWD/namespacefilter.h
+   $$PWD/producerfiltersettings.hpp

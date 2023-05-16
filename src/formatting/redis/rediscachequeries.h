@@ -1,7 +1,8 @@
 #ifndef REDIS_CACHE_QUIERIES
 #define REDIS_CACHE_QUIERIES
 
-#include <QString>
+#include "private/global.h"
+
 class JsonDict;
 
 namespace Redis {

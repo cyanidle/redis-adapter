@@ -21,9 +21,11 @@ JsonDict Json::missingToTarget() const
     return m_target - m_current;
 }
 
-bool Json::updateCurrent(const JsonDict &newState)
+JsonDict Json::updateCurrent(const JsonDict &newState)
 {
-    return m_current.update(newState);
+    auto was = m_current;
+    m_current.merge(newState);
+    return m_current - was;
 }
 
 static JsonDict convert(const QStringList& key, const QVariant& val)
@@ -33,27 +35,29 @@ static JsonDict convert(const QStringList& key, const QVariant& val)
     return res;
 }
 
-bool Json::updateCurrent(const QString &key, const QVariant &val, QChar sep)
+JsonDict Json::updateCurrent(const QString &key, const QVariant &val, QChar sep)
 {
     return updateCurrent(convert(key.split(sep), val));
 }
 
-bool Json::updateCurrent(const QStringList &key, const QVariant &val)
+JsonDict Json::updateCurrent(const QStringList &key, const QVariant &val)
 {
     return updateCurrent(convert(key, val));
 }
 
-bool Json::updateTarget(const JsonDict &newState)
+JsonDict Json::updateTarget(const JsonDict &newState)
 {
-    return m_target.update(newState);
+    auto was = m_target;
+    m_target.update(newState);
+    return m_target - was;
 }
 
-bool Json::updateTarget(const QString &key, const QVariant &val, QChar sep)
+JsonDict Json::updateTarget(const QString &key, const QVariant &val, QChar sep)
 {
     return updateTarget(convert(key.split(sep), val));
 }
 
-bool Json::updateTarget(const QStringList &key, const QVariant &val)
+JsonDict Json::updateTarget(const QStringList &key, const QVariant &val)
 {
     return updateTarget(convert(key, val));
 }

@@ -1,9 +1,7 @@
 #ifndef REDISCACHEPRODUCER_H
 #define REDISCACHEPRODUCER_H
 
-#include <QObject>
 #include "connectors/redisconnector.h"
-#include "jsondict/jsondict.h"
 #include "async_context/rediscachecontext.h"
 
 namespace Settings {

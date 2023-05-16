@@ -1,11 +1,8 @@
 #ifndef RADAPTER_REPLY_H
 #define RADAPTER_REPLY_H
 
-#include <QString>
-#include <QSharedPointer>
-#include <limits>
-#include "private/commandreplymacros.h"
 #include "templates/metaprogramming.hpp"
+#include "private/commandreplymacros.h"
 
 namespace Radapter {
 

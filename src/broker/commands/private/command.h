@@ -1,9 +1,6 @@
 #ifndef RADAPTER_COMMAND_H
 #define RADAPTER_COMMAND_H
 
-#include <QString>
-#include <QSharedPointer>
-#include <limits>
 #include "private/global.h"
 #include "private/commandreplymacros.h"
 #include "broker/replies/private/reply.h"

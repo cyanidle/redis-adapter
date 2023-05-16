@@ -1,7 +1,8 @@
 #ifndef REDIS_STREAMENTRY_H
 #define REDIS_STREAMENTRY_H
 
-#include <QVariantMap>
+#include "private/global.h"
+
 
 namespace Redis {
 

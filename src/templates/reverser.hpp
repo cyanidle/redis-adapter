@@ -1,7 +1,7 @@
 #ifndef REVERSER_HPP
 #define REVERSER_HPP
 
-#include <iterator>
+#include "private/global.h"
 
 template<typename Container>
 struct Reverser {

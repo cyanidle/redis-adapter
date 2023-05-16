@@ -1,16 +1,22 @@
 #include "modbusmaster.h"
 #include "broker/broker.h"
-#include "broker/sync/channel.h"
+#include "sync/channel.h"
 #include <QModbusRtuSerialClient>
+#include "settings/modbussettings.h"
 #include "commands/rediscommands.h"
 #include "templates/algorithms.hpp"
 #include "consumers/rediscacheconsumer.h"
 #include "producers/rediscacheproducer.h"
+#include "jsondict/jsondict.h"
+#include "modbusparsing.h"
 #include <QModbusReply>
-#include "broker/sync/syncjson.h"
+#include "sync/syncjson.h"
 #include <QModbusClient>
 #include <QStringBuilder>
 #include <QModbusTcpClient>
+#include <QModbusReply>
+#include <QQueue>
+#include <QObject>
 
 using namespace Modbus;
 using namespace Radapter;
@@ -196,7 +202,8 @@ void Master::write(const JsonDict &data)
             continue;
         }
         if (valCopy.canConvert(QMetaType(regInfo.type))) {
-            if (!d->state.updateTarget(key, valCopy)) continue;
+            auto delta = d->state.updateTarget(key, valCopy);
+            if (delta.isEmpty()) continue;
             results.append(parseValueToDataUnit(valCopy, regInfo));
         } else {
             workerError(this) << "Incompatible value under:" << fullKeyJoined << " --> " << valCopy << "; Wanted: " << regInfo.type.value;
@@ -321,8 +328,10 @@ void Master::doFrame()
 
 void Master::updateCurrent(const JsonDict &json)
 {
-    auto last = d->state.current();
-    d->state.updateCurrent(json);
+    auto delta = d->state.updateCurrent(json);
+    if (!delta.isEmpty()) {
+        emit send(delta);
+    }
     auto toRewrite = d->state.missingToTarget();
     for (auto &[key, val] : toRewrite) {
         auto joined = key.join(':');
@@ -340,10 +349,6 @@ void Master::updateCurrent(const JsonDict &json)
         }
     }
     saveState(d->state.current());
-    auto diff = d->state.current() - last;
-    if (!diff.isEmpty()) {
-        emit send(diff);
-    }
     if (!toRewrite.isEmpty()) {
         QTimer::singleShot(d->settings.response_time_ms, this, [this, toRewrite]{
             write(toRewrite);

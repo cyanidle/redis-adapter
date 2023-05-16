@@ -1,10 +1,8 @@
 #ifndef REDISSTREAMPRODUCER_H
 #define REDISSTREAMPRODUCER_H
 
-#include <QObject>
-#include <QQueue>
-#include <QTimer>
 #include "connectors/redisconnector.h"
+
 namespace Settings {
 struct RedisStreamProducer;
 }
