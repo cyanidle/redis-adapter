@@ -13,8 +13,11 @@ struct ValidatingInterceptor : public Serializable {
     FIELD(OptionalMapping<QString>, by_glob)
     FIELD(HasDefault<bool>, inverse, false)
     COMMENT(inverse, "'Inverse mode' applies validators to all field EXCEPT ones defined in other fields")
-
-    QMap<Validator::Fetched, QStringList> final_by_validator;
+    struct FieldPair {
+        QString joined;
+        QStringList full;
+    };
+    QMap<Validator::Fetched, QList<FieldPair>> final_by_validator;
     QMap<Validator::Fetched, QRegularExpression> final_by_validator_glob;
     void init();
 };

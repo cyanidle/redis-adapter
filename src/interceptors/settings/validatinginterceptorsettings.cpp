@@ -15,7 +15,7 @@ void Settings::ValidatingInterceptor::init() {
     for (auto [valName, fields]: Radapter::keyVal(temp)) {
         auto validator = Validator::Fetched(valName);
         for (const auto &field: fields) {
-            final_by_validator[validator].append(field);
+            final_by_validator[validator].append({field, field.split(':')});
         }
     }
     for (auto [name, value]: by_glob) {

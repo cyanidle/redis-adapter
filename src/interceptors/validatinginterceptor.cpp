@@ -1,6 +1,7 @@
 #include "validatinginterceptor.h"
 #include "broker/workers/private/workermsg.h"
 #include "settings/validatinginterceptorsettings.h"
+#include "templates/algorithms.hpp"
 
 using namespace Radapter;
 
@@ -33,13 +34,23 @@ void ValidatingInterceptor::onMsgFromWorker(WorkerMsg &msg)
     }
 }
 
+bool listStartsWith(const QStringList &who, const QStringList &with)
+{
+    for (auto [f, s]: zip(who, with)) {
+        if (f != s) return false;
+    }
+    return true;
+}
+
 void ValidatingInterceptor::checkKeyVal(const QStringList &key, QVariant& val)
 {
     auto joined = key.join(':');
     for (auto iter = d->settings.final_by_validator.cbegin(); iter != d->settings.final_by_validator.cend(); ++iter) {
         auto &validator = iter.key();
-        for (const auto &field: iter.value()) {
-            if (field == joined ^ d->settings.inverse) {
+        for (const auto &[field, split]: iter.value()) {
+            auto hit = field == joined;
+            hit |= listStartsWith(split, key);
+            if (hit ^ d->settings.inverse) {
                 if (!validator.validate(val)) {
                     val.clear();
                 }
