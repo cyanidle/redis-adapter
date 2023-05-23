@@ -62,9 +62,10 @@ ARG TARGET_DEVICE
 ENV TARGET_DEVICE=${TARGET_DEVICE}
 ARG TARGETPLATFORM
 ENV TARGET_PLATFORM=${TARGETPLATFORM}
-COPY --from=py_install /usr/lib/python3 /usr/lib/python3.9 /usr/lib/
+COPY --from=py_install /usr/lib/python3 /usr/lib/python3
+COPY --from=py_install /usr/lib/python3.9 /usr/lib/python3.9
 COPY --from=py_install /usr/local/lib/python3.9 /usr/local/lib/python3.9
-COPY --from=py_install /lib/*/libexpat* /lib/
+COPY --from=py_install /lib/*/libexpat* /usr/lib/
 COPY --from=py_install /usr/bin/python* /usr/bin/
 COPY --from=builder ${APP_DIR}/ ${APP_DIR}/
 COPY --from=builder /starter.sh ${APP_DIR}/${APP_NAME}.sh
