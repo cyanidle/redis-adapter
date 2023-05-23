@@ -33,7 +33,7 @@ from pydantic.fields import Undefined
 assert sys.version_info.major >= 3
 assert sys.version_info.minor >= 9
 
-__all__=("BootParams", "Signal", "JsonDict", "Timer", "Worker", "JsonState", "merge_flat_dicts", "execute_universal", "execute_universal_or_argless")
+__all__=("BootParams", "Signal", "JsonDict", "Timer", "Worker", "JsonState")
 _T = TypeVar("_T")
 
 @dataclass
@@ -62,33 +62,22 @@ async def execute_universal(func: UniversalCallback, *args, **kwargs):
     else:
         raise TypeError(f"Can only execute function or coroutine! Got: ({func})")
 
-async def execute_universal_or_argless(func: UniversalOrArgless, *args, **kwargs):
-    try:
-        found_args = bool(inspect.signature(func).parameters) # type: ignore
-    except ValueError:
-        found_args = True
-    if not found_args:
-        await execute_universal(func) # type: ignore
-    else:
-        await execute_universal(func, *args, **kwargs) # type: ignore
-
-class _CbTypes(IntEnum):
-    CORO = auto()
-    CORO_FUNC = auto()
-    PLAIN = auto()
-
 class _SignalMeta(Generic[_T]):
+    class _CbTypes(IntEnum):
+        CORO = auto()
+        CORO_FUNC = auto()
+        PLAIN = auto()
     __slots__ = ("_cb", "_argless", "_type")
     def __init__(self, cb: UniversalOrArgless[_T]) -> None:
         self._cb = cb
         if inspect.iscoroutine(cb):
-            self._type = _CbTypes.CORO
+            self._type = _SignalMeta._CbTypes.CORO
             self._argless = True
             return
         if inspect.iscoroutinefunction(cb):
-            self._type = _CbTypes.CORO_FUNC
+            self._type = _SignalMeta._CbTypes.CORO_FUNC
         elif callable(cb):
-            self._type = _CbTypes.PLAIN
+            self._type = _SignalMeta._CbTypes.PLAIN
         else:
             raise TypeError(f"Invalid type is passed as callback to Signal!")
         sign = inspect.signature(cb)
@@ -96,11 +85,11 @@ class _SignalMeta(Generic[_T]):
     async def invoke(self, *args):
         if self._argless:
             args = tuple()
-        if self._type == _CbTypes.CORO:
+        if self._type == _SignalMeta._CbTypes.CORO:
             if args:
                 raise RuntimeError(f"Signal emit on coroutine: {self._cb} with args (Was already wrapped)")
             await self._cb # type: ignore
-        elif self._type == _CbTypes.CORO_FUNC:
+        elif self._type == _SignalMeta._CbTypes.CORO_FUNC:
             await self._cb(*args) # type: ignore
         else:
             self._cb(*args) # type: ignore
@@ -184,13 +173,17 @@ class Worker(ABC):
         self._with_error = False
         self._sync_sender: Optional[Callable[[JsonDict], None]] = None
     @overload
+    async def send(self, state: 'JsonState') -> None: ...
+    @overload
     async def send(self, prefix: str, state: 'JsonState') -> None: ...
     @overload
     async def send(self, prefix: str, state: 'JsonItem') -> None: ...
     @overload
     async def send(**kwargs) -> None: ...
-    async def send(self, prefix = None, state = None, **kwargs):
-        if isinstance(state, JsonState):
+    async def send(self, prefix = None, state = None, **kwargs): # type: ignore
+        if isinstance(prefix, JsonState):
+            await self.msgs.emit(prefix.send())
+        elif isinstance(state, JsonState):
             await self.msgs.emit(JsonDict({prefix: state.send()}))
         elif isinstance(state, get_args(JsonItem)):
             await self.msgs.emit(JsonDict({prefix: state}))
@@ -311,9 +304,6 @@ JsonKey = Union[Sequence[str], str]
 JsonItem = Union[str, None, int, float, list, dict, Any]
 FlatDict = Dict[str, JsonItem]
 
-def merge_flat_dicts(first: FlatDict, second: FlatDict) -> FlatDict:
-    return {**first, **second}
-
 class _JsonDictKeyPart:
     __slots__ = ["key", "as_index"]
     def __init__(self, raw: str) -> None:
@@ -407,6 +397,8 @@ class JsonDict(MutableMapping[str, JsonItem]):
     @classmethod
     def from_bytes(cls, raw: bytes, encoding:str = "utf-8"):
         return cls(json.loads(raw.decode(encoding=encoding).replace("'", '"')))
+    def __bool__(self):
+        return bool(self._dict)
     def __eq__(self, other: 'JsonDict') -> bool:
         if len(self._dict) != len(other._dict):
             return False
@@ -621,7 +613,7 @@ if not TYPE_CHECKING:
         @classmethod
         def default(cls) -> Self: 
             return cls()
-        async def update_with(self, data:Union[JsonDict, dict]) -> bool: 
+        async def update_with(self, data:Union[JsonDict, dict]) -> JsonDict: 
             if isinstance(data, JsonDict):
                 return await self.__refresh(**data.top)
             elif isinstance(data, dict):
@@ -644,8 +636,9 @@ if not TYPE_CHECKING:
         def __sig(self, name: str):
             if not name in self._after: self._after[name] = Signal()
             return self._after[name]
-        async def __refresh(self, **data):
+        async def __refresh(self, **data) -> JsonDict:
             """Refresh the internal attributes with new data."""
+            result = JsonDict()
             values, fields, error = validate_model(self.__class__, data)
             if error:
                 logging.getLogger("bootstrap").exception(error)
@@ -656,23 +649,24 @@ if not TYPE_CHECKING:
                 was = getattr(self, name)
                 if isinstance(was, JsonState):
                     value: JsonState
-                    await was.__refresh(**value.dict(exclude_unset=True))
+                    result[name] = await was.__refresh(**value.dict(exclude_unset=True))
                 else:
                     logging.getLogger("bootstrap").info(f"Updating {name}: {was!r} --> {value!r}")
                     setattr(self, name, value)
+                    result[name] = value
                     sig = self._after.get(name)
                     try:
                         if sig is not None: await sig.emit(getattr(self, name))
                     except Exception as e:
                         logging.getLogger("bootstrap").error(f"{self}: While updating {name}:")
                         logging.getLogger("bootstrap").exception(e)
-            return bool(fields)
+            return result
 else:
     class JsonState(metaclass=_JsonStateMeta):
         @classmethod
         def default(cls) -> Self: ...
         # True means was updated at least one field(nested or not)
-        async def update_with(self, data: JsonDict) -> bool: ...
+        async def update_with(self, data: JsonDict) -> JsonDict: ...
         def send(self) -> JsonDict: ...
         def after_update(self, part: _T, cb: UniversalOrArgless[_T]): ...
 
