@@ -173,7 +173,7 @@ class Worker(ABC):
         self._with_error = False
         self._sync_sender: Optional[Callable[[JsonDict], None]] = None
     @overload
-    async def send(self, state: 'JsonState') -> None: ...
+    async def send(self, state: 'JsonDict') -> None: ...
     @overload
     async def send(self, prefix: str, state: 'JsonState') -> None: ...
     @overload
@@ -181,8 +181,8 @@ class Worker(ABC):
     @overload
     async def send(**kwargs) -> None: ...
     async def send(self, prefix = None, state = None, **kwargs): # type: ignore
-        if isinstance(prefix, JsonState):
-            await self.msgs.emit(prefix.send())
+        if isinstance(prefix, JsonDict):
+            await self.msgs.emit(prefix)
         elif isinstance(state, JsonState):
             await self.msgs.emit(JsonDict({prefix: state.send()}))
         elif isinstance(state, get_args(JsonItem)):
