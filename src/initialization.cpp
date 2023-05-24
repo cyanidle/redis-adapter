@@ -93,7 +93,7 @@ void tryCreateInterceptor(const QString &name, QObject *parent)
         auto config = Settings::RemappingPipe();
         auto field = tryExtract<QString>(name, data, 0, "field");
         auto remap = Settings::FieldRemap();
-        remap.from = tryExtract<QString>(name, data, 1, "remap_to");
+        remap.from = tryExtract<QString>(name, data, 1, "remap_from");
         remap.to = tryExtract<QString>(name, data, 2, "remap_to");
         config.remaps[field] = remap;
         broker->registerInterceptor(name, new RemappingPipe(config));
@@ -120,22 +120,22 @@ void tryCreateInterceptor(const QString &name, QObject *parent)
     }
 }
 
-void tryCreateWorker(const QString &name, QObject *parent)
+void tryCreateWorker(const QString &rawFunction, QObject *parent)
 {
     auto broker = Radapter::Broker::instance();
-    auto [func, data] = parseFunc(name);
+    auto [func, data] = parseFunc(rawFunction);
     if (func == "repeater") {
         auto config = Settings::Repeater();
-        config.name = name;
+        config.name = rawFunction;
         broker->registerWorker(new Repeater(config, new QThread(parent)));
     } else if (func == "mock") {
         auto config = Settings::MockWorker();
-        config.name = name;
+        config.name = rawFunction;
         broker->registerWorker(new MockWorker(config, new QThread(parent)));
     } else if (func == "file") {
         auto config = Settings::FileWorker();
-        config.worker->name = name;
-        config.filepath = tryExtract<QString>(name, data, 0, "filepath");
+        config.worker->name = rawFunction;
+        config.filepath = tryExtract<QString>(rawFunction, data, 0, "filepath");
         broker->registerWorker(new FileWorker(config, new QThread(parent)));
     } else if (func == "py") {
         auto launcher = qobject_cast<Launcher*>(parent);
@@ -143,40 +143,40 @@ void tryCreateWorker(const QString &name, QObject *parent)
             throw std::runtime_error("Cannot create .py workers without launcher as parent!");
         }
         auto config = Settings::PythonModuleWorker();
-        config.worker->name = name;
+        config.worker->name = rawFunction;
         auto prefix = launcher->commandLineParser().value("modules-path");
-        config.module_path = prefix%'/'%tryExtract<QString>(name, data, 0, "filepath")%".py";
-        auto settingsPath = tryExtract<QString>(name, data, 1, "settings_path");
+        config.module_path = prefix%'/'%tryExtract<QString>(rawFunction, data, 0, "filepath")%".py";
+        auto settingsPath = tryExtract<QString>(rawFunction, data, 1, "settings_path");
         auto raw = launcher->reader()->get(settingsPath);
         if (!raw.canConvert<QVariantMap>()) {
-            throw std::runtime_error("Could not fetch config with key: "+settingsPath.toStdString()+" for worker: "+name.toStdString());
+            throw std::runtime_error("Could not fetch config with key: "+settingsPath.toStdString()+" for worker: "+rawFunction.toStdString());
         }
         config.module_settings = raw.toMap();
         broker->registerWorker(new PythonModuleWorker(config, new QThread(parent)));
     } else if (func == "udp.in") {
         auto config = Udp::ConsumerSettings();
-        config.worker->name = name;
-        config.port = tryExtract<quint16>(name, data, 0, "port");
+        config.worker->name = rawFunction;
+        config.port = tryExtract<quint16>(rawFunction, data, 0, "port");
         broker->registerWorker(new Udp::Consumer(config, new QThread(parent)));
     } else if (func == "udp.out") {
         auto config = Udp::ProducerSettings();
-        config.worker->name = name;
-        config.server->host = tryExtract<QString>(name, data, 0, "host");
-        config.server->port = tryExtract<quint16>(name, data, 1, "port");
+        config.worker->name = rawFunction;
+        config.server->host = tryExtract<QString>(rawFunction, data, 0, "host");
+        config.server->port = tryExtract<quint16>(rawFunction, data, 1, "port");
         broker->registerWorker(new Udp::Producer(config, new QThread(parent)));
     } else if (func == "websocket.server") {
         auto config = Settings::WebsocketServer();
-        config.worker->name = name;
-        config.port = tryExtract<quint16>(name, data, 0, "port");
+        config.worker->name = rawFunction;
+        config.port = tryExtract<quint16>(rawFunction, data, 0, "port");
         broker->registerWorker(new Websocket::Server(config, new QThread(parent)));
     } else if (func == "websocket.client") {
         auto config = Settings::WebsocketClient();
-        config.worker->name = name;
-        config.host = tryExtract<QString>(name, data, 0, "host");
-        config.port = tryExtract<quint16>(name, data, 1, "port");
+        config.worker->name = rawFunction;
+        config.host = tryExtract<QString>(rawFunction, data, 0, "host");
+        config.port = tryExtract<quint16>(rawFunction, data, 1, "port");
         broker->registerWorker(new Websocket::Client(config, new QThread(parent)));
     } else {
-        throw std::runtime_error("(" + name.toStdString() + ") is not supported in pipe!");
+        throw std::runtime_error("(" + rawFunction.toStdString() + ") is not supported in pipe!");
     }
 }
 
@@ -223,6 +223,18 @@ void tryCreateBidirConnect(const QString &left, const QString &right, QStringLis
                 switch(dir) {
                 case PipeOp::Normal: fakePipe.append("allow("%data.join(',')%')');break;
                 case PipeOp::Inverted: fakePipe.append("allow("%data.join(',')%')');break;
+                default: throw std::runtime_error("Unreachable");
+                }
+            } else if (func == "rename") {
+                switch(dir) {
+                case PipeOp::Normal: fakePipe.append("rename("%data.join(',')%')');break;
+                case PipeOp::Inverted: fakePipe.append("rename("%reversed(data).join(',')%')');break;
+                default: throw std::runtime_error("Unreachable");
+                }
+            } else if (func == "remap") {
+                switch(dir) {
+                case PipeOp::Normal: fakePipe.append("remap("%data.join(',')%')');break;
+                case PipeOp::Inverted: fakePipe.append("remap("%reversed(data).join(',')%')');break;
                 default: throw std::runtime_error("Unreachable");
                 }
             } else {

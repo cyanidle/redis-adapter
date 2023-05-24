@@ -44,8 +44,8 @@ QVariant YamlReader::getAll()
     Node config;
     try {
         config = LoadFile(actualPath.toStdString());
-    } catch (...) {
-        settingsParsingWarn() << "Could not load file: " << actualPath;
+    } catch (std::exception &exc) {
+        settingsParsingWarn().noquote().nospace() << "Could not load file: " << actualPath << ". Full:\n" << exc.what();
         return {};
     }
     auto asMap = config.as<QVariantMap>();

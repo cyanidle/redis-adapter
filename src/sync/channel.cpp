@@ -3,64 +3,86 @@
 #include "templates/algorithms.hpp"
 #include <stdexcept>
 #include <QSet>
+#include <QMutex>
+#include <QTimer>
+
 using namespace Radapter::Sync;
 
+struct Channel::Private {
+    struct UserState {
+        QObject *user;
+        Priority priority;
+        bool waitingForTrigger;
+
+        bool isWaiting() const {return waitingForTrigger;}
+        Priority whatPrio() const {return priority;}
+    };
+    QHash<QObject*, UserState> userStates;
+    std::atomic<QObject*> busy{nullptr};
+    QTimer *debug;
+    QMutex mutex;
+};
+
 Channel::Channel(QThread *thread) :
-    m_busy(nullptr),
-    m_debug(new QTimer(this)),
-    m_mutex()
+    d(new Private)
 {
-    m_debug->setInterval(1000);
-    m_debug->callOnTimeout([this](){reDebug() << this << "Busy on:" << m_busy;});
+    d->debug = new QTimer(this);
+    d->debug->setInterval(1000);
+    d->debug->callOnTimeout([this](){reDebug() << this << "Busy on:" << d->busy;});
     moveToThread(thread);
+}
+
+Channel::~Channel()
+{
+    delete d;
 }
 
 QObject *Channel::whoIsBusy() const
 {
-    return const_cast<QObject*>(m_busy.load());
+    return const_cast<QObject*>(d->busy.load());
 }
 
 void Channel::registerUser(QObject *user, Priority priority)
 {
-    QMutexLocker lock(&m_mutex);
+    QMutexLocker lock(&d->mutex);
     if (priority != NormalPriority &&
             priority != LowPriority &&
             priority != HighPriority) {
         throw std::invalid_argument("Invalid priority for channel user!");
     }
-    m_userStates[user] = {user, priority, false,};
+    d->userStates[user] = {user, priority, false,};
 }
 
 bool Channel::isBusy() const
 {
-    return m_busy;
+    return d->busy;
 }
 
 void Channel::onJobDone()
 {
-    m_debug->stop();
-    auto was = m_busy.load();
-    m_busy = nullptr;
+    d->debug->stop();
+    auto was = d->busy.load();
+    d->busy = nullptr;
     checkWaiting(was);
 }
 
 void Channel::askTrigger()
 {
     auto checked = sender();
-    m_userStates[checked].waitingForTrigger = true;
+    d->userStates[checked].waitingForTrigger = true;
     checkWaiting();
 }
 
 void Channel::checkWaiting(QObject *ignore)
 {
     if (isBusy()) return;
-    auto allWaiting = filter(m_userStates, &UserState::isWaiting);
+    auto allWaiting = filter(d->userStates, &Private::UserState::isWaiting);
     auto size = allWaiting.size();
     if (size > 1) {
-        auto filterIgnored = as_function([ignore](const UserState &state){
+        auto filterIgnored = as_function([ignore](const Private::UserState &state){
                                 return state.user != ignore;
                               });
-        auto max = max_element(filter(allWaiting, filterIgnored), &UserState::whatPrio);
+        auto max = max_element(filter(allWaiting, filterIgnored), &Private::UserState::whatPrio);
         activate(max.result->user);
     } else if (size) {
         activate(allWaiting.begin()->user);
@@ -69,8 +91,8 @@ void Channel::checkWaiting(QObject *ignore)
 
 void Channel::activate(QObject *who)
 {
-    m_debug->start();
-    m_userStates[who].waitingForTrigger = false;
-    m_busy = who;
+    d->debug->start();
+    d->userStates[who].waitingForTrigger = false;
+    d->busy = who;
     emit trigger(who, QPrivateSignal{});
 }

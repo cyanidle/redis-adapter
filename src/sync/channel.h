@@ -1,14 +1,14 @@
 #ifndef SYNC_CHANNEL_H
 #define SYNC_CHANNEL_H
 
-#include <QObject>
-#include <QHash>
-#include <QTimer>
-#include <QMutex>
+#include "private/global.h"
+
 namespace Radapter {
 namespace Sync {
-class Channel : public QObject {
+class Channel : public QObject
+{
     Q_OBJECT
+    struct Private;
 public:
     enum Priority : quint16 {
         NormalPriority = 100,
@@ -16,6 +16,7 @@ public:
         HighPriority = 200,
     };
     Channel(QThread *thread);
+    ~Channel();
     //! \warning not threadsafe
     void registerUser(QObject *user, Priority priority = NormalPriority);
     //! \note Everything else is (with connections)
@@ -48,17 +49,8 @@ private:
     bool isBusy() const;
     void checkWaiting(QObject *ignore = nullptr);
     void activate(QObject *who);
-    struct UserState {
-        QObject *user;
-        Priority priority;
-        bool waitingForTrigger;
-        bool isWaiting() const {return waitingForTrigger;}
-        Priority whatPrio() const {return priority;}
-    };
-    QHash<QObject*, UserState> m_userStates;
-    std::atomic<QObject*> m_busy;
-    QTimer *m_debug;
-    QMutex m_mutex;
+
+    Private *d;
 };
 }
 }

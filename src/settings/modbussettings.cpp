@@ -31,16 +31,6 @@ void ModbusSlave::postUpdate() {
     };
     counts.reset();
     for (auto &reg : registers) {
-        switch (reg.table.value) {
-        case QModbusDataUnit::InputRegisters: counts.input_registers++; continue;
-        case QModbusDataUnit::Coils: counts.coils++; continue;
-        case QModbusDataUnit::HoldingRegisters: counts.holding_registers++; continue;
-        case QModbusDataUnit::DiscreteInputs: counts.di++; continue;
-        default:
-            throw std::runtime_error("Unkown registers error");
-        }
-    }
-    for (auto &reg : registers) {
         auto wordSize = QMetaType(reg.type).sizeOf() / 2;
         switch (reg.table.value) {
         case QModbusDataUnit::InputRegisters:

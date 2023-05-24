@@ -87,6 +87,9 @@ void Broker::registerWorker(Worker* worker)
     if (worker->workerName().isEmpty()) {
         throw std::runtime_error(std::string("Worker name cannot be empty! Source: ") + worker->parent()->metaObject()->className());
     }
+    if (d->workers.contains(worker->workerName())) {
+        throw std::runtime_error("Worker name occupied! Name: " + worker->workerName().toStdString());
+    }
     connect(this, &Broker::broadcastToAll,
             worker, &Worker::onMsgFromBroker,
             thread() == worker->workerThread() ? Qt::DirectConnection : Qt::QueuedConnection);

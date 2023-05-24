@@ -1,5 +1,6 @@
 #include "modbusmaster.h"
 #include "broker/broker.h"
+#include "qthread.h"
 #include "sync/channel.h"
 #include <QModbusRtuSerialClient>
 #include "settings/modbussettings.h"
@@ -16,27 +17,33 @@
 #include <QModbusTcpClient>
 #include <QModbusReply>
 #include <QQueue>
+#include <QTimer>
 #include <QObject>
 
 using namespace Modbus;
 using namespace Radapter;
-
 struct Master::Private{
     Settings::ModbusMaster settings;
     QHash<QModbusDataUnit::RegisterType, QHash<int, QString>> reverseRegisters;
     QQueue<QModbusDataUnit> readQueue;
     QQueue<QModbusDataUnit> writeQueue;
+    quint64 lastFrameTime;
     Sync::Json state;
     QMap<QString, quint8> rewriteAttempts;
     QTimer *reconnectTimer;
     QTimer *readTimer;
+    QTimer *frameDelay;
     QModbusClient *device{nullptr};
     std::atomic<bool> connected{false};
     Redis::CacheProducer *stateWriter{nullptr};
     Redis::CacheConsumer *stateReader{nullptr};
     int currentReadFrame{0};
-    QTimer *interframeTimer;
 };
+
+static quint64 getTimeMS()
+{
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+}
 
 Master::Master(const Settings::ModbusMaster &settings, QThread *thread) :
     Radapter::Worker(settings.worker, thread),
@@ -45,14 +52,15 @@ Master::Master(const Settings::ModbusMaster &settings, QThread *thread) :
     d->settings = settings;
     d->reconnectTimer = new QTimer(this);
     d->readTimer = new QTimer(this);
-    d->interframeTimer = new QTimer(this);
-    d->interframeTimer->setInterval(settings.interframe_gap);
-    d->interframeTimer->callOnTimeout(this, &Master::doFrame);
+    d->frameDelay = new QTimer(this);
+    d->frameDelay->setSingleShot(true);
+    d->frameDelay->callOnTimeout(this, &Master::askTrigger);
     d->reconnectTimer->setInterval(settings.reconnect_timeout_ms);
     d->reconnectTimer->callOnTimeout(this, &Master::connectDevice);
     d->reconnectTimer->setSingleShot(true);
     d->readTimer->setInterval(settings.poll_rate);
     d->readTimer->callOnTimeout(this, &Master::doRead);
+    d->lastFrameTime = getTimeMS();
     for (auto regIter = settings.registers.cbegin(); regIter != settings.registers.cend(); ++regIter) {
         if (d->reverseRegisters[regIter->table].contains(regIter->index)) {
             throw std::invalid_argument("Register index collission on: " +
@@ -232,6 +240,13 @@ void Master::connectDevice()
 
 void Master::executeNext()
 {
+    auto sinceLastFrame = getTimeMS() - d->lastFrameTime;
+    qint64 toWait = d->settings.interframe_gap - sinceLastFrame;
+    if (toWait > 0) {
+        emit queryDone();
+        d->frameDelay->start(toWait);
+        return;
+    }
     if (!d->writeQueue.isEmpty()) {
         executeWrite(d->writeQueue.dequeue());
     } else if (!d->readQueue.isEmpty()) {
@@ -239,6 +254,7 @@ void Master::executeNext()
     } else {
         emit allQueriesDone();
     }
+    d->lastFrameTime = getTimeMS();
 }
 
 void Master::onErrorOccurred(QModbusDevice::Error error)
@@ -320,17 +336,9 @@ void Master::doRead()
     if (!d->connected || !config().queries->size()) {
         return;
     }
-    d->interframeTimer->start();
-}
-
-void Master::doFrame()
-{
-    auto &query = config().queries[d->currentReadFrame++];
-    auto unit = QModbusDataUnit(query.type, query.reg_index, query.reg_count);
-    enqeueRead(unit);
-    if (d->currentReadFrame >= config().queries->size()) {
-        d->currentReadFrame = 0;
-        d->interframeTimer->stop();
+    for (auto &query: config().queries) {
+        auto unit = QModbusDataUnit(query.type, query.reg_index, query.reg_count);
+        enqeueRead(unit);
     }
 }
 
