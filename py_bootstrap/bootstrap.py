@@ -634,22 +634,13 @@ class JsonState(BaseModel, metaclass=_JsonStateMeta, extra=Extra.allow):
                     return
                 except: 
                     pass
-        raise ValueError(f"Field {part} does not belong to {self!r}")
+        raise ValueError(f"Field {part} does not belong to {self!r}. (Note: Nested fields inside containers are not supported for callbacks!)")
     def __sig(self, name: str):
         if not name in self._after: self._after[name] = Signal()
         return self._after[name]
     async def __handle_field(self, out: JsonDict, name: str, was, new):
         if isinstance(was, JsonState):
             out[name] = await was.__refresh(**new.dict(exclude_unset=True))
-        elif isinstance(was, Mapping):
-            for k in was:
-                curr_was = was[k]
-                curr_new = new.get(k)
-                if curr_new is None: continue
-                await self.__handle_field(out, f"{name}:{k}", curr_was, curr_new)
-        elif isinstance(was, Sequence):
-            for num, (curr_was, curr_new) in enumerate(zip(was, new)):
-                await self.__handle_field(out, f"{name}:[{num}]", curr_was, curr_new)
         else:
             logging.getLogger("bootstrap").info(f"Updating {name}: {was!r} --> {new!r}")
             setattr(self, name, new)
@@ -668,7 +659,8 @@ class JsonState(BaseModel, metaclass=_JsonStateMeta, extra=Extra.allow):
             logging.getLogger("bootstrap").exception(error)
             return JsonDict()
         for name in fields:
-            if not hasattr(self, name): continue
+            if not hasattr(self, name): 
+                logging.getLogger("bootstrap").warning(f"Extra property received --> {name}")
             value = values[name]
             was = getattr(self, name)
             await self.__handle_field(result, name, was, value)
