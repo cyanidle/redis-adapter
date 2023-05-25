@@ -201,31 +201,26 @@ void ModbusDevice::postUpdate() {
     devicesMap->insert(tcp->port ? tcp->name : rtu->name, *this);
 }
 
-void Registers::postUpdate()
+void Registers::init(const QString &device)
 {
-    auto parseRegisters = [&](const QString &deviceName, const QVariantMap &regs, const QVariant &toInsert) {
+    auto parseRegisters = [&](const QVariantMap &regs, const QVariant &toInsert) {
         const auto deviceRegs = JsonDict(regs);
         for (auto &iter : deviceRegs) {
             if (iter.field() == "index" && iter.value().canConvert<int>()) {
                 auto regName = iter.domainKey().join(":");
                 auto regInfo = *iter.domainMap();
                 regInfo["table"] = toInsert;
-                (*allRegisters)[deviceName][regName] = parseObject<RegisterInfo>(regInfo);
+                (*allRegisters)[device][regName] = parseObject<RegisterInfo>(regInfo);
             }
         }
     };
-    auto parse = [&](const QMap<QString, QVariantMap> &mapping, const QVariant &toInsert) {
-        for (auto iter = mapping.cbegin(); iter != mapping.cend(); ++iter) {
-            parseRegisters(iter.key(), iter.value(), toInsert);
-        }
-    };
-    parse(holding, "holding");
-    parse(holding_registers, "holding");
-    parse(input, "input");
-    parse(input_registers, "input");
-    parse(coils, "coils");
-    parse(di, "discrete_inputs");
-    parse(discrete_inputs, "discrete_inputs");
+    parseRegisters(holding, "holding");
+    parseRegisters(holding_registers, "holding");
+    parseRegisters(input, "input");
+    parseRegisters(input_registers, "input");
+    parseRegisters(coils, "coils");
+    parseRegisters(di, "discrete_inputs");
+    parseRegisters(discrete_inputs, "discrete_inputs");
 }
 
 void RegisterCounts::reset()

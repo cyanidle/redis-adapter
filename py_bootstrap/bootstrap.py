@@ -587,6 +587,8 @@ class _JsonStateMeta(pydantic.main.ModelMetaclass):
             if field.startswith('__'): continue
             field_info = _fetch_field_info(field, namespaces)
             stripped = get_origin(ann) or ann
+            if stripped is Union:
+                raise TypeError(f"Unions are not supported in JsonState!")
             if not issubclass(stripped, object):
                 raise _BootException(f"JsonState cannot use fields annotated with non-types! Field: {field}. Annotation: {stripped}")
             # check if field default constructible
@@ -603,72 +605,82 @@ class _JsonStateMeta(pydantic.main.ModelMetaclass):
         namespaces['__annotations__'] = annotations
         return super().__new__(cls, name, bases, namespaces, **kwargs)
 
-if not TYPE_CHECKING:
-    class JsonState(BaseModel, metaclass=_JsonStateMeta, extra=Extra.allow):
-        __slots__ = ("_before", "_after")
-        def __init__(self, **data):
-            super().__init__(**data)
-            object.__setattr__(self, "_after", {})
-            self._after: Dict[str, Signal]
-        @classmethod
-        def default(cls) -> Self: 
-            return cls()
-        async def update_with(self, data:Union[JsonDict, dict]) -> JsonDict: 
-            if isinstance(data, JsonDict):
-                return await self.__refresh(**data.top)
-            elif isinstance(data, dict):
-                return await self.__refresh(**data)
-            else: raise TypeError("JsonState can obly be updated with dict or JsonDict")
-        def send(self) -> JsonDict: 
-            return JsonDict(self.dict())
-        def after_update(self, part: _T, cb: UniversalOrArgless[_T]):
-            for k, v in self.__dict__.items():
-                if v is part:
-                    self.__sig(k).receive_with(cb)
+#if not TYPE_CHECKING:
+class JsonState(BaseModel, metaclass=_JsonStateMeta, extra=Extra.allow):
+    __slots__ = ("_after")
+    def __init__(self, **data):
+        super().__init__(**data)
+        object.__setattr__(self, "_after", {})
+        self._after: Dict[str, Signal]
+    @classmethod
+    def default(cls) -> Self: 
+        return cls()
+    async def update_with(self, data:Union[JsonDict, dict]) -> JsonDict: 
+        if isinstance(data, JsonDict):
+            return await self.__refresh(**data.top)
+        elif isinstance(data, dict):
+            return await self.__refresh(**data)
+        else: raise TypeError("JsonState can obly be updated with dict or JsonDict")
+    def send(self) -> JsonDict: 
+        return JsonDict(self.dict())
+    def after_update(self, part: _T, cb: UniversalOrArgless[_T]):
+        for k, v in self.__dict__.items():
+            if v is part:
+                self.__sig(k).receive_with(cb)
+                return
+            elif isinstance(v, JsonState):
+                try:
+                    v.after_update(part, cb)
                     return
-                elif isinstance(v, JsonState):
-                    try:
-                        v.after_update(part, cb)
-                        return
-                    except: 
-                        pass
-            raise ValueError(f"Field {part} does not belong to {self!r}")
-        def __sig(self, name: str):
-            if not name in self._after: self._after[name] = Signal()
-            return self._after[name]
-        async def __refresh(self, **data) -> JsonDict:
-            """Refresh the internal attributes with new data."""
-            result = JsonDict()
-            values, fields, error = validate_model(self.__class__, data)
-            if error:
-                logging.getLogger("bootstrap").exception(error)
-                return False
-            for name in fields:
-                if not hasattr(self, name): continue
-                value = values[name]
-                was = getattr(self, name)
-                if isinstance(was, JsonState):
-                    value: JsonState
-                    result[name] = await was.__refresh(**value.dict(exclude_unset=True))
-                else:
-                    logging.getLogger("bootstrap").info(f"Updating {name}: {was!r} --> {value!r}")
-                    setattr(self, name, value)
-                    result[name] = value
-                    sig = self._after.get(name)
-                    try:
-                        if sig is not None: await sig.emit(getattr(self, name))
-                    except Exception as e:
-                        logging.getLogger("bootstrap").error(f"{self}: While updating {name}:")
-                        logging.getLogger("bootstrap").exception(e)
-            return result
-else:
-    class JsonState(metaclass=_JsonStateMeta):
-        @classmethod
-        def default(cls) -> Self: ...
-        # True means was updated at least one field(nested or not)
-        async def update_with(self, data: JsonDict) -> JsonDict: ...
-        def send(self) -> JsonDict: ...
-        def after_update(self, part: _T, cb: UniversalOrArgless[_T]): ...
+                except: 
+                    pass
+        raise ValueError(f"Field {part} does not belong to {self!r}")
+    def __sig(self, name: str):
+        if not name in self._after: self._after[name] = Signal()
+        return self._after[name]
+    async def __handle_field(self, out: JsonDict, name: str, was, new):
+        if isinstance(was, JsonState):
+            out[name] = await was.__refresh(**new.dict(exclude_unset=True))
+        elif isinstance(was, Mapping):
+            for k in was:
+                curr_was = was[k]
+                curr_new = new.get(k)
+                if curr_new is None: continue
+                await self.__handle_field(out, f"{name}:{k}", curr_was, curr_new)
+        elif isinstance(was, Sequence):
+            for num, (curr_was, curr_new) in enumerate(zip(was, new)):
+                await self.__handle_field(out, f"{name}:[{num}]", curr_was, curr_new)
+        else:
+            logging.getLogger("bootstrap").info(f"Updating {name}: {was!r} --> {new!r}")
+            setattr(self, name, new)
+            out[name] = new
+            sig = self._after.get(name)
+            try:
+                if sig is not None: await sig.emit(getattr(self, name))
+            except Exception as e:
+                logging.getLogger("bootstrap").error(f"{self}: While updating {name}:")
+                logging.getLogger("bootstrap").exception(e)
+    async def __refresh(self, **data) -> JsonDict:
+        """Refresh the internal attributes with new data."""
+        result = JsonDict()
+        values, fields, error = validate_model(self.__class__, data)
+        if error:
+            logging.getLogger("bootstrap").exception(error)
+            return JsonDict()
+        for name in fields:
+            if not hasattr(self, name): continue
+            value = values[name]
+            was = getattr(self, name)
+            await self.__handle_field(result, name, was, value)
+        return result
+# else:
+#     class JsonState(metaclass=_JsonStateMeta):
+#         @classmethod
+#         def default(cls) -> Self: ...
+#         # True means was updated at least one field(nested or not)
+#         async def update_with(self, data: JsonDict) -> JsonDict: ...
+#         def send(self) -> JsonDict: ...
+#         def after_update(self, part: _T, cb: UniversalOrArgless[_T]): ...
 
 class Weekday(IntEnum):
     MONDAY = 1

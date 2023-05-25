@@ -10,3 +10,10 @@ void Settings::AppConfig::postUpdate() {
         Radapter::Broker::instance()->applySettings(broker);
     }
 }
+
+void Settings::Modbus::postUpdate()
+{
+    for (auto [device, regs]: registers) {
+        regs.init(device);
+    }
+}

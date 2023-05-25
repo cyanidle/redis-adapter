@@ -86,12 +86,13 @@ struct Redis : public Serializable {
 struct Modbus : public Serializable {
     Q_GADGET
     IS_SERIALIZABLE
-    FIELD(Required<Registers>, registers)
+    FIELD(RequiredMapping<Registers>, registers)
     COMMENT(registers, "Registers are initialized first")
     FIELD(RequiredSequence<ModbusDevice>, devices)
     COMMENT(devices, "Then devices")
     FIELD(OptionalSequence<ModbusSlave>, slaves)
     FIELD(OptionalSequence<ModbusMaster>, masters)
+    void postUpdate() override;
 };
 
 struct Websocket : public Serializable {

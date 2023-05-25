@@ -22,13 +22,11 @@ namespace Validator {
 }
 
 namespace Settings {
-    using RequiredRegisterTable = ::Serializable::Validated<Required<QModbusDataUnit::RegisterType>>::With<Validator::RegisterTable>;
-    using RegisterValueType = ::Serializable::Validated<Required<QMetaType::Type>>::With<Validator::RegValueType>;
 
     struct RADAPTER_API ModbusQuery : Serializable {
         Q_GADGET
         IS_SERIALIZABLE
-        FIELD(RequiredRegisterTable, type)
+        FIELD(VALIDATED(Required<QModbusDataUnit::RegisterType>, Validator::RegisterTable), type)
         FIELD(Required<quint16>, reg_index)
         FIELD(Required<quint8>, reg_count)
     };
@@ -43,7 +41,6 @@ namespace Settings {
     };
 
     struct RADAPTER_API ModbusDevice : Serializable {
-        typedef QMap<QString, ModbusDevice> Map;
         Q_GADGET
         IS_SERIALIZABLE
         FIELD(Optional<TcpDevice>, tcp)
@@ -56,11 +53,10 @@ namespace Settings {
     struct RADAPTER_API RegisterInfo : Serializable {
         Q_GADGET
         IS_SERIALIZABLE
-        using Orders = ::Serializable::Validated<HasDefault<PackingMode>>::With<Validator::ByteWordOrder>;
-        FIELD(Orders, endianess)
-        FIELD(RequiredRegisterTable, table)
+        FIELD(VALIDATED(Required<QModbusDataUnit::RegisterType>, Validator::RegisterTable), table)
+        FIELD(VALIDATED(HasDefault<PackingMode>, Validator::ByteWordOrder), endianess)
+        FIELD(VALIDATED(HasDefault<QMetaType::Type>, Validator::RegValueType), type, QMetaType::UShort)
         FIELD(Required<int>, index)
-        FIELD(MarkHasDefault<RegisterValueType>, type, QMetaType::UShort)
         FIELD(HasDefault<bool>, resetting, false) // not implemented yet
         FIELD(HasDefault<bool>, writable, true)
         FIELD(OptionalValidator, validator)
@@ -120,22 +116,14 @@ namespace Settings {
     struct RADAPTER_API Registers : Serializable {
         Q_GADGET
         IS_SERIALIZABLE
-        FIELD(OptionalMapping<QVariantMap>, holding)
-        FIELD(OptionalMapping<QVariantMap>, holding_registers)
-        FIELD(OptionalMapping<QVariantMap>, input)
-        FIELD(OptionalMapping<QVariantMap>, input_registers)
-        FIELD(OptionalMapping<QVariantMap>, coils)
-        FIELD(OptionalMapping<QVariantMap>, discrete_inputs)
-        FIELD(OptionalMapping<QVariantMap>, di)
-        void postUpdate() override;
-
-        COMMENT(holding, "{index: int, type: (float32/uint32/uint16), validator: (name), endianess: (abcd), writable: (bool)}")
-        COMMENT(holding_registers, "{index: int, type: (float32/uint32/uint16), validator: (name), endianess: (abcd), writable: (bool)}")
-        COMMENT(input, "{index: int, type: (float32/uint32/uint16), validator: (name), endianess: (abcd), writable: (bool)}")
-        COMMENT(input_registers, "{index: int, type: (float32/uint32/uint16), validator: (name), endianess: (abcd), writable: (bool)}")
-        COMMENT(coils, "{index: int, type: (float32/uint32/uint16), validator: (name), endianess: (abcd), writable: (bool)}")
-        COMMENT(discrete_inputs, "{index: int, type: (float32/uint32/uint16), validator: (name), endianess: (abcd), writable: (bool)}")
-        COMMENT(di, "{index: int, type: (float32/uint32/uint16), validator: (name), endianess: (abcd), writable: (bool)}")
+        FIELD(Optional<QVariantMap>, holding)
+        FIELD(Optional<QVariantMap>, holding_registers)
+        FIELD(Optional<QVariantMap>, input)
+        FIELD(Optional<QVariantMap>, input_registers)
+        FIELD(Optional<QVariantMap>, coils)
+        FIELD(Optional<QVariantMap>, discrete_inputs)
+        FIELD(Optional<QVariantMap>, di)
+        void init(const QString &device);
     };
 
 }
