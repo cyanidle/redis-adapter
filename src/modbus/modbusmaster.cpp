@@ -218,8 +218,12 @@ void Master::write(const JsonDict &data)
             continue;
         }
         if (valCopy.canConvert(QMetaType(regInfo.type))) {
-            auto delta = d->state.updateTarget(key, valCopy);
-            if (delta.isEmpty()) continue;
+            if (d->state.target().isEmpty()) {
+                if (d->state.current()[key] == valCopy) continue; //do not write if already same value
+            } else {
+                if (d->state.target()[key] == valCopy) continue; //do not write if target is same
+            }
+            d->state.updateTarget(key, valCopy);
             results.append(parseValueToDataUnit(valCopy, regInfo));
         } else {
             workerError(this) << "Incompatible value under:" << fullKeyJoined << " --> " << valCopy << "; Wanted: " << regInfo.type.value;
@@ -359,16 +363,15 @@ void Master::updateCurrent(const JsonDict &json)
                              << "; Attemtps:" << rewriteAttempts;
             toRewrite[key] = val;
         } else {
-            d->state.updateCurrent(key, val);
-            d->state.updateTarget(key, val);
+            d->state.updateTarget(key, d->state.current()[key]);
             rewriteAttempts = 0;
         }
     }
     saveState(d->state.current());
     if (!toRewrite.isEmpty()) {
-        QTimer::singleShot(d->settings.response_time_ms, this, [this, toRewrite]{
-            write(toRewrite);
-        });
+        write(toRewrite);
+    } else {
+        d->state.target().clear();
     }
 }
 

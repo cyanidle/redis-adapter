@@ -186,16 +186,34 @@ void tryConnecting(const QString &producer, const QString &consumer, const QStri
     for (auto &step: pipe) {
         auto existing = broker->getInterceptor(step);
         if (!existing) {
-            tryCreateInterceptor(step, parent);
+            try {
+                tryCreateInterceptor(step, parent);
+            } catch (std::exception &exc) {
+                throw std::runtime_error(
+                    std::string("Interceptor: (") + step.toStdString() + ") not found! "
+                                                                         "Could not also create --> " + std::string(exc.what()));
+            }
         }
     }
     auto existingProd = broker->getWorker(producer);
     if (!existingProd) {
-        tryCreateWorker(producer, parent);
+        try {
+            tryCreateWorker(producer, parent);
+        } catch (std::exception &exc) {
+            throw std::runtime_error(
+                std::string("Worker: (") + producer.toStdString() + ") not found! "
+                                                                    "Could not also create --> " + std::string(exc.what()));
+        }
     }
     auto existingCons = broker->getWorker(consumer);
     if (!existingCons) {
-        tryCreateWorker(consumer, parent);
+        try {
+            tryCreateWorker(consumer, parent);
+        } catch (std::exception &exc) {
+            throw std::runtime_error(
+                std::string("Worker: (") + consumer.toStdString() + ") not found! "
+                                                                    "Could not also create --> " + std::string(exc.what()));
+        }
     }
     broker->connectTwo(producer, consumer, pipe);
 }

@@ -14,6 +14,8 @@ public:
     Json(Json&& other) = default;
     Json &operator=(const Json& other) = default;
     Json &operator=(Json&& other) = default;
+    [[nodiscard]] JsonDict &current();
+    [[nodiscard]] JsonDict &target();
     [[nodiscard]] const JsonDict &current() const;
     [[nodiscard]] const JsonDict &target() const;
     [[nodiscard]] JsonDict missingToTarget() const;

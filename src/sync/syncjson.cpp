@@ -6,6 +6,16 @@ Json::Json(const JsonDict &start) :
     m_current(start)
 {}
 
+JsonDict &Json::current()
+{
+    return m_current;
+}
+
+JsonDict &Json::target()
+{
+    return m_target;
+}
+
 const JsonDict &Json::current() const
 {
     return m_current;
