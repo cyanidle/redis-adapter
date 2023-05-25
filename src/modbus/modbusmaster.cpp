@@ -243,7 +243,7 @@ void Master::executeNext()
     auto sinceLastFrame = getTimeMS() - d->lastFrameTime;
     qint64 toWait = d->settings.interframe_gap - sinceLastFrame;
     if (toWait > 0) {
-        emit queryDone();
+        emit allQueriesDone();
         d->frameDelay->start(toWait);
         return;
     }
@@ -375,13 +375,17 @@ void Master::updateCurrent(const JsonDict &json)
 void Master::enqeueRead(const QModbusDataUnit &unit)
 {
     d->readQueue.enqueue(unit);
-    emit askTrigger();
+    if (!d->frameDelay->isActive()) {
+        emit askTrigger();
+    }
 }
 
 void Master::enqeueWrite(const QModbusDataUnit &state)
 {
     d->writeQueue.enqueue(state);
-    emit askTrigger();
+    if (!d->frameDelay->isActive()) {
+        emit askTrigger();
+    }
 }
 
 void Master::executeRead(const QModbusDataUnit &unit)

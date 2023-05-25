@@ -70,6 +70,9 @@ private:
 
     bool update(const QVariantMap &data) override;
     JsonDict send(const QString &fieldName) const;
+    void performCheck() const;
+
+
     template <typename T> friend struct Serializable::PlainField;
     template <typename T> friend struct Serializable::NestedField;
     template <typename T> friend struct Serializable::PlainSequence;

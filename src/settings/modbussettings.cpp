@@ -12,7 +12,7 @@ typedef QMap<QString /*deviceName*/, DevicesRegisters> AllRegisters;
 Q_GLOBAL_STATIC(AllRegisters, allRegisters)
 Q_GLOBAL_STATIC(QStringMap<ModbusDevice>, devicesMap)
 
-void ModbusSlave::postUpdate() {
+void ModbusSlave::init() {
     for (auto &name: register_names) {
         auto toMerge = (*allRegisters).value(name.replace('.', ':'));
         for (auto newRegisters = toMerge.cbegin(); newRegisters != toMerge.cend(); ++newRegisters) {
@@ -67,7 +67,7 @@ void ModbusSlave::postUpdate() {
     device = devicesMap->value(device_name);
 }
 
-void ModbusMaster::postUpdate()
+void ModbusMaster::init()
 {
     for (auto &name: register_names) {
         auto toMerge = (*allRegisters).value(name.replace('.', ':'));

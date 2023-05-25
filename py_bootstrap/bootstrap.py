@@ -21,15 +21,15 @@ from types import CodeType
 from typing import (TYPE_CHECKING, AbstractSet, Any, 
                     Awaitable, Callable, ClassVar, Deque,
                       Dict, Generic, Iterator,
-                        List, Mapping, MutableMapping,
+                        List, Mapping, MutableMapping, MutableSequence, MutableSet,
                           Optional, Sequence, Tuple,
                             Type, TypeVar, Union, cast, get_args, get_origin, overload)
 from typing_extensions import ParamSpec, TypeVarTuple, dataclass_transform, Self
 import debugpy
 
-from pydantic import BaseModel, Extra, Field, validate_model, validator
+from pydantic import BaseModel, BaseSettings, Extra, Field, create_model, validate_model, validator
 import pydantic
-from pydantic.fields import Undefined
+from pydantic.fields import Undefined, ModelField, FieldInfo
 assert sys.version_info.major >= 3
 assert sys.version_info.minor >= 9
 
@@ -603,8 +603,15 @@ class _JsonStateMeta(pydantic.main.ModelMetaclass):
             else:
                 namespaces[field] = Field(default_factory=stripped)    
         namespaces['__annotations__'] = annotations
-        return super().__new__(cls, name, bases, namespaces, **kwargs)
-
+        res = super().__new__(cls, name, bases, namespaces, **kwargs)
+        for name, field in res.__fields__.items():
+            field: ModelField
+            stripped = get_origin(field.outer_type_)
+            if not isinstance(stripped, type): continue
+            if issubclass(stripped, (Sequence, Mapping, AbstractSet, MutableMapping, MutableSequence, MutableSet)):
+                raise RuntimeError(f"{res} --> Containers are forbidden. Error in: {name} --> {field}")
+        return res
+    
 #if not TYPE_CHECKING:
 class JsonState(BaseModel, metaclass=_JsonStateMeta, extra=Extra.allow):
     __slots__ = ("_after")
@@ -615,11 +622,30 @@ class JsonState(BaseModel, metaclass=_JsonStateMeta, extra=Extra.allow):
     @classmethod
     def default(cls) -> Self: 
         return cls()
-    async def update_with(self, data:Union[JsonDict, dict]) -> JsonDict: 
+    @classmethod
+    def model_as_settings(cls) -> Type[BaseSettings]:
+        "CAN be used as type annotation"
+        definitions: Dict[str, Any] = {}
+        for k, v in cls.__fields__.items():
+            definitions[k] = (v.outer_type_, Undefined)
+        model = create_model(f"{cls.__name__}Settings", 
+                             __base__= BaseSettings, 
+                             __validators__=cls.__validators__,
+                             **definitions)
+        return cast(Type[BaseSettings], model)
+    def apply_settings(self, setting: BaseModel):
+        values, fields, error = validate_model(self.__class__, setting.dict())
+        if error is not None:
+            raise error
+        for field in fields:
+            setattr(self, field, values[field])
+    async def update_with(self, data:Union[JsonDict, dict, BaseModel]) -> JsonDict: 
         if isinstance(data, JsonDict):
             return await self.__refresh(**data.top)
         elif isinstance(data, dict):
             return await self.__refresh(**data)
+        elif isinstance(data, BaseModel):
+            return await self.__refresh(**data.dict())
         else: raise TypeError("JsonState can obly be updated with dict or JsonDict")
     def send(self) -> JsonDict: 
         return JsonDict(self.dict())

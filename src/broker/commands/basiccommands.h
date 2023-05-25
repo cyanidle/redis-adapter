@@ -3,8 +3,8 @@
 
 #include "private/command.h"
 #include "broker/replies/basicreplies.h"
-#include "jsondict/jsondict.h"
 
+class JsonDict;
 namespace Radapter {
 
 class RADAPTER_API CommandAck : public Command

@@ -90,7 +90,7 @@ namespace Settings {
         RegisterCounts counts{};
         QStringMap<RegisterInfo> registers{};
 
-        void postUpdate() override;
+        void init();
     };
 
     struct RADAPTER_API ModbusMaster : ModbusWorker {
@@ -110,7 +110,7 @@ namespace Settings {
 
         ModbusDevice device{};
         QStringMap<RegisterInfo> registers{};
-        void postUpdate() override;
+        void init();
     };
 
     struct RADAPTER_API Registers : Serializable {

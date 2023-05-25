@@ -16,4 +16,10 @@ void Settings::Modbus::postUpdate()
     for (auto [device, regs]: registers) {
         regs.init(device);
     }
+    for (auto &slave: slaves) {
+        slave.init();
+    }
+    for (auto &master: masters) {
+        master.init();
+    }
 }
