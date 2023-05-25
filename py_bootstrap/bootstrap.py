@@ -687,6 +687,7 @@ if not TYPE_CHECKING:
             for name in fields:
                 if not hasattr(self, name): 
                     logging.getLogger("bootstrap").warning(f"Extra property received --> {name}")
+                    continue
                 value = values[name]
                 was = getattr(self, name)
                 await self.__handle_field(result, name, was, value)
