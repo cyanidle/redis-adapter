@@ -156,7 +156,7 @@ PackingMode::PackingMode(QDataStream::ByteOrder words, QDataStream::ByteOrder by
 
 void ModbusDevice::postUpdate() {
     static QThread channelsThread;
-    if (!channel) channel.reset(new Radapter::Sync::Channel(&channelsThread, interframe_gap));
+    if (!channel) channel.reset(new Radapter::Sync::Channel(&channelsThread, frame_gap));
     channelsThread.start();
     if (tcp.wasUpdated() && rtu.wasUpdated()) {
         throw std::runtime_error("[Modbus Device] Both tcp and rtu device is prohibited! Use one");

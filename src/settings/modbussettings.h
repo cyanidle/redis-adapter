@@ -37,8 +37,8 @@ namespace Settings {
         IS_SERIALIZABLE
         FIELD(Optional<TcpDevice>, tcp)
         FIELD(Optional<SerialDevice>, rtu)
-        FIELD(HasDefault<quint32>, interframe_gap, 50)
-        COMMENT(interframe_gap, "Interframe gap is the minimal timeout between queries")
+        FIELD(HasDefault<quint32>, frame_gap, 50)
+        COMMENT(frame_gap, "Interframe gap is the minimal timeout between queries")
 
         QSharedPointer<Radapter::Sync::Channel> channel;
         void postUpdate() override;
