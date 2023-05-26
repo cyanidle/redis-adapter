@@ -13,24 +13,14 @@ Q_GLOBAL_STATIC(AllRegisters, allRegisters)
 Q_GLOBAL_STATIC(QStringMap<ModbusDevice>, devicesMap)
 
 void ModbusSlave::init() {
-    for (auto &name: register_names) {
-        auto toMerge = (*allRegisters).value(name.replace('.', ':'));
-        for (auto newRegisters = toMerge.cbegin(); newRegisters != toMerge.cend(); ++newRegisters) {
-            auto name = newRegisters.key();
-            auto &reg = newRegisters.value();
-            if (registers.contains(name)) {
-                throw std::invalid_argument("Register name collision: " + name.toStdString());
-            }
-            registers[name] = reg;
-        }
-    }
+    ModbusWorker::init();
     auto errRange = [](const RegisterInfo &info){
         throw std::runtime_error(QString(
             "Register ("%Modbus::printTable(info.table)%'['%QString::number(info.index)%"]) "
             "out of range for slave: all regs must be from 0 to n without gaps").toStdString());
     };
     counts.reset();
-    for (auto &reg : registers) {
+    for (auto &reg : m_registers) {
         auto wordSize = QMetaType(reg.type).sizeOf() / 2;
         switch (reg.table.value) {
         case QModbusDataUnit::InputRegisters:
@@ -61,49 +51,9 @@ void ModbusSlave::init() {
             throw std::runtime_error("Unkown registers error");
         }
     }
-    if (registers.isEmpty()) {
+    if (m_registers.isEmpty()) {
         throw std::runtime_error("Empty registers for Mb Slave! Available: " + allRegisters->keys().join(", ").toStdString());
     }
-    device = devicesMap->value(device_name);
-}
-
-void ModbusMaster::init()
-{
-    for (auto &name: register_names) {
-        auto toMerge = (*allRegisters).value(name.replace('.', ':'));
-        if (toMerge.isEmpty()) {
-            throw std::runtime_error(worker->name->toStdString() + ": Missing registers with name: " + name.toStdString());
-        }
-        for (auto newRegisters = toMerge.begin(); newRegisters != toMerge.end(); ++newRegisters) {
-            auto name = newRegisters.key();
-            auto &reg = newRegisters.value();
-            if (registers.contains(name)) {
-                throw std::invalid_argument("Register name collision: " + name.toStdString());
-            }
-            registers[name] = reg;
-        }
-    }
-    for (auto &query: queries) {
-        auto &table = query.type;
-        auto start = query.reg_index;
-        auto end = query.reg_count + start;
-        auto hitCount = 0;
-        for (auto &reg: registers) {
-            if (reg.table == table && reg.index >= start && reg.index < end) {
-                hitCount++;
-            }
-        }
-        if (hitCount < query.reg_count || hitCount > query.reg_count) {
-            throw std::runtime_error(QString("Query: reg_index: "%
-                                             QString::number(query.reg_index)%
-                                             ". reg_count: "%
-                                             QString::number(query.reg_count)%
-                                             ". table: "%
-                                             Modbus::printTable(query.type)%
-                                             ": not all registers found!").toStdString());
-        }
-    }
-    device = devicesMap->value(device_name);
 }
 
 const QString &Validator::ByteWordOrder::name()
@@ -140,6 +90,21 @@ void RegisterInfo::postUpdate()
 {
     if (table == QModbusDataUnit::InputRegisters || table == QModbusDataUnit::DiscreteInputs) {
         writable = false;
+    }
+    if (mode.wasUpdated()) {
+        mode = mode->toLower();
+        if (mode == 'r' || mode == "readonly") {
+            writable = false;
+            readable = true;
+        } else if (mode == 'w' || mode == "writeonly") {
+            writable = true;
+            readable = false;
+        } else if (mode == "rw" || mode == "readwrite") {
+            writable = true;
+            readable = true;
+        } else {
+            throw std::runtime_error("Invalid mode passed to register config --> " + mode->toStdString());
+        }
     }
 }
 
@@ -191,11 +156,11 @@ PackingMode::PackingMode(QDataStream::ByteOrder words, QDataStream::ByteOrder by
 
 void ModbusDevice::postUpdate() {
     static QThread channelsThread;
-    if (!channel) channel.reset(new Radapter::Sync::Channel(&channelsThread));
+    if (!channel) channel.reset(new Radapter::Sync::Channel(&channelsThread, interframe_gap));
     channelsThread.start();
-    if (tcp.isValid() && rtu.isValid()) {
+    if (tcp.wasUpdated() && rtu.wasUpdated()) {
         throw std::runtime_error("[Modbus Device] Both tcp and rtu device is prohibited! Use one");
-    } else if (!tcp.isValid() && !rtu.isValid()) {
+    } else if (!tcp.wasUpdated() && !rtu.wasUpdated()) {
         throw std::runtime_error("[Modbus Device] Tcp or Rtu device not specified!");
     }
     devicesMap->insert(tcp->port ? tcp->name : rtu->name, *this);
@@ -203,6 +168,22 @@ void ModbusDevice::postUpdate() {
 
 void Registers::init(const QString &device)
 {
+    auto tryReplaceMode = [&](QVariantMap &rawRegister){
+        if (allow_read_by_default && allow_write_by_default) {
+            return;
+        }
+        if (!rawRegister.contains("mode") &&
+            !rawRegister.contains("readable") &&
+            !rawRegister.contains("writable"))
+        {
+            if (!allow_read_by_default) {
+                rawRegister["readable"] = false;
+            }
+            if (!allow_write_by_default) {
+                rawRegister["writable"] = false;
+            }
+        }
+    };
     auto parseRegisters = [&](const QVariantMap &regs, const QVariant &toInsert) {
         const auto deviceRegs = JsonDict(regs);
         for (auto &iter : deviceRegs) {
@@ -210,6 +191,7 @@ void Registers::init(const QString &device)
                 auto regName = iter.domainKey().join(":");
                 auto regInfo = *iter.domainMap();
                 regInfo["table"] = toInsert;
+                tryReplaceMode(regInfo);
                 (*allRegisters)[device][regName] = parseObject<RegisterInfo>(regInfo);
             }
         }
@@ -226,4 +208,16 @@ void Registers::init(const QString &device)
 void RegisterCounts::reset()
 {
     coils = di = input_registers = holding_registers = 0;
+}
+
+void ModbusWorker::init()
+{
+    m_registers = (*allRegisters).value(QString(registers).replace('.', ':'));
+    if (m_registers.isEmpty()) {
+        throw std::runtime_error("Registers not found: " + registers->toStdString());
+    }
+    if (!devicesMap->contains(device)) {
+        throw std::runtime_error("Modbus device not found: " + device->toStdString());
+    }
+    m_device = devicesMap->value(device);
 }

@@ -29,10 +29,6 @@ void NamespaceUnwrapper::onMsgFromWorker(WorkerMsg &msg)
     msg.json() = JsonDict(msg.json()[d->settings.unwrap_from], false);
     if (!msg.isEmpty()) {
         emit msgFromWorker(msg);
-    } else if (d->settings.print_filtered) {
-        brokerWarn().nospace().noquote() << this
-                               << " --> Msg empty after unwrap(" << d->settings.unwrap_from << ')'
-                               << msg.printFullDebug();
     }
 }
 

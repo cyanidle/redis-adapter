@@ -15,14 +15,14 @@ public:
         LowPriority = 50,
         HighPriority = 200,
     };
-    Channel(QThread *thread);
+    Channel(QThread *thread, quint32 frameGap);
     ~Channel();
     //! \warning not threadsafe
     void registerUser(QObject *user, Priority priority = NormalPriority);
     //! \note Everything else is (with connections)
     QObject *whoIsBusy() const;
-    template<typename User>
-    QMetaObject::Connection callOnTrigger(User *user, void (User::*slot)()) {
+    template<typename User, typename...Args>
+    QMetaObject::Connection callOnTrigger(User *user, void (User::*slot)(Args...args)) {
         return connect(this,
                        &Channel::trigger,
                        user,
@@ -32,12 +32,12 @@ public:
                             }
                        }, Qt::QueuedConnection);
     }
-    template<typename User>
-    QMetaObject::Connection signalJobDone(User *user, void (User::*signal)()) {
+    template<typename User, typename...Args>
+    QMetaObject::Connection signalJobDone(User *user, void (User::*signal)(Args...args)) {
         return connect(user, signal, this, &Channel::onJobDone, Qt::QueuedConnection);
     }
-    template<typename User>
-    QMetaObject::Connection askTriggerOn(User *user, void (User::*signal)()) {
+    template<typename User, typename...Args>
+    QMetaObject::Connection askTriggerOn(User *user, void (User::*signal)(Args...args)) {
         return connect(user, signal, this, &Channel::askTrigger, Qt::QueuedConnection);
     }
 signals:
@@ -47,7 +47,7 @@ private slots:
     void askTrigger();
 private:
     bool isBusy() const;
-    void checkWaiting(QObject *ignore = nullptr);
+    void chooseNext();
     void activate(QObject *who);
 
     Private *d;

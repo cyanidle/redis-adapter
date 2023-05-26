@@ -5,14 +5,8 @@
 #include <QModbusDataUnit>
 #include <QModbusDevice>
 
-class QTimer;
-class QModbusClient;
 namespace Settings {
 struct ModbusMaster;
-}
-namespace Redis {
-class CacheProducer;
-class CacheConsumer;
 }
 namespace Modbus {
 

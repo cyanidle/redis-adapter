@@ -30,17 +30,17 @@ Slave::Slave(const Settings::ModbusSlave &settings, QThread *thread) :
     d->reconnectTimer->setSingleShot(true);
     d->reconnectTimer->callOnTimeout(this, &Slave::connectDevice);
     connect(this->workerThread(), &QThread::started, this, &Slave::connectDevice);
-    if (settings.device.tcp.isValid()) {
+    if (settings.m_device.tcp.wasUpdated()) {
         d->modbusDevice = new QModbusTcpServer(this);
-        d->modbusDevice->setConnectionParameter(QModbusDevice::NetworkPortParameter, settings.device.tcp->port);
-        d->modbusDevice->setConnectionParameter(QModbusDevice::NetworkAddressParameter, settings.device.tcp->host);
+        d->modbusDevice->setConnectionParameter(QModbusDevice::NetworkPortParameter, settings.m_device.tcp->port);
+        d->modbusDevice->setConnectionParameter(QModbusDevice::NetworkAddressParameter, settings.m_device.tcp->host);
     } else {
         d->modbusDevice = new QModbusRtuSerialServer(this);
-        d->modbusDevice->setConnectionParameter(QModbusDevice::SerialPortNameParameter, settings.device.rtu->port_name);
-        d->modbusDevice->setConnectionParameter(QModbusDevice::SerialParityParameter, settings.device.rtu->parity);
-        d->modbusDevice->setConnectionParameter(QModbusDevice::SerialBaudRateParameter, settings.device.rtu->baud);
-        d->modbusDevice->setConnectionParameter(QModbusDevice::SerialDataBitsParameter, settings.device.rtu->data_bits);
-        d->modbusDevice->setConnectionParameter(QModbusDevice::SerialStopBitsParameter, settings.device.rtu->stop_bits);
+        d->modbusDevice->setConnectionParameter(QModbusDevice::SerialPortNameParameter, settings.m_device.rtu->port_name);
+        d->modbusDevice->setConnectionParameter(QModbusDevice::SerialParityParameter, settings.m_device.rtu->parity);
+        d->modbusDevice->setConnectionParameter(QModbusDevice::SerialBaudRateParameter, settings.m_device.rtu->baud);
+        d->modbusDevice->setConnectionParameter(QModbusDevice::SerialDataBitsParameter, settings.m_device.rtu->data_bits);
+        d->modbusDevice->setConnectionParameter(QModbusDevice::SerialStopBitsParameter, settings.m_device.rtu->stop_bits);
     }
     d->modbusDevice->setServerAddress(settings.slave_id);
     connect(d->modbusDevice, &QModbusServer::dataWritten,
@@ -50,7 +50,7 @@ Slave::Slave(const Settings::ModbusSlave &settings, QThread *thread) :
     connect(d->modbusDevice, &QModbusServer::errorOccurred,
             this, &Slave::onErrorOccurred);
     QModbusDataUnitMap regMap;
-    for (auto regIter = d->settings.registers.constBegin(); regIter != d->settings.registers.constEnd(); ++regIter) {
+    for (auto regIter = d->settings.m_registers.constBegin(); regIter != d->settings.m_registers.constEnd(); ++regIter) {
         if (d->reverseRegisters[regIter->table].contains(regIter->index)) {
             throw std::invalid_argument("Register index collission on: " +
                                         regIter.key().toStdString() +
@@ -86,7 +86,7 @@ bool Slave::isConnected() const
 void Slave::connectDevice()
 {
     if (!d->modbusDevice->connectDevice()) {
-        workerWarn(this) << ": Failed to connect: Attempt to reconnect to: " << d->settings.device.print();
+        workerWarn(this) << ": Failed to connect: Attempt to reconnect to: " << d->settings.m_device.print();
         d->reconnectTimer->start();
     }
 }
@@ -106,7 +106,7 @@ void Slave::handleNewWords(QVector<quint16> &words, QModbusDataUnit::RegisterTyp
             continue;
         }
         const auto &regString = d->reverseRegisters[table][address + i];
-        const auto &regInfo = d->settings.registers[regString];
+        const auto &regInfo = d->settings.m_registers[regString];
         auto sizeWords = QMetaType(regInfo.type).sizeOf()/2;
         if (i + sizeWords > size) {
             workerWarn(this) << "Insufficient size of value: " << sizeWords;
@@ -168,7 +168,7 @@ void Slave::onDataWritten(QModbusDataUnit::RegisterType table, int address, int 
 
 void Slave::onErrorOccurred(QModbusDevice::Error error)
 {
-    workerWarn(this) << "Error: " << d->settings.device.print() << "; Reason: " << error;
+    workerWarn(this) << "Error: " << d->settings.m_device.print() << "; Reason: " << error;
     disconnectDevice();
     d->reconnectTimer->start();
 }
@@ -185,16 +185,12 @@ void Slave::onStateChanged(QModbusDevice::State state)
 
 void Slave::onMsg(const Radapter::WorkerMsg &msg)
 {
-    if (d->settings.read_only) {
-        workerWarn(this) << "Attempt to write while read-only! See config.";
-        return;
-    }
     QList<QModbusDataUnit> results;
     for (auto& iter : msg) {
         auto fullKeyJoined = iter.key().join(":");
-        if (d->settings.registers.contains(fullKeyJoined)) {
+        if (d->settings.m_registers.contains(fullKeyJoined)) {
             d->state[fullKeyJoined] = iter.value();
-            auto regInfo = d->settings.registers.value(fullKeyJoined);
+            auto regInfo = d->settings.m_registers.value(fullKeyJoined);
             auto value = iter.value();
             if (Q_LIKELY(value.canConvert(QMetaType(regInfo.type)))) {
                 results.append(parseValueToDataUnit(value, regInfo));

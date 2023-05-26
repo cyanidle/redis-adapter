@@ -3,10 +3,10 @@
 #include "localization.h"
 
 void Settings::AppConfig::postUpdate() {
-    if (localization.isValid()) {
+    if (localization.wasUpdated()) {
         Localization::instance()->applyInfo(localization);
     }
-    if (broker.isValid()) {
+    if (broker.wasUpdated()) {
         Radapter::Broker::instance()->applySettings(broker);
     }
 }

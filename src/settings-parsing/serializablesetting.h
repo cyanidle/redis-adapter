@@ -40,7 +40,7 @@ protected:
 template <typename Super>
 struct MarkOptional : Super {
     FIELD_SUPER(Super)
-    bool isValid() const {
+    bool wasUpdated() const {
         return m_valid;
     }
 protected:
@@ -48,7 +48,7 @@ protected:
         return m_valid = Super::updateWithVariant(source);
     }
     QVariant readVariant() const {
-        if (!isValid()) {
+        if (!wasUpdated()) {
             return {};
         } else {
             return Super::readVariant();

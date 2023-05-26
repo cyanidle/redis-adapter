@@ -29,7 +29,7 @@ PythonModuleWorker::PythonModuleWorker(const Settings::PythonModuleWorker &setti
     config.worker->print_msgs = false;
     config.process = "python3";
     config.extra_paths = settings.extra_paths;
-    if (settings.override_bootstrap_with.isValid()) {
+    if (settings.override_bootstrap_with.wasUpdated()) {
         config.arguments.value.append(settings.override_bootstrap_with);
     } else {
         config.arguments.value.append({"-c", d->bootstrap->readAll()});
@@ -47,7 +47,8 @@ PythonModuleWorker::PythonModuleWorker(const Settings::PythonModuleWorker &setti
     connect(d->proc, &ProcessWorker::sendMsg, this, &PythonModuleWorker::forwardMsg);
     d->proc->ownLogEnable(false);
     connect(d->proc, &ProcessWorker::stdErrLine, this, [this](const QByteArray &line) {
-        qInfo(workersLogging()).noquote().nospace() << '['%workerName()%".py]: " << line;
+        if (printEnabled(QtMsgType::QtInfoMsg))
+            qInfo(workersLogging()).noquote().nospace() << '['%workerName()%".py]: " << line;
     });
     d->proc->prepareForNested();
 }

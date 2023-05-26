@@ -20,30 +20,32 @@
 #include <QTimer>
 #include <QObject>
 
+#define MAX_RECONNECTS 5
+
 using namespace Modbus;
 using namespace Radapter;
+
+struct RegisterMetaInfo {
+    QString name;
+    quint8 rewriteAttempts{0};
+};
+
 struct Master::Private{
     Settings::ModbusMaster settings;
     QHash<QModbusDataUnit::RegisterType, QHash<int, QString>> reverseRegisters;
+    QMap<QString, RegisterMetaInfo> regsMetaInfo;
     QQueue<QModbusDataUnit> readQueue;
     QQueue<QModbusDataUnit> writeQueue;
-    quint64 lastFrameTime;
+    QList<QModbusDataUnit> queries;
     Sync::Json state;
-    QMap<QString, quint8> rewriteAttempts;
     QTimer *reconnectTimer;
     QTimer *readTimer;
-    QTimer *frameDelay;
     QModbusClient *device{nullptr};
     std::atomic<bool> connected{false};
     Redis::CacheProducer *stateWriter{nullptr};
     Redis::CacheConsumer *stateReader{nullptr};
-    int currentReadFrame{0};
+    int reconnectAttempts{0};
 };
-
-static quint64 getTimeMS()
-{
-    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-}
 
 Master::Master(const Settings::ModbusMaster &settings, QThread *thread) :
     Radapter::Worker(settings.worker, thread),
@@ -52,26 +54,11 @@ Master::Master(const Settings::ModbusMaster &settings, QThread *thread) :
     d->settings = settings;
     d->reconnectTimer = new QTimer(this);
     d->readTimer = new QTimer(this);
-    d->frameDelay = new QTimer(this);
-    d->frameDelay->setSingleShot(true);
-    d->frameDelay->callOnTimeout(this, &Master::askTrigger);
     d->reconnectTimer->setInterval(settings.reconnect_timeout_ms);
     d->reconnectTimer->callOnTimeout(this, &Master::connectDevice);
     d->reconnectTimer->setSingleShot(true);
     d->readTimer->setInterval(settings.poll_rate);
     d->readTimer->callOnTimeout(this, &Master::doRead);
-    d->lastFrameTime = getTimeMS();
-    for (auto regIter = settings.registers.cbegin(); regIter != settings.registers.cend(); ++regIter) {
-        if (d->reverseRegisters[regIter->table].contains(regIter->index)) {
-            throw std::invalid_argument("Register index collission on: " +
-                                        regIter.key().toStdString() +
-                                        "; With --> " +
-                                        d->reverseRegisters[regIter->table][regIter->index].toStdString() +
-                                        " (Table: "+ printTable(regIter->table).toStdString() +
-                                        "; Register: " + QString::number(regIter->index.value).toStdString() + ")");
-        }
-        d->reverseRegisters[regIter->table][regIter->index] = regIter.key();
-    }
     connect(this, &Master::connected, [this]{
         d->connected=true;
         doRead();
@@ -79,28 +66,41 @@ Master::Master(const Settings::ModbusMaster &settings, QThread *thread) :
     connect(this, &Master::disconnected, [this]{
         d->connected=false;
     });
-    if (!d->settings.read_only && d->settings.queries->isEmpty()) {
-        throw std::runtime_error(
-            QString(printSelf()%": Empty queries while not read_only. If you wanted to forbid reading set 'read_only: true'")
-                .toStdString());
+    for (auto [name, reg]: keyVal(d->settings.m_registers)) {
+        if (d->reverseRegisters[reg.table].contains(reg.index)) {
+            throw std::invalid_argument("Register index collission on: " +
+                                        name.toStdString() +
+                                        "; With --> " +
+                                        d->reverseRegisters[reg.table][reg.index].toStdString() +
+                                        " (Table: "+ printTable(reg.table).toStdString() +
+                                        "; Register: " + QString::number(reg.index.value).toStdString() + ")");
+        }
+        d->reverseRegisters[reg.table][reg.index] = name;
     }
+    for (auto [key, reg]: keyVal(d->settings.m_registers)) {
+        d->regsMetaInfo[key] = RegisterMetaInfo{key};
+        if (reg.readable) {
+            d->queries.append(QModbusDataUnit{reg.table, reg.index, 1});
+        }
+    }
+    d->queries = Modbus::mergeDataUnits(d->queries);
 }
 
 void Master::initClient()
 {
-    if (d->settings.device.tcp.isValid()) {
+    if (d->settings.m_device.tcp.wasUpdated()) {
         d->device = new QModbusTcpClient(this);
-        d->device->setConnectionParameter(QModbusDevice::NetworkAddressParameter, d->settings.device.tcp->host.value);
-        d->device->setConnectionParameter(QModbusDevice::NetworkPortParameter, d->settings.device.tcp->port.value);
+        d->device->setConnectionParameter(QModbusDevice::NetworkAddressParameter, d->settings.m_device.tcp->host.value);
+        d->device->setConnectionParameter(QModbusDevice::NetworkPortParameter, d->settings.m_device.tcp->port.value);
     } else {
         d->device = new QModbusRtuSerialClient(this);
-        d->device->setConnectionParameter(QModbusDevice::SerialBaudRateParameter, d->settings.device.rtu->baud);
-        d->device->setConnectionParameter(QModbusDevice::SerialDataBitsParameter, d->settings.device.rtu->data_bits);
-        d->device->setConnectionParameter(QModbusDevice::SerialParityParameter, d->settings.device.rtu->parity);
-        d->device->setConnectionParameter(QModbusDevice::SerialPortNameParameter, d->settings.device.rtu->port_name.value);
-        d->device->setConnectionParameter(QModbusDevice::SerialStopBitsParameter, d->settings.device.rtu->stop_bits);
+        d->device->setConnectionParameter(QModbusDevice::SerialBaudRateParameter, d->settings.m_device.rtu->baud);
+        d->device->setConnectionParameter(QModbusDevice::SerialDataBitsParameter, d->settings.m_device.rtu->data_bits);
+        d->device->setConnectionParameter(QModbusDevice::SerialParityParameter, d->settings.m_device.rtu->parity);
+        d->device->setConnectionParameter(QModbusDevice::SerialPortNameParameter, d->settings.m_device.rtu->port_name.value);
+        d->device->setConnectionParameter(QModbusDevice::SerialStopBitsParameter, d->settings.m_device.rtu->stop_bits);
     }
-    d->device->setTimeout(d->settings.response_time_ms);
+    d->device->setTimeout(d->settings.response_time);
     d->device->setNumberOfRetries(d->settings.retries);
     connect(d->device, &QModbusDevice::stateChanged, this, &Master::onStateChanged);
     connect(d->device, &QModbusDevice::errorOccurred, this, &Master::onErrorOccurred);
@@ -108,14 +108,14 @@ void Master::initClient()
 
 void Master::onRun()
 {
-    if (d->settings.state_reader.isValid()) {
+    if (d->settings.state_reader.wasUpdated()) {
         d->stateReader = broker()->getWorker<Redis::CacheConsumer>(d->settings.state_reader);
         if (!d->stateReader) {
             throw std::runtime_error(printSelf().toStdString() + ": Could not fetch RedisCacheConsumer: " + d->settings.state_reader->toStdString());
         }
         d->stateReader->waitConnected(this);
     }
-    if (d->settings.state_writer.isValid()) {
+    if (d->settings.state_writer.wasUpdated()) {
         d->stateWriter = broker()->getWorker<Redis::CacheProducer>(d->settings.state_writer);
         if (!d->stateWriter) {
             throw std::runtime_error(printSelf().toStdString() + ": Could not fetch RedisCacheProducer: " + d->settings.state_writer->toStdString());
@@ -145,7 +145,7 @@ bool Master::isConnected() const
 
 void Master::attachToChannel()
 {
-    auto channel = d->settings.device.channel.data();
+    auto channel = d->settings.m_device.channel.data();
     channel->registerUser(this);
     channel->callOnTrigger(this, &Master::executeNext);
     channel->signalJobDone(this, &Master::queryDone);
@@ -173,7 +173,7 @@ void Master::fetchState()
 {
     if (d->stateReader) {
         auto command = prepareCommand(new Redis::Cache::ReadObject(workerName()));
-        command.setCallback(this, [this](const ReplyJson *reply){
+        command.setCallback(this, [this](const Redis::Cache::ReadObject::WantedReply *reply){
             d->state.updateTarget(reply->json());
             d->state.updateCurrent(reply->json());
         });
@@ -184,10 +184,6 @@ void Master::fetchState()
 
 void Master::onMsg(const Radapter::WorkerMsg &msg)
 {
-    if (d->settings.read_only) {
-        workerWarn(this) << "Attempt to write while read-only! See config.";
-        return;
-    }
     write(msg);
 }
 
@@ -200,17 +196,17 @@ void Master::write(const JsonDict &data)
     for (auto&[key, value] : data) {
         if (!value.isValid()) continue;
         auto fullKeyJoined = key.join(":");
-        if (!d->settings.registers.contains(fullKeyJoined)) {
+        if (!d->settings.m_registers.contains(fullKeyJoined)) {
             workerWarn(this) << "Extra property passed: " << fullKeyJoined;
             continue;
         }
-        const auto &regInfo = d->settings.registers[fullKeyJoined];
+        const auto &regInfo = d->settings.m_registers[fullKeyJoined];
         if (!regInfo.writable) {
             workerInfo(this) << "Attempt to write to protected register:" << fullKeyJoined;
             continue;
         }
         auto valCopy = value;
-        if (regInfo.validator.isValid() && !regInfo.validator->validate(valCopy)) {
+        if (regInfo.validator.wasUpdated() && !regInfo.validator->validate(valCopy)) {
             workerWarn(this, .nospace())
                 << "Property: '" << fullKeyJoined
                 << "' was invalidated by Validator[" << regInfo.validator.value.name()
@@ -239,16 +235,17 @@ void Master::connectDevice()
     if (!d->device->connectDevice()) {
         reDebug() << printSelf() << ": Error Connecting: " << d->device->errorString();
         d->reconnectTimer->start();
+    } else {
+        if (!d->writeQueue.isEmpty() || !d->readQueue.isEmpty()) {
+            emit askTrigger();
+        }
     }
 }
 
 void Master::executeNext()
 {
-    auto sinceLastFrame = getTimeMS() - d->lastFrameTime;
-    qint64 toWait = d->settings.interframe_gap - sinceLastFrame;
-    if (toWait > 0) {
+    if (!d->connected) {
         emit allQueriesDone();
-        d->frameDelay->start(toWait);
         return;
     }
     if (!d->writeQueue.isEmpty()) {
@@ -258,7 +255,6 @@ void Master::executeNext()
     } else {
         emit allQueriesDone();
     }
-    d->lastFrameTime = getTimeMS();
 }
 
 void Master::onErrorOccurred(QModbusDevice::Error error)
@@ -267,8 +263,14 @@ void Master::onErrorOccurred(QModbusDevice::Error error)
 }
 
 void Master::reconnect() {
-    workerWarn(this) << ": Reconnecting...";
+    if (!d->connected) return;
+    auto time = d->settings.reconnect_timeout_ms * (1 + d->reconnectAttempts);
+    workerWarn(this) << ": Reconnecting in"<< time/1000.0<<"...";
+    if (d->reconnectAttempts < MAX_RECONNECTS) {
+        d->reconnectAttempts++;
+    }
     d->device->disconnectDevice();
+    d->reconnectTimer->setInterval(time);
     d->reconnectTimer->start();
 }
 
@@ -295,6 +297,7 @@ void Master::onReadReady()
         reconnect();
         return;
     }
+    d->reconnectAttempts = 0;
     auto words = reply->result().values();
     auto table = reply->result().registerType();
     JsonDict resultJson;
@@ -306,7 +309,7 @@ void Master::onReadReady()
         }
         auto index = reply->result().startAddress() + i;
         const auto &registersName = d->reverseRegisters[table][index];
-        const auto &regData = config().registers[registersName];
+        const auto &regData = config().m_registers[registersName];
         auto sizeWords = QMetaType(regData.type).sizeOf()/2;
         if (i + sizeWords > words.size()) {
             break;
@@ -328,6 +331,7 @@ void Master::onWriteReady()
     auto unit = reply->result();
     auto err = reply->error();
     if (err == QModbusDevice::NoError) {
+        d->reconnectAttempts = 0;
         workerInfo(this, .nospace().noquote()) << ": Written:\n" << printUnit(unit);
     } else {
         workerError(this, .nospace().noquote()) << ": Error Writing. Reason: " << reply->errorString();
@@ -337,12 +341,11 @@ void Master::onWriteReady()
 
 void Master::doRead()
 {
-    if (!d->connected || !config().queries->size()) {
+    if (!d->connected) {
         return;
     }
-    for (auto &query: config().queries) {
-        auto unit = QModbusDataUnit(query.type, query.reg_index, query.reg_count);
-        enqeueRead(unit);
+    for (auto &query: d->queries) {
+        enqeueRead(query);
     }
 }
 
@@ -355,7 +358,12 @@ void Master::updateCurrent(const JsonDict &json)
     auto toRewrite = d->state.missingToTarget();
     for (auto &[key, val] : toRewrite) {
         auto joined = key.join(':');
-        auto &rewriteAttempts = d->rewriteAttempts[joined];
+        auto &reg = d->settings.m_registers[joined];
+        if (!reg.readable) {
+            d->state.updateTarget(key, val);
+            continue;
+        }
+        auto &rewriteAttempts = d->regsMetaInfo[joined].rewriteAttempts;
         if (rewriteAttempts < d->settings.retries) {
             rewriteAttempts++;
             workerWarn(this) << "Rewriting property:" << joined
@@ -377,24 +385,31 @@ void Master::updateCurrent(const JsonDict &json)
 
 void Master::enqeueRead(const QModbusDataUnit &unit)
 {
-    d->readQueue.enqueue(unit);
-    if (!d->frameDelay->isActive()) {
-        emit askTrigger();
+    for (auto &query: d->readQueue) {
+        if (query.registerType() == unit.registerType() &&
+            query.startAddress() == unit.startAddress() &&
+            query.valueCount() == unit.valueCount())
+        {
+            return;
+        }
     }
+    d->readQueue.enqueue(unit);
+    emit askTrigger();
 }
 
 void Master::enqeueWrite(const QModbusDataUnit &state)
 {
     d->writeQueue.enqueue(state);
-    if (!d->frameDelay->isActive()) {
-        emit askTrigger();
-    }
+    emit askTrigger();
 }
 
 void Master::executeRead(const QModbusDataUnit &unit)
 {
     if (auto reply = d->device->sendReadRequest(unit, d->settings.slave_id)) {
-        connect(reply, &QModbusReply::destroyed, this, &Master::queryDone);
+        connect(reply, &QModbusReply::destroyed, this, [this](QObject *obj){
+            Q_UNUSED(obj)
+            emit queryDone();
+        });
         if (!reply->isFinished()) {
             QObject::connect(reply, &QModbusReply::finished, this, &Master::onReadReady);
         } else {
@@ -411,9 +426,12 @@ void Master::executeRead(const QModbusDataUnit &unit)
 
 void Master::executeWrite(const QModbusDataUnit &state)
 {
+    workerInfo(this, .noquote()) << "Writing...:\n" << printUnit(state);
     if (auto reply = d->device->sendWriteRequest(state, d->settings.slave_id)) {
-        workerInfo(this, .noquote()) << "Writing...:\n" << printUnit(state);
-        connect(reply, &QModbusReply::destroyed, this, &Master::queryDone);
+        connect(reply, &QModbusReply::destroyed, this, [this](QObject *obj){
+            Q_UNUSED(obj)
+            emit queryDone();
+        });
         if (!reply->isFinished()) {
             QObject::connect(reply, &QModbusReply::finished, this, &Master::onWriteReady);
         } else {

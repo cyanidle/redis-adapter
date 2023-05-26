@@ -22,14 +22,6 @@ namespace Validator {
 }
 
 namespace Settings {
-
-    struct RADAPTER_API ModbusQuery : Serializable {
-        Q_GADGET
-        IS_SERIALIZABLE
-        FIELD(VALIDATED(Required<QModbusDataUnit::RegisterType>, Validator::RegisterTable), type)
-        FIELD(Required<quint16>, reg_index)
-        FIELD(Required<quint8>, reg_count)
-    };
     struct RADAPTER_API PackingMode : Serializable {
         Q_GADGET
         IS_SERIALIZABLE
@@ -45,6 +37,8 @@ namespace Settings {
         IS_SERIALIZABLE
         FIELD(Optional<TcpDevice>, tcp)
         FIELD(Optional<SerialDevice>, rtu)
+        FIELD(HasDefault<quint32>, interframe_gap, 50)
+        COMMENT(interframe_gap, "Interframe gap is the minimal timeout between queries")
 
         QSharedPointer<Radapter::Sync::Channel> channel;
         void postUpdate() override;
@@ -59,6 +53,9 @@ namespace Settings {
         FIELD(Required<int>, index)
         FIELD(HasDefault<bool>, resetting, false) // not implemented yet
         FIELD(HasDefault<bool>, writable, true)
+        FIELD(HasDefault<bool>, readable, true)
+        FIELD(Optional<QString>, mode)
+        COMMENT(mode, "Allowed: r / w / rw (read, write, read+write)")
         FIELD(OptionalValidator, validator)
         void postUpdate() override;
     };
@@ -75,42 +72,33 @@ namespace Settings {
         Q_GADGET
         IS_SERIALIZABLE
         FIELD(Required<Worker>, worker)
-        FIELD(Required<QString>, device_name)
+        FIELD(Required<QString>, device)
         FIELD(Required<quint16>, slave_id)
-        FIELD(RequiredSequence<QString>, register_names)
-        FIELD(HasDefault<quint32>, reconnect_timeout_ms, 3000)
-        FIELD(HasDefault<bool>, read_only, false)
+        FIELD(Required<QString>, registers)
+        FIELD(HasDefault<quint32>, reconnect_timeout_ms, 1000)
+
+        ModbusDevice m_device;
+        QStringMap<RegisterInfo> m_registers;
+        void init();
     };
 
     struct RADAPTER_API ModbusSlave : ModbusWorker {
         Q_GADGET
         IS_SERIALIZABLE
-
-        ModbusDevice device{};
         RegisterCounts counts{};
-        QStringMap<RegisterInfo> registers{};
-
         void init();
     };
 
     struct RADAPTER_API ModbusMaster : ModbusWorker {
         Q_GADGET
         IS_SERIALIZABLE
-        FIELD(OptionalSequence<ModbusQuery>, queries)
-
         FIELD(HasDefault<quint32>, poll_rate, 500)
         COMMENT(poll_rate, "Poll rate is the time between two full updates")
-        FIELD(HasDefault<quint32>, interframe_gap, 50)
-        COMMENT(interframe_gap, "Interframe gap is the timeout between queries")
-        FIELD(HasDefault<quint32>, response_time_ms, 150)
+        FIELD(HasDefault<quint32>, response_time, 150)
         FIELD(HasDefault<quint32>, retries, 3)
 
         FIELD(Optional<QString>, state_writer)
         FIELD(Optional<QString>, state_reader)
-
-        ModbusDevice device{};
-        QStringMap<RegisterInfo> registers{};
-        void init();
     };
 
     struct RADAPTER_API Registers : Serializable {
@@ -123,6 +111,9 @@ namespace Settings {
         FIELD(Optional<QVariantMap>, coils)
         FIELD(Optional<QVariantMap>, discrete_inputs)
         FIELD(Optional<QVariantMap>, di)
+
+        FIELD(HasDefault<bool>, allow_read_by_default, true)
+        FIELD(HasDefault<bool>, allow_write_by_default, true)
         void init(const QString &device);
     };
 

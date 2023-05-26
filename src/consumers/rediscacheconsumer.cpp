@@ -22,7 +22,7 @@ CacheConsumer::CacheConsumer(const Settings::RedisCacheConsumer &config, QThread
     Connector(config, thread),
     d(new Private{config.object_hash_key, {}, nullptr})
 {
-    if (config.object_hash_key.isValid()) {
+    if (config.object_hash_key.wasUpdated()) {
         if (config.use_polling) {
             d->objectRead = new QTimer(this);
             d->objectRead->callOnTimeout(this, &CacheConsumer::requestObjectSimple);
