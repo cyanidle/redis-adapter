@@ -206,7 +206,7 @@ void Master::write(const JsonDict &data)
         }
         const auto &regInfo = d->settings.registers[fullKeyJoined];
         if (!regInfo.writable) {
-            workerInfo(this) << "Attempt to write to protected register: " << regInfo.print();
+            workerInfo(this) << "Attempt to write to protected register:" << fullKeyJoined;
             continue;
         }
         auto valCopy = value;
