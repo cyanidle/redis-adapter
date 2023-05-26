@@ -432,15 +432,22 @@ class JsonDict(MutableMapping[str, JsonItem]):
             del cast(list, current)[last.as_index]
         else:
             del cast(dict, current)[last.key]
-    def get(self, *keys: Union[JsonKey, 'JsonDictIterator', Tuple[JsonKey]], default:_T = None) -> Union[JsonItem, _T]:
+    @overload
+    def get(self, *keys: JsonKey, default: _T = None) -> Union[JsonItem, _T]: ...
+    @overload
+    def get(self, key: 'JsonDictIterator', /, *, default: _T = None) -> Union[JsonItem, _T]: ...
+    def get(self, *keys, default:_T = None) -> Union[JsonItem, _T]:
         try:
-            if isinstance(keys, Sequence):
+            assert len(keys)
+            if len(keys) > 1 and isinstance(keys, Sequence):
                 if not keys: raise ValueError("Empty JsonDict key!")
-                return self.get(':'.join(keys)) #type: ignore
-            elif isinstance(keys, JsonDictIterator):
-                return self.get(keys.key())
+                joined = ':'.join(keys)
+                return self.get(joined) 
+            elif keys and isinstance(keys[0], JsonDictIterator):
+                if len(keys) > 1: raise RuntimeError("Do not pass a tuple of JsonDictIterators!")
+                return self.get(keys[0].key())
             else:
-                return self.__getitem__(keys)
+                return self.__getitem__(keys[0])
         except:
             return default
     def __getitem__(self, key: Union[JsonKey, 'JsonDictIterator']) -> JsonItem:
@@ -906,5 +913,12 @@ def _boot_main():
     logging.getLogger("bootstrap").info("Starting boot sequence!")
     _boot_exec(params, internal)
 
+def _local_test():
+    b = JsonDict({"a": 2})
+    print(b.get("a"))
+
 if __name__ == "__main__":
-    _boot_main()
+    if sys.argv[1] == "LOCAL_TEST":
+        _local_test()
+    else:
+        _boot_main()

@@ -187,6 +187,10 @@ void Registers::init(const QString &device)
     auto parseRegisters = [&](const QVariantMap &regs, const QVariant &toInsert) {
         const auto deviceRegs = JsonDict(regs);
         for (auto &iter : deviceRegs) {
+            if (iter.field() == "allow_write_by_default" || iter.field() == "allow_read_by_default") {
+                throw std::runtime_error("Do not place 'allow_write_by_default' or 'allow_read_by_default' inside of registers! "
+                                         "Place them just under device name, alongside 'holding', 'coils' etc.");
+            }
             if (iter.field() == "index" && iter.value().canConvert<int>()) {
                 auto regName = iter.domainKey().join(":");
                 auto regInfo = *iter.domainMap();
