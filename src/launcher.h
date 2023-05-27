@@ -23,6 +23,7 @@ public:
     const QString &configsDirectory() const;
     const Settings::AppConfig &config() const;
     Settings::Reader *reader();
+    Broker* broker() const;
     QCommandLineParser &commandLineParser();
     void createPipe(const QString &pipe);
     //! run() starts all configured radapter modules and workers
@@ -37,7 +38,6 @@ public slots:
     void addInterceptor(const QString &name, Radapter::Interceptor *interceptor);
 private:
     QThread *newThread();
-    Broker* broker() const;
 
     void parseCommandlineArgs();
     void initConfig();

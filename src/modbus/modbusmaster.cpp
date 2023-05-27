@@ -302,12 +302,11 @@ void Master::onReadReady()
     auto table = reply->result().registerType();
     JsonDict resultJson;
     for (int i = 0; i < words.size();) {
-        auto startAddr = reply->result().startAddress();
-        if (!d->reverseRegisters[table].contains(startAddr + i)) {
+        auto index = reply->result().startAddress() + i;
+        if (!d->reverseRegisters[table].contains(index)) {
             ++i;
             continue;
         }
-        auto index = reply->result().startAddress() + i;
         const auto &registersName = d->reverseRegisters[table][index];
         const auto &regData = config().m_registers[registersName];
         auto sizeWords = QMetaType(regData.type).sizeOf()/2;
